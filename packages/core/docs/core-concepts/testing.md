@@ -116,7 +116,9 @@ store.assertNoPendingActions(); // ✅ Passes
 
 #### `finish()`
 
-Convenience method that flushes pending effects and asserts no actions remain.
+Convenience method that flushes pending effects and asserts no actions remain. Call it only while
+the TestStore is alive: `destroy()` closes the test helper, and calling `finish()`
+afterward throws.
 
 ```typescript
 await store.send({ type: 'saveData' });
@@ -518,7 +520,20 @@ describe('Effect Chains', () => {
 
 ## Testing Time-Based Effects
 
-Test effects that use delays, debouncing, or throttling with fake timers.
+Test reducer effects that use delays, debouncing, or throttling with injected
+clocks or appropriately scoped fake timers.
+
+Browser-native motion has a separate timing boundary. Advancing or replacing
+`performance.now()` without advancing the document animation timeline can leave
+Web Animations scheduled far in the future. A test can then stall even though the
+application works with the normal browser clock. Keep native browser timing for
+rendered motion and dismissal tests, and control pending business work with
+injected dependencies or deferred service promises. Do not install a global
+browser clock override merely to test a delayed HTTP response.
+
+If a test intentionally controls animation time, its clock must cover every time
+source used by that animation implementation. Verify that setup separately;
+reducer fake-timer tests do not establish browser animation or cleanup behavior.
 
 ### Setup Requirements
 
@@ -786,168 +801,133 @@ describe('Scoped Counter', () => {
 });
 ```
 
-## Testing Navigation
+## Testing Managed Presentation Dismissal
 
-Test navigation patterns with `ifLet()` and `PresentationAction`.
-
-### Testing Optional Destinations
+Exercise dismissal through the same managed composition that owns the child. Avoid
+manually capturing a parent dispatch or fabricating a `PresentationView`: both skip
+the owner identity that prevents stale children from dismissing replacements.
 
 <!-- consumer-file: navigation.test.ts -->
 ```typescript
-import { describe, it, expect } from 'vitest';
-import { createTestStore } from '@composable-svelte/core/test';
+import { describe, expect, it } from 'vitest';
 import {
+  createStore,
   Effect,
-  ifLet,
-  createDismissDependency,
-  type DismissDependency,
   type PresentationAction,
   type Reducer
 } from '@composable-svelte/core';
+import {
+  ManagedIntegrationBuilder,
+  managedDismissDependency,
+  optionalSlot,
+  type DismissDependency,
+} from '@composable-svelte/core/application';
 
-interface ParentState {
-  destination: ChildState | null;
-  items: string[];
+type ChildState = { count: number };
+type ChildAction = { type: 'increment' } | { type: 'cancel' };
+type ChildDeps = { readonly dismiss: DismissDependency };
+type State = { child: ChildState | null };
+type Action =
+  | { type: 'child'; action: PresentationAction<ChildAction> }
+  | { type: 'replace'; count: number };
+
+const childSlot = optionalSlot<State, Action>()('child');
+const childReducer: Reducer<ChildState, ChildAction, ChildDeps> =
+  (state, action, deps) => {
+    if (action.type === 'increment') {
+      return [{ count: state.count + 1 }, Effect.none()];
+    }
+    return [state, deps.dismiss()];
+  };
+const rootReducer: Reducer<State, Action, ChildDeps> = (state, action) => {
+  if (action.type === 'replace') {
+    return [{ child: { count: action.count } }, Effect.none()];
+  }
+  return [state, Effect.none()];
+};
+const composition = new ManagedIntegrationBuilder(rootReducer)
+  .with(childSlot, childReducer, {
+    replaceOn: (action) => action.type === 'replace'
+  })
+  .build();
+
+const flush = async (): Promise<void> => {
+  for (let i = 0; i < 20; i++) await Promise.resolve();
+};
+function makeStore() {
+  return createStore({
+    initialState: { child: { count: 0 } },
+    ...composition,
+    dependencies: { dismiss: managedDismissDependency() },
+    ssr: { deferEffects: false }
+  });
 }
 
-interface ChildState {
-  count: number;
-}
-
-type ParentAction =
-  | { type: 'showDestination' }
-  | { type: 'hideDestination' }
-  | { type: 'destination'; action: PresentationAction<ChildAction> };
-
-type ChildAction =
-  | { type: 'increment' }
-  | { type: 'save' };
-
-const childReducer: Reducer<ChildState, ChildAction, { dismiss: DismissDependency }> = (
-  state,
-  action,
-  deps
-) => {
-  switch (action.type) {
-    case 'increment':
-      return [{ ...state, count: state.count + 1 }, Effect.none()];
-    case 'save':
-      // Child dismisses itself via deps.dismiss(). It returns the Effect —
-      // return it. Wrapping it in `Effect.run` and awaiting it only awaits the
-      // Effect *object*, which never executes it.
-      return [state, deps.dismiss()];
-    default:
-      return [state, Effect.none()];
-  }
-};
-
-type Dependencies = { dismiss: DismissDependency };
-
-const parentReducer: Reducer<ParentState, ParentAction, Dependencies> = (state, action, deps) => {
-  switch (action.type) {
-    case 'showDestination':
-      return [
-        { ...state, destination: { count: 0 } },
-        Effect.none()
-      ];
-
-    case 'hideDestination':
-      return [
-        { ...state, destination: null },
-        Effect.none()
-      ];
-
-    default:
-      break;
-  }
-
-  // The child returns the injected dismiss effect. Its captured dispatch
-  // already targets the parent; it must not enter the child action stream.
-  const [newState, effect] = ifLet<ParentState, ParentAction, ChildState, ChildAction, Dependencies>(
-    (s) => s.destination,
-    (s, d) => ({ ...s, destination: d }),
-    (a) => a.type === 'destination' && a.action.type === 'presented' ? a.action.action : null,
-    (ca) => ({ type: 'destination', action: { type: 'presented', action: ca } }),
-    childReducer
-  )(state, action, deps);
-
-  // Handle dismiss
-  if (action.type === 'destination' && action.action.type === 'dismiss') {
-    return [
-      { ...newState, destination: null },
-      Effect.none()
-    ];
-  }
-
-  return [newState, effect];
-};
-
-function makeStore(initialState: ParentState) {
-  let dispatch: (action: ParentAction) => void;
-  const store = createTestStore({
-    initialState,
-    reducer: parentReducer,
-    dependencies: {
-      dismiss: createDismissDependency<ParentAction>(
-        action => dispatch(action),
-        action => ({ type: 'destination', action })
-      )
+describe('managed dismissal surface', () => {
+  it('lets only the current bound view dismiss its presentation', () => {
+    const store = makeStore();
+    try {
+      composition.bind(store, childSlot)!.dismiss();
+      expect(store.state.child).toBeNull();
+    } finally {
+      store.destroy();
     }
   });
-  dispatch = action => store.dispatch(action);
-  return store;
-}
 
-describe('Navigation with ifLet', () => {
-  it('shows destination', async () => {
-    const store = makeStore({ destination: null, items: [] });
+  it('keeps a replacement safe from a stale bound view', () => {
+    const store = makeStore();
+    try {
+      const stale = composition.bind(store, childSlot)!;
+      store.dispatch({ type: 'replace', count: 42 });
+      const current = composition.bind(store, childSlot)!;
 
-    await store.send({ type: 'showDestination' }, (state) => {
-      expect(state.destination).toEqual({ count: 0 });
-    });
-    await store.finish();
+      stale.dismiss();
+      expect(store.state.child).toEqual({ count: 42 });
+      current.dismiss();
+      expect(store.state.child).toBeNull();
+    } finally {
+      store.destroy();
+    }
   });
 
-  it('hides destination', async () => {
-    const store = makeStore({ destination: { count: 5 }, items: [] });
-
-    await store.send({ type: 'hideDestination' }, (state) => {
-      expect(state.destination).toBe(null);
-    });
-    await store.finish();
-  });
-
-  it('routes actions to destination', async () => {
-    const store = makeStore({ destination: { count: 0 }, items: [] });
-
-    await store.send({
-      type: 'destination',
-      action: { type: 'presented', action: { type: 'increment' } }
-    }, (state) => {
-      expect(state.destination?.count).toBe(1);
-    });
-    await store.finish();
-  });
-
-  it('handles child dismissal via deps.dismiss()', async () => {
-    const store = makeStore({ destination: { count: 0 }, items: [] });
-
-    await store.send({
-      type: 'destination',
-      action: { type: 'presented', action: { type: 'save' } }
-    });
-
-    // Child calls deps.dismiss(), which dispatches dismiss action
-    await store.receive({
-      type: 'destination',
-      action: { type: 'dismiss' }
-    }, (state) => {
-      expect(state.destination).toBe(null);
-    });
-    await store.finish();
+  it('claims the reducer dismiss request at its presentation lift', async () => {
+    const store = makeStore();
+    try {
+      composition.bind(store, childSlot)!.dispatch({ type: 'cancel' });
+      await flush();
+      expect(store.state.child).toBeNull();
+    } finally {
+      store.destroy();
+    }
   });
 });
 ```
+
+In an integration test, build the real `ManagedIntegrationBuilder`, create the store,
+and obtain the view with `composition.bind(store, optionalSlot)` or a registered
+`destinationSlot.case(...)`. A raw store created with the composition's reducer
+and execution configuration uses `composition.bind`. The typed
+`scopeTo(app.store, slot)` helper instead consumes the application projection
+provided by the application API; the two stores are not interchangeable. Do not
+cast a raw store to bypass that distinction. Assert these behaviors together:
+
+- a current view dismisses only its own presentation;
+- a view captured before replacement cannot dismiss the replacement;
+- `deps.dismiss()` runs as an effect and is claimed by that presentation's managed
+  lift;
+- cleanup-delayed dismissal is dropped after replacement or destruction;
+- keyed and raw dispatch paths reject the managed request.
+
+Legacy functional and fluent scoped stores can still be tested for state/read and
+action wrapping. They intentionally have no `dismiss` member.
+
+For rendered application lifetime tests, start with the shipped
+[consumer fixture](../../consumer/README.md#testing-rendered-application-lifetime).
+It compiles the actual App and its CSS through Vite, removes the whole Root-owned
+application, and checks a fresh remount while an old service request completes.
+Adapt the app-specific entry and assertions; keep the generic snippet harness
+free of store handles or cleanup orchestration. This is separate from the raw
+composition-binding tests above and does not replace motion or focus tests.
 
 ## Mock Dependencies
 

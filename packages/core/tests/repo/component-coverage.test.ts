@@ -25,6 +25,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
 import { kindOf, listDirs, walkFiles } from './walk.js';
+import { packageCapabilities } from './package-capabilities.js';
 import { fileURLToPath } from 'node:url';
 import { join, dirname, resolve, relative } from 'node:path';
 
@@ -155,15 +156,19 @@ function scan(pkg: string): Scan {
 	const components = walk(srcDir).filter((f) => f.endsWith('.svelte'));
 	// `.svelte` files under `tests/` are harnesses a spec mounts, and they import
 	// the components under test, so they are entry points too.
-	const testFiles = walk(testDir).filter((f) => /\.(ts|svelte)$/.test(f));
+	const testFiles = [...new Set([...walk(testDir).filter((f) => /\.(ts|svelte)$/.test(f)), ...packageCapabilities(join(packagesDir, pkg)).testFiles])];
 
 	const reached = new Set<string>();
+	const traversed = new Set<string>();
 
 	const visit = (file: string, viaNames: string[] | null = null) => {
-		if (reached.has(file)) return;
-		reached.add(file);
-
 		const isBarrel = file.endsWith('index.ts');
+		// A later import of a different name from the same barrel must still
+		// traverse that export. Reaching the file is not reaching all its names.
+		const key = JSON.stringify([file, isBarrel ? [...(viaNames ?? [])].sort() : []]);
+		if (traversed.has(key)) return;
+		traversed.add(key);
+		reached.add(file);
 		// A barrel entered by name forwards only those names. Entered with no
 		// names — a namespace or side-effect import — it forwards everything.
 		const forward = isBarrel && viaNames && viaNames.length > 0 ? barrelExports(file) : null;
@@ -225,8 +230,8 @@ describe('the scan sees a real repository', () => {
 	// Every arm below is an absence claim, and an absence claim from a walker
 	// that resolved nothing is worthless. These are the floors that make the
 	// rest mean something.
-	it('finds components in every package', () => {
-		for (const pkg of PACKAGES) {
+	it('finds components in every package with Svelte sources', () => {
+		for (const pkg of PACKAGES.filter(name => packageCapabilities(join(packagesDir,name)).svelteFiles.length > 0)) {
 			expect(scans.get(pkg)!.components.length, `${pkg} has no components`).toBeGreaterThan(0);
 		}
 	});
@@ -241,7 +246,9 @@ describe('the scan sees a real repository', () => {
 		// If `resolveLocal` were broken, `reached` would hold only the test files
 		// themselves and every component would look untested.
 		const core = scans.get('core')!;
-		expect(core.reached.size).toBeGreaterThan(core.testFiles.length * 2);
+		// A growing number of reducer tests must not change this structural assertion.
+		expect(core.reached.has(join(packagesDir, 'core/src/lib/components/ui/breadcrumb/Breadcrumb.svelte'))).toBe(true);
+		expect(core.reached.has(join(packagesDir, 'core/src/lib/components/ui/breadcrumb/BreadcrumbList.svelte'))).toBe(true);
 	});
 
 	it('reaches most components, so a total failure would be obvious', () => {
@@ -279,4 +286,11 @@ describe('an unreached component is reported', () => {
 		const ghost = join(packagesDir, 'core', 'src', 'lib', 'components', 'ui', 'ghost', 'Ghost.svelte');
 		expect(offendersOf({ components: [...real.components, ghost], reached: real.reached })).toEqual(['Ghost']);
 	});
+});
+
+// These are imported separately through the same public application barrel.
+it('accumulates separately imported names from one barrel without crediting all exports', () => {
+ const reached=scans.get('core')!.reached;
+ expect(reached.has(join(packagesDir,'core/src/lib/application/FeatureViews.svelte'))).toBe(true);
+ expect(reached.has(join(packagesDir,'core/src/lib/application/FeatureOutlet.svelte'))).toBe(true);
 });

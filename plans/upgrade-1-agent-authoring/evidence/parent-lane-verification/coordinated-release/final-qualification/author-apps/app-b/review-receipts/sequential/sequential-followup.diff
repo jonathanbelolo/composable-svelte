@@ -1,0 +1,51 @@
+--- a/tests/dashboard.test.ts
++++ b/tests/dashboard.test.ts
+@@ -1120,7 +1120,11 @@
+   it('requests activity only after the account resolves, for that account’s subject', async () => {
+     const backend = createControlledBackend();
+     const account = deferred<AccountSnapshot>();
+-    backend.fetchAccount = () => account.promise;
++    let accountSignal: AbortSignal | undefined;
++    backend.fetchAccount = (signal) => {
++      accountSignal = signal;
++      return account.promise;
++    };
+     const store = makeStore(backend);
+     await signInThroughForm(store, 'ada@example.com');
+     await flush();
+@@ -1130,6 +1134,8 @@
+     await until(() => store.state.accountData !== null, 'account with activity');
+     expect(backend.counters.fetchActivityCalls).toBe(1);
+     // The activity request carries the same owned signal as the account request.
++    expect(accountSignal).toBeDefined();
++    expect(backend.activitySignals[0]).toBe(accountSignal);
+     expect(backend.activitySignals[0]?.aborted).toBe(false);
+     expect(store.state.chart?.data).toHaveLength(7);
+   });
+@@ -1144,6 +1150,12 @@
+     });
+     // Ignores abort: only the owned effect decides whether activity follows.
+     backend.fetchAccount = () => pending;
++    const abortedAtCall: boolean[] = [];
++    const fetchActivity = backend.fetchActivity;
++    backend.fetchActivity = (subjectId, signal) => {
++      abortedAtCall.push(signal?.aborted === true);
++      return fetchActivity(subjectId, signal);
++    };
+     const store = makeStore(backend);
+     await signInThroughForm(store, 'ada@example.com');
+     if (outcome === 'failed') {
+@@ -1162,9 +1174,10 @@
+       // A failed account never requests activity.
+       expect(backend.counters.fetchActivityCalls).toBe(0);
+     } else {
+-      // Retirement drops the effect's dispatches; any follow-up request carries the
+-      // owned, already-aborted signal, which the service refuses.
+-      expect(backend.activitySignals.every((signal) => signal?.aborted === true)).toBe(true);
++      // Retirement drops the effect's dispatches; any follow-up request is issued
++      // with the owned signal already aborted, which the service refuses.
++      expect(abortedAtCall.length).toBeLessThanOrEqual(1);
++      expect(abortedAtCall.every((aborted) => aborted)).toBe(true);
+     }
+     expect(store.state.accountData).toBeNull();
+     expect(store.state.chart).toBeNull();

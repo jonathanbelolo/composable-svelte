@@ -5,6 +5,28 @@
  */
 
 
+import type { ChildView } from '@composable-svelte/core/application';
+
+/**
+ * A store or managed child view that can drive Chart components.
+ * Structural projection containing only state, dispatch, and subscribe.
+ */
+export type ChartStore<T = unknown> = Pick<
+  ChildView<ChartState<T>, ChartAction<T>>,
+  'state' | 'dispatch' | 'subscribe'
+>;
+
+/**
+ * Accessor for extracting a value from a row datum.
+ * When `T` is specified, provides typed property keys and typed parameter `d: T`.
+ * Unknown-row consumers may use any string key; known rows accept only keys
+ * present on that row type. Function accessors receive the row type directly.
+ */
+export type ChartAccessor<T> =
+  | (keyof T & string)
+  | ((d: T) => unknown)
+  | ([unknown] extends [T] ? string : never);
+
 /**
  * Chart state manages data, visualization config, and interactivity
  */
@@ -123,11 +145,11 @@ export type ChartAction<T = unknown> =
 /**
  * Chart configuration
  */
-export interface ChartConfig {
+export interface ChartConfig<T = unknown> {
   // Data accessors
-  x?: string | ((d: any) => any) | undefined;
-  y?: string | ((d: any) => any) | undefined;
-  color?: string | ((d: any) => any) | undefined;
+  x?: ChartAccessor<T> | undefined;
+  y?: ChartAccessor<T> | undefined;
+  color?: ChartAccessor<T> | undefined;
   // Dot radius in px. Not an accessor like x/y/color: plot-builder destructures
   // it with `size = 5` and passes it straight to Plot's `r`.
   size?: number | undefined;
@@ -135,6 +157,9 @@ export interface ChartConfig {
   // Domain overrides
   xDomain?: [number, number] | 'auto' | undefined;
   yDomain?: [number, number] | 'auto' | undefined;
+
+  /** Bar categorical axis order; auto preserves Plot defaults, input follows filtered rows. */
+  barCategoryOrder?: 'input' | 'auto' | undefined;
 
   // Interaction flags
   enableZoom?: boolean | undefined;

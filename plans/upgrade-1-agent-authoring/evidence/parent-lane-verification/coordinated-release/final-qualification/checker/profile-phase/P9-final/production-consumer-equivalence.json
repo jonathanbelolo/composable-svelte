@@ -1,0 +1,283 @@
+{
+  "schema": "composable-final-checker/production-consumer-equivalence/v1",
+  "startedAt": "2026-09-26T14:57:08.181Z",
+  "sourceReceipt": {
+    "path": "P9-final/profile-qualification-receipt.json",
+    "sha256": "aa1c78138e682dbcad0bf791613c806a1d0232095aaa9c3fcd894513d101c541"
+  },
+  "profiles": {
+    "maps": {
+      "consumer": "maps-fixture-production-consumer",
+      "delta": {
+        "src/App.svelte": {
+          "before": "f2380418358815fe9bddfb30a158358eb564728c905e944514454e81de3c6a1c",
+          "after": "79a245bfd894211119198e01bc2fc8a7e3902bb1caeba02744ce5b981a1ccef5",
+          "removedLines": [
+            "  let { onApp }: { onApp?: ((app: ApplicationInstance<State, Action>) => void) | undefined } = $props();",
+            "    {@const _ = onApp?.(app)}"
+          ],
+          "addedLines": []
+        },
+        "src/installed.browser.test.ts": {
+          "removed": true,
+          "sha256": "385e92763bfa65ddf9b16e71bb5928b2b580d5791e8f7bb324975aa71cf10613"
+        }
+      },
+      "steps": [
+        {
+          "label": "production consumer npm run check",
+          "ok": true,
+          "cmd": "npm run check",
+          "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/maps-fixture-production-consumer",
+          "exit": 0,
+          "stdoutTail": "\n> check\n> svelte-check --tsconfig tsconfig.json --fail-on-warnings\n\nLoading svelte-check in workspace: /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/maps-fixture-production-consumer\nGetting Svelte diagnostics...\n\nsvelte-check found 0 errors and 0 warnings\n",
+          "stderrTail": ""
+        },
+        {
+          "label": "production consumer npm run build",
+          "ok": true,
+          "cmd": "npm run build",
+          "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/maps-fixture-production-consumer",
+          "exit": 0,
+          "stdoutTail": "\n> build\n> vite build\n\n4:57:09 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/maps-fixture-production-consumer - using default configuration.\nvite v6.4.1 building for production...\ntransforming...\n✓ 701 modules transformed.\nrendering chunks...\ncomputing gzip size...\nweb-dist/index.html                   0.25 kB │ gzip:   0.19 kB\nweb-dist/assets/index-DfsuOWMb.css   66.63 kB │ gzip:   9.59 kB\nweb-dist/assets/index-CcixkDM_.js   991.21 kB │ gzip: 275.03 kB\n✓ built in 2.03s\n",
+          "stderrTail": "[plugin vite:resolve] Module \"node:async_hooks\" has been externalized for browser compatibility, imported by \"/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/maps-fixture-production-consumer/node_modules/svelte/src/internal/server/render-context.js\". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n"
+        },
+        {
+          "label": "production consumer npm run ssr",
+          "ok": true,
+          "cmd": "npm run ssr",
+          "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/maps-fixture-production-consumer",
+          "exit": 0,
+          "stdoutTail": "\n> ssr\n> node ssr.mjs\n\nSSR rendered 1038 bytes including map control\n",
+          "stderrTail": ""
+        },
+        {
+          "label": "original instrumented fixture: shipped npm run test:browser",
+          "ok": true,
+          "cmd": "npm run test:browser",
+          "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/maps-fixture-equivalence",
+          "exit": 0,
+          "stdoutTail": "\n> test:browser\n> vitest run --config browser.config.mjs\n\n4:57:15 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/maps-fixture-equivalence - using default configuration.\n\n RUN  v4.0.7 /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/maps-fixture-equivalence\n\n4:57:15 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/maps-fixture-equivalence - using default configuration.\n ✓ |chromium| src/installed.browser.test.ts (1 test) 46ms\n\n Test Files  1 passed (1)\n      Tests  1 passed (1)\n   Start at  16:57:15\n   Duration  1.37s (transform 0ms, setup 0ms, collect 361ms, tests 46ms, environment 0ms, prepare 61ms)\n\n",
+          "stderrTail": ""
+        },
+        {
+          "label": "SSR output identical (default props and brush:true)",
+          "ok": true,
+          "cmd": "node opus-ssr-equivalence.mjs",
+          "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/maps-fixture-equivalence",
+          "exit": 0,
+          "stderrTail": ""
+        },
+        {
+          "label": "browser equivalence (Chromium): instrumented without onApp vs production consumer",
+          "ok": true,
+          "cmd": "npx --no vitest run --config opus-equivalence.config.mjs",
+          "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/maps-fixture-equivalence",
+          "exit": 0,
+          "stdoutTail": "4:57:21 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/maps-fixture-equivalence - using default configuration.\n\n RUN  v4.0.7 /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/maps-fixture-equivalence\n\n4:57:21 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/maps-fixture-equivalence - using default configuration.\n ✓ |chromium| src/opus-equivalence.browser.test.ts (1 test) 2638ms\n   ✓ instrumented (no onApp) and production consumer render and react identically  2637ms\n\n Test Files  1 passed (1)\n      Tests  1 passed (1)\n   Start at  16:57:21\n   Duration  3.57s (transform 0ms, setup 0ms, collect 435ms, tests 2.64s, environment 0ms, prepare 43ms)\n\n",
+          "stderrTail": ""
+        }
+      ],
+      "ssrNoExternal": "true",
+      "ssr": {
+        "equal": true,
+        "instrumentedSha256": "fa14a2b833a3a70fe21a9c6e3d8483d17b0853968c5f926da9e4cd258540e5bc",
+        "productionSha256": "fa14a2b833a3a70fe21a9c6e3d8483d17b0853968c5f926da9e4cd258540e5bc",
+        "bodyBytes": 1038
+      },
+      "browserEquivalenceTest": {
+        "sha256": "d8f04e0c2cd7b3f0100f8aad39a2e44584588c93a6c8ed5d625ce7d328fa64a6"
+      }
+    },
+    "graphics": {
+      "consumer": "graphics-fixture-production-consumer",
+      "delta": {
+        "src/App.svelte": {
+          "before": "a2ad0224dc5e1bb1aed332798c5ab816eb6539222b5d3eea545d57621f948d17",
+          "after": "c7204f4521d09f06229ba7efdf0c039e27747f476e93db8d3258b672a4213623",
+          "removedLines": [
+            "  let { onApp }: { onApp?: ((app: ApplicationInstance<State, Action>) => void) | undefined } = $props();",
+            "    {@const _ = onApp?.(app)}"
+          ],
+          "addedLines": []
+        },
+        "src/installed.browser.test.ts": {
+          "removed": true,
+          "sha256": "7f526f3a1df6539c3fe1f0bfe5b0bb0bcfb349525f3b55bab6f4e8da49e18c24"
+        }
+      },
+      "steps": [
+        {
+          "label": "production consumer npm run check",
+          "ok": true,
+          "cmd": "npm run check",
+          "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/graphics-fixture-production-consumer",
+          "exit": 0,
+          "stdoutTail": "\n> check\n> svelte-check --tsconfig tsconfig.json --fail-on-warnings\n\nLoading svelte-check in workspace: /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/graphics-fixture-production-consumer\nGetting Svelte diagnostics...\n\nsvelte-check found 0 errors and 0 warnings\n",
+          "stderrTail": ""
+        },
+        {
+          "label": "production consumer npm run typecheck:nodenext",
+          "ok": true,
+          "cmd": "npm run typecheck:nodenext",
+          "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/graphics-fixture-production-consumer",
+          "exit": 0,
+          "stdoutTail": "\n> typecheck:nodenext\n> tsc --project tsconfig.nodenext.json\n\n",
+          "stderrTail": ""
+        },
+        {
+          "label": "production consumer npm run build",
+          "ok": true,
+          "cmd": "npm run build",
+          "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/graphics-fixture-production-consumer",
+          "exit": 0,
+          "stdoutTail": "functions-ayNlGC5K.js                    0.96 kB │ gzip:     0.49 kB\nweb-dist/assets/volumetricLightingBlendVolume.fragment-B0faYzj7.js       1.01 kB │ gzip:     0.52 kB\nweb-dist/assets/selection.fragment-BoTKANkG.js                           1.11 kB │ gzip:     0.52 kB\nweb-dist/assets/basisTextureLoader-DSojXQsS.js                           1.19 kB │ gzip:     0.57 kB\nweb-dist/assets/ddsTextureLoader-B7NikGLb.js                             1.22 kB │ gzip:     0.59 kB\nweb-dist/assets/ktxTextureLoader-DdLoMLFC.js                             1.37 kB │ gzip:     0.70 kB\nweb-dist/assets/volumetricLightingRenderVolume.fragment-C6w8QX08.js      1.51 kB │ gzip:     0.73 kB\nweb-dist/assets/screenSpaceCurvature.fragment-Cjc-pws0.js                1.60 kB │ gzip:     0.65 kB\nweb-dist/assets/volumetricLightingRenderVolume.fragment-OUOoucES.js      1.74 kB │ gzip:     0.81 kB\nweb-dist/assets/selection.vertex-BxipU--C.js                             1.90 kB │ gzip:     0.70 kB\nweb-dist/assets/selection.vertex-BMUqmkzm.js                             2.23 kB │ gzip:     0.78 kB\nweb-dist/assets/iesTextureLoader-CIud7EVe.js                             2.70 kB │ gzip:     1.16 kB\nweb-dist/assets/selectionOutline.fragment-DquX-5Ji.js                    4.82 kB │ gzip:     1.00 kB\nweb-dist/assets/selectionOutline.fragment-B2AOYS-V.js                    6.09 kB │ gzip:     1.11 kB\nweb-dist/assets/index-Dkmf3HwW.js                                    6,237.98 kB │ gzip: 1,379.00 kB\n✓ built in 5.36s\n",
+          "stderrTail": "[plugin vite:resolve] Module \"node:async_hooks\" has been externalized for browser compatibility, imported by \"/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/graphics-fixture-production-consumer/node_modules/svelte/src/internal/server/render-context.js\". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n"
+        },
+        {
+          "label": "production consumer npm run ssr",
+          "ok": true,
+          "cmd": "npm run ssr",
+          "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/graphics-fixture-production-consumer",
+          "exit": 0,
+          "stdoutTail": "\n> ssr\n> node ssr.mjs\n\nSSR rendered 434 bytes including graphics scene\n",
+          "stderrTail": ""
+        },
+        {
+          "label": "original instrumented fixture: shipped npm run test:browser",
+          "ok": true,
+          "cmd": "npm run test:browser",
+          "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/graphics-fixture-equivalence",
+          "exit": 0,
+          "stdoutTail": "\n> test:browser\n> vitest run --config browser.config.mjs\n\n4:57:39 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/graphics-fixture-equivalence - using default configuration.\n\n RUN  v4.0.7 /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/graphics-fixture-equivalence\n\n4:57:39 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/graphics-fixture-equivalence - using default configuration.\nstdout | src/installed.browser.test.ts > mounts the packed managed graphics recipe and native canvas\nBJS - [16:57:42]: Babylon.js v8.56.2 - WebGL2\n ✓ |chromium| src/installed.browser.test.ts (1 test) 56ms\n\n Test Files  1 passed (1)\n      Tests  1 passed (1)\n   Start at  16:57:39\n   Duration  3.17s (transform 0ms, setup 0ms, collect 1.77s, tests 56ms, environment 0ms, prepare 52ms)\n\n",
+          "stderrTail": ""
+        },
+        {
+          "label": "SSR output identical (default props and brush:true)",
+          "ok": true,
+          "cmd": "node opus-ssr-equivalence.mjs",
+          "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/graphics-fixture-equivalence",
+          "exit": 0,
+          "stderrTail": "[graphics] sceneId \"test-scene\" is already in use; scenes with this id under the same effect owner may cancel each other's animation frame loop\n[graphics] sceneId \"test-scene\" is already in use; scenes with this id under the same effect owner may cancel each other's animation frame loop\n[graphics] sceneId \"test-scene\" is already in use; scenes with this id under the same effect owner may cancel each other's animation frame loop\n"
+        },
+        {
+          "label": "browser equivalence (Chromium): instrumented without onApp vs production consumer",
+          "ok": true,
+          "cmd": "npx --no vitest run --config opus-equivalence.config.mjs",
+          "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/graphics-fixture-equivalence",
+          "exit": 0,
+          "stdoutTail": "4:57:47 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/graphics-fixture-equivalence - using default configuration.\n\n RUN  v4.0.7 /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/graphics-fixture-equivalence\n\n4:57:47 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/graphics-fixture-equivalence - using default configuration.\nstdout | src/opus-equivalence.browser.test.ts > instrumented (no onApp) and production consumer render identically\nBJS - [16:57:50]: Babylon.js v8.56.2 - WebGL2\nstdout | src/opus-equivalence.browser.test.ts > instrumented (no onApp) and production consumer render identically\nBJS - [16:57:50]: Babylon.js v8.56.2 - WebGL2\n ✓ |chromium| src/opus-equivalence.browser.test.ts (1 test) 816ms\n   ✓ instrumented (no onApp) and production consumer render identically  816ms\n\n Test Files  1 passed (1)\n      Tests  1 passed (1)\n   Start at  16:57:47\n   Duration  3.11s (transform 0ms, setup 0ms, collect 1.79s, tests 816ms, environment 0ms, prepare 45ms)\n\n",
+          "stderrTail": "stderr | src/opus-equivalence.browser.test.ts > instrumented (no onApp) and production consumer render identically\n[graphics] sceneId \"test-scene\" is already in use; scenes with this id under the same effect owner may cancel each other's animation frame loop\n"
+        }
+      ],
+      "ssrNoExternal": "['@composable-svelte/core', '@composable-svelte/graphics']",
+      "ssr": {
+        "equal": true,
+        "instrumentedSha256": "d51b657279ec98fc3025c3a059291094f315b4c6699942a4eca3efa0a74476b5",
+        "productionSha256": "d51b657279ec98fc3025c3a059291094f315b4c6699942a4eca3efa0a74476b5",
+        "bodyBytes": 434
+      },
+      "browserEquivalenceTest": {
+        "sha256": "f1849751eff2c8203076d6d5c366ed21333ba8daec041501244a05d5663dbf3c"
+      }
+    },
+    "charts": {
+      "consumer": "charts-fixture-production-consumer",
+      "delta": {
+        "src/App.svelte": {
+          "before": "877f95a25282e011f94fe3496b61e7345ef08259c64378491e9c401fed52714b",
+          "after": "55af2d66908bc1877b74de62d0d6658879e57c9d884d659a77ccd035ffc95510",
+          "removedLines": [
+            "  let { onApp, onSelectionChange, brush = false }: { onApp?: ((app: ApplicationInstance<State, Action>) => void) | undefined; onSelectionChange?: ((rows: MetricRow[]) => void) | undefined; brush?: boolean | undefined } = $props();",
+            "    {@const _ = onApp?.(app)}"
+          ],
+          "addedLines": [
+            "  let { onSelectionChange, brush = false }: { onSelectionChange?: ((rows: MetricRow[]) => void) | undefined; brush?: boolean | undefined } = $props();"
+          ]
+        },
+        "src/installed.browser.test.ts": {
+          "removed": true,
+          "sha256": "c0e63c18186beb72c0632d450ee61e33069dd68d056079946313e18bfd46576b"
+        }
+      },
+      "steps": [
+        {
+          "label": "production consumer npm run check",
+          "ok": true,
+          "cmd": "npm run check",
+          "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/charts-fixture-production-consumer",
+          "exit": 0,
+          "stdoutTail": "\n> check\n> svelte-check --tsconfig tsconfig.json --fail-on-warnings\n\nLoading svelte-check in workspace: /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/charts-fixture-production-consumer\nGetting Svelte diagnostics...\n\nsvelte-check found 0 errors and 0 warnings\n",
+          "stderrTail": ""
+        },
+        {
+          "label": "production consumer npm run typecheck:nodenext",
+          "ok": true,
+          "cmd": "npm run typecheck:nodenext",
+          "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/charts-fixture-production-consumer",
+          "exit": 0,
+          "stdoutTail": "\n> typecheck:nodenext\n> tsc --project tsconfig.nodenext.json\n\n",
+          "stderrTail": ""
+        },
+        {
+          "label": "production consumer npm run build",
+          "ok": true,
+          "cmd": "npm run build",
+          "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/charts-fixture-production-consumer",
+          "exit": 0,
+          "stdoutTail": "\n> build\n> vite build\n\n4:57:52 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/charts-fixture-production-consumer - using default configuration.\nvite v6.4.1 building for production...\ntransforming...\n✓ 1346 modules transformed.\nrendering chunks...\ncomputing gzip size...\nweb-dist/index.html                   0.37 kB │ gzip:   0.27 kB\nweb-dist/assets/index-C27W4fGl.css    0.69 kB │ gzip:   0.36 kB\nweb-dist/assets/index-CsfXHLIZ.js   477.95 kB │ gzip: 156.35 kB\n✓ built in 1.70s\n",
+          "stderrTail": "[plugin vite:resolve] Module \"node:async_hooks\" has been externalized for browser compatibility, imported by \"/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/charts-fixture-production-consumer/node_modules/svelte/src/internal/server/render-context.js\". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.\n"
+        },
+        {
+          "label": "production consumer npm run ssr",
+          "ok": true,
+          "cmd": "npm run ssr",
+          "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/charts-fixture-production-consumer",
+          "exit": 0,
+          "stdoutTail": "\n> ssr\n> node ssr.mjs\n\nSSR rendered 1087 bytes including charts content\n",
+          "stderrTail": ""
+        },
+        {
+          "label": "original instrumented fixture: shipped npm run test:browser",
+          "ok": true,
+          "cmd": "npm run test:browser",
+          "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/charts-fixture-equivalence",
+          "exit": 0,
+          "stdoutTail": "\n> test:browser\n> vitest run --config browser.config.mjs\n\n4:57:58 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/charts-fixture-equivalence - using default configuration.\n\n RUN  v4.0.7 /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/charts-fixture-equivalence\n\n4:57:58 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/charts-fixture-equivalence - using default configuration.\n ✓ |chromium| src/installed.browser.test.ts (2 tests) 43ms\n\n Test Files  1 passed (1)\n      Tests  2 passed (2)\n   Start at  16:57:58\n   Duration  1.25s (transform 0ms, setup 0ms, collect 290ms, tests 43ms, environment 0ms, prepare 51ms)\n\n",
+          "stderrTail": ""
+        },
+        {
+          "label": "SSR output identical (default props and brush:true)",
+          "ok": true,
+          "cmd": "node opus-ssr-equivalence.mjs",
+          "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/charts-fixture-equivalence",
+          "exit": 0,
+          "stderrTail": ""
+        },
+        {
+          "label": "browser equivalence (Chromium): instrumented without onApp vs production consumer",
+          "ok": true,
+          "cmd": "npx --no vitest run --config opus-equivalence.config.mjs",
+          "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/charts-fixture-equivalence",
+          "exit": 0,
+          "stdoutTail": "4:58:03 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/charts-fixture-equivalence - using default configuration.\n\n RUN  v4.0.7 /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/charts-fixture-equivalence\n\n4:58:03 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/charts-fixture-equivalence - using default configuration.\n ✓ |chromium| src/opus-equivalence.browser.test.ts (2 tests) 1048ms\n   ✓ instrumented (no onApp) and production consumer render and zoom identically  1015ms\n\n Test Files  1 passed (1)\n      Tests  2 passed (2)\n   Start at  16:58:03\n   Duration  1.94s (transform 0ms, setup 0ms, collect 365ms, tests 1.05s, environment 0ms, prepare 51ms)\n\n",
+          "stderrTail": ""
+        }
+      ],
+      "ssrNoExternal": "['@composable-svelte/charts', '@composable-svelte/core']",
+      "ssr": {
+        "equal": true,
+        "instrumentedSha256": "61b263eee2cd92da8d4cd71b8a2167df3cf8dedb183d4e86870799cabb21b3fa",
+        "productionSha256": "61b263eee2cd92da8d4cd71b8a2167df3cf8dedb183d4e86870799cabb21b3fa",
+        "bodyBytes": 1087
+      },
+      "browserEquivalenceTest": {
+        "sha256": "59b452fa44eb3e1339942999414b6549994fb361d430b57fa91df75e6b2dd22b"
+      }
+    }
+  },
+  "finishedAt": "2026-09-26T14:58:05.327Z",
+  "verdict": "EQUIVALENCE_CHECKS_PASSED",
+  "failures": 0,
+  "note": "Reviewer-style verification only. Production consumers differ from the shipped fixtures solely by the onApp test-capture hook (App.svelte) and the hook-driven browser test; model and feature modules are unchanged. The original instrumented fixtures remain rejected by the checker and are not claimed as passing."
+}

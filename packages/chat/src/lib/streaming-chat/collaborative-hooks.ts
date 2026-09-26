@@ -5,7 +5,6 @@
  * These are headless utilities that can be mixed and matched.
  */
 
-import type { Store } from '@composable-svelte/core';
 import type {
 	CollaborativeStreamingChatState,
 	CollaborativeAction,
@@ -13,6 +12,39 @@ import type {
 	UserPresence
 } from './collaborative-types.js';
 import { CleanupTracker } from './cleanup-tracker.js';
+import { watchRetirement, type ViewStore } from '../internal/view-store.js';
+
+/**
+ * The collaborative store a hook drives: a standalone `Store`, or a managed
+ * feature view.
+ *
+ * Under a managed view each hook also releases itself when the view's owner
+ * retires, so a feature removed by its parent leaves no listener or timer
+ * behind even if nobody calls the returned teardown. A standalone store never
+ * retires; call the teardown, as before.
+ */
+type CollaborativeStore = ViewStore<CollaborativeStreamingChatState, CollaborativeAction>;
+
+/**
+ * Run `dispose` when a managed owner retires, and make it safe to call again.
+ *
+ * @returns The teardown to hand back: a no-op once the tracker is disposed, so
+ *   a consumer's own call after retirement does not dispose twice.
+ */
+function releaseOnRetirement(
+	store: CollaborativeStore,
+	cleanup: CleanupTracker,
+	dispose: () => void
+): () => void {
+	const teardown = () => {
+		if (!cleanup.disposed) dispose();
+	};
+	const stopWatching = watchRetirement(store, teardown);
+	// A view that had already retired has run `teardown` by now.
+	if (cleanup.disposed) stopWatching();
+	else cleanup.add(stopWatching);
+	return teardown;
+}
 
 /**
  * Track user presence based on activity.
@@ -30,7 +62,7 @@ import { CleanupTracker } from './cleanup-tracker.js';
  * @returns Cleanup function
  */
 export function usePresenceTracking(
-	store: Store<CollaborativeStreamingChatState, CollaborativeAction>
+	store: CollaborativeStore
 ): () => void {
 	const cleanup = new CleanupTracker();
 
@@ -73,7 +105,7 @@ export function usePresenceTracking(
 		}
 	}, 30000); // Check every 30 seconds
 
-	return () => cleanup.dispose();
+	return releaseOnRetirement(store, cleanup, () => cleanup.dispose());
 }
 
 /**
@@ -87,7 +119,7 @@ export function usePresenceTracking(
  * @returns Object with start/stop/update functions and cleanup
  */
 export function useTypingEmitter(
-	store: Store<CollaborativeStreamingChatState, CollaborativeAction>,
+	store: CollaborativeStore,
 	target: 'message' | 'edit',
 	messageId?: string
 ): {
@@ -105,7 +137,11 @@ export function useTypingEmitter(
 	const THROTTLE_DELAY = 300; // Don't emit more than once per 300ms
 	const AUTO_STOP_DELAY = 3000; // Auto-stop after 3 seconds
 
+	// Released — by its teardown, or by the owner retiring, which the consumer
+	// is not told about. A component that outlives its view may keep calling
+	// these; they must neither dispatch nor arm a timer nor warn.
 	const start = () => {
+		if (cleanup.disposed) return;
 		const now = Date.now();
 
 		// Throttle typing start
@@ -142,7 +178,7 @@ export function useTypingEmitter(
 	};
 
 	const update = () => {
-		if (isTyping) {
+		if (isTyping && !cleanup.disposed) {
 			// Reset auto-stop timer
 			if (stopTypingTimer) {
 				cleanup.clearTimeout(stopTypingTimer);
@@ -154,14 +190,16 @@ export function useTypingEmitter(
 		}
 	};
 
+	const teardown = releaseOnRetirement(store, cleanup, () => {
+		stop();
+		cleanup.dispose();
+	});
+
 	return {
 		start,
 		stop,
 		update,
-		cleanup: () => {
-			stop();
-			cleanup.dispose();
-		}
+		cleanup: teardown
 	};
 }
 
@@ -176,16 +214,23 @@ export function useTypingEmitter(
  * @returns Cleanup function
  */
 export function useCursorTracking(
-	store: Store<CollaborativeStreamingChatState, CollaborativeAction>,
+	store: CollaborativeStore,
 	element: HTMLInputElement | HTMLTextAreaElement,
 	throttleMs = 100
 ): () => void {
 	const cleanup = new CleanupTracker();
 
 	let lastUpdate = 0;
-	let pendingUpdate: number | null = null;
+	let focused = element.ownerDocument.activeElement === element;
+	let disposed = false;
+	let pendingUpdate: ReturnType<typeof setTimeout> | null = null;
 
 	const emitCursor = () => {
+		const doc = element.ownerDocument ?? document;
+		if (doc.activeElement !== element) {
+			return;
+		}
+
 		const position = element.selectionStart ?? 0;
 		const selectionLength = (element.selectionEnd ?? 0) - position;
 
@@ -198,18 +243,26 @@ export function useCursorTracking(
 		lastUpdate = Date.now();
 	};
 
+	const cancelPendingUpdate = () => {
+		if (pendingUpdate !== null) {
+			cleanup.clearTimeout(pendingUpdate);
+			pendingUpdate = null;
+		}
+	};
+
 	const handleCursorChange = () => {
 		const now = Date.now();
 
 		if (now - lastUpdate > throttleMs) {
 			// Emit immediately
+			cancelPendingUpdate();
 			emitCursor();
 		} else {
 			// Queue update
-			if (!pendingUpdate) {
+			if (pendingUpdate === null) {
 				pendingUpdate = cleanup.setTimeout(() => {
-					emitCursor();
 					pendingUpdate = null;
+					emitCursor();
 				}, throttleMs);
 			}
 		}
@@ -222,13 +275,28 @@ export function useCursorTracking(
 
 	// Clear cursor on blur
 	cleanup.addEventListener(element, 'blur', () => {
+		focused = false;
+		cancelPendingUpdate();
+		lastUpdate = 0;
 		store.dispatch({ type: 'clearCursor' });
 	});
 
 	// Emit initial cursor position on focus
-	cleanup.addEventListener(element, 'focus', handleCursorChange);
+	cleanup.addEventListener(element, 'focus', () => {
+		focused = true;
+		lastUpdate = Number.NEGATIVE_INFINITY;
+		handleCursorChange();
+	});
 
-	return () => cleanup.dispose();
+	return releaseOnRetirement(store, cleanup, () => {
+		if (disposed) return;
+		disposed = true;
+		cancelPendingUpdate();
+		cleanup.dispose();
+		// Removing a focused node need not dispatch blur. Retire its cursor,
+		// but do not clear another input's cursor after a focus handoff.
+		if (focused) store.dispatch({ type: 'clearCursor' });
+	});
 }
 
 /**
@@ -241,7 +309,7 @@ export function useCursorTracking(
  * @returns Cleanup function
  */
 export function useHeartbeat(
-	store: Store<CollaborativeStreamingChatState, CollaborativeAction>,
+	store: CollaborativeStore,
 	intervalMs = 30000
 ): () => void {
 	const cleanup = new CleanupTracker();
@@ -255,7 +323,7 @@ export function useHeartbeat(
 		store.dispatch({ type: 'sendHeartbeat' });
 	}, intervalMs);
 
-	return () => cleanup.dispose();
+	return releaseOnRetirement(store, cleanup, () => cleanup.dispose());
 }
 
 /**

@@ -26,11 +26,12 @@
 	}
 
 	let { label, children, class: className = '' }: CommandGroupProps = $props();
+	const headingId = $props.id();
 </script>
 
-<div class="command-group {className}" role="group" aria-labelledby="group-{label}">
+<div class="command-group {className}" role="group" aria-labelledby={headingId}>
 	<!-- Group Header -->
-	<div class="command-group-heading" id="group-{label}">
+	<div class="command-group-heading" id={headingId}>
 		{label}
 	</div>
 

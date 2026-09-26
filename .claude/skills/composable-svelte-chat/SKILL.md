@@ -9,6 +9,14 @@ Streaming chat with collaborative features for LLM interactions and real-time me
 
 ---
 
+## UPGRADE 1 AGENT ENTRY
+
+For an application built with the integrated Upgrade 1 companion packages, begin with the [managed package reference](../../../packages/chat/recipes/managed/README.md) and its executable recipe. The same reference is included in the package at `node_modules/@composable-svelte/chat/recipes/managed/README.md`; use the installed version's declarations and instructions as the API authority.
+
+Compose chat business outcomes in the parent reducer and pass genuine child views to the packaged UI. Code and Media integrations remain optional: install and import only the capabilities the app uses. Preserve stream/request freshness within each conversation owner.
+
+The standalone store and callback examples below describe standalone usage. For an owned application feature, follow the managed recipe rather than copying the standalone setup and adding ad hoc lifetime glue. Candidate qualification and npm publication are separate; verify the installed package version contains this managed surface.
+
 ## PACKAGE OVERVIEW
 
 **Package**: `@composable-svelte/chat`

@@ -1,0 +1,33 @@
+4:39:23 PM [vite-plugin-svelte] no Svelte config found at /private/tmp/composable-final-authoring/app-b - using default configuration.
+
+ RUN  v4.0.7 /private/tmp/composable-final-authoring/app-b
+
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > initial state starts on login route with anonymous session and open login flow 3ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > accepted sign-in changes the app route to dashboard and loads account data with chart 4ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > rejected sign-in does not change the app route 1ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > handles MFA challenge when requested, and accepted MFA changes app route 2ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > typed chart interactions route through the owning feature 1ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > password change follows documented acceptance rather than inferred object identity 2ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > logout removes former accounts views and pending work 1ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > includes at least one delayed response after retirement in an application-level test 1ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > logout offers a fresh sign-in so a different subject can sign in 1ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > a same-subject rotated password session keeps the account view; the outcome is read from changePasswordOutcome 1ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > delayed account load resolved after logout is dropped (logout=true negative control) 1ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > delayed account load resolved after logout is dropped (logout=false negative control) 1ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > an account result from before logout is rejected after the same subject signs in again 4ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > typed multi-row and keyboard selections route through the owning chart feature 0ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > the dashboard is refused while logging out and always shows the current subject 1ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > the injected fetchActivity service supplies each subject its typed chart rows 1ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > a delayed fetchActivity response is cancelled and rejected after logout (logout=true negative control) 1ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > a delayed fetchActivity response is cancelled and rejected after logout (logout=false negative control) 0ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > a superseded fetchActivity response is rejected after the same subject signs in again 1ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > a failed fetchActivity fails the whole account load without a partial view 0ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > requests activity only after the account resolves, for that account’s subject 0ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > a failed account load cannot obtain activity 1ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > a retired account load cannot obtain activity 1ms
+
+ Test Files  1 passed (1)
+      Tests  23 passed (23)
+   Start at  16:39:23
+   Duration  1.50s (transform 981ms, setup 0ms, collect 1.39s, tests 29ms, environment 0ms, prepare 2ms)
+

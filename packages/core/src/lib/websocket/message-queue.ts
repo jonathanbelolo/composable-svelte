@@ -7,6 +7,7 @@
  */
 
 import type { ConnectionStats, WebSocketClient } from './types.js';
+import { isValidCloseCode } from './types.js';
 
 export interface MessageQueue<T = unknown> {
   /**
@@ -120,7 +121,12 @@ export function createQueuedWebSocket<T = unknown>(
 
   return {
     connect: client.connect.bind(client),
-    async disconnect(code?: number, reason?: string): Promise<void> {
+    async disconnect(code = 1000, reason = ''): Promise<void> {
+      if (!isValidCloseCode(code)) {
+        throw new TypeError(
+          `disconnect(): close code ${code} is not allowed from script — use 1000 or 3000–4999`
+        );
+      }
       // Held for this connection, not for the next URL.
       queue.clear();
       return client.disconnect(code, reason);

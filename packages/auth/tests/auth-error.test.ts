@@ -100,19 +100,25 @@ describe('recognising our own errors', () => {
 		//
 		// One sample per arm, so a new arm carrying a `Date`, a `Map`, a `Set` or
 		// an `undefined`-valued key fails here rather than in someone's browser.
-		const everyArm: AuthError[] = [
-			{ code: 'invalid_credentials', message: 'no' },
-			{ code: 'mfa_required', message: 'no', challengeId: 'c1', methods: ['totp'] },
-			{ code: 'email_unverified', message: 'no', email: 'a@b.c' },
-			{ code: 'account_locked', message: 'no', until: '2026-01-01T00:00:00.000Z' },
-			{ code: 'rate_limited', message: 'no', retryAfterSeconds: 30 },
-			{ code: 'token_expired', message: 'no' },
-			{ code: 'network', message: 'no' },
-			{ code: 'unknown', message: 'no', status: 500 }
-		];
+		const everyArm = {
+			invalid_credentials: { code: 'invalid_credentials', message: 'no' },
+			mfa_required: { code: 'mfa_required', message: 'no', challengeId: 'c1', methods: ['totp'] },
+			email_unverified: { code: 'email_unverified', message: 'no', email: 'a@b.c' },
+			email_taken: { code: 'email_taken', message: 'no', email: 'a@b.c' },
+			account_locked: { code: 'account_locked', message: 'no', until: '2026-01-01T00:00:00.000Z' },
+			rate_limited: { code: 'rate_limited', message: 'no', retryAfterSeconds: 30 },
+			token_expired: { code: 'token_expired', message: 'no' },
+			oauth_denied: { code: 'oauth_denied', message: 'no', provider: 'google' },
+			oauth_state_mismatch: { code: 'oauth_state_mismatch', message: 'no' },
+			reauthentication_required: { code: 'reauthentication_required', message: 'no', methods: ['password', 'totp'] },
+			network: { code: 'network', message: 'no' },
+			unknown: { code: 'unknown', message: 'no', status: 500 }
+		} satisfies { [Code in AuthError['code']]: Extract<AuthError, { code: Code }> };
 
-		for (const arm of everyArm) {
-			expect(JSON.parse(JSON.stringify(arm)), `${arm.code} did not survive JSON`).toEqual(arm);
+		for (const arm of Object.values(everyArm)) {
+			const roundTripped = JSON.parse(JSON.stringify(arm));
+			expect(roundTripped, `${arm.code} did not survive JSON`).toEqual(arm);
+			expect(isAuthError(roundTripped), `${arm.code} was not recognized by isAuthError`).toBe(true);
 		}
 
 		// Non-vacuity: the comparison above must be capable of failing.

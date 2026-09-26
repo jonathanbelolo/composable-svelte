@@ -154,21 +154,32 @@ describe('serializeDestination', () => {
 
 		});
 
-		it('warns only once per unknown type', () => {
-			const consoleSpy = expectConsole('warn');
+		it('warns on each unknown serialization, including repeated types', () => {
+			const consoleSpy = expectConsole('warn', 3);
 
 			const unknownDestination = {
 				type: 'anotherUnknown',
 				state: { foo: 'bar' }
 			} as any;
+			const differentUnknownDestination = {
+				type: 'differentUnknown',
+				state: { foo: 'baz' }
+			} as any;
 
 			serializeDestination(unknownDestination, basicConfig);
+			serializeDestination(unknownDestination, basicConfig);
+			serializeDestination(differentUnknownDestination, basicConfig);
 
-			expect(consoleSpy).toHaveLength(1);
+			expect(consoleSpy).toHaveLength(3);
 			expect(consoleSpy[0]?.[0]).toEqual(
 				'[Composable Svelte] No serializer found for destination type: "anotherUnknown". Falling back to base path.'
 			);
-
+			expect(consoleSpy[1]?.[0]).toEqual(
+				'[Composable Svelte] No serializer found for destination type: "anotherUnknown". Falling back to base path.'
+			);
+			expect(consoleSpy[2]?.[0]).toEqual(
+				'[Composable Svelte] No serializer found for destination type: "differentUnknown". Falling back to base path.'
+			);
 		});
 	});
 

@@ -18,28 +18,9 @@
 	 */
 	import type { Component } from 'svelte';
 	import type { Store } from '@composable-svelte/core';
-	import { FullAudioPlayer, VideoEmbed, extractVideosFromMarkdown } from '../../src/lib/index.js';
+	import { FullAudioPlayer, VoiceInput, VideoEmbed, extractVideosFromMarkdown } from '../../src/lib/index.js';
+	import type { VoiceInputState, VoiceInputAction } from '../../src/lib/voice-input/types.js';
 	import type { AudioPlayerAction, AudioPlayerState } from '../../src/lib/audio-player/types.js';
-
-	/**
-	 * The `VoiceInputState` the skill documents, not the package's.
-	 *
-	 * The real state has `errorMessage`, `permission` and `status`; the skill's
-	 * markup reads `error`, `permissionDenied` and `transcript`, none of which
-	 * exist. Its `mode` is also non-nullable here, where the package's is
-	 * `… | null`. Only the fields the markup reads are declared.
-	 */
-	type SkillVoiceInputState = {
-		mode: 'push-to-talk' | 'conversation';
-		transcript: string | null;
-		error: string | null;
-		permissionDenied: boolean;
-	};
-
-	/** Enough of a store for `$voiceStore` to typecheck against the shape above. */
-	type SkillVoiceStore = {
-		subscribe(listener: (state: SkillVoiceInputState) => void): () => void;
-	};
 
 	/**
 	 * The props the skill's "Complete Example" passes to `<FullAudioPlayer>`.
@@ -56,31 +37,12 @@
 		showPlaylist: boolean;
 	};
 
-	/**
-	 * The props the skill's two `<VoiceInput>` fences pass.
-	 *
-	 * Neither compiles against the real component: `onTranscript` is required and
-	 * neither fence passes it; the Complete Example also passes `voiceStore`,
-	 * `showWaveform` and `showTimer`, none of which exist (the store prop is
-	 * `store`). So `VoiceInput` is a prop of this fixture, not an import.
-	 */
-	type SkillVoiceInputProps =
-		| { store: SkillVoiceStore }
-		| { voiceStore: SkillVoiceStore; showWaveform: boolean; showTimer: boolean };
-
-	let {
-		playerStore,
-		voiceStore,
-		videoUrl,
-		toggleMode,
-		VoiceInput
-	}: {
-		playerStore: Store<AudioPlayerState, AudioPlayerAction>;
-		voiceStore: SkillVoiceStore;
-		videoUrl: string;
-		toggleMode: () => void;
-		VoiceInput: Component<SkillVoiceInputProps>;
-	} = $props();
+	let { playerStore, store, videoUrl }: {
+    playerStore: Store<AudioPlayerState, AudioPlayerAction>;
+    store: Store<VoiceInputState, VoiceInputAction>;
+    videoUrl: string;
+  } = $props();
+  let transcript = $state('');
 
 	const markdown = `
 # My Post
@@ -170,36 +132,6 @@ import { VideoEmbed } from '@composable-svelte/media';
   <VideoEmbed url={video.url} />
 {/each}
 
-<!-- VOICE INPUT / Quick Start -->
-<VoiceInput store={voiceStore} />
-
-<!-- VOICE INPUT / Complete Example -->
-<div class="voice-container">
-  <VoiceInput
-    {voiceStore}
-    showWaveform={true}
-    showTimer={true}
-  />
-
-  <!-- Mode toggle -->
-  <button onclick={toggleMode}>
-    Mode: {$voiceStore.mode}
-  </button>
-
-  <!-- Display transcript -->
-  {#if $voiceStore.transcript}
-    <div class="transcript">
-      <strong>Transcript:</strong>
-      <p>{$voiceStore.transcript}</p>
-    </div>
-  {/if}
-
-  <!-- Error display -->
-  {#if $voiceStore.error}
-    <div class="error">{$voiceStore.error}</div>
-  {/if}
-
-  {#if $voiceStore.permissionDenied}
-    <div class="warning">Microphone access denied</div>
-  {/if}
-</div>
+<!-- Voice markup now uses the actual library component and public store types. -->
+<VoiceInput {store} defaultMode="push-to-talk" onTranscript={(text) => transcript = text} />
+<p>{transcript}</p>

@@ -148,8 +148,7 @@ describe('disabled and loading', () => {
 	});
 
 	it('does not dispatch its action while loading', async () => {
-		// Separate from `disabled`: a loading button is not `disabled` in the DOM,
-		// so the guard is the component's own and could regress independently.
+		// Loading disables the native button and prevents dispatch.
 		const dispatched: unknown[] = [];
 		const button = await renderButton({
 			loading: true,
@@ -157,6 +156,7 @@ describe('disabled and loading', () => {
 			dispatch: (a: unknown) => dispatched.push(a)
 		});
 
+		expect(button.disabled).toBe(true);
 		button.click();
 		expect(dispatched).toEqual([]);
 	});

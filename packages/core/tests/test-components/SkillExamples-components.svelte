@@ -18,13 +18,10 @@
 	 * Three things the skill uses do not exist in this package and are declared as
 	 * props instead: `ProductDetail` (an app component), `lucide-svelte`'s icons,
 	 * and a `Toaster` taking `toasts` / `position` — the real one takes `store`.
-	 * Two more are declared as props because the skill's markup does not compile
-	 * against the real component: `Modal`, whose `children` snippet receives
-	 * `store: … | null`, so `scoped.dismiss()` is a null-safety error; and
-	 * `Checkbox`, whose restProps are `[key: string]: any`, so the `e` in
+	 * One more is declared as a prop: `Checkbox`, whose restProps are `[key: string]: any`, so the `e` in
 	 * `onchange={(e) => …}` is an implicit `any`.
 	 */
-	import type { Component, Snippet } from 'svelte';
+	import type { Component } from 'svelte';
 	import {
 		Accordion,
 		AccordionContent,
@@ -54,8 +51,8 @@
 	} from '../../src/lib/components/data-table/index.js';
 	import type { TableAction, TableState } from '../../src/lib/components/data-table/index.js';
 	import type { Toast, ToastState } from '../../src/lib/components/toast/toast.types.js';
-	import { Tabs } from '../../src/lib/navigation-components/index.js';
-	import type { ScopedDestinationStore } from '../../src/lib/navigation/scope-to-destination.js';
+	import { Modal, Tabs } from '../../src/lib/navigation-components/index.js';
+	import type { ChildView, PresentationView } from '../../src/lib/application/index.js';
 	import type { PresentationEvent, PresentationState } from '../../src/lib/navigation/types.js';
 	import type { Store } from '../../src/lib/types.js';
 
@@ -66,7 +63,7 @@
 	type ProductDetailState = { productId: string };
 	type ProductDetailAction = { type: 'backTapped' };
 	type Destination = { type: 'detail'; state: ProductDetailState };
-	type DetailStore = ScopedDestinationStore<ProductDetailState, ProductDetailAction>;
+	type DetailStore = PresentationView<ProductDetailState, ProductDetailAction>;
 
 	type State = {
 		name: string;
@@ -108,7 +105,6 @@
 		tableStore,
 		detailStore,
 		scopedStore,
-		Modal,
 		Checkbox,
 		ProductDetail,
 		Toaster,
@@ -120,14 +116,8 @@
 	}: {
 		store: Store<State, Action>;
 		tableStore: Store<TableState<User>, TableAction<User>>;
-		detailStore: DetailStore | null;
-		scopedStore: DetailStore;
-		Modal: Component<{
-			store: DetailStore | null;
-			presentation?: PresentationState<Destination>;
-			onDismissalComplete?: () => void;
-			children?: Snippet<[{ visible: boolean; store: DetailStore }]>;
-		}>;
+		detailStore: DetailStore | undefined;
+		scopedStore: ChildView<ProductDetailState, ProductDetailAction>;
 		Checkbox: Component<{
 			checked?: boolean;
 			onchange?: (event: Event & { currentTarget: EventTarget & HTMLInputElement }) => void;
@@ -157,19 +147,12 @@ import { ChevronDown, Plus, Search } from 'lucide-svelte';
 <!-- Navigation components: shared props -->
 import { Modal } from '@composable-svelte/core';
 
-{#if detailStore}
-  <Modal
-    store={detailStore}
-    presentation={store.state.presentation}
-    onDismissalComplete={() => store.dispatch({
-      type: 'presentation', event: { type: 'dismissalCompleted' }
-    })}
-  >
-    {#snippet children({ store: scoped })}
-      <ProductDetail store={scoped} onBack={() => scoped.dismiss()} />
-    {/snippet}
-  </Modal>
-{/if}
+<Modal store={detailStore} ariaLabel="Product details">
+  {#if detailStore && detailStore.state !== undefined}
+    {@const detail = detailStore}
+    <ProductDetail store={detail} onBack={() => detail.dismiss()} />
+  {/if}
+</Modal>
 
 <!-- Tabs -->
 <Tabs

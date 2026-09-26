@@ -3,7 +3,7 @@
 	import { tooltipReducer } from './tooltip.reducer.js';
 	import { initialTooltipState } from './tooltip.types.js';
 	import TooltipPrimitive from './TooltipPrimitive.svelte';
-	import type { Snippet } from 'svelte';
+	import { onDestroy, type Snippet } from 'svelte';
 
 	/**
 	 * Tooltip component - Hover-triggered tooltip with state-based animations.
@@ -76,6 +76,8 @@
 		}
 	});
 
+	onDestroy(() => store.destroy());
+
 	// Subscribe to store for reactivity
 	const tooltipState = $derived($store);
 
@@ -100,19 +102,15 @@
 		store.dispatch({ type: 'hoverEnded' });
 	}
 
-	function handlePresentationComplete() {
-		store.dispatch({
-			type: 'presentation',
-			event: { type: 'presentationCompleted' }
-		});
-	}
-
-	function handleDismissalComplete() {
-		store.dispatch({
-			type: 'presentation',
-			event: { type: 'dismissalCompleted' }
-		});
-	}
+	// Bind each renderer callback to the phase that created it, never to the current phase.
+	const handlePresentationComplete = $derived.by(() => {
+		const presentationVersion = tooltipState.presentationVersion;
+		return () => store.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' }, presentationVersion });
+	});
+	const handleDismissalComplete = $derived.by(() => {
+		const presentationVersion = tooltipState.presentationVersion;
+		return () => store.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' }, presentationVersion });
+	});
 </script>
 
 <!-- This wrapper only positions the tooltip; the real trigger is the caller's

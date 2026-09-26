@@ -1,0 +1,465 @@
+{
+  "schema": "composable-final-checker/author-app-compatibility-exercise/v2",
+  "manifest": "/private/tmp/companion-runtime-release/archives-r6/MANIFEST.json",
+  "startedAt": "2026-09-26T14:58:34.411Z",
+  "finishedAt": "2026-09-26T14:58:45.174Z",
+  "label": "COMPATIBILITY EXERCISE ONLY - not app acceptance and not app architecture qualification; read-only copies; local candidate tarball transport, no registry provenance claimed",
+  "verdict": "ALL_EXPECTATIONS_MET",
+  "failures": 0,
+  "checker": {
+    "sha256": "b62cf88f15d8dd42ed7202c482c27d34e73b0194cf47f4ee16226c3da579529b",
+    "install": [
+      {
+        "name": "@composable-svelte/architecture",
+        "version": "0.13.1",
+        "archiveSha256": "b62cf88f15d8dd42ed7202c482c27d34e73b0194cf47f4ee16226c3da579529b",
+        "files": 40,
+        "mismatched": 0
+      }
+    ]
+  },
+  "policies": {
+    "chatCodeMedia": {
+      "path": "/private/tmp/composable-final-checker/packages/architecture/policies/chat-code-media.json",
+      "sha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327"
+    },
+    "appB": {
+      "path": "P1-policies/external-appb/app-b-auth-charts.json",
+      "sha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de"
+    }
+  },
+  "apps": {
+    "app-a": {
+      "source": "/private/tmp/composable-final-authoring/app-a",
+      "copiedTo": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-author-compat-TPGPyh/app-a",
+      "srcFiles": [
+        {
+          "path": "src/App.svelte",
+          "sha256": "05e0eda5f5952463b137020efe0bc4519ab85cb196ce6117fa9e6b5875dc79a1"
+        },
+        {
+          "path": "src/ChatView.svelte",
+          "sha256": "aad711cde89f5b6df1ffb26f753643873ab302798203559deeee6e6ec2b99aa9"
+        },
+        {
+          "path": "src/EditorView.svelte",
+          "sha256": "f5d08c69b5c62f3dcf600c3c62a9d7d9ae44030c591dce4d89182085a04d214a"
+        },
+        {
+          "path": "src/VoiceView.svelte",
+          "sha256": "e6f5c706ef7172e3bfcbbdf343214780a1f7160fa3e313d129bf503eabf57425"
+        },
+        {
+          "path": "src/Workspace.svelte",
+          "sha256": "46fca585acc9574857b5b810c510da35eeb890d39787433a50ab2454ebd81c1d"
+        },
+        {
+          "path": "src/dependencies.ts",
+          "sha256": "47e19d9ac202037e307ffc9dd2b8393580ac91b6de2ad9d7d17511d419fe2b34"
+        },
+        {
+          "path": "src/main.ts",
+          "sha256": "b302b5df854e4feac0b9dc7963c1b9d39fa444bc940608df2512ac5cb691d38e"
+        },
+        {
+          "path": "src/model.ts",
+          "sha256": "1d8487ee14f5b67f45f88bed1e899378097899540186c720d39b6678feffd567"
+        },
+        {
+          "path": "src/views.ts",
+          "sha256": "2ea04331e2987911fba11eebf791e7a78ac3f5394cec1cb05687996eebaca4ce"
+        }
+      ],
+      "installed": [
+        {
+          "name": "@composable-svelte/core",
+          "version": "0.13.1",
+          "archiveSha256": "729ca89f1850e56bde5db23c9f8560090eed07a0dc4126374dd5e33fd11a8e0d",
+          "files": 1258,
+          "mismatched": 0
+        },
+        {
+          "name": "@composable-svelte/chat",
+          "version": "0.5.0",
+          "archiveSha256": "fe21f00f75385205073744bc45cba715e441914d38119d46fb7cf0bfdfe76aeb",
+          "files": 157,
+          "mismatched": 0
+        },
+        {
+          "name": "@composable-svelte/code",
+          "version": "0.5.0",
+          "archiveSha256": "f85b945232c460edc45c0051dc69c4580f4a502b39a2988af38c62a2e3a37026",
+          "files": 69,
+          "mismatched": 0
+        },
+        {
+          "name": "@composable-svelte/media",
+          "version": "0.5.0",
+          "archiveSha256": "c0bfa6528fb6cd3dc68f2769237d3053514f76f79bc5197316b230eb07b78298",
+          "files": 101,
+          "mismatched": 0
+        }
+      ],
+      "svelte": "5.55.3"
+    },
+    "app-b": {
+      "source": "/private/tmp/composable-final-authoring/app-b",
+      "copiedTo": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-author-compat-TPGPyh/app-b",
+      "srcFiles": [
+        {
+          "path": "src/App.svelte",
+          "sha256": "c72bc8d9d98bdd272d9c7172b074482d6955bde30694f2af64941599b2a57be2"
+        },
+        {
+          "path": "src/lib/components/AuthFeatureView.svelte",
+          "sha256": "e8586ea280fe0fbc30a320dc2ed7abadb218a844d8e0747c15a36b793ab28884"
+        },
+        {
+          "path": "src/lib/components/ChangePasswordView.svelte",
+          "sha256": "4640cd9ee5f631d96335769f22fc6009f03f8101b3f5616be0c3fabb52504700"
+        },
+        {
+          "path": "src/lib/components/ChartView.svelte",
+          "sha256": "35401230dd378f367f19cd4b55a1ff2ba94c2f69800241a7a993a11707b075d4"
+        },
+        {
+          "path": "src/lib/components/LoginView.svelte",
+          "sha256": "25fc468e4da0adf232d6f866572f18bfa6af6ce6b872c9168a6e68ed37722881"
+        },
+        {
+          "path": "src/lib/components/MfaView.svelte",
+          "sha256": "8f84d2cfc23ea49ec94d86c464612ef29d85322eeb746bb9647b5ed56b9e9714"
+        },
+        {
+          "path": "src/lib/controlled-backend.ts",
+          "sha256": "74eb38c676d5d83d20b2e80919faf9ab1d6f85de724a0e9cd1743e3cdbd5d3d0"
+        },
+        {
+          "path": "src/lib/model.ts",
+          "sha256": "99eecdf8dba65166271dcd1c8784e8bfb2586a00c5d43a1fc196bc11b645c754"
+        },
+        {
+          "path": "src/lib/views.ts",
+          "sha256": "183a07560aad7b9d52fc5e323b8ca65bef5721c39ecd7ef54dd16643600919c1"
+        },
+        {
+          "path": "src/main.ts",
+          "sha256": "b302b5df854e4feac0b9dc7963c1b9d39fa444bc940608df2512ac5cb691d38e"
+        }
+      ],
+      "installed": [
+        {
+          "name": "@composable-svelte/core",
+          "version": "0.13.1",
+          "archiveSha256": "729ca89f1850e56bde5db23c9f8560090eed07a0dc4126374dd5e33fd11a8e0d",
+          "files": 1258,
+          "mismatched": 0
+        },
+        {
+          "name": "@composable-svelte/auth",
+          "version": "0.3.0",
+          "archiveSha256": "dbb2611bb01616e4e9ef86a54016724cf6271e0ec337b759b5cbcb21dae27112",
+          "files": 404,
+          "mismatched": 0
+        },
+        {
+          "name": "@composable-svelte/charts",
+          "version": "0.3.0",
+          "archiveSha256": "c36b7a06e5a293259cdbebd599a1698cd448c000eac343c66411c1282a73c21d",
+          "files": 53,
+          "mismatched": 0
+        }
+      ],
+      "svelte": "5.55.3"
+    }
+  },
+  "results": [
+    {
+      "app": "app-a",
+      "label": "exact proposed bundled chat-code-media bytes, supplied externally",
+      "ok": true,
+      "expected": {
+        "exit": 0,
+        "pass": true
+      },
+      "exit": 0,
+      "isQualificationPass": true,
+      "policy": {
+        "id": "bundled-chat-code-media",
+        "sha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327"
+      },
+      "enforced": 5,
+      "violations": 0,
+      "moduleCount": 9,
+      "packageSpecifiers": [
+        "@composable-svelte/chat",
+        "@composable-svelte/code",
+        "@composable-svelte/core",
+        "@composable-svelte/core/application",
+        "@composable-svelte/media",
+        "svelte"
+      ],
+      "errors": []
+    },
+    {
+      "app": "app-a",
+      "label": "NEG wrong --policy-sha256",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "policy": {
+        "id": null,
+        "sha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327"
+      },
+      "enforced": 0,
+      "violations": 0,
+      "errors": [
+        {
+          "code": "policy-pin-mismatch",
+          "path": null,
+          "line": null,
+          "message": "policy bytes do not match the supplied sha256 pin"
+        }
+      ]
+    },
+    {
+      "app": "app-a",
+      "label": "NEG chat-only approvals (code/media unapproved)",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "policy": {
+        "id": "neg-chat-only",
+        "sha256": "07aeb3c9b1536d730f3d410d55d1fc6ddd522579b23d07c53d39c70b981e892a"
+      },
+      "enforced": 0,
+      "violations": 0,
+      "moduleCount": 9,
+      "packageSpecifiers": [
+        "@composable-svelte/chat",
+        "@composable-svelte/code",
+        "@composable-svelte/core",
+        "@composable-svelte/core/application",
+        "@composable-svelte/media",
+        "svelte"
+      ],
+      "errors": [
+        {
+          "code": "unresolved-package-import",
+          "path": "src/EditorView.svelte",
+          "line": 3,
+          "message": "package lacks external opaque-package approval: @composable-svelte/code"
+        },
+        {
+          "code": "unresolved-package-import",
+          "path": "src/VoiceView.svelte",
+          "line": 3,
+          "message": "package lacks external opaque-package approval: @composable-svelte/media"
+        },
+        {
+          "code": "unresolved-package-import",
+          "path": "src/Workspace.svelte",
+          "line": 3,
+          "message": "package lacks external opaque-package approval: @composable-svelte/media"
+        },
+        {
+          "code": "unresolved-package-import",
+          "path": "src/model.ts",
+          "line": 18,
+          "message": "package lacks external opaque-package approval: @composable-svelte/code"
+        },
+        {
+          "code": "unresolved-package-import",
+          "path": "src/model.ts",
+          "line": 24,
+          "message": "package lacks external opaque-package approval: @composable-svelte/media"
+        }
+      ]
+    },
+    {
+      "app": "app-b",
+      "label": "external appB auth+charts policy",
+      "ok": true,
+      "expected": {
+        "exit": 0,
+        "pass": true
+      },
+      "exit": 0,
+      "isQualificationPass": true,
+      "policy": {
+        "id": "external-app-b-auth-charts",
+        "sha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de"
+      },
+      "enforced": 5,
+      "violations": 0,
+      "moduleCount": 10,
+      "packageSpecifiers": [
+        "@composable-svelte/auth",
+        "@composable-svelte/auth/application",
+        "@composable-svelte/auth/components",
+        "@composable-svelte/auth/flows",
+        "@composable-svelte/auth/testing",
+        "@composable-svelte/charts",
+        "@composable-svelte/core",
+        "@composable-svelte/core/application",
+        "svelte"
+      ],
+      "errors": []
+    },
+    {
+      "app": "app-b",
+      "label": "NEG wrong --policy-sha256",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "policy": {
+        "id": null,
+        "sha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de"
+      },
+      "enforced": 0,
+      "violations": 0,
+      "errors": [
+        {
+          "code": "policy-pin-mismatch",
+          "path": null,
+          "line": null,
+          "message": "policy bytes do not match the supplied sha256 pin"
+        }
+      ]
+    },
+    {
+      "app": "app-b",
+      "label": "NEG wrong expected core 0.13.0",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "policy": {
+        "id": "external-app-b-auth-charts",
+        "sha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de"
+      },
+      "enforced": 0,
+      "violations": 0,
+      "moduleCount": 10,
+      "packageSpecifiers": [
+        "@composable-svelte/auth",
+        "@composable-svelte/auth/application",
+        "@composable-svelte/auth/components",
+        "@composable-svelte/auth/flows",
+        "@composable-svelte/auth/testing",
+        "@composable-svelte/charts",
+        "@composable-svelte/core",
+        "@composable-svelte/core/application",
+        "svelte"
+      ],
+      "errors": [
+        {
+          "code": "core-version-mismatch",
+          "path": null,
+          "line": null,
+          "message": "installed core 0.13.1 is not the expected 0.13.0"
+        }
+      ]
+    },
+    {
+      "app": "app-b",
+      "label": "NEG auth-only approvals (charts unapproved)",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "policy": {
+        "id": "neg-auth-only",
+        "sha256": "9f0fe74d6a3a4ab918bc596e52ea7e30220a29d6e0c1ebfa226ad8dfb94b3051"
+      },
+      "enforced": 0,
+      "violations": 0,
+      "moduleCount": 10,
+      "packageSpecifiers": [
+        "@composable-svelte/auth",
+        "@composable-svelte/auth/application",
+        "@composable-svelte/auth/components",
+        "@composable-svelte/auth/flows",
+        "@composable-svelte/auth/testing",
+        "@composable-svelte/core",
+        "@composable-svelte/core/application",
+        "svelte"
+      ],
+      "errors": [
+        {
+          "code": "unresolved-package-import",
+          "path": "src/lib/components/ChartView.svelte",
+          "line": 2,
+          "message": "package lacks external opaque-package approval: @composable-svelte/charts"
+        },
+        {
+          "code": "unresolved-package-import",
+          "path": "src/lib/model.ts",
+          "line": 21,
+          "message": "package lacks external opaque-package approval: @composable-svelte/charts"
+        }
+      ]
+    },
+    {
+      "app": "app-b",
+      "label": "NEG wrong charts pin 0.3.1",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "policy": {
+        "id": "neg-charts-pin",
+        "sha256": "3987e4b33d55e7ebdf6298ddae7817d5d9a38932cc32f6b61c420889beafa838"
+      },
+      "enforced": 0,
+      "violations": 0,
+      "moduleCount": 10,
+      "packageSpecifiers": [
+        "@composable-svelte/auth",
+        "@composable-svelte/auth/application",
+        "@composable-svelte/auth/components",
+        "@composable-svelte/auth/flows",
+        "@composable-svelte/auth/testing",
+        "@composable-svelte/core",
+        "@composable-svelte/core/application",
+        "svelte"
+      ],
+      "errors": [
+        {
+          "code": "unresolved-package-import",
+          "path": "src/lib/components/ChartView.svelte",
+          "line": 2,
+          "message": "installed package name or version does not match external approval: @composable-svelte/charts (@composable-svelte/charts@0.3.0 !== @composable-svelte/charts@0.3.1)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "path": "src/lib/model.ts",
+          "line": 21,
+          "message": "installed package name or version does not match external approval: @composable-svelte/charts (@composable-svelte/charts@0.3.0 !== @composable-svelte/charts@0.3.1)"
+        }
+      ]
+    }
+  ],
+  "scratch": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-author-compat-TPGPyh"
+}

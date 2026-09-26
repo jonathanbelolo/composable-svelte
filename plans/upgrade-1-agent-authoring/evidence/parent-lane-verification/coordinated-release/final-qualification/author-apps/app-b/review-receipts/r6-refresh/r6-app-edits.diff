@@ -1,0 +1,334 @@
+--- a/src/lib/model.ts
++++ b/src/lib/model.ts
+@@ -38,18 +38,6 @@
+   metrics: AccountActivityRow[];
+ }
+ 
+-export function buildActivityMetrics(subjectId: string): AccountActivityRow[] {
+-  return [
+-    { date: '2026-09-20', logins: 4, service: 'Web Dashboard' },
+-    { date: '2026-09-21', logins: 7, service: 'Web Dashboard' },
+-    { date: '2026-09-22', logins: 3, service: 'Mobile App' },
+-    { date: '2026-09-23', logins: 9, service: 'Web Dashboard' },
+-    { date: '2026-09-24', logins: 12, service: 'API Client' },
+-    { date: '2026-09-25', logins: 6, service: 'Web Dashboard' },
+-    { date: '2026-09-26', logins: 8, service: 'Web Dashboard' }
+-  ];
+-}
+-
+ /** Root application state */
+ export interface AppState {
+   route: AppRoute;
+@@ -78,8 +66,13 @@
+   | { type: 'closeChangePassword' }
+   | { type: 'logout' };
+ 
+-/** Dependencies required by the application */
+-export type AppDependencies = AuthFeatureDependencies;
++/**
++ * Dependencies injected into the application: Auth's services plus the app's own
++ * account-activity service. The auth composition reads only what it declares.
++ */
++export interface AppDependencies extends AuthFeatureDependencies {
++  fetchActivity(subjectId: string, signal?: AbortSignal): Promise<readonly AccountActivityRow[]>;
++}
+ 
+ export const auth: AuthFeature = createAuthFeature();
+ export const authSlot = optionalSlot<AppState, AppAction>()('auth');
+@@ -122,13 +115,16 @@
+     },
+     Effect.cancellable<AppAction>(ACCOUNT_LOAD, async (dispatch, signal) => {
+       try {
+-        const snapshot = await deps.fetchAccount(signal);
++        const [snapshot, activity] = await Promise.all([
++          deps.fetchAccount(signal),
++          deps.fetchActivity(subjectId, signal)
++        ]);
+         const data: AccountData = {
+           subjectId,
+           email: snapshot.email,
+           displayName: String(subject.attributes['display_name'] ?? subjectId),
+           role: Array.isArray(roles) && roles.includes('admin') ? 'Administrator' : 'Member',
+-          metrics: buildActivityMetrics(subjectId)
++          metrics: [...activity]
+         };
+         dispatch({ type: 'accountLoaded', request, data });
+       } catch (err: unknown) {
+--- a/src/lib/controlled-backend.ts
++++ b/src/lib/controlled-backend.ts
+@@ -1,6 +1,6 @@
+ import { createMockAuthDeps } from '@composable-svelte/auth/testing';
+ import type { SessionSnapshot, AccountSnapshot, AuthError } from '@composable-svelte/auth';
+-import type { AppDependencies } from './model.js';
++import type { AccountActivityRow, AppDependencies } from './model.js';
+ 
+ export interface ControlledBackendOptions {
+   initialSession?: SessionSnapshot | null;
+@@ -9,6 +9,7 @@
+   delayChangePassword?: boolean;
+   delayAccountLoad?: boolean;
+   delayLogout?: boolean;
++  delayActivity?: boolean;
+ }
+ 
+ export interface ControlledBackend extends AppDependencies {
+@@ -16,17 +17,23 @@
+     loginCalls: number;
+     verifyMfaCalls: number;
+     fetchAccountCalls: number;
++    fetchActivityCalls: number;
+     changePasswordCalls: number;
+     logoutCalls: number;
+   };
++  /** Signals handed to fetchActivity, in call order, so tests can observe cancellation. */
++  readonly activitySignals: readonly (AbortSignal | undefined)[];
+   setReauthenticateForChangePassword(value: boolean): void;
+   setDelayChangePassword(value: boolean): void;
+   setDelayAccountLoad(value: boolean): void;
+   setDelayLogout(value: boolean): void;
++  setDelayActivity(value: boolean): void;
+   resolveDelayedChangePassword(result?: SessionSnapshot | null): void;
+   rejectDelayedChangePassword(error: AuthError): void;
+   resolveDelayedAccountLoad(snapshot?: AccountSnapshot): void;
+   resolveDelayedLogout(): void;
++  /** Resolve the oldest held activity request; it ignores abort, so only the app can drop its result. */
++  resolveDelayedActivity(): void;
+ }
+ 
+ const defaultAdaSession: SessionSnapshot = {
+@@ -41,6 +48,24 @@
+   roles: ['member']
+ };
+ 
++/** Per-subject activity rows served by the controlled backend. */
++const activityBySubject: Readonly<Record<string, readonly AccountActivityRow[]>> = {
++  'sub-ada-1': [
++    { date: '2026-09-20', logins: 4, service: 'Web Dashboard' },
++    { date: '2026-09-21', logins: 7, service: 'Web Dashboard' },
++    { date: '2026-09-22', logins: 3, service: 'Mobile App' },
++    { date: '2026-09-23', logins: 9, service: 'Web Dashboard' },
++    { date: '2026-09-24', logins: 12, service: 'API Client' },
++    { date: '2026-09-25', logins: 6, service: 'Web Dashboard' },
++    { date: '2026-09-26', logins: 8, service: 'Web Dashboard' }
++  ],
++  'sub-mfa-1': [
++    { date: '2026-09-24', logins: 2, service: 'Mobile App' },
++    { date: '2026-09-25', logins: 5, service: 'Web Dashboard' },
++    { date: '2026-09-26', logins: 1, service: 'Mobile App' }
++  ]
++};
++
+ const defaultAccountSnapshot: AccountSnapshot = {
+   email: 'ada@example.com',
+   emailVerified: true,
+@@ -55,16 +80,20 @@
+   let delayChangePass = options.delayChangePassword ?? false;
+   let delayAccount = options.delayAccountLoad ?? false;
+   let delayLogOut = options.delayLogout ?? false;
++  let delayActivity = options.delayActivity ?? false;
+ 
+   let pendingChangePasswordResolve: ((val: SessionSnapshot | null) => void) | null = null;
+   let pendingChangePasswordReject: ((err: AuthError) => void) | null = null;
+   let pendingAccountLoadResolve: ((val: AccountSnapshot) => void) | null = null;
+   let pendingLogoutResolve: (() => void) | null = null;
++  const pendingActivity: (() => void)[] = [];
++  const activitySignals: (AbortSignal | undefined)[] = [];
+ 
+   const counters = {
+     loginCalls: 0,
+     verifyMfaCalls: 0,
+     fetchAccountCalls: 0,
++    fetchActivityCalls: 0,
+     changePasswordCalls: 0,
+     logoutCalls: 0
+   };
+@@ -80,6 +109,7 @@
+   const backend: ControlledBackend = {
+     ...mock,
+     counters,
++    activitySignals,
+ 
+     setReauthenticateForChangePassword(val: boolean) {
+       reauthChangePassword = val;
+@@ -93,6 +123,9 @@
+     setDelayLogout(val: boolean) {
+       delayLogOut = val;
+     },
++    setDelayActivity(val: boolean) {
++      delayActivity = val;
++    },
+ 
+     resolveDelayedChangePassword(result: SessionSnapshot | null = null) {
+       if (pendingChangePasswordResolve) {
+@@ -117,6 +150,9 @@
+         resolve(snapshot);
+       }
+     },
++    resolveDelayedActivity() {
++      pendingActivity.shift()?.();
++    },
+     resolveDelayedLogout() {
+       if (pendingLogoutResolve) {
+         const resolve = pendingLogoutResolve;
+@@ -176,6 +212,20 @@
+       return mock.fetchAccount(signal);
+     },
+ 
++    fetchActivity: async (subjectId, signal) => {
++      counters.fetchActivityCalls++;
++      activitySignals.push(signal);
++      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
++      const rows = activityBySubject[subjectId] ?? [];
++      if (delayActivity) {
++        // Deliberately ignores abort: a late response is still delivered to the caller.
++        return new Promise<readonly AccountActivityRow[]>((resolve) => {
++          pendingActivity.push(() => resolve(rows));
++        });
++      }
++      return rows;
++    },
++
+     changePassword: async (newPassword, signal) => {
+       counters.changePasswordCalls++;
+       if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+--- a/scripts/ssr.mjs
++++ b/scripts/ssr.mjs
+@@ -126,8 +126,8 @@
+   const allBackends = [backend1, backend2, backend3];
+   for (let i = 0; i < allBackends.length; i++) {
+     const b = allBackends[i];
+-    const { loginCalls, fetchAccountCalls, verifyMfaCalls, changePasswordCalls, logoutCalls } = b.counters;
+-    if (loginCalls !== 0 || fetchAccountCalls !== 0 || verifyMfaCalls !== 0 || changePasswordCalls !== 0 || logoutCalls !== 0) {
++    const { loginCalls, fetchAccountCalls, fetchActivityCalls, verifyMfaCalls, changePasswordCalls, logoutCalls } = b.counters;
++    if (loginCalls !== 0 || fetchAccountCalls !== 0 || fetchActivityCalls !== 0 || verifyMfaCalls !== 0 || changePasswordCalls !== 0 || logoutCalls !== 0) {
+       throw new Error(`Request ${i + 1} triggered client-only calls during SSR: ${JSON.stringify(b.counters)}`);
+     }
+   }
+@@ -137,8 +137,8 @@
+ 
+   for (let i = 0; i < allBackends.length; i++) {
+     const b = allBackends[i];
+-    const { loginCalls, fetchAccountCalls, verifyMfaCalls, changePasswordCalls, logoutCalls } = b.counters;
+-    if (loginCalls !== 0 || fetchAccountCalls !== 0 || verifyMfaCalls !== 0 || changePasswordCalls !== 0 || logoutCalls !== 0) {
++    const { loginCalls, fetchAccountCalls, fetchActivityCalls, verifyMfaCalls, changePasswordCalls, logoutCalls } = b.counters;
++    if (loginCalls !== 0 || fetchAccountCalls !== 0 || fetchActivityCalls !== 0 || verifyMfaCalls !== 0 || changePasswordCalls !== 0 || logoutCalls !== 0) {
+       throw new Error(`Request ${i + 1} triggered deferred client calls: ${JSON.stringify(b.counters)}`);
+     }
+   }
+--- a/tests/dashboard.test.ts
++++ b/tests/dashboard.test.ts
+@@ -1017,5 +1017,85 @@
+     });
+     await until(() => seeded.state.accountData !== null, 'current subject account');
+     expect(seeded.state.accountData?.subjectId).toBe('sub-ada-1');
++  });
++
++  // ---- r6: injected fetchActivity service (dependency superset composition) ----
++
++  it('the injected fetchActivity service supplies each subject its typed chart rows', async () => {
++    const backend = createControlledBackend();
++    const store = makeStore(backend);
++    await signInThroughForm(store, 'ada@example.com');
++    await until(() => store.state.chart !== null, 'ada chart');
++    expect(backend.counters.fetchActivityCalls).toBe(1);
++    expect(store.state.chart?.data.map((row) => row.date)).toEqual([
++      '2026-09-20', '2026-09-21', '2026-09-22', '2026-09-23', '2026-09-24', '2026-09-25', '2026-09-26'
++    ]);
++    await store.send({ type: 'logout' });
++    await until(() => store.state.auth?.login != null && store.state.auth.session.status === 'anonymous', 'signed out');
++    await store.send(loginAction({ type: 'form', action: { type: 'fieldChanged', field: 'email', value: 'mfa@example.com' } }));
++    await store.send(loginAction({ type: 'form', action: { type: 'fieldChanged', field: 'password', value: 'ValidPassword123!' } }));
++    await store.send(loginAction({ type: 'form', action: { type: 'submitTriggered' } }));
++    await until(() => store.state.auth?.mfa != null, 'mfa challenge');
++    await store.send({ type: 'auth', action: { type: 'presented', action: { type: 'mfa', action: { type: 'presented', action: { type: 'form', action: { type: 'fieldChanged', field: 'code', value: '123456' } } } } } });
++    await store.send({ type: 'auth', action: { type: 'presented', action: { type: 'mfa', action: { type: 'presented', action: { type: 'form', action: { type: 'submitTriggered' } } } } } });
++    await until(() => store.state.accountData?.subjectId === 'sub-mfa-1', 'mfa account');
++    expect(backend.counters.fetchActivityCalls).toBe(2);
++    expect(store.state.chart?.data).toEqual([
++      { date: '2026-09-24', logins: 2, service: 'Mobile App' },
++      { date: '2026-09-25', logins: 5, service: 'Web Dashboard' },
++      { date: '2026-09-26', logins: 1, service: 'Mobile App' }
++    ]);
++  });
++
++  it.each([true, false])('a delayed fetchActivity response is cancelled and rejected after logout (logout=%s negative control)', async (logout) => {
++    const backend = createControlledBackend({ delayActivity: true });
++    const store = makeStore(backend);
++    await signInThroughForm(store, 'ada@example.com');
++    expect(backend.counters.fetchActivityCalls).toBe(1);
++    expect(store.state.accountLoading).toBe(true);
++    const signal = backend.activitySignals[0];
++    expect(signal?.aborted).toBe(false);
++    if (logout) {
++      await store.send({ type: 'logout' });
++      // Owner-local cancellation reached the injected service's signal.
++      expect(signal?.aborted).toBe(true);
++    }
++    // The controlled service ignores abort and delivers its late result anyway.
++    backend.resolveDelayedActivity();
++    await flush();
++    await flush();
++    if (logout) {
++      expect(store.state.route).toBe('login');
++      expect(store.state.accountData).toBeNull();
++      expect(store.state.chart).toBeNull();
++    } else {
++      expect(store.state.route).toBe('dashboard');
++      expect(store.state.chart?.data).toHaveLength(7);
++    }
+   });
++
++  it('a superseded fetchActivity response cannot fill the next subject’s dashboard', async () => {
++    const backend = createControlledBackend({ delayActivity: true });
++    const store = makeStore(backend);
++    await signInThroughForm(store, 'ada@example.com');
++    await store.send({ type: 'logout' });
++    await until(() => store.state.auth?.session.status === 'anonymous', 'signed out');
++    // Sign in as the same subject again: a new request with a new epoch.
++    await signInThroughForm(store, 'ada@example.com');
++    expect(backend.counters.fetchActivityCalls).toBe(2);
++    expect(backend.activitySignals[0]?.aborted).toBe(true);
++    expect(backend.activitySignals[1]?.aborted).toBe(false);
++    const current = store.state.accountRequest;
++    // The first (retired) response arrives first: dropped.
++    backend.resolveDelayedActivity();
++    await flush();
++    await flush();
++    expect(store.state.accountData).toBeNull();
++    expect(store.state.accountLoading).toBe(true);
++    expect(store.state.accountRequest).toBe(current);
++    // The current response is accepted.
++    backend.resolveDelayedActivity();
++    await until(() => store.state.accountData !== null, 'current account');
++    expect(store.state.chart?.data).toHaveLength(7);
++  });
+ });
+--- a/tests/browser/dashboard.pw.ts
++++ b/tests/browser/dashboard.pw.ts
+@@ -40,6 +40,13 @@
+   await page.getByRole('button', { name: 'Verify' }).click();
+   await expect(page).toHaveURL(/\/dashboard$/);
+   await expect(page.getByTestId('account-subject-id')).toHaveText('sub-mfa-1');
++  // Rows come from the injected fetchActivity service for this subject.
++  const chart = page.getByTestId('chart-feature-view').locator('[role="application"]');
++  await chart.focus();
++  await page.keyboard.press('Home');
++  await page.keyboard.press('Enter');
++  await expect(page.getByTestId('selected-metric')).toContainText('2026-09-24');
++  await expect(page.getByTestId('selected-metric')).toContainText('2 logins');
+ });
+ 
+ test('keyboard chart selection reaches the owning feature as a typed row', async ({ page }) => {
+--- a/package.json
++++ b/package.json
+@@ -10,8 +10,8 @@
+     "test:browser": "playwright test"
+   },
+   "dependencies": {
+-    "@composable-svelte/core": "file:/private/tmp/composable-final-authoring/artifacts-b/composable-svelte-core-0.13.1.tgz",
+-    "@composable-svelte/auth": "file:/private/tmp/composable-final-authoring/artifacts-b/composable-svelte-auth-0.3.0.tgz",
++    "@composable-svelte/core": "file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz",
++    "@composable-svelte/auth": "file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-auth-0.3.0.tgz",
+     "@composable-svelte/charts": "file:/private/tmp/composable-final-authoring/artifacts-b/composable-svelte-charts-0.3.0.tgz",
+     "svelte": "5.55.3"
+   },

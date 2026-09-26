@@ -1,0 +1,8 @@
+
+> @composable-svelte/graphics@0.2.1 check /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics
+> svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings
+
+Loading svelte-check in workspace: /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics
+Getting Svelte diagnostics...
+
+svelte-check found 0 errors and 0 warnings

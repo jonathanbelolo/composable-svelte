@@ -61,7 +61,7 @@
 	const containerClasses = $derived(cn('relative w-full', className));
 </script>
 
-<div class={containerClasses} style="padding-bottom: {paddingBottom}" {...restProps}>
+<div class={containerClasses} style:padding-bottom={paddingBottom} {...restProps}>
 	<div class="absolute inset-0">
 		{#if children}
 			{@render children()}

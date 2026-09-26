@@ -35,7 +35,7 @@ export interface WebSocketClient<T = unknown> {
   /**
    * Close the connection and forget the URL. `code` must be 1000 (the
    * default) or 3000–4999 — the codes a browser accepts from script; any
-   * other is a `TypeError` before anything is touched.
+   * other rejects the returned promise with a `TypeError` before anything is touched.
    */
   disconnect(code?: number, reason?: string): Promise<void>;
 
@@ -221,6 +221,14 @@ export const WS_ERROR_CODES = {
   PROTOCOL_ERROR: 'WS_PROTOCOL_ERROR',
   HEARTBEAT_TIMEOUT: 'WS_HEARTBEAT_TIMEOUT'
 } as const;
+
+/**
+ * Close codes a browser accepts from script: 1000 and 3000–4999.
+ * Shared internal validator across live, mock, and queued clients.
+ */
+export function isValidCloseCode(code: number): boolean {
+  return Number.isInteger(code) && (code === 1000 || (code >= 3000 && code <= 4999));
+}
 
 // ============================================================================
 // Configuration

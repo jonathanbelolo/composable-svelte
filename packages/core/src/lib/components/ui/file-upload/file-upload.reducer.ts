@@ -15,7 +15,7 @@ import type {
   ValidationError,
   FileValidationConfig
 } from './file-upload.types.js';
-import { generateFileId } from './file-upload.types.js';
+import { generateFileId, formatFileSize } from './file-upload.types.js';
 
 /**
  * Main reducer for file upload component
@@ -52,23 +52,40 @@ export function fileUploadReducer(
       if (deps?.onFilesChange) {
         effects.push(
           Effect.run<FileUploadAction>(async () => {
-            deps.onFilesChange!(newFiles);
+            deps.onFilesChange!(newFiles.map(file => ({ ...file })));
           })
         );
+      }
+
+      // A preview is a store-owned resource, acquired only after its subscription enrolls.
+      for (const file of validFiles) {
+        if (deps?.previews === false || !file.file.type.startsWith('image/')) continue;
+        effects.push(Effect.subscription<FileUploadAction>(`file-preview:${file.id}`, dispatch => {
+          let url: string | undefined;
+          try { url = URL.createObjectURL(file.file); } catch { /* Preview is optional. */ }
+          if (!url) return () => {};
+          const previewUrl = url;
+          try { dispatch({ type: 'previewReady', fileId: file.id, previewUrl }); }
+          catch (error) { URL.revokeObjectURL(previewUrl); throw error; }
+          return () => URL.revokeObjectURL(previewUrl);
+        }));
       }
 
       // Start upload for each valid file if onUpload is provided
       if (deps?.onUpload && validFiles.length > 0) {
         validFiles.forEach((uploadedFile) => {
           effects.push(
-            Effect.run<FileUploadAction>(async (dispatch) => {
+            Effect.cancellable<FileUploadAction>(`file-upload:${uploadedFile.id}`, async (dispatch, signal) => {
+              const upload = deps?.onUpload;
+              if (!upload || signal?.aborted) return;
               dispatch({ type: 'uploadStarted', fileId: uploadedFile.id });
 
+              if (signal?.aborted) return;
               try {
                 // Call the upload function, giving it a progress channel.
-                await deps.onUpload!(uploadedFile.file, (percent) => {
+                await upload(uploadedFile.file, (percent) => {
                   dispatch({ type: 'uploadProgress', fileId: uploadedFile.id, progress: percent });
-                });
+                }, signal);
                 dispatch({ type: 'uploadCompleted', fileId: uploadedFile.id });
               } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Upload failed';
@@ -90,17 +107,26 @@ export function fileUploadReducer(
       ];
     }
 
+    case 'previewReady': {
+      if (!state.files.some(file => file.id === action.fileId)) {
+        return [state, Effect.cancel(`file-preview:${action.fileId}`)];
+      }
+      const files = state.files.map(file => file.id === action.fileId ? { ...file, previewUrl: action.previewUrl } : file);
+      return [{ ...state, files }, deps?.onFilesChange
+        ? Effect.run(async () => { deps.onFilesChange!(files.map(file => ({ ...file }))); }) : Effect.none()];
+    }
+
     case 'fileRemoved': {
       const { fileId } = action;
 
+      if (!state.files.some(file => file.id === fileId)) return [state, Effect.none()];
       const newFiles = state.files.filter((f) => f.id !== fileId);
 
       // Trigger onFilesChange callback
-      const effect = deps?.onFilesChange
-        ? Effect.run<FileUploadAction>(async () => {
-            deps.onFilesChange!(newFiles);
-          })
-        : Effect.none<FileUploadAction>();
+      const removed = state.files.filter((file) => file.id === fileId);
+      const effect = Effect.run<FileUploadAction>(async () => {
+        deps?.onFilesChange?.(newFiles.map(file => ({ ...file })));
+      });
 
       return [
         {
@@ -108,12 +134,13 @@ export function fileUploadReducer(
           files: newFiles,
           isUploading: newFiles.some((f) => f.status === 'uploading')
         },
-        effect
+        Effect.batch(...removed.flatMap(file => [Effect.cancel<FileUploadAction>(`file-preview:${file.id}`), Effect.cancel<FileUploadAction>(`file-upload:${file.id}`)]), effect)
       ];
     }
 
     case 'uploadStarted': {
       const { fileId } = action;
+      if (!state.files.some(file => file.id === fileId)) return [state, Effect.cancel(`file-upload:${fileId}`)];
 
       const newFiles = state.files.map((f) =>
         f.id === fileId ? { ...f, status: 'uploading' as const, progress: 0 } : f
@@ -194,12 +221,11 @@ export function fileUploadReducer(
     }
 
     case 'allFilesCleared': {
+      if (state.files.length === 0 && state.errors.length === 0) return [state, Effect.none()];
       // Trigger onFilesChange callback
-      const effect = deps?.onFilesChange
-        ? Effect.run<FileUploadAction>(async () => {
-            deps.onFilesChange!([]);
-          })
-        : Effect.none<FileUploadAction>();
+      const effect = Effect.run<FileUploadAction>(async () => {
+        if (state.files.length) deps?.onFilesChange?.([]);
+      });
 
       return [
         {
@@ -208,7 +234,7 @@ export function fileUploadReducer(
           errors: [],
           isUploading: false
         },
-        effect
+        Effect.batch(...state.files.flatMap(file => [Effect.cancel<FileUploadAction>(`file-preview:${file.id}`), Effect.cancel<FileUploadAction>(`file-upload:${file.id}`)]), effect)
       ];
     }
 
@@ -240,25 +266,14 @@ function validateFiles(
 
   const maxSize = config.maxSize || 5 * 1024 * 1024; // Default 5MB
   const acceptedTypes = config.acceptedTypes || [];
-  const maxFiles = config.maxFiles || Infinity;
-
-  // Check if adding these files would exceed maxFiles
-  if (currentFileCount + files.length > maxFiles) {
-    errors.push({
-      type: 'max-files',
-      message: `Cannot upload more than ${maxFiles} file${maxFiles === 1 ? '' : 's'}`
-    });
-
-    // Only process files up to the limit
-    files = files.slice(0, Math.max(0, maxFiles - currentFileCount));
-  }
+  const maxFiles = config.maxFiles ?? Infinity;
 
   files.forEach((file) => {
     // Check file size
     if (file.size > maxSize) {
       errors.push({
         type: 'max-size',
-        message: `File "${file.name}" exceeds maximum size of ${formatBytes(maxSize)}`,
+        message: `File "${file.name}" exceeds maximum size of ${formatFileSize(maxSize)}`,
         fileName: file.name
       });
       return;
@@ -300,28 +315,14 @@ function validateFiles(
       progress: 0
     };
 
-    // Generate preview URL for images (only in browser environment)
-    if (file.type.startsWith('image/') && typeof URL !== 'undefined' && URL.createObjectURL) {
-      try {
-        uploadedFile.previewUrl = URL.createObjectURL(file);
-      } catch (e) {
-        // Silently fail in test environments
-      }
-    }
-
     validFiles.push(uploadedFile);
   });
 
+  const available = Math.max(0, maxFiles - currentFileCount);
+  if (validFiles.length > available) {
+    validFiles.splice(available);
+    errors.push({ type: 'max-files', message: `Cannot upload more than ${maxFiles} file${maxFiles === 1 ? '' : 's'}` });
+  }
   return { validFiles, errors };
 }
 
-/**
- * Helper to format bytes
- */
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
-}

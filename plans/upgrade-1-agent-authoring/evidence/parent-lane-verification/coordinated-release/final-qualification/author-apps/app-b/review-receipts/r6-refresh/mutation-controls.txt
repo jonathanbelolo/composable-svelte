@@ -1,0 +1,39 @@
+=== mutant m1
+     ✓ the injected fetchActivity service supplies each subject its typed chart rows 9ms
+     × a delayed fetchActivity response is cancelled and rejected after logout (logout=true negative control) 5ms
+     ✓ a delayed fetchActivity response is cancelled and rejected after logout (logout=false negative control) 1ms
+     ✓ a superseded fetchActivity response cannot fill the next subject’s dashboard 1ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  1 failed | 3 passed | 15 skipped (19)
+=== mutant m2
+     ✓ the injected fetchActivity service supplies each subject its typed chart rows 10ms
+     × a delayed fetchActivity response is cancelled and rejected after logout (logout=true negative control) 4ms
+     ✓ a delayed fetchActivity response is cancelled and rejected after logout (logout=false negative control) 1ms
+     ✓ a superseded fetchActivity response cannot fill the next subject’s dashboard 1ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  1 failed | 3 passed | 15 skipped (19)
+=== mutant m2 (full suite)
+     × delayed account load resolved after logout is dropped (logout=true negative control) 5ms
+     × an account result from before logout is rejected after the same subject signs in again 5ms
+     × a delayed fetchActivity response is cancelled and rejected after logout (logout=true negative control) 1ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  3 failed | 16 passed (19)
+=== mutant m3 (full suite)
+     × delayed account load resolved after logout is dropped (logout=true negative control) 4ms
+     × a delayed fetchActivity response is cancelled and rejected after logout (logout=true negative control) 1ms
+     × a superseded fetchActivity response cannot fill the next subject’s dashboard 1ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  3 failed | 16 passed (19)
+=== mutant m4 (full suite)
+     × delayed account load resolved after logout is dropped (logout=true negative control) 4ms
+     × an account result from before logout is rejected after the same subject signs in again 5ms
+     × a delayed fetchActivity response is cancelled and rejected after logout (logout=true negative control) 1ms
+     × a superseded fetchActivity response cannot fill the next subject’s dashboard 1ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  4 failed | 15 passed (19)
+
+Mutants: m1 = retireAccount returns Effect.none() instead of Effect.cancel('account-load'); m2 = m1 + accountLoaded epoch/phase gate removed; m3 = m1 + account load as uncancellable Effect.run (epoch kept); m4 = m3 + epoch gate removed. Source restored to /tmp/model.r6.ts (cmp verified).
+=== mutant m5: fetchActivity failure tolerated as empty rows (.catch(() => []))
+     × a failed fetchActivity fails the whole account load without a partial view 10ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  1 failed | 19 skipped (20)

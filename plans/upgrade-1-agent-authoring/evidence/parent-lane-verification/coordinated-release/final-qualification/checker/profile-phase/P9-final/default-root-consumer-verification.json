@@ -1,0 +1,220 @@
+{
+  "schema": "composable-final-checker/default-root-consumer-verification/v1",
+  "startedAt": "2026-09-26T14:56:25.600Z",
+  "sourceReceipt": {
+    "path": "P9-final/profile-qualification-receipt.json",
+    "sha256": "aa1c78138e682dbcad0bf791613c806a1d0232095aaa9c3fcd894513d101c541"
+  },
+  "consumers": {
+    "chat": {
+      "consumer": "chat-managed-default-root-consumer",
+      "hostFiles": {
+        "src/main.ts": "1dbdc768d281edcaf360f6e683beba4c85d69122242af5d16782006f3ab7e53d",
+        "index.html": "1776d0b29d3b1b233a84384904a4690855139ef907b6c24c63d0d41634e625ff",
+        "vite.config.ts": "9417785234cebc5f69541bde238029b68cd22927ea7a0209081527562f332650",
+        "tsconfig.json": "77e0e38a19b90f9489fd2bdd71a8a6bbd16547ef667ef9716ce96347f84da310"
+      },
+      "steps": [
+        {
+          "label": "svelte-check --fail-on-warnings",
+          "ok": true,
+          "cmd": "npx --no svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
+          "exit": 0,
+          "stdoutTail": "Loading svelte-check in workspace: /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/chat-managed-default-root-consumer-verify\nGetting Svelte diagnostics...\n\nsvelte-check found 0 errors and 0 warnings\n",
+          "stderrTail": "npm warn \"./tsconfig.json\" is being parsed as a normal command line argument.\nnpm warn Unknown cli config \"--tsconfig\". This will stop working in the next major version of npm.\nnpm warn Unknown cli config \"--fail-on-warnings\". This will stop working in the next major version of npm.\n"
+        },
+        {
+          "label": "vite build (index.html -> src/main.ts)",
+          "ok": true,
+          "cmd": "npx --no vite build",
+          "exit": 0,
+          "stdoutTail": "4:56:28 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/chat-managed-default-root-consumer-verify - using default configuration.\nvite v6.4.1 building for production...\ntransforming...\n✓ 784 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                   0.30 kB │ gzip:   0.22 kB\ndist/assets/index-CylxBlUz.css   50.80 kB │ gzip:   7.56 kB\ndist/assets/chat-FmFgRqLi.js      0.03 kB │ gzip:   0.05 kB\ndist/assets/chat-EsbCP2xM.js      0.03 kB │ gzip:   0.05 kB\ndist/assets/chat-CmIwEgv4.js      0.03 kB │ gzip:   0.05 kB\ndist/assets/chat-BXAGpWi5.js      0.03 kB │ gzip:   0.05 kB\ndist/assets/index-YI8n0444.js   431.68 kB │ gzip: 136.80 kB\n✓ built in 1.61s\n",
+          "stderrTail": "[plugin vite:resolve] Module \"node:async_hooks\" has been externalized for browser compatibility, imported by \"/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/chat-managed-default-root-consumer-verify/node_modules/svelte/src/internal/server/render-context.js\". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.\n"
+        },
+        {
+          "label": "SSR render of every host-mounted component",
+          "ok": true,
+          "cmd": "node opus-ssr.mjs",
+          "exit": 0,
+          "stdoutTail": "{\"chat\":{\"bytes\":176,\"text\":\"Open chat 0 replies archived\"}}\n",
+          "stderrTail": ""
+        },
+        {
+          "label": "shipped recipes/managed/managed.test.ts (Chromium)",
+          "ok": true,
+          "cmd": "npx --no vitest run --config recipes/managed/vitest.config.ts",
+          "exit": 0,
+          "stdoutTail": "4:56:33 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/chat-managed-default-root-consumer-verify - using default configuration.\n\n RUN  v4.0.7 /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/chat-managed-default-root-consumer-verify\n\n4:56:33 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/chat-managed-default-root-consumer-verify - using default configuration.\n ✓ |chromium| recipes/managed/managed.test.ts (1 test) 42ms\n\n Test Files  1 passed (1)\n      Tests  1 passed (1)\n   Start at  16:56:33\n   Duration  1.92s (transform 0ms, setup 0ms, collect 1.02s, tests 42ms, environment 0ms, prepare 64ms)\n\n",
+          "stderrTail": "inputs/chat-managed-default-root-consumer-verify/node_modules/@composable-svelte/chat/dist/streaming-chat/attachment-components/ImagePreview.svelte?svelte&type=style&lang.css\n4:56:35 PM [vite-plugin-svelte:load] failed to load virtual css module /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/chat-managed-default-root-consumer-verify/node_modules/@composable-svelte/chat/dist/streaming-chat/attachment-components/VideoPlayer.svelte?svelte&type=style&lang.css\n4:56:35 PM [vite-plugin-svelte:load] failed to load virtual css module /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/chat-managed-default-root-consumer-verify/node_modules/@composable-svelte/chat/dist/streaming-chat/attachment-components/AudioPlayer.svelte?svelte&type=style&lang.css\n4:56:35 PM [vite-plugin-svelte:load] failed to load virtual css module /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/chat-managed-default-root-consumer-verify/node_modules/@composable-svelte/chat/dist/streaming-chat/attachment-components/FileAttachment.svelte?svelte&type=style&lang.css\n4:56:35 PM [vite-plugin-svelte:load] failed to load virtual css module /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/chat-managed-default-root-consumer-verify/node_modules/@composable-svelte/chat/dist/streaming-chat/attachment-components/PDFViewer.svelte?svelte&type=style&lang.css\n"
+        }
+      ],
+      "ssr": {
+        "chat": {
+          "bytes": 176,
+          "text": "Open chat 0 replies archived"
+        }
+      }
+    },
+    "code": {
+      "consumer": "code-managed-default-root-consumer",
+      "hostFiles": {
+        "src/main.ts": "4512823c5e0f1b0e0c6fcecfc250c4c0fb914a36498f33ff409f84d25f425557",
+        "index.html": "7a6fab6528141cfef7cc9e74c798823f2c74404323728809f6b1ac88a1259df3",
+        "vite.config.ts": "9417785234cebc5f69541bde238029b68cd22927ea7a0209081527562f332650",
+        "tsconfig.json": "77e0e38a19b90f9489fd2bdd71a8a6bbd16547ef667ef9716ce96347f84da310",
+        "src/CodeHost.svelte": "5454cec721497f002d96015fc313ddd7779bd1a36d965adb45e2d65856c29f05"
+      },
+      "steps": [
+        {
+          "label": "svelte-check --fail-on-warnings",
+          "ok": true,
+          "cmd": "npx --no svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
+          "exit": 0,
+          "stdoutTail": "Loading svelte-check in workspace: /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/code-managed-default-root-consumer-verify\nGetting Svelte diagnostics...\n\nsvelte-check found 0 errors and 0 warnings\n",
+          "stderrTail": "npm warn \"./tsconfig.json\" is being parsed as a normal command line argument.\nnpm warn Unknown cli config \"--tsconfig\". This will stop working in the next major version of npm.\nnpm warn Unknown cli config \"--fail-on-warnings\". This will stop working in the next major version of npm.\n"
+        },
+        {
+          "label": "vite build (index.html -> src/main.ts)",
+          "ok": true,
+          "cmd": "npx --no vite build",
+          "exit": 0,
+          "stdoutTail": "vite v6.4.1 building for production...\ntransforming...\n✓ 1030 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                   0.30 kB │ gzip:   0.23 kB\ndist/assets/index-Bd6AsgBz.css   25.84 kB │ gzip:   4.30 kB\ndist/assets/index-CJqw-tmD.js     2.01 kB │ gzip:   1.25 kB\ndist/assets/index-2eXx6a5-.js    13.99 kB │ gzip:   6.01 kB\ndist/assets/index-BMj5nhKf.js    26.52 kB │ gzip:   8.82 kB\ndist/assets/index-CYudj2V0.js    28.25 kB │ gzip:  12.52 kB\ndist/assets/index-C4FmdxK4.js    28.76 kB │ gzip:  11.42 kB\ndist/assets/index-BqAYtOBX.js    44.34 kB │ gzip:  15.36 kB\ndist/assets/index-D13Uvxz2.js    45.10 kB │ gzip:  18.65 kB\ndist/assets/index-CpppqnP2.js    83.70 kB │ gzip:  29.55 kB\ndist/assets/index-C0j8Udx_.js    84.56 kB │ gzip:  32.61 kB\ndist/assets/index-B98v2-q4.js   727.69 kB │ gzip: 234.69 kB\n✓ built in 2.07s\n",
+          "stderrTail": "[plugin vite:resolve] Module \"node:async_hooks\" has been externalized for browser compatibility, imported by \"/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/code-managed-default-root-consumer-verify/node_modules/svelte/src/internal/server/render-context.js\". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n"
+        },
+        {
+          "label": "SSR render of every host-mounted component",
+          "ok": true,
+          "cmd": "node opus-ssr.mjs",
+          "exit": 0,
+          "stdoutTail": "{\"code\":{\"bytes\":9273,\"text\":\"TypeScript JavaScript Svelte HTML CSS JSON Markdown Bash SQL Python Rust Undo Redo Line Numbers: On Theme: Dark Format Save Copy 1 const x = 1; A B Svelte Flow \"}}\n",
+          "stderrTail": ""
+        },
+        {
+          "label": "shipped recipes/managed/managed.test.ts (Chromium)",
+          "ok": true,
+          "cmd": "npx --no vitest run --config recipes/managed/vitest.config.ts",
+          "exit": 0,
+          "stdoutTail": "\n RUN  v4.0.7 /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/code-managed-default-root-consumer-verify\n\n ✓ |chromium| recipes/managed/managed.test.ts (1 test) 1282ms\n   ✓ installed CodeEditor, CodeHighlight and NodeCanvas take the managed path with no warning  1282ms\n\n Test Files  1 passed (1)\n      Tests  1 passed (1)\n   Start at  16:56:43\n   Duration  3.02s (transform 0ms, setup 0ms, collect 1.16s, tests 1.28s, environment 0ms, prepare 44ms)\n\n",
+          "stderrTail": "css module /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/code-managed-default-root-consumer-verify/node_modules/@xyflow/svelte/dist/lib/components/EdgeLabel/EdgeLabel.svelte?svelte&type=style&lang.css\n4:56:44 PM [vite-plugin-svelte:load] failed to load virtual css module /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/code-managed-default-root-consumer-verify/node_modules/@xyflow/svelte/dist/lib/container/SvelteFlow/Wrapper.svelte?svelte&type=style&lang.css\n4:56:44 PM [vite-plugin-svelte:load] failed to load virtual css module /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/code-managed-default-root-consumer-verify/node_modules/@xyflow/svelte/dist/lib/components/Selection/Selection.svelte?svelte&type=style&lang.css\n4:56:44 PM [vite-plugin-svelte:load] failed to load virtual css module /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/code-managed-default-root-consumer-verify/node_modules/@xyflow/svelte/dist/lib/components/A11yDescriptions/A11yDescriptions.svelte?svelte&type=style&lang.css\n4:56:44 PM [vite-plugin-svelte:load] failed to load virtual css module /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/code-managed-default-root-consumer-verify/node_modules/@xyflow/svelte/dist/lib/components/NodeSelection/NodeSelection.svelte?svelte&type=style&lang.css\n"
+        }
+      ],
+      "ssr": {
+        "code": {
+          "bytes": 9273,
+          "text": "TypeScript JavaScript Svelte HTML CSS JSON Markdown Bash SQL Python Rust Undo Redo Line Numbers: On Theme: Dark Format Save Copy 1 const x = 1; A B Svelte Flow "
+        }
+      }
+    },
+    "media": {
+      "consumer": "media-managed-default-root-consumer",
+      "hostFiles": {
+        "src/main.ts": "27a0a21bb480b67d8f2e74a1828252c2b58054972164c1c039bc12aa85721421",
+        "index.html": "bd1745f3dfc5d0d00c0924092b477edecc9c52e205947a91de70c5c97d6fb78b",
+        "vite.config.ts": "9417785234cebc5f69541bde238029b68cd22927ea7a0209081527562f332650",
+        "tsconfig.json": "77e0e38a19b90f9489fd2bdd71a8a6bbd16547ef667ef9716ce96347f84da310"
+      },
+      "steps": [
+        {
+          "label": "svelte-check --fail-on-warnings",
+          "ok": true,
+          "cmd": "npx --no svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
+          "exit": 0,
+          "stdoutTail": "Loading svelte-check in workspace: /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/media-managed-default-root-consumer-verify\nGetting Svelte diagnostics...\n\nsvelte-check found 0 errors and 0 warnings\n",
+          "stderrTail": "npm warn \"./tsconfig.json\" is being parsed as a normal command line argument.\nnpm warn Unknown cli config \"--tsconfig\". This will stop working in the next major version of npm.\nnpm warn Unknown cli config \"--fail-on-warnings\". This will stop working in the next major version of npm.\n"
+        },
+        {
+          "label": "vite build (index.html -> src/main.ts)",
+          "ok": true,
+          "cmd": "npx --no vite build",
+          "exit": 0,
+          "stdoutTail": "4:56:49 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/media-managed-default-root-consumer-verify - using default configuration.\nvite v6.4.1 building for production...\ntransforming...\n✓ 719 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                   0.33 kB │ gzip:  0.23 kB\ndist/assets/index-BF8htuds.css   13.13 kB │ gzip:  2.80 kB\ndist/assets/index-Dd6iKQ8J.js   274.67 kB │ gzip: 87.24 kB\n✓ built in 1.24s\n",
+          "stderrTail": "[plugin vite:resolve] Module \"node:async_hooks\" has been externalized for browser compatibility, imported by \"/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/media-managed-default-root-consumer-verify/node_modules/svelte/src/internal/server/render-context.js\". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.\n"
+        },
+        {
+          "label": "SSR render of every host-mounted component",
+          "ok": true,
+          "cmd": "node opus-ssr.mjs",
+          "exit": 0,
+          "stdoutTail": "{\"player\":{\"bytes\":147,\"text\":\"Listen\"},\"voice\":{\"bytes\":174,\"text\":\"Dictate\"}}\n",
+          "stderrTail": ""
+        },
+        {
+          "label": "shipped recipes/managed/managed.test.ts (Chromium)",
+          "ok": true,
+          "cmd": "npx --no vitest run --config recipes/managed/vitest.config.ts",
+          "exit": 0,
+          "stdoutTail": "4:56:52 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/media-managed-default-root-consumer-verify - using default configuration.\n\n RUN  v4.0.7 /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/media-managed-default-root-consumer-verify\n\n4:56:52 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/media-managed-default-root-consumer-verify - using default configuration.\n ✓ |chromium| recipes/managed/managed.test.ts (2 tests) 28ms\n\n Test Files  1 passed (1)\n      Tests  2 passed (2)\n   Start at  16:56:52\n   Duration  1.49s (transform 0ms, setup 0ms, collect 893ms, tests 28ms, environment 0ms, prepare 43ms)\n\n",
+          "stderrTail": "00gn/T/opus-profile-p9-final-0qlaAN/inputs/media-managed-default-root-consumer-verify/node_modules/@composable-svelte/media/dist/voice-input/components/VoiceInputButton.svelte?svelte&type=style&lang.css\n4:56:53 PM [vite-plugin-svelte:load] failed to load virtual css module /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/media-managed-default-root-consumer-verify/node_modules/@composable-svelte/media/dist/voice-input/components/PushToTalkPanel.svelte?svelte&type=style&lang.css\n4:56:54 PM [vite-plugin-svelte:load] failed to load virtual css module /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/media-managed-default-root-consumer-verify/node_modules/@composable-svelte/media/dist/voice-input/components/ConversationModePanel.svelte?svelte&type=style&lang.css\n4:56:54 PM [vite-plugin-svelte:load] failed to load virtual css module /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/media-managed-default-root-consumer-verify/node_modules/@composable-svelte/media/dist/voice-input/components/RecordingTimer.svelte?svelte&type=style&lang.css\n4:56:54 PM [vite-plugin-svelte:load] failed to load virtual css module /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/media-managed-default-root-consumer-verify/node_modules/@composable-svelte/media/dist/voice-input/components/AudioVisualizer.svelte?svelte&type=style&lang.css\n"
+        }
+      ],
+      "ssr": {
+        "player": {
+          "bytes": 147,
+          "text": "Listen"
+        },
+        "voice": {
+          "bytes": 174,
+          "text": "Dictate"
+        }
+      }
+    },
+    "chat-code-media": {
+      "consumer": "chat-code-media-default-root-consumer",
+      "hostFiles": {
+        "src/main.ts": "75f4ed1453027c3f73b70f75e66dcd0515f4f1e97cdf27fc4f3e8704753003a3",
+        "index.html": "27c5e29dfa4436a63dd217d96fd47c2a985bec6369ddd164ad5b4fbd9d4eca23",
+        "vite.config.ts": "9417785234cebc5f69541bde238029b68cd22927ea7a0209081527562f332650",
+        "tsconfig.json": "77e0e38a19b90f9489fd2bdd71a8a6bbd16547ef667ef9716ce96347f84da310",
+        "src/CodeHost.svelte": "44db325c515455a268ab0ba701a563226c3a86e9dc3529cea3167f02c72d5835"
+      },
+      "steps": [
+        {
+          "label": "svelte-check --fail-on-warnings",
+          "ok": true,
+          "cmd": "npx --no svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
+          "exit": 0,
+          "stdoutTail": "Loading svelte-check in workspace: /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/chat-code-media-default-root-consumer-verify\nGetting Svelte diagnostics...\n\nsvelte-check found 0 errors and 0 warnings\n",
+          "stderrTail": "npm warn \"./tsconfig.json\" is being parsed as a normal command line argument.\nnpm warn Unknown cli config \"--tsconfig\". This will stop working in the next major version of npm.\nnpm warn Unknown cli config \"--fail-on-warnings\". This will stop working in the next major version of npm.\n"
+        },
+        {
+          "label": "vite build (index.html -> src/main.ts)",
+          "ok": true,
+          "cmd": "npx --no vite build",
+          "exit": 0,
+          "stdoutTail": "DnbrfgvT.js      1.80 kB │ gzip:   0.87 kB\ndist/assets/prism-yaml-Chm5ZdEN.js            1.94 kB │ gzip:   0.86 kB\ndist/assets/index-CIT_OMDy.js                 2.01 kB │ gzip:   1.25 kB\ndist/assets/prism-python-DcYENpeL.js          2.61 kB │ gzip:   1.38 kB\ndist/assets/prism-rust-DBkPVqaT.js            2.99 kB │ gzip:   1.46 kB\ndist/assets/prism-sql-AgAyy5H_.js             3.26 kB │ gzip:   1.81 kB\ndist/assets/prism-javascript-2LMHe_9g.js      4.72 kB │ gzip:   1.65 kB\ndist/assets/prism-markdown-4MKFcK2x.js        5.24 kB │ gzip:   2.00 kB\ndist/assets/index-B2ctbA3f.js                 5.49 kB │ gzip:   2.15 kB\ndist/assets/prism-bash-DTkDXsAh.js            6.15 kB │ gzip:   2.96 kB\ndist/assets/index-DM3QdxCK.js                13.99 kB │ gzip:   6.01 kB\ndist/assets/prism-4Ntj8vJ3.js                19.65 kB │ gzip:   7.47 kB\ndist/assets/index-C2HyZQXB.js                26.52 kB │ gzip:   8.82 kB\ndist/assets/index-CLxQg1VH.js                28.25 kB │ gzip:  12.52 kB\ndist/assets/index-DlJwO2a2.js                28.42 kB │ gzip:   9.37 kB\ndist/assets/index-CiSRPeI_.js                28.76 kB │ gzip:  11.42 kB\ndist/assets/index-BxQf0vnB.js                44.34 kB │ gzip:  15.36 kB\ndist/assets/index-CZQ5Bu0N.js                45.10 kB │ gzip:  18.65 kB\ndist/assets/index-CIBNmhGe.js                83.70 kB │ gzip:  29.55 kB\ndist/assets/index-CAWYAsQV.js                84.56 kB │ gzip:  32.61 kB\ndist/assets/index-DRvlHbvu.js             1,082.90 kB │ gzip: 345.40 kB\n✓ built in 2.82s\n",
+          "stderrTail": "[plugin vite:resolve] Module \"node:async_hooks\" has been externalized for browser compatibility, imported by \"/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/chat-code-media-default-root-consumer-verify/node_modules/svelte/src/internal/server/render-context.js\". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n"
+        },
+        {
+          "label": "SSR render of every host-mounted component",
+          "ok": true,
+          "cmd": "node opus-ssr.mjs",
+          "exit": 0,
+          "stdoutTail": "{\"chat\":{\"bytes\":176,\"text\":\"Open chat 0 replies archived\"},\"code\":{\"bytes\":9273,\"text\":\"TypeScript JavaScript Svelte HTML CSS JSON Markdown Bash SQL Python Rust Undo Redo Line Numbers: On Theme: Dark Format Save Copy 1 const x = 1; A B Svelte Flow \"},\"player\":{\"bytes\":147,\"text\":\"Listen\"},\"voice\":{\"bytes\":174,\"text\":\"Dictate\"}}\n",
+          "stderrTail": ""
+        }
+      ],
+      "ssr": {
+        "chat": {
+          "bytes": 176,
+          "text": "Open chat 0 replies archived"
+        },
+        "code": {
+          "bytes": 9273,
+          "text": "TypeScript JavaScript Svelte HTML CSS JSON Markdown Bash SQL Python Rust Undo Redo Line Numbers: On Theme: Dark Format Save Copy 1 const x = 1; A B Svelte Flow "
+        },
+        "player": {
+          "bytes": 147,
+          "text": "Listen"
+        },
+        "voice": {
+          "bytes": 174,
+          "text": "Dictate"
+        }
+      },
+      "runtimeProof": "Combined runtime proof retained: matrix-r6 chat-code-media recipe receipts (both checkpoints) run all three shipped suites on one combined install; App-A is the real combined application."
+    }
+  },
+  "finishedAt": "2026-09-26T14:57:04.157Z",
+  "verdict": "CONSUMER_VERIFICATION_PASSED",
+  "failures": 0
+}

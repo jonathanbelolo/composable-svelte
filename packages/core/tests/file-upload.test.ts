@@ -583,12 +583,15 @@ describe('File Upload Component', () => {
       await store.send({ type: 'filesSelected', files });
 
       await store.receive({ type: 'filesValidated' });
+      await store.receive({ type: 'previewReady' }, state => {
+        expect(state.files[0]!.previewUrl).toMatch(/^blob:/);
+      });
       await store.receive({ type: 'uploadStarted' });
       await store.receive({ type: 'uploadCompleted' });
 
       // Widened: `onUpload` now also receives a progress callback, which is
       // what gives `uploadProgress` a dispatcher at all.
-      expect(onUpload).toHaveBeenCalledWith(files[0], expect.any(Function));
+      expect(onUpload).toHaveBeenCalledWith(files[0], expect.any(Function), expect.any(AbortSignal));
     });
 
     it('should handle upload errors from onUpload', async () => {
@@ -604,6 +607,9 @@ describe('File Upload Component', () => {
       await store.send({ type: 'filesSelected', files });
 
       await store.receive({ type: 'filesValidated' });
+      await store.receive({ type: 'previewReady' }, state => {
+        expect(state.files[0]!.previewUrl).toMatch(/^blob:/);
+      });
       await store.receive({ type: 'uploadStarted' });
       await store.receive({ type: 'uploadFailed' }, (state) => {
         expect(state.files[0]!.status).toBe('error');

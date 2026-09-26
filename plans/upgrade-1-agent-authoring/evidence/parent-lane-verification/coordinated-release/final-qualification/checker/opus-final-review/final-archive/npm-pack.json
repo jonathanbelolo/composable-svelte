@@ -1,0 +1,216 @@
+[
+  {
+    "id": "@composable-svelte/architecture@0.13.1",
+    "name": "@composable-svelte/architecture",
+    "version": "0.13.1",
+    "size": 99447,
+    "unpackedSize": 408197,
+    "shasum": "aaf5f0f916cc73b8593034aa3c3fdfe04254301d",
+    "integrity": "sha512-LAm/0jRDaTNRUs+DIaRjp6J1RdUF/BPU/3qN+87tT5DifvxlAeWmtRj2Am91YsvAbkW1qs6IzwSRtcN/aeNpvw==",
+    "filename": "composable-svelte-architecture-0.13.1.tgz",
+    "files": [
+      {
+        "path": "CHANGELOG.md",
+        "size": 2313,
+        "mode": 420
+      },
+      {
+        "path": "LICENSE",
+        "size": 1072,
+        "mode": 420
+      },
+      {
+        "path": "README.md",
+        "size": 9213,
+        "mode": 420
+      },
+      {
+        "path": "bin/composable-svelte-architecture.mjs",
+        "size": 253,
+        "mode": 493
+      },
+      {
+        "path": "package.json",
+        "size": 1197,
+        "mode": 420
+      },
+      {
+        "path": "policies/auth.json",
+        "size": 1715,
+        "mode": 420
+      },
+      {
+        "path": "policies/charts.json",
+        "size": 1719,
+        "mode": 420
+      },
+      {
+        "path": "policies/chat-code-media.json",
+        "size": 1949,
+        "mode": 420
+      },
+      {
+        "path": "policies/chat.json",
+        "size": 1715,
+        "mode": 420
+      },
+      {
+        "path": "policies/code.json",
+        "size": 1715,
+        "mode": 420
+      },
+      {
+        "path": "policies/graphics.json",
+        "size": 1723,
+        "mode": 420
+      },
+      {
+        "path": "policies/maps.json",
+        "size": 1715,
+        "mode": 420
+      },
+      {
+        "path": "policies/media.json",
+        "size": 1717,
+        "mode": 420
+      },
+      {
+        "path": "policies/starter.json",
+        "size": 1607,
+        "mode": 420
+      },
+      {
+        "path": "src/anchors.mjs",
+        "size": 7437,
+        "mode": 420
+      },
+      {
+        "path": "src/authority-values.mjs",
+        "size": 7686,
+        "mode": 420
+      },
+      {
+        "path": "src/bundled-policy.mjs",
+        "size": 7807,
+        "mode": 420
+      },
+      {
+        "path": "src/check.mjs",
+        "size": 23787,
+        "mode": 420
+      },
+      {
+        "path": "src/detector-catalog.mjs",
+        "size": 2357,
+        "mode": 420
+      },
+      {
+        "path": "src/expression-values.mjs",
+        "size": 13476,
+        "mode": 420
+      },
+      {
+        "path": "src/framework-seeds.mjs",
+        "size": 8136,
+        "mode": 420
+      },
+      {
+        "path": "src/graph.mjs",
+        "size": 27212,
+        "mode": 420
+      },
+      {
+        "path": "src/policy.mjs",
+        "size": 23978,
+        "mode": 420
+      },
+      {
+        "path": "src/primitive-catalog.mjs",
+        "size": 4234,
+        "mode": 420
+      },
+      {
+        "path": "src/rules/motion-syntax.mjs",
+        "size": 6869,
+        "mode": 420
+      },
+      {
+        "path": "src/rules/routing-template.mjs",
+        "size": 6097,
+        "mode": 420
+      },
+      {
+        "path": "src/rules/semantic-rules.mjs",
+        "size": 15354,
+        "mode": 420
+      },
+      {
+        "path": "src/semantic-context.mjs",
+        "size": 6360,
+        "mode": 420
+      },
+      {
+        "path": "src/semantic-flow.mjs",
+        "size": 71504,
+        "mode": 420
+      },
+      {
+        "path": "src/semantic-origins.mjs",
+        "size": 10792,
+        "mode": 420
+      },
+      {
+        "path": "src/semantic-parse.mjs",
+        "size": 24380,
+        "mode": 420
+      },
+      {
+        "path": "src/semantic-types.mjs",
+        "size": 37490,
+        "mode": 420
+      },
+      {
+        "path": "src/semantic-zones.mjs",
+        "size": 6292,
+        "mode": 420
+      },
+      {
+        "path": "src/semantics.mjs",
+        "size": 6145,
+        "mode": 420
+      },
+      {
+        "path": "src/svelte-runes.mjs",
+        "size": 1454,
+        "mode": 420
+      },
+      {
+        "path": "src/symbols.mjs",
+        "size": 12421,
+        "mode": 420
+      },
+      {
+        "path": "src/taint-values.mjs",
+        "size": 8028,
+        "mode": 420
+      },
+      {
+        "path": "src/template-seeds.mjs",
+        "size": 30977,
+        "mode": 420
+      },
+      {
+        "path": "src/version.mjs",
+        "size": 2639,
+        "mode": 420
+      },
+      {
+        "path": "src/zone-graph.mjs",
+        "size": 5662,
+        "mode": 420
+      }
+    ],
+    "entryCount": 40,
+    "bundled": []
+  }
+]

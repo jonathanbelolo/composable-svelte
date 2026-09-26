@@ -1,0 +1,4 @@
+$ npm install --offline --no-audit --no-fund --ignore-scripts
+
+added 50 packages, and removed 9 packages in 381ms
+exit=0

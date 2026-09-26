@@ -46,11 +46,15 @@ export default defineConfig({
 	},
 
 	resolve: {
-		alias: {
-			'$lib': resolve(__dirname, 'src/lib'),
+		alias: [
+			{ find: '$lib', replacement: resolve(__dirname, 'src/lib') },
 			// Mock pdfjs-dist to avoid Node.js dependencies in tests
-			'pdfjs-dist': resolve(__dirname, 'tests/__mocks__/pdfjs-dist.ts')
-		},
+			{ find: 'pdfjs-dist', replacement: resolve(__dirname, 'tests/__mocks__/pdfjs-dist.ts') },
+			// The README recipes import the package by name, as a consumer does.
+			// Mount them against source, so a test never runs a stale `dist`.
+			// svelte-check still resolves the name to the built declarations.
+			{ find: /^@composable-svelte\/chat$/, replacement: resolve(__dirname, 'src/lib/index.ts') }
+		],
 		// Prefer browser builds over Node.js builds
 		conditions: ['browser', 'module', 'import', 'default']
 	}

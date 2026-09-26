@@ -1,0 +1,11 @@
+4:27:53 PM [vite-plugin-svelte] no Svelte config found at /private/tmp/composable-final-authoring/app-b - using default configuration.
+
+ RUN  v4.0.7 /private/tmp/composable-final-authoring/app-b
+
+ ✓ tests/dashboard.test.ts (15 tests) 26ms
+
+ Test Files  1 passed (1)
+      Tests  15 passed (15)
+   Start at  16:27:53
+   Duration  1.94s (transform 1.20s, setup 0ms, collect 1.83s, tests 26ms, environment 0ms, prepare 3ms)
+

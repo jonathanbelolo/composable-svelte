@@ -214,10 +214,11 @@ onDestroy(() => {
    - Convert destination to action
    - Dispatch action to update state
 
-3. **Loop Prevention**:
-   - Effects set `{ composableSvelteSync: true }` metadata
-   - `popstate` handler checks timestamp to ignore self-triggered events
-   - Prevents infinite loops from circular updates
+3. **Traversal and write ownership**:
+   - Native History writes do not emit `popstate`; no metadata or global History patch is needed.
+   - Every Back/Forward event is delivered.
+   - Replacement syncs, destruction, and traversal cancel pending debounced writes.
+   - Traversal-induced canonicalization must replace rather than push an entry.
 
 ### Lifecycle
 
@@ -1920,18 +1921,16 @@ onDestroy(() => {
 
 ## Common Pitfalls
 
-### Pitfall 1: Infinite Loops
+### Pitfall 1: Canonicalizing a traversed URL
 
-**Problem:** URL updates trigger state updates, which trigger URL updates...
+Parsing may omit incoming query parameters or normalize paths. A subsequent push
+of the canonical URL can trap the Back button. Use a `{ replace: true }` URL effect
+for actions representing browser traversal. Ordinary user navigation can retain a
+push effect. Replacing preserves the traversed entry and its forward history.
 
-**Solution:** Use metadata to detect self-triggered events.
-
-```typescript
-// Built into syncBrowserHistory - checks timestamp
-if (event.state?.composableSvelteSync && timeSinceLastPush < 50) {
-  return; // Ignore self-triggered popstate
-}
-```
+The generic adapters do not automatically propagate traversal provenance into the
+effect. Managed routing must supply framework-owned provenance; this remains an
+open limitation, not a request for consumer listeners or timing guards.
 
 ### Pitfall 2: Parser Order
 
@@ -2093,3 +2092,24 @@ const config = {
 - [Navigation System](../navigation/tree-based.md) - State-driven navigation components
 - [DSL Guide](../dsl/destinations.md) - Fluent API for reducer composition
 - [Testing Guide](../core-concepts/testing.md) - TestStore patterns
+
+## URL synchronization lifecycle migration
+
+URL synchronization is now cancellable. One factory instance is one cancellation
+channel per store, including when reused across scoped children. Separate
+factories are independent but still share the browser URL. Random factory IDs
+prevent counter resets during module replacement; they are not serialized feature
+state. Description construction performs no browser reads. Invalid debounce
+values (negative, non-finite, or nonnumeric) throw at factory construction.
+
+New pushed entries start with `null` history state. Replacement reads and retains
+the current entry's state at write settlement. Existing fragments are preserved at
+settlement unless serialization supplies an explicit fragment. No
+`composableSvelteSync` metadata is written or consulted; consumers must not use
+that former marker to identify origin. Null and undefined traversal mappings skip
+delivery, while false, zero, and empty string remain legitimate actions.
+
+TestStore tests must advance fake timers through the debounce before `finish()`,
+or use `destroyAndSettle()` to cancel it. Outstanding cancellable work is tracked,
+unlike the former fire-and-forget behavior. Use a DOM environment for URL effects;
+SSR remains a safe no-op with ordinary effect deferral.

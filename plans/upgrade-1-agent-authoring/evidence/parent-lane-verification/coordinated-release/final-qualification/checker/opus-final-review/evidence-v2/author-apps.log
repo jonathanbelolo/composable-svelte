@@ -1,0 +1,9 @@
+ok   app-a exact proposed bundled chat-code-media bytes, supplied externally exit=0 pass=true 
+ok   app-a NEG wrong --policy-sha256 exit=21 pass=false policy-pin-mismatch
+ok   app-a NEG chat-only approvals (code/media unapproved) exit=21 pass=false unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import
+ok   app-b external appB auth+charts policy exit=0 pass=true 
+ok   app-b NEG wrong --policy-sha256 exit=21 pass=false policy-pin-mismatch
+ok   app-b NEG wrong expected core 0.13.0 exit=21 pass=false core-version-mismatch
+ok   app-b NEG auth-only approvals (charts unapproved) exit=21 pass=false unresolved-package-import,unresolved-package-import
+ok   app-b NEG wrong charts pin 0.3.1 exit=21 pass=false unresolved-package-import,unresolved-package-import
+receipt /private/tmp/composable-final-checker/opus-final-review/evidence-v2/author-apps/author-app-compatibility-receipt.json sha256 fee26d44efe9dca4c511bec31f9a6370f16d9ace45a1dd6b60f5b24c7af4f627 ALL_EXPECTATIONS_MET

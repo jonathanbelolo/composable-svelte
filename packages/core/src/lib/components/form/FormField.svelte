@@ -1,5 +1,6 @@
 <script lang="ts" generics="T extends Record<string, any>">
 	import { getContext, setContext } from 'svelte';
+	import { readAtPath } from './field-path.js';
 	import type { FormAction, FieldRenderState, FormFieldProps, FormStore } from './form.types.js';
 
 	/**
@@ -31,7 +32,7 @@
 
 	// Derive field state from store
 	const fieldState = $derived<FieldRenderState>({
-		value: $store.data[name],
+		value: readAtPath($store.data, name),
 		error: $store.fields[name]?.error ?? null,
 		touched: $store.fields[name]?.touched ?? false,
 		dirty: $store.fields[name]?.dirty ?? false,

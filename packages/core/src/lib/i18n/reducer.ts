@@ -49,6 +49,22 @@ export const i18nReducer: Reducer<I18nState, I18nAction, I18nDependencies> = (
   deps
 ) => {
   switch (action.type) {
+    case 'i18n/hydrate': {
+      const hydrated: I18nState = {
+        ...action.state,
+        // Already-loaded client namespaces may contain compiled message functions.
+        // Hydration fills absent namespaces without overwriting that live cache.
+        translations: { ...action.state.translations, ...state.translations },
+        // Server requests have completed before the snapshot is sent.
+        // Client-side in-flight namespace work remains owned by this store.
+        loadingNamespaces: state.loadingNamespaces
+      };
+      return [hydrated, EffectBuilder.fireAndForget(() => {
+        deps.dom.setLanguage(hydrated.currentLocale);
+        deps.dom.setDirection(hydrated.direction);
+      })];
+    }
+
     case 'i18n/setLocale': {
       const { locale, preloadNamespaces = [] } = action;
 
@@ -72,16 +88,20 @@ export const i18nReducer: Reducer<I18nState, I18nAction, I18nDependencies> = (
         // but the app does not list is exactly the misconfiguration that made
         // the old behaviour so confusing, and it is worth saying out loud
         // rather than reporting a flat "unsupported".
-        const detectorKnows = deps.localeDetector.getSupportedLocales().includes(locale);
-        console.warn(
-          `Unsupported locale: ${locale}, ignoring. Current: ${state.currentLocale}. ` +
-            `Available: ${state.availableLocales.join(', ') || '(none)'}.` +
-            (detectorKnows
-              ? ` The locale detector lists it but availableLocales does not — ` +
-                `add it to createInitialI18nState's locale list.`
-              : '')
-        );
-        return [state, EffectBuilder.none()];
+        return [
+          state,
+          EffectBuilder.run<I18nAction>(async () => {
+            const detectorKnows = deps.localeDetector.getSupportedLocales().includes(locale);
+            console.warn(
+              `Unsupported locale: ${locale}, ignoring. Current: ${state.currentLocale}. ` +
+                `Available: ${state.availableLocales.join(', ') || '(none)'}.` +
+                (detectorKnows
+                  ? ` The locale detector lists it but availableLocales does not — ` +
+                    `add it to createInitialI18nState's locale list.`
+                  : '')
+            );
+          })
+        ];
       }
 
       // Update state with new locale and fallback chain
@@ -191,12 +211,15 @@ export const i18nReducer: Reducer<I18nState, I18nAction, I18nDependencies> = (
       const { namespace, locale, error } = action;
       const cacheKey = `${locale}:${namespace}`;
 
-      console.error(`Failed to load namespace ${namespace} for ${locale}:`, error);
-
       // ✅ FIXED: Remove from array using filter
       const loadingNamespaces = state.loadingNamespaces.filter(key => key !== cacheKey);
 
-      return [{ ...state, loadingNamespaces }, EffectBuilder.none()];
+      return [
+        { ...state, loadingNamespaces },
+        EffectBuilder.run<I18nAction>(async () => {
+          console.error(`Failed to load namespace ${namespace} for ${locale}:`, error);
+        })
+      ];
     }
 
     case 'i18n/setDirection': {

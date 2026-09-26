@@ -1,0 +1,14 @@
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/auth
+
+ ✓ |chromium| tests/managed-auth-sibling-ownership.test.ts (4 tests) 657ms
+ ✓ |chromium| tests/email-verification.test.ts (13 tests) 2222ms
+     ✓ establishes nothing when confirming issued no session  1193ms
+ ✓ |chromium| tests/managed-forms.test.ts (22 tests) 1490ms
+ ✓ |chromium| tests/auth-feature.test.ts (50 tests) 4602ms
+
+ Test Files  4 passed (4)
+      Tests  89 passed (89)
+   Start at  16:15:24
+   Duration  20.55s (transform 0ms, setup 0ms, collect 47.05s, tests 8.97s, environment 0ms, prepare 1.42s)
+

@@ -19,6 +19,7 @@
 	 * Pattern A: it animates nothing.
 	 */
 	import type { Snippet } from 'svelte';
+	import type { PresentationView } from '@composable-svelte/core/application';
 
 	import { isMfaRequired } from '../errors/helpers.js';
 	import type { MfaMethod } from '../deps.js';
@@ -28,12 +29,47 @@
 	} from '../flows/magic-link-signin/types.js';
 	import type { SessionAction } from '../session/types.js';
 
-	interface Props {
+	interface StandaloneBinding {
+		mode?: 'standalone' | undefined;
 		flowStore: {
 			readonly state: MagicLinkSignInState;
 			dispatch(action: MagicLinkSignInAction): void;
 		};
 		sessionStore: { dispatch(action: SessionAction): void };
+		/** Called once, after the session has been established. */
+		onSuccess?: (() => void) | undefined;
+		/**
+		 * Where "ask for a new link" goes. **Required.**
+		 *
+		 * An expired or spent link cannot be retried from here, and a branch with
+		 * nothing to click is a dead end — the same reasoning as
+		 * `ResetPasswordForm`'s `onRequestNewLink`, which was optional until it
+		 * silently stranded people.
+		 */
+		onRequestNewLink: () => void;
+		/**
+		 * Called when the backend wants a second factor after the link.
+		 *
+		 * A real branch: proving control of a mailbox is not proving possession of
+		 * a device, and a backend may reasonably ask for both. Without this the
+		 * user lands on a banner telling them to enter a code with nowhere to
+		 * enter it.
+		 */
+		onMfaRequired?:
+			| ((challenge: { challengeId: string; methods: readonly MfaMethod[] }) => void)
+			| undefined;
+	}
+
+	interface ManagedBinding {
+		mode: 'managed';
+		flowStore: PresentationView<MagicLinkSignInState, MagicLinkSignInAction>;
+		sessionStore?: never;
+		onSuccess?: never;
+		onRequestNewLink?: never;
+		onMfaRequired?: never;
+	}
+
+	interface PresentationProps {
 		/**
 		 * The token from the link.
 		 *
@@ -59,30 +95,9 @@
 		 * escapes it. Omitting it is a supported configuration.
 		 */
 		email?: string | null | undefined;
-		/** Called once, after the session has been established. */
-		onSuccess?: (() => void) | undefined;
-		/**
-		 * Where "ask for a new link" goes. **Required.**
-		 *
-		 * An expired or spent link cannot be retried from here, and a branch with
-		 * nothing to click is a dead end — the same reasoning as
-		 * `ResetPasswordForm`'s `onRequestNewLink`, which was optional until it
-		 * silently stranded people.
-		 */
-		onRequestNewLink: () => void;
-		/**
-		 * Called when the backend wants a second factor after the link.
-		 *
-		 * A real branch: proving control of a mailbox is not proving possession of
-		 * a device, and a backend may reasonably ask for both. Without this the
-		 * user lands on a banner telling them to enter a code with nowhere to
-		 * enter it.
-		 */
-		onMfaRequired?:
-			| ((challenge: { challengeId: string; methods: readonly MfaMethod[] }) => void)
-			| undefined;
 		headingLevel?: 1 | 2 | 3 | 4 | undefined;
 		submitLabel?: string | undefined;
+		startOverLabel?: string | undefined;
 		/** Replaces the signed-in panel. */
 		signedIn?: Snippet | undefined;
 		/** Rendered on every branch. */
@@ -90,56 +105,69 @@
 		class?: string | undefined;
 	}
 
+	type Props = PresentationProps & (StandaloneBinding | ManagedBinding);
+
 	let {
-		flowStore,
-		sessionStore,
 		token = null,
 		email = null,
-		onSuccess,
-		onRequestNewLink,
-		onMfaRequired,
 		headingLevel = 2,
 		submitLabel = 'Sign in',
+		startOverLabel = 'Sign in another way',
 		signedIn,
 		footer,
-		class: className = ''
+		class: className = '',
+		...binding
 	}: Props = $props();
 
-	const status = $derived(flowStore.state.status);
-	const error = $derived(flowStore.state.error);
+	/** `undefined` only for a managed view whose owner has retired. See `LoginForm`. */
+	const flow: MagicLinkSignInState | undefined = $derived(binding.flowStore.state);
+
+	type Owner = symbol | PresentationView<MagicLinkSignInState, MagicLinkSignInAction>;
+	const standaloneOwner = Symbol('standalone');
+	const owner: Owner = $derived(binding.mode === 'managed' ? binding.flowStore : standaloneOwner);
+	const viewOf = (key: Owner) => (typeof key === 'symbol' ? binding.flowStore : key);
+
+	const status = $derived(flow?.status);
+	const error = $derived(flow?.error ?? null);
 	/** The store's token, which the prop feeds rather than replaces. */
-	const heldToken = $derived(flowStore.state.token);
+	const heldToken = $derived(flow?.token ?? null);
 	const isSubmitting = $derived(status === 'submitting');
 
 	/**
-	 * The token this component has already handed to the flow.
+	 * The token this component has already handed to the flow, per owner.
 	 *
 	 * Nothing like `EmailVerification`'s guard — that one stops a single-use
 	 * token being *spent* twice. Nothing is spent here without a press, so this
-	 * only stops a redundant dispatch when the prop re-evaluates. Keying on the
-	 * value is therefore safe: `tokenProvided` is idempotent.
+	 * only stops a redundant dispatch when the prop re-evaluates.
 	 */
+	let providedOwner: Owner | null = null;
 	let provided: string | null = null;
 
 	$effect(() => {
+		const key = owner;
+		if (key !== providedOwner) {
+			providedOwner = key;
+			provided = null;
+		}
 		if (token === null || token === provided) return;
 		provided = token;
-		flowStore.dispatch({ type: 'tokenProvided', token });
+		viewOf(key).dispatch({ type: 'tokenProvided', token });
 	});
 
 	/** Whether the session has been handed over. */
 	let handedOver = false;
 
 	$effect(() => {
-		const state = flowStore.state;
+		if (binding.mode === 'managed') return;
+		const state = binding.flowStore.state;
 		if (state.status !== 'succeeded') {
 			handedOver = false;
 			return;
 		}
 		if (handedOver || state.session === null) return;
 		handedOver = true;
-		sessionStore.dispatch({ type: 'sessionEstablished', session: state.session });
-		onSuccess?.();
+		binding.sessionStore.dispatch({ type: 'sessionEstablished', session: state.session });
+		binding.onSuccess?.();
 	});
 
 	/**
@@ -153,14 +181,15 @@
 	let reportedChallenge = false;
 
 	$effect(() => {
-		const current = flowStore.state.error;
-		if (onMfaRequired === undefined || !isMfaRequired(current)) {
+		if (binding.mode === 'managed') return;
+		const current = binding.flowStore.state.error;
+		if (binding.onMfaRequired === undefined || !isMfaRequired(current)) {
 			reportedChallenge = false;
 			return;
 		}
 		if (reportedChallenge) return;
 		reportedChallenge = true;
-		onMfaRequired({ challengeId: current.challengeId, methods: current.methods });
+		binding.onMfaRequired({ challengeId: current.challengeId, methods: current.methods });
 	});
 
 	/** The panel, focused when it replaces the offer. */
@@ -171,7 +200,9 @@
 	});
 
 	/** Suppressed while a consumer routes to the second factor. */
-	const handlingMfa = $derived(onMfaRequired !== undefined && isMfaRequired(error));
+	const handlingMfa = $derived(
+		binding.mode !== 'managed' && binding.onMfaRequired !== undefined && isMfaRequired(error)
+	);
 
 	/**
 	 * Whether pressing again could possibly help.
@@ -200,117 +231,157 @@
 	const deadReason = $derived(
 		heldToken === null ? 'missing' : isMfaRequired(error) ? 'needsSecondFactor' : 'spent'
 	);
+
+	function handleRequestNewLink(key: Owner) {
+		if (isSubmitting) return;
+		if (binding.mode === 'managed') {
+			viewOf(key).dispatch({ type: 'requestNewLinkRequested' });
+		} else {
+			binding.onRequestNewLink();
+		}
+	}
+
+	function handleStartOver(key: Owner) {
+		if (isSubmitting) return;
+		if (binding.mode === 'managed') {
+			viewOf(key).dispatch({ type: 'startOverRequested' });
+		}
+	}
+
+	function handleSignIn(key: Owner) {
+		viewOf(key).dispatch({ type: 'signInRequested' });
+	}
 </script>
 
-<div class="magic-signin {className}">
-	{#if status === 'succeeded'}
-		<div
-			bind:this={panel}
-			class="magic-signin__panel"
-			role="status"
-			aria-live="polite"
-			tabindex="-1"
-		>
-			{#if signedIn}
-				{@render signedIn()}
+{#if flow}
+	{#each [owner] as key (key)}
+		<div class="magic-signin {className}">
+			{#if status === 'succeeded'}
+				<div
+					bind:this={panel}
+					class="magic-signin__panel"
+					role="status"
+					aria-live="polite"
+					tabindex="-1"
+				>
+					{#if signedIn}
+						{@render signedIn()}
+					{:else}
+						<svelte:element this={`h${headingLevel}`} class="magic-signin__title">
+							You're signed in
+						</svelte:element>
+						<p class="magic-signin__body">Welcome back.</p>
+					{/if}
+				</div>
+			{:else if handlingMfa}
+				<!-- The consumer is routing to the code prompt. Not a failure, so no alert. -->
+				<svelte:element this={`h${headingLevel}`} class="magic-signin__title">
+					One more step
+				</svelte:element>
+				<p class="magic-signin__body" role="status" aria-live="polite">
+					Taking you to your second factor…
+				</p>
+			{:else if !canPress}
+				<svelte:element this={`h${headingLevel}`} class="magic-signin__title">
+					{deadReason === 'missing'
+						? 'Nothing to sign in with'
+						: deadReason === 'needsSecondFactor'
+							? 'One more step is needed'
+							: 'That link has expired'}
+				</svelte:element>
+				{#if error}
+					<div
+						class="magic-signin__error"
+						role="alert"
+						aria-live="polite"
+						data-error-code={error.code}
+					>
+						{error.message}
+					</div>
+				{:else}
+					<p class="magic-signin__body">
+						Sign-in links work once and expire quickly. Ask for a fresh one to continue.
+					</p>
+				{/if}
+				{#if deadReason === 'needsSecondFactor'}
+					<p class="magic-signin__body">
+						This link is used up, and finishing needs a step this page cannot offer. Ask for a fresh
+						one, or sign in another way.
+					</p>
+				{/if}
+				<button
+					type="button"
+					class="magic-signin__action"
+					disabled={isSubmitting}
+					onclick={() => handleRequestNewLink(key)}
+				>
+					Send me a new link
+				</button>
 			{:else}
 				<svelte:element this={`h${headingLevel}`} class="magic-signin__title">
-					You're signed in
+					Sign in
 				</svelte:element>
-				<p class="magic-signin__body">Welcome back.</p>
+
+				<!--
+					The press is the point. A mail scanner opening this page issues a GET
+					and stops here, leaving the token unspent for whoever the mail was
+					actually for.
+				-->
+				<p class="magic-signin__body">
+					{#if email}
+						Continue as <strong>{email}</strong> on this device.
+					{:else}
+						Press the button to finish signing in on this device.
+					{/if}
+				</p>
+
+				{#if error}
+					<div
+						class="magic-signin__error"
+						role="alert"
+						aria-live="polite"
+						data-error-code={error.code}
+					>
+						{error.message}
+					</div>
+				{/if}
+
+				<p class="magic-signin__status" role="status" aria-live="polite">
+					{isSubmitting ? 'Signing you in…' : ''}
+				</p>
+
+				<button
+					type="button"
+					class="magic-signin__action"
+					disabled={isSubmitting}
+					onclick={() => handleSignIn(key)}
+				>
+					{isSubmitting ? 'Signing in…' : submitLabel}
+				</button>
+			{/if}
+
+			<!--
+				Outside every branch, as `ForgotPasswordForm` renders its own: a footer is
+				usually a way out, and dropping it on the dead-link branch removes it
+				exactly when the user is most stuck.
+			-->
+			{#if footer}
+				<div class="magic-signin__footer">{@render footer()}</div>
+			{:else if binding.mode === 'managed'}
+				<div class="magic-signin__footer">
+					<button
+						type="button"
+						class="magic-signin__back"
+						disabled={isSubmitting}
+						onclick={() => handleStartOver(key)}
+					>
+						{startOverLabel}
+					</button>
+				</div>
 			{/if}
 		</div>
-	{:else if handlingMfa}
-		<!-- The consumer is routing to the code prompt. Not a failure, so no alert. -->
-		<svelte:element this={`h${headingLevel}`} class="magic-signin__title">
-			One more step
-		</svelte:element>
-		<p class="magic-signin__body" role="status" aria-live="polite">
-			Taking you to your second factor…
-		</p>
-	{:else if !canPress}
-		<svelte:element this={`h${headingLevel}`} class="magic-signin__title">
-			{deadReason === 'missing'
-				? 'Nothing to sign in with'
-				: deadReason === 'needsSecondFactor'
-					? 'One more step is needed'
-					: 'That link has expired'}
-		</svelte:element>
-		{#if error}
-			<div
-				class="magic-signin__error"
-				role="alert"
-				aria-live="polite"
-				data-error-code={error.code}
-			>
-				{error.message}
-			</div>
-		{:else}
-			<p class="magic-signin__body">
-				Sign-in links work once and expire quickly. Ask for a fresh one to continue.
-			</p>
-		{/if}
-		{#if deadReason === 'needsSecondFactor'}
-			<p class="magic-signin__body">
-				This link is used up, and finishing needs a step this page cannot offer. Ask for a fresh
-				one, or sign in another way.
-			</p>
-		{/if}
-		<button type="button" class="magic-signin__action" onclick={() => onRequestNewLink()}>
-			Send me a new link
-		</button>
-	{:else}
-		<svelte:element this={`h${headingLevel}`} class="magic-signin__title">
-			Sign in
-		</svelte:element>
-
-		<!--
-			The press is the point. A mail scanner opening this page issues a GET
-			and stops here, leaving the token unspent for whoever the mail was
-			actually for.
-		-->
-		<p class="magic-signin__body">
-			{#if email}
-				Continue as <strong>{email}</strong> on this device.
-			{:else}
-				Press the button to finish signing in on this device.
-			{/if}
-		</p>
-
-		{#if error}
-			<div
-				class="magic-signin__error"
-				role="alert"
-				aria-live="polite"
-				data-error-code={error.code}
-			>
-				{error.message}
-			</div>
-		{/if}
-
-		<p class="magic-signin__status" role="status" aria-live="polite">
-			{isSubmitting ? 'Signing you in…' : ''}
-		</p>
-
-		<button
-			type="button"
-			class="magic-signin__action"
-			disabled={isSubmitting}
-			onclick={() => flowStore.dispatch({ type: 'signInRequested' })}
-		>
-			{isSubmitting ? 'Signing in…' : submitLabel}
-		</button>
-	{/if}
-
-	<!--
-		Outside every branch, as `ForgotPasswordForm` renders its own: a footer is
-		usually a way out, and dropping it on the dead-link branch removes it
-		exactly when the user is most stuck.
-	-->
-	{#if footer}
-		<div class="magic-signin__footer">{@render footer()}</div>
-	{/if}
-</div>
+	{/each}
+{/if}
 
 <style>
 	/* Scoped CSS over core's theme tokens — see `LoginForm` for why not Tailwind. */
@@ -402,6 +473,27 @@
 	}
 
 	.magic-signin__action:disabled {
+		cursor: not-allowed;
+		opacity: 0.5;
+	}
+
+	.magic-signin__back {
+		font: inherit;
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: hsl(var(--primary, 222.2 47.4% 11.2%));
+		background: transparent;
+		border: 0;
+		padding: 0;
+		cursor: pointer;
+	}
+
+	.magic-signin__back:focus-visible {
+		outline: 2px solid hsl(var(--ring, 222.2 84% 4.9%));
+		outline-offset: 2px;
+	}
+
+	.magic-signin__back:disabled {
 		cursor: not-allowed;
 		opacity: 0.5;
 	}

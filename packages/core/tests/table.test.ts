@@ -33,6 +33,15 @@ const mockProducts: Product[] = [
 	{ id: '10', name: 'Pencil', price: 1, category: 'Stationery', inStock: false }
 ];
 
+const generateProducts = (count: number): Product[] =>
+	Array.from({ length: count }, (_, i) => ({
+		id: String(i + 1),
+		name: `Product ${i + 1}`,
+		price: (i + 1) * 10,
+		category: i % 2 === 0 ? 'Electronics' : 'Furniture',
+		inStock: i % 3 === 0
+	}));
+
 describe('DataTable - Data Loading', () => {
 	it('should load data successfully', async () => {
 		const reducer = createTableReducer<Product>();
@@ -45,6 +54,78 @@ describe('DataTable - Data Loading', () => {
 			expect(state.isLoading).toBe(false);
 			expect(state.error).toBe(null);
 			expect(state.pagination.total).toBe(10);
+		});
+	});
+
+	it('should preserve dataset total when loading client-side data larger than pageSize', async () => {
+		const products = generateProducts(50);
+		const reducer = createTableReducer<Product>({ pageSize: 10 });
+		const initialState = createInitialState<Product>({ pageSize: 10 });
+		const store = new TestStore({ initialState, reducer });
+
+		await store.send({ type: 'dataLoaded', data: products }, (state) => {
+			expect(state.data).toHaveLength(10);
+			expect(state.originalData).toHaveLength(50);
+			expect(state.isLoading).toBe(false);
+			expect(state.error).toBe(null);
+			expect(state.pagination.total).toBe(50);
+		});
+	});
+
+	it('should preserve filtered pre-pagination client total when data is loaded with active filters', async () => {
+		const products = generateProducts(50);
+		const reducer = createTableReducer<Product>({ pageSize: 10 });
+		const initialState = createInitialState<Product>({ pageSize: 10 });
+		const store = new TestStore({ initialState, reducer });
+
+		await store.send(
+			{
+				type: 'filterAdded',
+				filter: { column: 'category', operator: 'equals', value: 'Electronics' }
+			},
+			() => {}
+		);
+
+		await store.send({ type: 'dataLoaded', data: products }, (state) => {
+			expect(state.originalData).toHaveLength(50);
+			expect(state.pagination.total).toBe(25);
+			expect(state.data).toHaveLength(10);
+			expect(state.data.every((p) => p.category === 'Electronics')).toBe(true);
+		});
+
+		await store.send({ type: 'filtersCleared' }, (state) => {
+			expect(state.pagination.total).toBe(50);
+			expect(state.data).toHaveLength(10);
+		});
+	});
+
+	it('should preserve server-reported total when dataLoaded is dispatched with total', async () => {
+		const reducer = createTableReducer<Product>({ serverSide: true });
+		const initialState = createInitialState<Product>({ serverSide: true, pageSize: 10 });
+		const store = new TestStore({ initialState, reducer });
+
+		await store.send(
+			{
+				type: 'dataLoaded',
+				data: mockProducts.slice(0, 5),
+				total: 500
+			},
+			(state) => {
+				expect(state.data).toHaveLength(5);
+				expect(state.originalData).toHaveLength(5);
+				expect(state.pagination.total).toBe(500);
+			}
+		);
+	});
+
+	it('should fall back to data length when serverSide dataLoaded does not provide total', async () => {
+		const reducer = createTableReducer<Product>({ serverSide: true });
+		const initialState = createInitialState<Product>({ serverSide: true, pageSize: 10 });
+		const store = new TestStore({ initialState, reducer });
+
+		await store.send({ type: 'dataLoaded', data: mockProducts.slice(0, 5) }, (state) => {
+			expect(state.data).toHaveLength(5);
+			expect(state.pagination.total).toBe(5);
 		});
 	});
 
@@ -351,6 +432,30 @@ describe('DataTable - Pagination', () => {
 		});
 	});
 
+	it('should paginate across all pages after dataLoaded with dataset larger than pageSize', async () => {
+		const products = generateProducts(25);
+		const reducer = createTableReducer<Product>({ pageSize: 10 });
+		const initialState = createInitialState<Product>({ pageSize: 10 });
+		const store = new TestStore({ initialState, reducer });
+
+		await store.send({ type: 'dataLoaded', data: products }, (state) => {
+			expect(state.pagination.total).toBe(25);
+			expect(state.data).toHaveLength(10);
+		});
+
+		await store.send({ type: 'pageChanged', page: 1 }, (state) => {
+			expect(state.pagination.page).toBe(1);
+			expect(state.data).toHaveLength(10);
+			expect(state.data[0]!.id).toBe('11');
+		});
+
+		await store.send({ type: 'pageChanged', page: 2 }, (state) => {
+			expect(state.pagination.page).toBe(2);
+			expect(state.data).toHaveLength(5);
+			expect(state.data[0]!.id).toBe('21');
+		});
+	});
+
 	it('should reset page to 0 on sort', async () => {
 		const reducer = createTableReducer<Product>({ initialData: mockProducts });
 		const initialState = createInitialState<Product>({ initialData: mockProducts, pageSize: 3 });
@@ -501,6 +606,65 @@ describe('DataTable - Combined Operations', () => {
 			expect(state.selectedRows.size).toBe(2);
 			expect(state.selectedRows.has('1')).toBe(true);
 			expect(state.selectedRows.has('5')).toBe(true);
+		});
+	});
+});
+
+describe('DataTable - Refresh and Server-Side Pagination', () => {
+	it('should handle refreshTriggered and receive dataLoaded with server-reported total', async () => {
+		const serverProducts = mockProducts.slice(0, 5);
+		const fetchData = async () => ({
+			data: serverProducts,
+			total: 500
+		});
+		const reducer = createTableReducer<Product>({ serverSide: true, fetchData });
+		const initialState = createInitialState<Product>({ serverSide: true, pageSize: 5 });
+		const store = new TestStore({ initialState, reducer });
+
+		await store.send({ type: 'refreshTriggered' }, (state) => {
+			expect(state.isLoading).toBe(true);
+			expect(state.error).toBe(null);
+		});
+
+		await store.receive(
+			{ type: 'dataLoaded', data: serverProducts, total: 500 },
+			(state) => {
+				expect(state.isLoading).toBe(false);
+				expect(state.error).toBe(null);
+				expect(state.data).toEqual(serverProducts);
+				expect(state.pagination.total).toBe(500);
+			}
+		);
+	});
+
+	it('should handle refreshTriggered failure when fetchData rejects', async () => {
+		const fetchData = async () => {
+			throw new Error('Server request failed');
+		};
+		const reducer = createTableReducer<Product>({ serverSide: true, fetchData });
+		const initialState = createInitialState<Product>({ serverSide: true });
+		const store = new TestStore({ initialState, reducer });
+
+		await store.send({ type: 'refreshTriggered' }, (state) => {
+			expect(state.isLoading).toBe(true);
+		});
+
+		await store.receive(
+			{ type: 'dataLoadFailed', error: 'Server request failed' },
+			(state) => {
+				expect(state.isLoading).toBe(false);
+				expect(state.error).toBe('Server request failed');
+			}
+		);
+	});
+
+	it('should do nothing on refreshTriggered when fetchData is not configured', async () => {
+		const reducer = createTableReducer<Product>({ serverSide: true });
+		const initialState = createInitialState<Product>({ serverSide: true });
+		const store = new TestStore({ initialState, reducer });
+
+		await store.send({ type: 'refreshTriggered' }, (state) => {
+			expect(state.isLoading).toBe(false);
 		});
 	});
 });

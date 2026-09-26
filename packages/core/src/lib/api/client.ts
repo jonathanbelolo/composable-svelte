@@ -134,7 +134,8 @@ export function createAPIClient(config: APIClientConfig = {}): APIClient {
   // (AUDIT-2026-09-03-FINDINGS A1, A2).
   const inFlight = createInFlightRegistry();
   const cache = createResponseCache({
-    maxEntries: typeof defaultCache === 'object' ? defaultCache.maxEntries : undefined
+    maxEntries: typeof defaultCache === 'object' ? defaultCache.maxEntries : undefined,
+    baseURL
   });
 
   /**

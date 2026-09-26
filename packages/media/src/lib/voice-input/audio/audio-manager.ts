@@ -20,6 +20,7 @@ export class AudioManager {
 	private analyzer: AnalyserNode | null = null;
 	private recorder: MediaRecorder | null = null;
 	private chunks: Blob[] = [];
+	private pendingStop: { recorder: MediaRecorder; promise: Promise<Blob> } | null = null;
 	private intervals: Set<number> = new Set();
 
 	/**
@@ -56,15 +57,31 @@ export class AudioManager {
 			throw new Error('No stream available. Call requestMicrophone() first.');
 		}
 
-		this.recorder = new MediaRecorder(this.stream, {
-			mimeType: 'audio/webm;codecs=opus'
-		});
+		let options: MediaRecorderOptions | undefined;
+		const candidates = [
+			'audio/webm;codecs=opus',
+			'audio/webm',
+			'audio/mp4;codecs=mp4a.40.2',
+			'audio/mp4',
+			'audio/ogg;codecs=opus',
+			'audio/ogg'
+		];
 
-		this.chunks = [];
+		if (typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function') {
+			const supported = candidates.find((type) => MediaRecorder.isTypeSupported(type));
+			if (supported) {
+				options = { mimeType: supported };
+			}
+		}
+
+		this.recorder = options ? new MediaRecorder(this.stream, options) : new MediaRecorder(this.stream);
+
+		const chunks: Blob[] = [];
+		this.chunks = chunks;
 
 		this.recorder.ondataavailable = (e) => {
 			if (e.data.size > 0) {
-				this.chunks.push(e.data);
+				chunks.push(e.data);
 			}
 		};
 
@@ -77,19 +94,34 @@ export class AudioManager {
 	 * @throws Error if no recorder available
 	 */
 	stopRecording(): Promise<Blob> {
-		return new Promise((resolve, reject) => {
-			if (!this.recorder) {
-				reject(new Error('No recorder available'));
-				return;
-			}
-
-			this.recorder.onstop = () => {
-				const audioBlob = new Blob(this.chunks, { type: 'audio/webm' });
-				resolve(audioBlob);
-			};
-
-			this.recorder.stop();
+		const recorder = this.recorder;
+		if (!recorder) return Promise.reject(new Error('No recorder available'));
+		if (this.pendingStop?.recorder === recorder) return this.pendingStop.promise;
+		const chunks = this.chunks;
+		let resolveStop!: (blob: Blob) => void;
+		let rejectStop!: (error: unknown) => void;
+		const promise = new Promise<Blob>((resolve, reject) => {
+			resolveStop = resolve;
+			rejectStop = reject;
 		});
+		this.pendingStop = { recorder, promise };
+		const retire = () => {
+			if (this.recorder === recorder) this.recorder = null;
+			if (this.pendingStop?.recorder === recorder) this.pendingStop = null;
+		};
+		recorder.onstop = () => {
+			const mimeType = recorder.mimeType || chunks[0]?.type || '';
+			retire();
+			resolveStop(new Blob(chunks, { type: mimeType }));
+		};
+		try {
+			recorder.stop();
+		} catch (error) {
+			retire();
+			recorder.onstop = null;
+			rejectStop(error);
+		}
+		return promise;
 	}
 
 	/**
@@ -165,6 +197,7 @@ export class AudioManager {
 
 		// Clear references
 		this.recorder = null;
+		this.pendingStop = null;
 		this.analyzer = null;
 		this.chunks = [];
 	}

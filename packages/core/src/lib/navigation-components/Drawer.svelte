@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import DrawerPrimitive from './primitives/DrawerPrimitive.svelte';
-  import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
+  import { assertPresentationView, type PresentationView } from '../navigation/managed-integration.js';
   import type { PresentationState } from '../navigation/types.js';
   import type { SpringConfig } from '../animation/spring-config.js';
   import { cn } from '../utils.js';
@@ -12,9 +12,9 @@
 
   interface DrawerProps<State, Action> {
     /**
-     * Scoped store for the drawer content.
+     * Managed presentation view for the drawer content.
      */
-    store: ScopedDestinationStore<State, Action> | null;
+    store?: PresentationView<State, Action> | undefined;
 
     /**
      * Presentation state for animation lifecycle.
@@ -105,7 +105,7 @@
       [
         {
           visible: boolean;
-          store: ScopedDestinationStore<State, Action> | null;
+          store: PresentationView<State, Action> | undefined;
           side: 'left' | 'right';
           width: string;
         }
@@ -131,6 +131,13 @@
     width = '320px',
     children: renderContent
   }: DrawerProps<unknown, unknown> = $props();
+
+  const admittedStore = $derived.by(() => {
+    if (store !== undefined) {
+      assertPresentationView(store);
+    }
+    return store;
+  });
 
   // ============================================================================
   // Computed Classes
@@ -161,7 +168,7 @@
 <!-- ============================================================================ -->
 
 <DrawerPrimitive
-  {store}
+  store={admittedStore}
   {presentation}
   {onPresentationComplete}
   {onDismissalComplete}
@@ -171,7 +178,7 @@
   {side}
   {width}
 >
-  {#snippet children({ visible, store, side, width, bindBackdrop, bindContent, initialOpacity })}
+  {#snippet children({ visible, store: primitiveStore, side, width, bindBackdrop, bindContent, initialOpacity })}
     {#if backdropClasses}
       <div
         use:bindBackdrop
@@ -193,7 +200,7 @@
         : { 'aria-label': ariaLabel ?? 'Side drawer' }}
       {...ariaDescribedby !== undefined ? { 'aria-describedby': ariaDescribedby } : {}}
     >
-      {@render renderContent?.({ visible, store, side, width })}
+      {@render renderContent?.({ visible, store: primitiveStore, side, width })}
     </div>
   {/snippet}
 </DrawerPrimitive>

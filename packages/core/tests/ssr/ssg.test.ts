@@ -728,3 +728,85 @@ describe('SSG (Static Site Generation)', () => {
   });
 });
 
+
+
+describe('B009-08 canonical URL boundary',()=>{
+ for(const [baseURL, expected] of [['https://example.com','https://example.com/about'],['https://example.com/','https://example.com/about'],['https://example.com/app///','https://example.com/app/about']] as const)it(`joins route slashes for ${baseURL}`,async()=>{
+  vi.mocked(fs.writeFile).mockReset().mockResolvedValue(undefined);
+  const result=await generateStaticSite(MockComponent,{routes:[{path:'/about'}],outDir:'./dist',baseURL,generate404:false},{reducer,dependencies:{},getInitialState:async()=>initialState});
+  expect(result.pagesGenerated).toBe(1);const html=String(vi.mocked(fs.writeFile).mock.calls[0]![1]);expect(html).toContain(`<link rel="canonical" href="${expected}">`);
+ });
+});
+
+describe('canonical routes match emitted file paths', () => {
+ for(const [path, suffix] of [['//about///team/', '/about/team'], ['/about%2Fteam', '/about/team'], ['/a%20b', '/a%20b'], ['/a\\b', '/a/b'], ['/', '/'], ['/404', '/404.html']] as const) {
+  it(`normalizes ${path}`, async () => {
+   vi.mocked(fs.writeFile).mockReset().mockResolvedValue(undefined);
+   const result=await generateStaticSite(MockComponent,{routes:[{path}],outDir:'./dist',baseURL:'https://example.com/app/',generate404:false},{reducer,dependencies:{},getInitialState:async()=>initialState});
+   expect(result.pagesGenerated).toBe(1);
+   const html=String(vi.mocked(fs.writeFile).mock.calls[0]![1]);
+   expect(html).toContain(`<link rel="canonical" href="https://example.com/app${suffix}">`);
+  });
+ }
+});
+
+describe('per-page render options', () => {
+  it('resolves merged route state and the 404 state without injecting a second head owner', async () => {
+    vi.clearAllMocks();
+    const options = vi.fn((state: TestState, routePath: string) => ({
+      title: null,
+      lang: state.content,
+      head: `<meta name="route" content="${routePath}">`
+    }));
+    const result = await generateStaticSite(MockComponent, {
+      routes: [
+        { path: '/fr/', getServerProps: async () => ({ content: 'fr' }) },
+        { path: '/es/', getServerProps: async () => ({ content: 'es' }) }
+      ],
+      outDir: './localized',
+      notFoundState: { ...initialState, content: 'en' }
+    }, { reducer, getInitialState: () => initialState, renderOptions: options });
+    expect(result.errors).toEqual([]);
+    expect(options.mock.calls.map(([state, routePath]) => [state.content, routePath])).toEqual([
+      ['fr', '/fr/'], ['es', '/es/'], ['en', '/404']
+    ]);
+    for (const [file, html] of vi.mocked(fs.writeFile).mock.calls) {
+      const lang = String(file).split(path.sep).includes('fr') ? 'fr' : String(file).split(path.sep).includes('es') ? 'es' : 'en';
+      expect(String(html)).toContain(`<html lang="${lang}">`);
+      expect(String(html).match(/<title>/g)).toHaveLength(1);
+    }
+  });
+});
+
+it('retains static render-options objects for both route and 404 output', async () => {
+  vi.clearAllMocks();
+  const result = await generateStaticSite(MockComponent, {
+    routes: [{ path: '/', getServerProps: async () => initialState }],
+    outDir: './object-options', notFoundState: initialState
+  }, { reducer, renderOptions: { title: null, lang: 'fr' } });
+  expect(result.errors).toEqual([]);
+  expect(fs.writeFile).toHaveBeenCalledTimes(2);
+  for (const [, html] of vi.mocked(fs.writeFile).mock.calls) {
+    expect(String(html)).toContain('<html lang="fr">');
+    expect(String(html).match(/<title>/g)).toHaveLength(1);
+  }
+});
+
+it('records resolver failures by route including 404 and still generates successful siblings', async () => {
+  vi.clearAllMocks();
+  expectConsole('error', 2);
+  const failure = new Error('render-options failure');
+  const result = await generateStaticSite(MockComponent, {
+    routes: [{ path: '/bad' }, { path: '/good' }], outDir: './resolver-errors', notFoundState: initialState
+  }, {
+    reducer, getInitialState: () => initialState,
+    renderOptions: (_state, route) => {
+      if (route !== '/good') throw failure;
+      return { title: null, lang: 'en' };
+    }
+  });
+  expect(result.errors.map(entry => entry.path)).toEqual(['/bad', '/404']);
+  expect(result.errors.every(entry => entry.error === failure)).toBe(true);
+  expect(result.pagesGenerated).toBe(1);
+  expect(fs.writeFile).toHaveBeenCalledTimes(1);
+});

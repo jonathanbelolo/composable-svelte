@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "declarationMap": false,
+    "emitDeclarationOnly": true,
+    "noEmit": false,
+    "outDir": "../../.temp/application-public-managed-types",
+    "rootDir": "./tests",
+    "types": [
+      "svelte",
+      "node"
+    ]
+  },
+  "include": [
+    "tests/application-public-managed-types.emitted.types.ts",
+    "tests/managed-dependency-extension.emitted.types.ts"
+  ]
+}

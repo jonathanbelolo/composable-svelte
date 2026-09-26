@@ -1,0 +1,12 @@
+[
+  {
+    "name": "@composable-svelte/core",
+    "distFiles": 1163,
+    "allIdenticalToProvisional": true
+  },
+  {
+    "name": "@composable-svelte/media",
+    "distFiles": 92,
+    "allIdenticalToProvisional": true
+  }
+]

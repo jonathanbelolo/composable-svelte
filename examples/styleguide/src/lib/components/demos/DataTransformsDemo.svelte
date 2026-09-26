@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { createStore } from '@composable-svelte/core';
   import { Chart, chartReducer, createInitialChartState, DataTransforms } from '@composable-svelte/charts';
   import { Button } from '@composable-svelte/core/components/ui';
@@ -22,12 +23,14 @@
 
   const store = createStore({
     initialState: createInitialChartState({
-      data: fullData,
+      data: DataTransforms.sortBy<(typeof fullData)[number]>('sales', 'asc')(fullData),
       dimensions: { width: 700, height: 350 }
     }),
     reducer: chartReducer,
     dependencies: {}
   });
+
+  onDestroy(() => store.destroy());
 
   // Transform controls
   let filterCategory: string | null = $state(null);
@@ -36,19 +39,14 @@
 
   // Apply transforms
   function applyTransforms() {
-    let transforms: any[] = [];
+    const transforms: Array<(data: typeof fullData) => typeof fullData> = [];
 
     // Filter by category
     if (filterCategory) {
       transforms.push(
-        DataTransforms.filter((d: any) => d.category === filterCategory)
+        DataTransforms.filter<(typeof fullData)[number]>((d) => d.category === filterCategory)
       );
     }
-
-    // Sort by sales
-    transforms.push(
-      DataTransforms.sortBy('sales', sortOrder)
-    );
 
     // Top N
     if (showTopN) {
@@ -56,6 +54,11 @@
         DataTransforms.topN(showTopN, 'sales')
       );
     }
+
+    // Sort by sales
+    transforms.push(
+      DataTransforms.sortBy('sales', sortOrder)
+    );
 
     // Compose and apply
     const composedTransform = DataTransforms.compose(...transforms);
@@ -89,7 +92,7 @@
     sortOrder = 'asc';
     store.dispatch({
       type: 'setData',
-      data: fullData
+      data: DataTransforms.sortBy<(typeof fullData)[number]>('sales', 'asc')(fullData)
     });
   }
 </script>
@@ -210,6 +213,7 @@
       width={700}
       height={350}
       type="bar"
+      barCategoryOrder="input"
       x="month"
       y="sales"
       color="category"

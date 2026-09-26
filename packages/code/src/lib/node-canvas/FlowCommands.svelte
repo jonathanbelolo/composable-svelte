@@ -14,18 +14,24 @@
 	 * `setViewport`, so the store keeps the projection and the canvas keeps the
 	 * pixels. Exactly the shape used for the code editor's command actions.
 	 *
-	 * `subscribeToActions` rather than an `$effect`, for the same reason as
+	 * An action listener rather than an `$effect`, for the same reason as
 	 * there: Svelte coalesces effect runs, so two commands dispatched in one tick
-	 * would collapse into one.
+	 * would collapse into one. The listener is a managed owner's observed
+	 * actions, or a standalone store's `subscribeToActions` (`bindViewSource`).
 	 */
 	import { useSvelteFlow } from '@xyflow/svelte';
 	import { onMount } from 'svelte';
-	import type { Store } from '@composable-svelte/core';
+	import { isManagedChildView } from '@composable-svelte/core/application';
 	import type { NodeCanvasState, NodeCanvasAction } from './types.js';
+	import { bindViewSource, type ViewSource } from '../internal/view-source.js';
 
 	const props: {
-		store: Store<NodeCanvasState<NodeData, EdgeData>, Action>;
-		/** Recognises this canvas's commands in the parent's action stream. */
+		store: ViewSource<NodeCanvasState<NodeData, EdgeData>, Action>;
+		/**
+		 * Recognises this canvas's commands among a standalone store's actions.
+		 * Not consulted for a managed view: its observed actions are already the
+		 * canvas's own.
+		 */
 		unliftAction: (action: Action) => NodeCanvasAction<NodeData, EdgeData> | null;
 		/** The canvas's zoom bounds, so commands cannot exceed them. */
 		minZoom: number;
@@ -38,57 +44,64 @@
 		useSvelteFlow();
 
 	onMount(() => {
-		const unsubscribe = props.store.subscribeToActions?.((action) => {
-			const canvasAction = props.unliftAction(action);
-			if (!canvasAction) return;
-
-			switch (canvasAction.type) {
-				case 'setViewport':
-					// `duration: 0` so the echo through `onmoveend` is synchronous and
-					// the value guard there settles it in one pass.
-					//
-					// Clamped: `setViewport` does no bounds checking of its own, and
-					// while this action was dead it could not violate anything. Now
-					// that it drives the canvas, ignoring `minZoom`/`maxZoom` would
-					// make those props advisory for one command and binding for the
-					// other two.
-					setViewport(
-						{ ...canvasAction.viewport, zoom: clampZoom(canvasAction.viewport.zoom) },
-						{ duration: 0 }
-					);
-					return;
-				case 'zoomIn':
-					// The flow owns the clamping, against the real minZoom/maxZoom.
-					// The reducer used to duplicate it with hardcoded 2 / 0.1.
-					zoomIn();
-					return;
-				case 'zoomOut':
-					zoomOut();
-					return;
-				case 'fitView':
-					fitView();
-					return;
-				case 'centerView': {
-					const bounds = getNodesBounds(getNodes());
-					// The explicit zoom is required, not optional: `setCenter` defaults
-					// its zoom to `store.maxZoom`
-					// (`@xyflow/svelte/dist/lib/store/index.js:78-79`), so omitting it
-					// slams the canvas to maximum. Centring is a pan.
-					setCenter(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, {
-						zoom: getViewport().zoom
-					});
-					return;
-				}
+		// A managed view delivers only this owner's actions, already unwrapped to
+		// `NodeCanvasAction`. Passing them through a caller's `unliftAction`
+		// could only lose them: a non-identity `liftAction` (even `{ ...a }`)
+		// defeats the default identity probe, and every command would be dropped.
+		const managed = isManagedChildView(props.store);
+		return bindViewSource(
+			props.store,
+			{
+				component: 'NodeCanvas',
+				loses: 'setViewport / zoomIn / zoomOut / fitView / centerView cannot reach the canvas'
+			},
+			{
+				onAction: (action) =>
+					runCommand(managed ? (action as NodeCanvasAction<NodeData, EdgeData>) : props.unliftAction(action))
 			}
-		});
-
-		if (!unsubscribe) {
-			console.warn(
-				'[NodeCanvas] this store does not implement subscribeToActions, so ' +
-					'setViewport / zoomIn / zoomOut / fitView / centerView cannot reach the canvas.'
-			);
-		}
-
-		return () => unsubscribe?.();
+		);
 	});
+
+	function runCommand(canvasAction: NodeCanvasAction<NodeData, EdgeData> | null): void {
+		if (!canvasAction) return;
+
+		switch (canvasAction.type) {
+			case 'setViewport':
+				// `duration: 0` so the echo through `onmoveend` is synchronous and
+				// the value guard there settles it in one pass.
+				//
+				// Clamped: `setViewport` does no bounds checking of its own, and
+				// while this action was dead it could not violate anything. Now
+				// that it drives the canvas, ignoring `minZoom`/`maxZoom` would
+				// make those props advisory for one command and binding for the
+				// other two.
+				setViewport(
+					{ ...canvasAction.viewport, zoom: clampZoom(canvasAction.viewport.zoom) },
+					{ duration: 0 }
+				);
+				return;
+			case 'zoomIn':
+				// The flow owns the clamping, against the real minZoom/maxZoom.
+				// The reducer used to duplicate it with hardcoded 2 / 0.1.
+				zoomIn();
+				return;
+			case 'zoomOut':
+				zoomOut();
+				return;
+			case 'fitView':
+				fitView();
+				return;
+			case 'centerView': {
+				const bounds = getNodesBounds(getNodes());
+				// The explicit zoom is required, not optional: `setCenter` defaults
+				// its zoom to `store.maxZoom`
+				// (`@xyflow/svelte/dist/lib/store/index.js:78-79`), so omitting it
+				// slams the canvas to maximum. Centring is a pan.
+				setCenter(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, {
+					zoom: getViewport().zoom
+				});
+				return;
+			}
+		}
+	}
 </script>

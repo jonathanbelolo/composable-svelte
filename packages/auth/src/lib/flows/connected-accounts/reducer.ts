@@ -17,10 +17,22 @@ import type {
 const UNLINK_EFFECT_ID = 'auth/flows/connected-accounts/unlink';
 
 export function createInitialConnectedAccountsState(): ConnectedAccountsState {
-	return { status: 'idle', provider: null, unlinked: [], error: null };
+	return { status: 'idle', provider: null, unlinked: [], error: null, settled: null };
 }
 
+/**
+ * `settled` lasts one reduction: cleared before every action, and set again
+ * only by the arm that accepts a result. Identical state when it was already
+ * `null`, so an action that changes nothing still returns the same object.
+ */
 export const connectedAccountsReducer: Reducer<
+	ConnectedAccountsState,
+	ConnectedAccountsAction,
+	ConnectedAccountsDependencies
+> = (state, action, deps) =>
+	reduceConnectedAccounts(state.settled === null ? state : { ...state, settled: null }, action, deps);
+
+const reduceConnectedAccounts: Reducer<
 	ConnectedAccountsState,
 	ConnectedAccountsAction,
 	ConnectedAccountsDependencies
@@ -73,17 +85,18 @@ export const connectedAccountsReducer: Reducer<
 					unlinked: state.unlinked.includes(action.provider)
 						? state.unlinked
 						: [...state.unlinked, action.provider],
-					error: null
+					error: null,
+					settled: 'unlink'
 				},
 				Effect.none()
 			];
 		}
 
 		case 'unlinkFailed': {
-			// Guarded on the provider only, not on status — the reasoning
-			// `oauth-start` gives for the same arm. A refusal is the branch the user
-			// most needs to see, and a status clause is how it gets swallowed.
-			if (action.provider !== state.provider) {
+			// Accept only the pending request. The provider is retained after a
+			// failure for its row's error message, so matching the provider alone
+			// would replay a settled reauthentication demand indefinitely.
+			if (state.status !== 'unlinking' || action.provider !== state.provider) {
 				return [state, Effect.none()];
 			}
 
@@ -91,7 +104,7 @@ export const connectedAccountsReducer: Reducer<
 			// error is one banner above a row of buttons; here it belongs beside the
 			// row it is about, and a null would leave the panel unable to say which
 			// provider was refused.
-			return [{ ...state, status: 'idle', error: action.error }, Effect.none()];
+			return [{ ...state, status: 'idle', error: action.error, settled: 'unlink' }, Effect.none()];
 		}
 
 		case 'providersObserved': {

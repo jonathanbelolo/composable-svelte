@@ -22,7 +22,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import ts from 'typescript';
 import { fileURLToPath } from 'node:url';
 import { join, relative } from 'node:path';
 
@@ -198,10 +199,40 @@ const ALLOWED = new Map([
 
 // The promise and opendir forms too: a walk is a walk whichever call spells it.
 const usesReaddir = (file: string) => /\b(?:readdirSync|readdir|opendirSync|opendir)\b/.test(code(file));
-const usesThrowingStat = (file: string) =>
-	[...code(file).matchAll(/\b[lf]?statSync\s*\(([^)]*)\)/g)].some(
-		(m) => !m[1]!.includes('throwIfNoEntry')
-	);
+/** Finite syntax rule: only a proven second-argument false option is safe. */
+function usesThrowingStatCode(source:string):boolean {
+  const ast=ts.createSourceFile('guard.ts',source,ts.ScriptTarget.Latest,true);
+  let throwing=false;
+  const unwrap=(node:ts.Expression):ts.Expression=> {
+    while(ts.isParenthesizedExpression(node)||ts.isAsExpression(node)||ts.isSatisfiesExpression(node)) node=node.expression;
+    return node;
+  };
+  function visit(node:ts.Node):void {
+    if(throwing) return;
+    if(ts.isCallExpression(node)) {
+      const expression=node.expression;
+      const name=ts.isIdentifier(expression)?expression.text:ts.isPropertyAccessExpression(expression)?expression.name.text:'';
+      if(['statSync','lstatSync','fstatSync'].includes(name)) {
+        let safe=false;
+        const argument=node.arguments[1];
+        const options=argument&&unwrap(argument);
+        if(name!=='fstatSync'&&options&&ts.isObjectLiteralExpression(options)) {
+          for(const property of options.properties) {
+            // Later spread/computed writes may override an earlier false.
+            if(ts.isSpreadAssignment(property)||ts.isComputedPropertyName(property.name)) {safe=false;continue;}
+            const key=ts.isIdentifier(property.name)||ts.isStringLiteral(property.name)?property.name.text:undefined;
+            if(key==='throwIfNoEntry') safe=ts.isPropertyAssignment(property)&&unwrap(property.initializer).kind===ts.SyntaxKind.FalseKeyword;
+          }
+        }
+        if(!safe){throwing=true;return;}
+      }
+    }
+    ts.forEachChild(node,visit);
+  }
+  visit(ast);
+  return throwing;
+}
+const usesThrowingStat=(file:string)=>usesThrowingStatCode(readFileSync(join(testsDir,file),'utf8'));
 
 describe('no guard walks the tree itself', () => {
 	// `walk.ts` is the only place allowed to touch these, so the fix cannot be
@@ -267,4 +298,26 @@ describe('no guard walks the tree itself', () => {
 
 		expect(discussed.length, 'no guard mentions either name, so stripping proves nothing').toBeGreaterThan(0);
 	});
+});
+
+
+describe('stat option syntax regression',()=>{
+  it.each([
+    ["statSync(join(dir,file), {throwIfNoEntry:false});",false],
+    ["fs.lstatSync(resolve(dir,file), {'throwIfNoEntry': (false as const)});",false],
+    ["statSync(path, {throwIfNoEntry:true});",true],
+    ["statSync(path /* throwIfNoEntry:false */);",true],
+    ["statSync(path, {other:'throwIfNoEntry:false'});",true],
+    ["statSync({throwIfNoEntry:false});",true],
+    ["statSync(path, {throwIfNoEntry:false,...unknown});",true],
+    ["statSync(path, {...unknown,throwIfNoEntry:false});",false],
+    ["statSync(path, {throwIfNoEntry:false,throwIfNoEntry:true});",true],
+    ["fstatSync(fd, {throwIfNoEntry:false});",true],
+    ["const example='statSync(path)';",false],
+    ["// statSync(path)\nconst value=1;",false]
+  ])('classifies %s',(source,expected)=>{
+    const dir=mkdtempSync(join(testsDir,'stat-probe-'));
+    try{const file=join(dir,'probe.ts');writeFileSync(file,source);expect(usesThrowingStat(relative(testsDir,file))).toBe(expected);}
+    finally{rmSync(dir,{recursive:true,force:true});}
+  });
 });

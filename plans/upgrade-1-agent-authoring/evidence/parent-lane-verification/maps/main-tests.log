@@ -1,0 +1,31 @@
+
+> @composable-svelte/maps@0.2.1 test /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/maps
+> vitest run
+
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/maps
+
+5:39:02 AM [vite-plugin-svelte] tests/maps-boundaries-v1.test.svelte.ts:558:4 Avoid declaring classes below the top level scope
+https://svelte.dev/e/perf_avoid_nested_class
+5:39:02 AM [vite-plugin-svelte] tests/maps-boundaries-v1.test.svelte.ts:602:4 Avoid declaring classes below the top level scope
+https://svelte.dev/e/perf_avoid_nested_class
+ ✓ tests/optional-peer-isolation.test.ts (5 tests) 2ms
+ ✓ tests/layer-spec.test.ts (21 tests) 3ms
+ ✓ tests/tile-providers.test.ts (11 tests) 3ms
+ ✓ tests/mapbox-adapter.test.ts (13 tests) 5ms
+ ✓ tests/map.reducer.test.ts (34 tests) 4ms
+ ✓ tests/popup-lifetime.test.ts (4 tests) 21ms
+ ✓ tests/tile-provider-control.test.ts (10 tests) 26ms
+ ✓ tests/map-viewport-sync.test.svelte.ts (7 tests) 79ms
+ ✓ tests/component-mount.test.ts (4 tests) 249ms
+ ✓ tests/map-lifecycle-boundaries.test.ts (4 tests) 355ms
+ ✓ tests/map-d2-regressions.test.svelte.ts (5 tests) 332ms
+ ✓ tests/map-primitive.test.ts (11 tests) 614ms
+ ✓ tests/maps-boundaries-v1.test.svelte.ts (29 tests) 720ms
+ ✓ tests/map-managed-proof.test.svelte.ts (15 tests) 1995ms
+
+ Test Files  14 passed (14)
+      Tests  173 passed (173)
+   Start at  05:39:01
+   Duration  4.86s (transform 12.28s, setup 0ms, collect 19.67s, tests 4.41s, environment 10.40s, prepare 87ms)
+

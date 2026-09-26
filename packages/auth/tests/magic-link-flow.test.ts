@@ -355,4 +355,105 @@ describe('using a link', () => {
 		await store.send({ type: 'errorDismissed' });
 		expect(store.state).toBe(before);
 	});
+
+	it('cancels in-flight exchange on token replacement and ignores late or replayed results from superseded attempt', async () => {
+		const slow1 = deferred<SessionSnapshot>();
+		const slow2 = deferred<SessionSnapshot>();
+		const altSession: SessionSnapshot = {
+			subject_id: '99999999-9999-9999-9999-999999999999',
+			display_name: 'Bob',
+			roles: ['member']
+		};
+		const signInWithMagicLink = vi
+			.fn<MagicLinkSignInDependencies['signInWithMagicLink']>()
+			.mockReturnValueOnce(slow1.promise)
+			.mockReturnValueOnce(slow2.promise);
+
+		const store = signInStore({ signInWithMagicLink }, { token: 'tok_1' });
+
+		// 1. Submit tok_1
+		await store.send({ type: 'signInRequested' }, (s) => {
+			expect(s.status).toBe('submitting');
+			expect(s.attempt).toBe(1);
+		});
+
+		// 2. Token replaced while submitting
+		await store.send({ type: 'tokenProvided', token: 'tok_2' }, (s) => {
+			expect(s.status, 'status must reset to idle on replacement').toBe('idle');
+			expect(s.token).toBe('tok_2');
+			expect(s.attempt, 'attempt must be incremented').toBe(2);
+		});
+
+		// 3. Stale success from old attempt arriving while idle must be ignored
+		await store.send({ type: 'signInSucceeded', session, attempt: 1 }, (s) => {
+			expect(s.status).toBe('idle');
+			expect(s.session).toBeNull();
+			expect(s.settled).toBeNull();
+		});
+
+		// 4. Stale failures from old attempt arriving while idle must be ignored
+		await store.send(
+			{ type: 'signInFailed', error: { code: 'token_expired', message: 'Expired' }, attempt: 1 },
+			(s) => {
+				expect(s.status).toBe('idle');
+				expect(s.error).toBeNull();
+			}
+		);
+		await store.send(
+			{
+				type: 'signInFailed',
+				error: { code: 'mfa_required', message: 'MFA', challengeId: 'c1', methods: ['totp'] },
+				attempt: 1
+			},
+			(s) => {
+				expect(s.status).toBe('idle');
+				expect(s.error).toBeNull();
+			}
+		);
+
+		// 5. Submit tok_2
+		await store.send({ type: 'signInRequested' }, (s) => {
+			expect(s.status).toBe('submitting');
+			expect(s.attempt).toBe(3);
+		});
+
+		// 6. Stale result from attempt 1 replayed while attempt 3 is submitting must be ignored
+		await store.send({ type: 'signInSucceeded', session, attempt: 1 }, (s) => {
+			expect(s.status).toBe('submitting');
+			expect(s.session).toBeNull();
+		});
+
+		// 7. Legitimate result for attempt 3 resolves
+		slow2.resolve(altSession);
+		await store.receive({ type: 'signInSucceeded' }, (s) => {
+			expect(s.status).toBe('succeeded');
+			expect(s.session).toEqual(altSession);
+			expect(s.settled).toBe('succeeded');
+		});
+
+		store.assertNoPendingActions();
+	});
+
+	it('refuses startOverRequested and requestNewLinkRequested while submitting', async () => {
+		const slow = deferred<SessionSnapshot>();
+		const signInWithMagicLink = vi
+			.fn<MagicLinkSignInDependencies['signInWithMagicLink']>()
+			.mockReturnValue(slow.promise);
+		const store = signInStore({ signInWithMagicLink }, { token: 'tok_1' });
+
+		await store.send({ type: 'signInRequested' }, (s) => {
+			expect(s.status).toBe('submitting');
+		});
+
+		// While submitting, startOverRequested and requestNewLinkRequested must be no-ops
+		await store.send({ type: 'startOverRequested' }, (s) => {
+			expect(s.status).toBe('submitting');
+		});
+		await store.send({ type: 'requestNewLinkRequested' }, (s) => {
+			expect(s.status).toBe('submitting');
+		});
+
+		slow.resolve(session);
+		await store.receive({ type: 'signInSucceeded' });
+	});
 });

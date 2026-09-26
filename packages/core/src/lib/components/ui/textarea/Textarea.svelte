@@ -56,12 +56,12 @@
 		...restProps
 	}: Props = $props();
 
-	const resizeClass = {
+	const resizeClass = $derived({
 		none: 'resize-none',
 		vertical: 'resize-y',
 		horizontal: 'resize-x',
 		both: 'resize'
-	}[resize];
+	}[resize]);
 </script>
 
 <textarea

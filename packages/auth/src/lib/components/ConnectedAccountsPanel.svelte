@@ -8,11 +8,8 @@
 	 * rounds of review have already hardened. A second link flow would drift from
 	 * it, so there is not one.
 	 *
-	 * `oauthStore` is **required** even though a surface could imagine not
-	 * offering new links, because the commonest way to get this wrong is to wire
-	 * the panel and wonder where the buttons went. A panel about connected
-	 * accounts with no way to connect one is not a configuration worth making
-	 * silent.
+	 * In managed mode, accepts genuine PresentationView ports for connected accounts,
+	 * the account read model, and optional OAuth start, or an explicit `onLink` port.
 	 *
 	 * **No provider logos ship** — see `OAuthSignIn` for why — so labels come from
 	 * `available`, and a linked provider that is not in that list falls back to
@@ -21,12 +18,14 @@
 	 * Pattern A: it animates nothing.
 	 */
 	import type { Snippet } from 'svelte';
+	import type { PresentationView } from '@composable-svelte/core/application';
 
 	import { isReauthenticationRequired } from '../errors/helpers.js';
 	import type {
 		ConnectedAccountsAction,
 		ConnectedAccountsState
 	} from '../flows/connected-accounts/types.js';
+	import type { AccountAction, AccountState } from '../flows/account/types.js';
 	import type { OAuthStartAction, OAuthStartState } from '../flows/oauth-start/types.js';
 	import type { OAuthProvider } from '../flows/oauth-pending.js';
 
@@ -35,16 +34,24 @@
 		label: string;
 	}
 
-	interface Props {
+	interface StandaloneBinding {
+		mode?: 'standalone' | undefined;
 		store: {
 			readonly state: ConnectedAccountsState;
 			dispatch(action: ConnectedAccountsAction): void;
 		};
+		/** Optional standalone account read model. */
+		accountStore?: {
+			readonly state: AccountState;
+			dispatch(action: AccountAction): void;
+		} | undefined;
 		/** The redirect half. Attaching a provider goes through `oauth-start`. */
-		oauthStore: {
+		oauthStore?: {
 			readonly state: OAuthStartState;
 			dispatch(action: OAuthStartAction): void;
-		};
+		} | undefined;
+		/** Optional link action port. */
+		onLink?: ((provider: OAuthProvider) => void) | undefined;
 		/**
 		 * What is attached now, from `fetchAccount`.
 		 *
@@ -53,13 +60,6 @@
 		 * it before the read lands is a false one.
 		 */
 		providers?: readonly string[] | undefined;
-		/**
-		 * The providers this app offers, in order. This package ships no list.
-		 *
-		 * Same shape as `OAuthSignIn` takes, so a surface declares its providers
-		 * once and passes the same array to both.
-		 */
-		available?: readonly ProviderOption[] | undefined;
 		/**
 		 * Whether the account has a password, from `fetchAccount`.
 		 *
@@ -79,29 +79,110 @@
 					methods: readonly ('password' | 'totp' | 'recovery_code')[];
 			  }) => void)
 			| undefined;
+	}
+
+	interface ManagedBinding {
+		mode: 'managed';
+		/** The connected-accounts (unlink) presentation view from createAuthFeature. */
+		store: PresentationView<ConnectedAccountsState, ConnectedAccountsAction>;
+		/**
+		 * Optional account view from createAuthFeature.
+		 * When provided, providers and hasPassword derive directly from accountStore.state.account,
+		 * and accountRequested is dispatched once on client mount if idle.
+		 */
+		accountStore?: PresentationView<AccountState, AccountAction> | undefined;
+		/**
+		 * Optional oauthStart presentation view from createAuthFeature.
+		 * When live, authorizationRequested can be dispatched directly through it.
+		 */
+		oauthStore?: PresentationView<OAuthStartState, OAuthStartAction> | undefined;
+		/**
+		 * Supported managed link action / port: called when a user wants to link a provider.
+		 * Allows parent to open or restart oauthStart as needed without violating genuine-view typing.
+		 */
+		onLink?: ((provider: OAuthProvider) => void) | undefined;
+		providers?: readonly string[] | undefined;
+		hasPassword?: boolean | undefined;
+		returnTo?: string | null | undefined;
+		onUnlinked?: never;
+		onReauthenticationRequired?: never;
+	}
+
+	interface PresentationProps {
+		/**
+		 * The providers this app offers, in order. This package ships no list.
+		 *
+		 * Same shape as `OAuthSignIn` takes, so a surface declares its providers
+		 * once and passes the same array to both.
+		 */
+		available?: readonly ProviderOption[] | undefined;
 		headingLevel?: 1 | 2 | 3 | 4 | undefined;
 		/** Rendered below the panel. */
 		footer?: Snippet | undefined;
 		class?: string | undefined;
 	}
 
+	type Props = (StandaloneBinding | ManagedBinding) & PresentationProps;
+
 	let {
-		store,
-		oauthStore,
-		providers,
 		available = [],
-		hasPassword,
-		returnTo = null,
-		onUnlinked,
-		onReauthenticationRequired,
 		headingLevel = 2,
 		footer,
-		class: className = ''
+		class: className = '',
+		...binding
 	}: Props = $props();
 
-	const status = $derived(store.state.status);
-	const error = $derived(store.state.error);
-	const busyProvider = $derived(status === 'unlinking' ? store.state.provider : null);
+	const owner = $derived(binding.store);
+	const viewOf = (key: typeof binding.store) => key;
+
+	/** `undefined` only for a managed view whose owner has retired. */
+	const flow: ConnectedAccountsState | undefined = $derived(binding.store.state);
+	const status = $derived(flow?.status);
+	const error = $derived(flow?.error ?? null);
+	const busyProvider = $derived(status === 'unlinking' ? (flow?.provider ?? null) : null);
+
+	const accountState = $derived(binding.accountStore?.state);
+	const accountSnapshot = $derived(accountState?.account ?? null);
+	const accountError = $derived(accountState?.error ?? null);
+	const accountStatus = $derived(accountState?.status);
+
+	/**
+	 * Client-side mount effect for starting account read once per mounted view.
+	 * Never runs during SSR.
+	 */
+	let startedAccountRead = false;
+	let startedAccountOwner: unknown = null;
+
+	$effect(() => {
+		const accStore = binding.accountStore;
+		if (!accStore) return;
+		const accOwner = accStore;
+		if (accOwner !== startedAccountOwner) {
+			startedAccountOwner = accOwner;
+			startedAccountRead = false;
+		}
+		if (startedAccountRead) return;
+		const state = accStore.state;
+		if (state === undefined || state.status !== 'idle') return;
+		startedAccountRead = true;
+		accStore.dispatch({ type: 'accountRequested' });
+	});
+
+	/**
+	 * Truthful resolution of providers and password status.
+	 * If accountStore is passed, derives strictly from snapshot (undefined before read lands).
+	 */
+	const effectiveProviders = $derived(
+		binding.accountStore !== undefined
+			? (accountSnapshot?.providers ?? undefined)
+			: binding.providers
+	);
+
+	const effectiveHasPassword = $derived(
+		binding.accountStore !== undefined
+			? (accountSnapshot?.hasPassword ?? undefined)
+			: binding.hasPassword
+	);
 
 	/**
 	 * Tell the flow what the account currently reports.
@@ -111,9 +192,34 @@
 	 * `linked`, so there is no Disconnect row, *and* present in `linkable`, so
 	 * the panel offers to connect something already connected.
 	 */
+	let lastObservedProviders: readonly string[] | undefined = undefined;
+	let lastObservedOwner: unknown = null;
+	let lastObservedUnlinkedLength = 0;
+
 	$effect(() => {
-		if (providers === undefined) return;
-		store.dispatch({ type: 'providersObserved', providers });
+		const key = owner;
+		const currentProviders = effectiveProviders;
+		if (currentProviders === undefined) return;
+		if (key !== lastObservedOwner) {
+			lastObservedOwner = key;
+			lastObservedProviders = undefined;
+			lastObservedUnlinkedLength = 0;
+		}
+		const unlinked = flow?.unlinked ?? [];
+		const providersMatch =
+			lastObservedProviders !== undefined &&
+			lastObservedProviders.length === currentProviders.length &&
+			lastObservedProviders.every((p, i) => p === currentProviders[i]);
+		const unlinkedUnchanged = unlinked.length === lastObservedUnlinkedLength;
+
+		if (providersMatch && unlinkedUnchanged) {
+			return;
+		}
+
+		lastObservedProviders = currentProviders;
+		lastObservedUnlinkedLength = unlinked.length;
+		const view = viewOf(key);
+		view.dispatch({ type: 'providersObserved', providers: currentProviders });
 	});
 
 	/**
@@ -125,9 +231,9 @@
 	 * effect above is what keeps that subtraction from becoming permanent.
 	 */
 	const linked = $derived(
-		providers === undefined
+		effectiveProviders === undefined
 			? null
-			: providers.filter((id) => !store.state.unlinked.includes(id))
+			: effectiveProviders.filter((id) => !(flow?.unlinked.includes(id) ?? false))
 	);
 
 	const labelFor = (id: string): string =>
@@ -146,39 +252,51 @@
 	 * disabled the button would lock out every magic-link account. What is said
 	 * here is true regardless: there is one provider and no password.
 	 */
-	const isLastWayIn = $derived(hasPassword === false && linked !== null && linked.length === 1);
+	const isLastWayIn = $derived(effectiveHasPassword === false && linked !== null && linked.length === 1);
 
 	/** The redirect half's own trouble, which belongs beside the link buttons. */
-	const linkError = $derived(oauthStore.state.error);
+	const linkError = $derived(binding.oauthStore?.state?.error ?? null);
 	const linkingProvider = $derived(
-		oauthStore.state.status === 'idle' ? null : oauthStore.state.provider
+		binding.oauthStore?.state?.status === 'starting' || binding.oauthStore?.state?.status === 'redirecting'
+			? (binding.oauthStore?.state?.provider ?? null)
+			: null
 	);
 
 	/**
-	 * How many detachments have been reported.
+	 * Track which detached provider identities have been reported (standalone only).
 	 *
-	 * A count rather than a boolean, and that is the point: `unlinked` only ever
-	 * grows, so "has it changed since I last looked" is the whole question, and a
-	 * flag that had to be cleared somewhere would swallow the second detachment —
-	 * the species fixed in `LoginForm` and again in `ForgotPasswordForm`.
+	 * Semantic event identity tracking rather than a simple count: `unlinked`
+	 * is pruned by `providersObserved` once an account re-read lands, so a count
+	 * check would spuriously re-trigger on decreases or fail on replacements.
 	 */
-	let reportedUnlinks = 0;
+	let reportedUnlinked = new Set<string>();
 
 	$effect(() => {
-		const count = store.state.unlinked.length;
-		if (count === reportedUnlinks) return;
-		reportedUnlinks = count;
-		if (count > 0) onUnlinked?.();
+		if (binding.mode === 'managed') return;
+		const currentUnlinked = flow?.unlinked ?? [];
+		let newlyUnlinked = false;
+		for (const provider of currentUnlinked) {
+			if (!reportedUnlinked.has(provider)) {
+				newlyUnlinked = true;
+				break;
+			}
+		}
+		reportedUnlinked = new Set(currentUnlinked);
+		if (newlyUnlinked) {
+			binding.onUnlinked?.();
+		}
 	});
 
-	/** Once per demand, not once per distinct provider — the `LoginForm` species. */
+	/** Once per demand, not once per distinct provider — the `LoginForm` species (standalone only). */
 	let reportedDemand = false;
 
 	$effect(() => {
-		const state = store.state;
+		if (binding.mode === 'managed') return;
+		const state = flow;
+		if (!state) return;
 		const current = state.error;
 		if (
-			onReauthenticationRequired === undefined ||
+			binding.onReauthenticationRequired === undefined ||
 			!isReauthenticationRequired(current) ||
 			state.provider === null
 		) {
@@ -187,120 +305,173 @@
 		}
 		if (reportedDemand) return;
 		reportedDemand = true;
-		onReauthenticationRequired({ provider: state.provider, methods: current.methods });
+		binding.onReauthenticationRequired({ provider: state.provider, methods: current.methods });
 	});
+
+	const handlesReauth = $derived(
+		binding.mode !== 'managed' && binding.onReauthenticationRequired !== undefined
+	);
 
 	const showsError = $derived(
 		error !== null &&
-			!(onReauthenticationRequired !== undefined && isReauthenticationRequired(error))
+			!(handlesReauth && isReauthenticationRequired(error))
 	);
 
-	function link(provider: OAuthProvider) {
-		oauthStore.dispatch({
-			type: 'authorizationRequested',
-			provider,
-			intent: 'link',
-			returnTo
-		});
+	function link(key: typeof binding.store, provider: OAuthProvider) {
+		if (key.state === undefined) return;
+		if (binding.onLink !== undefined) {
+			binding.onLink(provider);
+			return;
+		}
+		const oauth = binding.oauthStore;
+		if (oauth && oauth.state !== undefined) {
+			oauth.dispatch({
+				type: 'authorizationRequested',
+				provider,
+				intent: 'link',
+				returnTo: binding.returnTo ?? null
+			});
+		}
 	}
+
+	const canLink = $derived(
+		binding.onLink !== undefined || (binding.oauthStore !== undefined && binding.oauthStore.state !== undefined)
+	);
+	const isLinkDisabled = $derived(linkingProvider !== null || !canLink);
 </script>
 
-<div class="connected-accounts {className}">
-	<svelte:element this={`h${headingLevel}`} class="connected-accounts__title">
-		Connected accounts
-	</svelte:element>
+{#if flow}
+	{#each [owner] as key (key)}
+		<div class="connected-accounts {className}">
+			<svelte:element this={`h${headingLevel}`} class="connected-accounts__title">
+				Connected accounts
+			</svelte:element>
 
-	{#if showsError && error}
-		<div
-			class="connected-accounts__error"
-			role="alert"
-			aria-live="polite"
-			data-error-code={error.code}
-		>
-			{error.message}
-		</div>
-	{/if}
+			{#if showsError && error}
+				<div
+					class="connected-accounts__error"
+					role="alert"
+					aria-live="polite"
+					data-error-code={error.code}
+				>
+					{error.message}
+				</div>
+			{/if}
 
-	{#if linkError}
-		<!--
-			The redirect half's failure, rendered here rather than left to the
-			`OAuthSignIn` that is not on this page. Without it, pressing Connect and
-			having the backend refuse produces a button that goes back to normal and
-			says nothing.
-		-->
-		<div
-			class="connected-accounts__error"
-			role="alert"
-			aria-live="polite"
-			data-error-code={linkError.code}
-		>
-			{linkError.message}
-		</div>
-	{/if}
+			{#if accountError}
+				<div
+					class="connected-accounts__error"
+					role="alert"
+					aria-live="polite"
+					data-error-code={accountError.code}
+				>
+					{accountError.message}
+				</div>
+			{/if}
 
-	{#if linked === null}
-		<p class="connected-accounts__body" role="status" aria-live="polite">
-			Reading your account…
-		</p>
-	{:else}
-		{#if linked.length === 0}
-			<p class="connected-accounts__body">
-				No accounts are connected. Connecting one adds another way to sign in.
-			</p>
-		{:else}
-			<ul class="connected-accounts__list">
-				{#each linked as provider (provider)}
-					<li class="connected-accounts__row">
-						<span class="connected-accounts__name">{labelFor(provider)}</span>
+			{#if linkError}
+				<!--
+					The redirect half's failure, rendered here rather than left to the
+					`OAuthSignIn` that is not on this page. Without it, pressing Connect and
+					having the backend refuse produces a button that goes back to normal and
+					says nothing.
+				-->
+				<div
+					class="connected-accounts__error"
+					role="alert"
+					aria-live="polite"
+					data-error-code={linkError.code}
+				>
+					{linkError.message}
+				</div>
+			{/if}
+
+			{#if linked === null}
+				{#if binding.accountStore !== undefined && accountState === undefined}
+					<p class="connected-accounts__body" role="status" aria-live="polite">
+						Account details are unavailable.
+					</p>
+				{:else if accountStatus === 'failed'}
+					<p class="connected-accounts__body" role="status" aria-live="polite">
+						Could not load account details.
 						<button
 							type="button"
-							class="connected-accounts__destructive"
-							disabled={status === 'unlinking'}
-							onclick={() => store.dispatch({ type: 'unlinkRequested', provider })}
+							class="connected-accounts__secondary"
+							onclick={() => {
+								if (key.state === undefined) return;
+								binding.accountStore?.dispatch({ type: 'reloadRequested' });
+							}}
 						>
-							{busyProvider === provider ? 'Disconnecting…' : 'Disconnect'}
+							Try again
 						</button>
-					</li>
-				{/each}
-			</ul>
+					</p>
+				{:else}
+					<p class="connected-accounts__body" role="status" aria-live="polite">
+						Reading your account…
+					</p>
+				{/if}
+			{:else}
+				{#if linked.length === 0}
+					<p class="connected-accounts__body">
+						No accounts are connected. Connecting one adds another way to sign in.
+					</p>
+				{:else}
+					<ul class="connected-accounts__list">
+						{#each linked as provider (provider)}
+							<li class="connected-accounts__row">
+								<span class="connected-accounts__name">{labelFor(provider)}</span>
+								<button
+									type="button"
+									class="connected-accounts__destructive"
+									disabled={status === 'unlinking'}
+									onclick={() => viewOf(key).dispatch({ type: 'unlinkRequested', provider })}
+								>
+									{busyProvider === provider ? 'Disconnecting…' : 'Disconnect'}
+								</button>
+							</li>
+						{/each}
+					</ul>
 
-			{#if isLastWayIn}
-				<!--
-					Said, not enforced. See `isLastWayIn` and the flow's doc: the client
-					cannot know whether the backend offers magic links, so a disabled
-					button here would be wrong for every backend that does.
-				-->
-				<p class="connected-accounts__note">
-					This is the only account connected, and you have no password. If you disconnect it,
-					make sure you can still sign in another way.
-				</p>
+					{#if isLastWayIn}
+						<!--
+							Said, not enforced. See `isLastWayIn` and the flow's doc: the client
+							cannot know whether the backend offers magic links, so a disabled
+							button here would be wrong for every backend that does.
+						-->
+						<p class="connected-accounts__note">
+							This is the only account connected, and you have no password. If you disconnect it,
+							make sure you can still sign in another way.
+						</p>
+					{/if}
+				{/if}
+
+				{#if linkable.length > 0}
+					<div class="connected-accounts__row connected-accounts__row--wrap">
+						{#each linkable as option (option.id)}
+							<button
+								type="button"
+								class="connected-accounts__secondary"
+								disabled={isLinkDisabled}
+								title={!canLink ? 'Connecting a provider is currently unavailable' : undefined}
+								onclick={() => link(key, option.id)}
+							>
+								{linkingProvider === option.id ? 'Taking you there…' : `Connect ${option.label}`}
+							</button>
+						{/each}
+					</div>
+				{/if}
 			{/if}
-		{/if}
 
-		{#if linkable.length > 0}
-			<div class="connected-accounts__row connected-accounts__row--wrap">
-				{#each linkable as option (option.id)}
-					<button
-						type="button"
-						class="connected-accounts__secondary"
-						disabled={linkingProvider !== null}
-						onclick={() => link(option.id)}
-					>
-						{linkingProvider === option.id ? 'Taking you there…' : `Connect ${option.label}`}
-					</button>
-				{/each}
-			</div>
-		{/if}
-	{/if}
+			<p class="connected-accounts__status" role="status" aria-live="polite">
+				{busyProvider === null ? '' : `Disconnecting ${labelFor(busyProvider)}…`}
+			</p>
 
-	<p class="connected-accounts__status" role="status" aria-live="polite">
-		{busyProvider === null ? '' : `Disconnecting ${labelFor(busyProvider)}…`}
-	</p>
-
-	{#if footer}
-		<div class="connected-accounts__footer">{@render footer()}</div>
-	{/if}
-</div>
+			{#if footer}
+				<div class="connected-accounts__footer">{@render footer()}</div>
+			{/if}
+		</div>
+	{/each}
+{/if}
 
 <style>
 	/* Scoped CSS over core's theme tokens — see `LoginForm` for why not Tailwind. */

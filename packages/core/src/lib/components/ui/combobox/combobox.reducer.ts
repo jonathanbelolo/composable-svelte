@@ -89,18 +89,22 @@ export const comboboxReducer: Reducer<
 > = (state, action, deps) => {
 	switch (action.type) {
 		case 'opened': {
+			if (state.dropdown.status === 'opening' || state.dropdown.status === 'open') return [state, Effect.none()];
+			const generation = (state.transitionGeneration ?? 0) + 1;
 			return [
 				{
 					...state,
-					dropdown: { status: 'opening' }
+					dropdown: { status: 'opening' },
+					transitionGeneration: generation
 				},
 				Effect.afterDelay<ComboboxAction>(150, (dispatch) => {
-					dispatch({ type: 'openingCompleted' });
+					dispatch({ type: 'openingCompleted', generation });
 				})
 			];
 		}
 
 		case 'openingCompleted': {
+			if (state.dropdown.status !== 'opening' || (action.generation !== undefined && action.generation !== state.transitionGeneration)) return [state, Effect.none()];
 			return [
 				{
 					...state,
@@ -111,18 +115,22 @@ export const comboboxReducer: Reducer<
 		}
 
 		case 'closed': {
+			if (state.dropdown.status === 'closing' || state.dropdown.status === 'idle') return [state, Effect.none()];
+			const generation = (state.transitionGeneration ?? 0) + 1;
 			return [
 				{
 					...state,
-					dropdown: { status: 'closing' }
+					dropdown: { status: 'closing' },
+					transitionGeneration: generation
 				},
 				Effect.afterDelay<ComboboxAction>(100, (dispatch) => {
-					dispatch({ type: 'closingCompleted' });
+					dispatch({ type: 'closingCompleted', generation });
 				})
 			];
 		}
 
 		case 'closingCompleted': {
+			if (state.dropdown.status !== 'closing' || (action.generation !== undefined && action.generation !== state.transitionGeneration)) return [state, Effect.none()];
 			return [
 				{
 					...state,
@@ -131,6 +139,9 @@ export const comboboxReducer: Reducer<
 					// Same reason as `optionSelected`: a dropdown that closes with a
 					// query still applied reopens filtered, with an empty search box.
 					searchQuery: '',
+					searchGeneration: (state.searchGeneration ?? 0) + 1,
+					loadGeneration: (state.loadGeneration ?? 0) + 1,
+					isLoading: false,
 					filteredOptions: state.options
 				},
 				Effect.none<ComboboxAction>()
@@ -155,6 +166,9 @@ export const comboboxReducer: Reducer<
 				// meant reopening after a search displayed a stale one-item list.
 				// Select does both — select.reducer.ts:177.
 				searchQuery: '',
+				searchGeneration: (state.searchGeneration ?? 0) + 1,
+				loadGeneration: (state.loadGeneration ?? 0) + 1,
+				isLoading: false,
 				filteredOptions: state.options
 			};
 
@@ -174,11 +188,13 @@ export const comboboxReducer: Reducer<
 
 		case 'searchChanged': {
 			const newQuery = action.query;
+			const generation = (state.searchGeneration ?? 0) + 1;
+			const loadGeneration = (state.loadGeneration ?? 0) + 1;
 
 			// If async mode and query is not empty, trigger debounced search
 			if (deps?.loadOptions && newQuery.trim()) {
 				const openEffect =
-					state.dropdown.status === 'idle'
+					(state.dropdown.status === 'idle' || state.dropdown.status === 'closing')
 						? Effect.run<ComboboxAction>(async (dispatch) => {
 								dispatch({ type: 'opened' });
 							})
@@ -188,12 +204,14 @@ export const comboboxReducer: Reducer<
 					{
 						...state,
 						searchQuery: newQuery,
+						searchGeneration: generation,
+						loadGeneration,
 						highlightedIndex: 0 // Highlight first result
 					},
 					Effect.batch(
 						openEffect,
 						Effect.afterDelay<ComboboxAction>(state.debounceDelay, (dispatch) => {
-							dispatch({ type: 'searchDebounced', query: newQuery });
+							dispatch({ type: 'searchDebounced', query: newQuery, generation });
 						})
 					)
 				];
@@ -203,7 +221,7 @@ export const comboboxReducer: Reducer<
 			const filtered = filterOptions(state.options, newQuery);
 
 			const openEffect =
-				state.dropdown.status === 'idle'
+				(state.dropdown.status === 'idle' || state.dropdown.status === 'closing')
 					? Effect.run<ComboboxAction>(async (dispatch) => {
 							dispatch({ type: 'opened' });
 						})
@@ -213,6 +231,9 @@ export const comboboxReducer: Reducer<
 				{
 					...state,
 					searchQuery: newQuery,
+					searchGeneration: generation,
+					loadGeneration,
+					isLoading: false,
 					filteredOptions: filtered,
 					highlightedIndex: filtered.length > 0 ? 0 : -1
 				},
@@ -222,33 +243,27 @@ export const comboboxReducer: Reducer<
 
 		case 'searchDebounced': {
 			// Only trigger async load if query matches current state (debounce check)
-			if (action.query !== state.searchQuery) {
+			if (action.query !== state.searchQuery || (action.generation !== undefined && action.generation !== state.searchGeneration)) {
 				return [state, Effect.none<ComboboxAction>()];
 			}
 
-			// Trigger async load
-			if (deps?.loadOptions) {
-				const effect = Effect.batch<ComboboxAction>(
-					Effect.run<ComboboxAction>(async (dispatch) => {
-						dispatch({ type: 'loadingStarted' });
-					}),
-					Effect.run<ComboboxAction>(async (dispatch) => {
-						try {
-							const results = await deps.loadOptions!(action.query);
-							dispatch({ type: 'loadingCompleted', options: results });
-						} catch (error) {
-							dispatch({
-								type: 'loadingFailed',
-								error: error instanceof Error ? error.message : 'Load failed'
-							});
-						}
-					})
-				);
-
-				return [state, effect];
-			}
-
-			return [state, Effect.none<ComboboxAction>()];
+			if (!deps?.loadOptions) return [state, Effect.none()];
+			const loadOptions = deps.loadOptions;
+			const query = action.query;
+			const generation = (state.loadGeneration ?? 0) + 1;
+			return [
+				{ ...state, isLoading: true, loadGeneration: generation },
+				Effect.run<ComboboxAction>(async (dispatch) => {
+					let outcome: ComboboxAction;
+					try {
+						const options = await loadOptions(query);
+						outcome = { type: 'loadingCompleted', options, query, generation };
+					} catch (error) {
+						outcome = { type: 'loadingFailed', error: error instanceof Error ? error.message : 'Load failed', query, generation };
+					}
+					dispatch(outcome);
+				})
+			];
 		}
 
 		case 'loadingStarted': {
@@ -262,6 +277,7 @@ export const comboboxReducer: Reducer<
 		}
 
 		case 'loadingCompleted': {
+			if ((action.query !== undefined && action.query !== state.searchQuery) || (action.generation !== undefined && action.generation !== state.loadGeneration)) return [state, Effect.none()];
 			return [
 				{
 					...state,
@@ -275,6 +291,7 @@ export const comboboxReducer: Reducer<
 		}
 
 		case 'loadingFailed': {
+			if ((action.query !== undefined && action.query !== state.searchQuery) || (action.generation !== undefined && action.generation !== state.loadGeneration)) return [state, Effect.none()];
 			return [
 				{
 					...state,
@@ -441,6 +458,9 @@ export const comboboxReducer: Reducer<
 					...state,
 					selected: null,
 					searchQuery: '',
+					searchGeneration: (state.searchGeneration ?? 0) + 1,
+					loadGeneration: (state.loadGeneration ?? 0) + 1,
+					isLoading: false,
 					filteredOptions: state.options,
 					highlightedIndex: -1
 				},
@@ -489,6 +509,9 @@ export const comboboxReducer: Reducer<
 					selected: action.value,
 					// An inbound sync clears the search, as picking an option does.
 					searchQuery: '',
+					searchGeneration: (state.searchGeneration ?? 0) + 1,
+					loadGeneration: (state.loadGeneration ?? 0) + 1,
+					isLoading: false,
 					filteredOptions: state.options,
 					highlightedIndex: -1
 				},

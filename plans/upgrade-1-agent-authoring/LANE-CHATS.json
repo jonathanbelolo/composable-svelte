@@ -1,0 +1,14 @@
+{
+  "parent": "01a0ce1e-5555-7be2-87a6-12fc43dca910",
+  "coordinatorModel": "gpt-6-sol",
+  "effort": "medium",
+  "workerCLI": "agy",
+  "workerModel": "gemini-3.8-flash-high",
+  "workerEffort": "high",
+  "reviewAndEscalation": "Opus 5.5 via Claude Code CLI",
+  "lanes": {
+    "code-media-chat": "01a0d606-1ea4-7c22-a376-bb4949f198d4",
+    "maps-graphics-charts": "01a0d606-328f-7f52-be1d-eb8b070891e5",
+    "auth-qualification": "01a0d606-43ce-7011-ae88-15501d2256cf"
+  }
+}

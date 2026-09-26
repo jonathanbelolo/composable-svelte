@@ -1,0 +1,16 @@
+import {defineApplication,optionalSlot,nestedSlot,ManagedIntegrationBuilder} from '../../src/lib/application/index.js';
+import {Effect} from '../../src/lib/effect.js';
+import type {Reducer} from '../../src/lib/types.js';
+import type {PresentationAction} from '../../src/lib/navigation/types.js';
+export type Leaf={count:number};export type LeafAction={type:'increment'};
+export type Workspace={editor:Leaf|null};export type WorkspaceAction={type:'editor';action:PresentationAction<LeafAction>}|{type:'openEditor'}|{type:'closeEditor'}|{type:'replaceEditor'}|{type:'touch'};
+export type Root={workspace:Workspace|null};export type Action={type:'workspace';action:PresentationAction<WorkspaceAction>}|{type:'open'}|{type:'close'}|{type:'noop'}|{type:'replaceRoot'};
+export type Dependencies={step:number;trace:string[]};
+export const editorSlot=optionalSlot<Workspace,WorkspaceAction>()('editor');
+export const workspaceSlot=optionalSlot<Root,Action>()('workspace');
+export const nestedEditor=nestedSlot(workspaceSlot,editorSlot);
+const leaf:Reducer<Leaf,LeafAction,Dependencies>=(state,_action,deps)=>{deps.trace.push('leaf');return[{count:state.count+deps.step},Effect.none()];};
+const workspace:Reducer<Workspace,WorkspaceAction,Dependencies>=(state,action,deps)=>{deps.trace.push('workspace');return[action.type==='openEditor'?{editor:{count:0}}:action.type==='closeEditor'?{editor:null}:state,Effect.none()];};
+const root:Reducer<Root,Action,Dependencies>=(state,action,deps)=>{deps.trace.push('root');return[action.type==='open'?{workspace:{editor:{count:0}}}:action.type==='close'?{workspace:null}:state,Effect.none()];};
+export const composition=new ManagedIntegrationBuilder(root).with(workspaceSlot,new ManagedIntegrationBuilder(workspace).with(editorSlot,leaf,{replaceOn:action=>action.type==='replaceEditor'}).build(),{replaceOn:action=>action.type==='replaceRoot'}).build();
+export const definition=defineApplication(composition,{initialState:(count:number):Root=>({workspace:{editor:{count}}})});

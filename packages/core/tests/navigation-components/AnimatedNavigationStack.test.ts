@@ -20,30 +20,29 @@
 
 import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import AnimatedNavigationStack from '../../src/lib/navigation-components/AnimatedNavigationStack.svelte';
 import AnimatedStackTest from './test-components/AnimatedStackTest.svelte';
-import { createStore } from '../../src/lib/store.svelte.js';
-import { scopeToDestination } from '../../src/lib/navigation/scope-to-destination.js';
-import { Effect } from '../../src/lib/effect.js';
+import { createManagedChildView } from '../helpers/managed-child-view.js';
 
 interface ScreenState {
 	id: string;
 	title: string;
 }
 
-interface ParentState {
-	destination: { type: 'test'; state: { stack: ScreenState[] } } | null;
-}
+const handles: Array<{ destroy(): void }> = [];
 
-type ParentAction = { type: 'destination'; action: unknown };
+afterEach(() => {
+	for (const handle of handles) {
+		handle.destroy();
+	}
+	handles.length = 0;
+});
 
 function makeScopedStore(stack: ScreenState[]) {
-	const parentStore = createStore<ParentState, ParentAction>({
-		initialState: { destination: { type: 'test', state: { stack } } },
-		reducer: (state) => [state, Effect.none()]
-	});
-	return scopeToDestination(parentStore, ['destination'], 'test', 'destination');
+	const handle = createManagedChildView({ stack });
+	handles.push(handle);
+	return handle.view;
 }
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 400));
@@ -61,9 +60,9 @@ describe('AnimatedNavigationStack', () => {
 		await expect.element(page.getByRole('navigation')).toBeInTheDocument();
 	});
 
-	it('renders nothing when the store is null', async () => {
+	it('renders nothing when the store is undefined', async () => {
 		render(AnimatedNavigationStack, {
-				store: null,
+				store: undefined,
 				stack: [],
 				presentation: { status: 'idle' as const },
 				onBack: () => {}

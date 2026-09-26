@@ -1,0 +1,6 @@
+/**
+ * Theme tokens and Tailwind entry point.
+ *
+ * Imported from the framework rather than duplicated locally.
+ */
+@import '@composable-svelte/core/styles/globals.css';

@@ -9,6 +9,14 @@ Code editing, syntax highlighting, and visual programming components.
 
 ---
 
+## UPGRADE 1 AGENT ENTRY
+
+For an application built with the integrated Upgrade 1 companion packages, begin with the [managed package reference](../../../packages/code/recipes/managed/README.md) and its executable recipe. The same reference is included in the package at `node_modules/@composable-svelte/code/recipes/managed/README.md`; use the installed version's declarations and instructions as the API authority.
+
+Pass genuine bound child views to the packaged editor, highlight and canvas components. Let those components own their native bindings and ordered command delivery; do not rebuild Store facades, root action listeners or command queues in application code.
+
+The standalone store and callback examples below describe standalone usage. For an owned application feature, follow the managed recipe rather than copying the standalone setup and adding ad hoc lifetime glue. Candidate qualification and npm publication are separate; verify the installed package version contains this managed surface.
+
 ## PACKAGE OVERVIEW
 
 **Package**: `@composable-svelte/code`

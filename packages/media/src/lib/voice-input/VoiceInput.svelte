@@ -1,9 +1,9 @@
 <script lang="ts">
-	import type { Store } from '@composable-svelte/core';
+	import { untrack } from 'svelte';
 	import type { VoiceInputState, VoiceInputAction } from './types.js';
 	import VoiceInputButton from './components/VoiceInputButton.svelte';
 	import VoiceInputPanel from './components/VoiceInputPanel.svelte';
-	import { deleteAudioManager } from './audio/audio-manager-registry.js';
+	import { observeActions, type ViewStore } from '../internal/view-store.js';
 
 	/**
 	 * Voice Input Component
@@ -22,11 +22,17 @@
 	 * ```
 	 */
 	interface Props {
-		/** Voice input store (manages its own state) */
-		store: Store<VoiceInputState, VoiceInputAction>;
+		/** A standalone store, or the managed feature view (`FeatureViewProps.store`) */
+		store: ViewStore<VoiceInputState, VoiceInputAction>;
 
-		/** Called when transcription completes */
-		onTranscript: (transcript: string) => void;
+		/**
+		 * Called when transcription completes.
+		 *
+		 * Optional under managed composition: a transcript the application acts on
+		 * belongs in the parent reducer, which sees the child's
+		 * `transcriptionCompleted` action (see the package README).
+		 */
+		onTranscript?: ((transcript: string) => void) | undefined;
 
 		/** Default mode on mount */
 		defaultMode?: 'push-to-talk' | 'conversation' | undefined;
@@ -54,36 +60,55 @@
 		class: className = ''
 	}: Props = $props();
 
+	// `undefined` once a managed view's owner retires. Its microphone, loops and
+	// transcriptions were owner resources and are already released; the
+	// component renders nothing and dispatches nothing.
+	const voice: VoiceInputState | undefined = $derived($store);
+
 	// Track transcript history for conversation mode
 	let transcriptHistory = $state<string[]>([]);
 
-	// Subscribe to store actions to detect transcription completion
+	// Observe accepted transcripts for this component's own outputs: the
+	// callback and the conversation panel's history. Keyed on the store alone:
+	// the callback is read when a transcript arrives, so replacing it neither
+	// drops nor repeats one, and a replaced store is never observed again.
 	$effect(() => {
-		const unsubscribe = store.subscribeToActions?.((action) => {
-			// When transcription completes, call the onTranscript callback
-			if (action.type === 'transcriptionCompleted') {
-				onTranscript(action.transcript);
-
-				// Add to history if in conversation mode
-				if ($store.mode === 'conversation') {
-					transcriptHistory = [...transcriptHistory, action.transcript];
-				}
-			}
-		});
-
-		return () => {
-			unsubscribe?.();
-		};
+		const view = store;
+		return untrack(() =>
+			observeActions(
+				view,
+				(action) => {
+					if (action.type !== 'transcriptionCompleted') return;
+					onTranscript?.(action.transcript);
+					if (view.state?.mode === 'conversation') {
+						transcriptHistory = [...transcriptHistory, action.transcript];
+					}
+				},
+				'VoiceInput'
+			)
+		);
 	});
 
-	// Cleanup audio manager when component unmounts
+	// The microphone belongs to the store: the reducer's `voice-input-microphone`
+	// resource acquires it and releases it through the injected
+	// `deleteAudioManager`, whatever registry the store was configured with.
+	// Unmounting releases it through that same path instead of reaching into a
+	// registry itself — so an injected registry is honoured, a pending
+	// permission request is cancelled and disposes a late grant, and the store
+	// is left consistent. An utterance the user already finished is still
+	// transcribed and reaches the store (`_releaseDevice`); `onTranscript`, which
+	// belongs to this component, is unsubscribed above and does not fire. A
+	// retired managed view (state `undefined`) has nothing left to release. A
+	// replaced `store` is released the same way.
 	$effect(() => {
-		return () => {
-			const audioManagerId = $store._audioManagerId;
-			if (audioManagerId) {
-				deleteAudioManager(audioManagerId);
-			}
-		};
+		const view = store;
+		return () =>
+			untrack(() => {
+				const state = view.state;
+				if (state && (state._audioManagerId !== null || state.status === 'requesting-permission')) {
+					view.dispatch({ type: '_releaseDevice' });
+				}
+			});
 	});
 
 	// Keyed on a `$derived` primitive for the same reason as the effect below:
@@ -93,8 +118,9 @@
 	// re-dispatched `activateConversationMode` unboundedly — a new recorder and a
 	// new level interval per utterance, and a runaway loop whenever activation
 	// failed and reset the mode. The primitive's equality check absorbs the
-	// dispatches that leave the mode alone.
-	const activeMode = $derived($store.mode);
+	// dispatches that leave the mode alone. `undefined` after retirement, which
+	// is not `null`, so a retired view is never activated.
+	const activeMode = $derived(voice?.mode);
 
 	$effect(() => {
 		if (activeMode === null && defaultMode === 'conversation') {
@@ -111,7 +137,7 @@
 	// arrives per animation frame, so the history was wiped continuously and the
 	// conversation panel was permanently empty. A primitive's equality check
 	// absorbs the dispatches that leave the mode alone.
-	const currentMode = $derived($store.mode);
+	const currentMode = $derived(voice?.mode);
 
 	$effect(() => {
 		// Referenced so the effect depends on the mode and nothing else; the reset
@@ -123,12 +149,13 @@
 	});
 </script>
 
+{#if voice}
 <div class="voice-input {className}">
 	<!-- Voice Input Button (stays on top during recording) -->
-	<VoiceInputButton {store} {variant} {label} {disabled} isRecording={$store.status === 'recording'} />
+	<VoiceInputButton {store} {variant} {label} {disabled} isRecording={voice.status === 'recording'} />
 
 	<!-- Voice Input Panel (appears when recording/active) -->
-	{#if $store.status === 'recording' || $store.mode === 'conversation'}
+	{#if voice.status === 'recording' || voice.mode === 'conversation'}
 		<VoiceInputPanel {store} transcripts={transcriptHistory} />
 	{/if}
 
@@ -138,10 +165,11 @@
 		because colour alone does not reach a screen reader, and this is the message a
 		user needs in order to act on it.
 	-->
-	{#if $store.errorMessage}
-		<div class="voice-input__error" role="alert">{$store.errorMessage}</div>
+	{#if voice.errorMessage}
+		<div class="voice-input__error" role="alert">{voice.errorMessage}</div>
 	{/if}
 </div>
+{/if}
 
 <style>
 	.voice-input {

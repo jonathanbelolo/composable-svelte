@@ -1,151 +1,83 @@
 <script lang="ts">
-  import { createStore, Effect } from '@composable-svelte/core';
-  import type { PresentationState } from '@composable-svelte/core/navigation';
+  import { Effect } from '@composable-svelte/core';
+  import type { Effect as EffectType, Reducer } from '@composable-svelte/core';
+  import { ApplicationHost, ApplicationRoot, defineApplication, ManagedIntegrationBuilder, optionalSlot, scopeTo } from '@composable-svelte/core/application';
+  import type { PresentationView } from '@composable-svelte/core/application';
+  import type { PresentationAction, PresentationState } from '@composable-svelte/core/navigation';
   import { Sidebar } from '@composable-svelte/core/navigation-components';
   import { Button } from '@composable-svelte/core/components/ui';
 
   interface DemoState {
     showSidebar: boolean;
+    sidebarContent: boolean | null;
     presentation: PresentationState<boolean>;
   }
-
-  type PresentationEvent =
-    | { type: 'presentationCompleted' }
-    | { type: 'dismissalCompleted' };
-
+  type SidebarContentAction = { type: 'presentationCompleted' } | { type: 'dismissalCompleted' };
   type DemoAction =
     | { type: 'openSidebar' }
-    | { type: 'closeSidebar' }
     | { type: 'toggleSidebar' }
-    | { type: 'presentation'; event: PresentationEvent };
+    | { type: 'closeSidebar' }
+    | { type: 'sidebarContent'; action: PresentationAction<SidebarContentAction> };
 
-  const demoStore = createStore<DemoState, DemoAction>({
-    initialState: {
-      showSidebar: true,  // Start open to show the layout
-      presentation: {
-        status: 'presented' as const,
-        content: true
+  const beginDismissal = (state: DemoState): [DemoState, EffectType<DemoAction>] => [
+    { ...state, presentation: { status: 'dismissing', content: state.presentation.status === 'presented' ? state.presentation.content : true, duration: 200 } },
+    Effect.none()
+  ];
+  const reducer: Reducer<DemoState, DemoAction, undefined> = (state, action) => {
+    if (action.type === 'sidebarContent') {
+      if (action.action.type === 'dismiss') {
+        return state.presentation.status === 'presented' ? beginDismissal(state) : [state, Effect.none()];
       }
-    },
-    reducer: (state, action) => {
-      switch (action.type) {
-        case 'openSidebar':
-          return [
-            {
-              showSidebar: true,
-              presentation: {
-                status: 'presenting' as const,
-                content: true,
-                duration: 300
-              }
-            },
-            // Fallback only. Motion One drives the real `onPresentationComplete`;
-            // this is the 3x-duration recovery CLAUDE.md asks for, and the guard
-            // in the `presentation` case makes the loser of the race a no-op.
-            Effect.afterDelay(1200, (d) => d({ type: 'presentation', event: { type: 'presentationCompleted' } }))
-          ];
-
-        case 'closeSidebar':
-          // Only allow dismissal if we're in presented state
-          if (state.presentation.status !== 'presented') {
-            return [state, Effect.none()];
-          }
-          return [
-            {
-              ...state,
-              presentation: {
-                status: 'dismissing' as const,
-                content: state.presentation.content,
-                duration: 200
-              }
-            },
-            Effect.afterDelay(1200, (d) => d({ type: 'presentation', event: { type: 'dismissalCompleted' } }))
-          ];
-
-        case 'toggleSidebar':
-          if (state.showSidebar) {
-            // Close if open - check presentation status
-            if (state.presentation.status !== 'presented') {
-              return [state, Effect.none()];
-            }
-            return [
-              {
-                ...state,
-                presentation: {
-                  status: 'dismissing' as const,
-                  content: state.presentation.content,
-                  duration: 200
-                }
-              },
-              Effect.afterDelay(1200, (d) => d({ type: 'presentation', event: { type: 'dismissalCompleted' } }))
-            ];
-          } else {
-            // Open if closed
-            return [
-              {
-                showSidebar: true,
-                presentation: {
-                  status: 'presenting' as const,
-                  content: true,
-                  duration: 300
-                }
-              },
-              // Fallback only. Motion One drives the real `onPresentationComplete`;
-            // this is the 3x-duration recovery CLAUDE.md asks for, and the guard
-            // in the `presentation` case makes the loser of the race a no-op.
-            Effect.afterDelay(1200, (d) => d({ type: 'presentation', event: { type: 'presentationCompleted' } }))
-            ];
-          }
-
-        case 'presentation':
-          if (action.event.type === 'presentationCompleted') {
-            // Identical state when already presented — the animation callback and
-            // the fallback timer both fire, and the loser must change nothing.
-            if (state.presentation.status !== 'presenting') return [state, Effect.none()];
-            return [
-              {
-                ...state,
-                presentation: {
-                  status: 'presented' as const,
-                  content: state.presentation.content
-                }
-              },
-              Effect.none()
-            ];
-          }
-          if (action.event.type === 'dismissalCompleted') {
-            if (state.presentation.status !== 'dismissing') return [state, Effect.none()];
-            return [
-              {
-                showSidebar: false,
-                presentation: { status: 'idle' as const }
-              },
-              Effect.none()
-            ];
-          }
-          return [state, Effect.none()];
-
-        default:
-          return [state, Effect.none()];
+      if (action.action.action.type === 'presentationCompleted') {
+        if (state.presentation.status !== 'presenting') return [state, Effect.none()];
+        return [{ ...state, presentation: { status: 'presented', content: state.presentation.content } }, Effect.none()];
       }
-    },
-    dependencies: {}
+      if (state.presentation.status !== 'dismissing') return [state, Effect.none()];
+      return [{ ...state, showSidebar: false, sidebarContent: null, presentation: { status: 'idle' } }, Effect.none()];
+    }
+    switch (action.type) {
+      case 'openSidebar':
+        return [{ ...state, showSidebar: true, sidebarContent: true, presentation: { status: 'presenting', content: true, duration: 300 } }, Effect.none()];
+      case 'closeSidebar':
+        return state.presentation.status === 'presented' ? beginDismissal(state) : [state, Effect.none()];
+      case 'toggleSidebar':
+        if (state.showSidebar) return state.presentation.status === 'presented' ? beginDismissal(state) : [state, Effect.none()];
+        return [{ showSidebar: true, sidebarContent: true, presentation: { status: 'presenting', content: true, duration: 300 } }, Effect.none()];
+      default:
+        return [state, Effect.none()];
+    }
+  };
+  const sidebarSlot = optionalSlot<DemoState, DemoAction>()('sidebarContent');
+  const childReducer: Reducer<boolean, SidebarContentAction, undefined> = state => [state, Effect.none()];
+  const composition = new ManagedIntegrationBuilder(reducer).with(sidebarSlot, childReducer, {
+    dismissal: 'deferred',
+    replaceOn: action => action.type === 'openSidebar'
+  }).build();
+  const application = defineApplication(composition, {
+    initialState: (): DemoState => ({ showSidebar: true, sidebarContent: true, presentation: { status: 'presented', content: true } })
   });
 
-  // Create a store wrapper with dismiss() method for Sidebar component
-  const storeWithDismiss = $derived(
-    $demoStore.showSidebar
-      ? {
-          ...demoStore,
-          state: $demoStore,
-          dispatch: demoStore.dispatch,
-          dismiss: () => demoStore.dispatch({ type: 'closeSidebar' })
-        }
-      : null
-  );
-
-  const state = $derived($demoStore);
+  let activeSidebarView: PresentationView<boolean, SidebarContentAction> | undefined;
+  function captureView(node: HTMLElement, view: PresentationView<boolean, SidebarContentAction> | undefined) {
+    activeSidebarView = view;
+    return {
+      update(next: PresentationView<boolean, SidebarContentAction> | undefined) {
+        activeSidebarView = next;
+      },
+      destroy() {
+        activeSidebarView = undefined;
+      }
+    };
+  }
 </script>
+
+
+<ApplicationRoot definition={application} options={{ dependencies: undefined, initial: { input: undefined } }}>
+{#snippet children(app)}
+<ApplicationHost {app}>
+{@const demoStore = app.store}
+{@const state = app.store.state}
+{@const sidebarView = scopeTo(app.store, sidebarSlot)}
 
 <div class="space-y-12">
   <!-- Live Demo Section -->
@@ -158,16 +90,21 @@
     </div>
 
     <!-- Demo Container with Sidebar Layout -->
-    <div class="rounded-lg border-2 bg-card overflow-hidden">
+    <div class="rounded-lg border-2 bg-card overflow-hidden" use:captureView={sidebarView}>
       <div class="flex h-[500px]">
         <!-- Sidebar (inline, affects layout) -->
+        <!--
+          Interim legacy bridge: this demo keeps explicit PresentationState so the existing
+          animation callbacks remain visible. The framework-owned view supplies lifetime and
+          dismissal authority; it does not synthesize these presentation states.
+        -->
         <Sidebar
-          store={storeWithDismiss}
+          store={sidebarView}
           presentation={state.presentation}
           onPresentationComplete={() =>
-            demoStore.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } })}
+            activeSidebarView?.dispatch({ type: 'presentationCompleted' })}
           onDismissalComplete={() =>
-            demoStore.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })}
+            activeSidebarView?.dispatch({ type: 'dismissalCompleted' })}
           side="left"
           width="240px"
         >
@@ -375,3 +312,6 @@
     </div>
   </section>
 </div>
+</ApplicationHost>
+{/snippet}
+</ApplicationRoot>

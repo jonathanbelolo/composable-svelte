@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import { render, App } from '../ssr/ssr-entry.js';
+let calls = 0;
+const dependencies = { save: async () => { calls++; throw new Error('SSR must not save'); } };
+const renderAt = url => render(App, { props: { url, dependencies } }).body;
+const first = renderAt('/notes/welcome');
+assert.equal(first, renderAt('/notes/welcome'));
+assert.match(first, /A notebook example/);
+assert.doesNotMatch(renderAt('/notes'), /A notebook example/);
+assert.match(renderAt('/notes/missing'), /Note not found/);
+assert.equal(calls, 0);
+console.log('SSR: deterministic rendering, request isolation, missing route, no service execution passed');

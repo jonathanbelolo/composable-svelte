@@ -16,6 +16,7 @@
 	 * confirming, confirmed, or failed-with-a-way-out.
 	 */
 	import type { Snippet } from 'svelte';
+	import type { PresentationView } from '@composable-svelte/core/application';
 
 	import type {
 		EmailVerificationAction,
@@ -23,48 +24,54 @@
 	} from '../flows/email-verification/types.js';
 	import type { SessionAction } from '../session/types.js';
 
-	interface Props {
+	interface StandaloneBinding {
+		mode?: 'standalone' | undefined;
 		flowStore: {
 			readonly state: EmailVerificationState;
 			dispatch(action: EmailVerificationAction): void;
 		};
 		/** Where a session is handed over, when confirming issued one. */
 		sessionStore: { dispatch(action: SessionAction): void };
-		/**
-		 * The confirmation token from the link, or `null` when there is none.
-		 *
-		 * `null` is a state worth rendering rather than an error: someone reached
-		 * this page directly, or a mail client mangled the link, and the useful
-		 * answer is an offer to resend.
-		 */
-		token?: string | null | undefined;
 		/** Called once, after a session has been established. */
 		onSuccess?: (() => void) | undefined;
 		/** Offered once the address is confirmed but no session was issued. */
 		onSignIn?: (() => void) | undefined;
+	}
+
+	interface ManagedBinding {
+		mode: 'managed';
+		flowStore: PresentationView<EmailVerificationState, EmailVerificationAction>;
+		sessionStore?: never;
+		onSuccess?: never;
+		onSignIn?: never;
+	}
+
+	interface PresentationProps {
+		/** Token from the confirmation link, or `null` when missing. No request starts during SSR. */
+		token?: string | null | undefined;
 		headingLevel?: 1 | 2 | 3 | 4 | undefined;
 		/** Replaces the confirmed panel. Receives whether a session was issued. */
 		verified?: Snippet<[{ signedIn: boolean }]> | undefined;
 		class?: string | undefined;
 	}
 
+	type Props = PresentationProps & (StandaloneBinding | ManagedBinding);
+
 	let {
-		flowStore,
-		sessionStore,
 		token = null,
-		onSuccess,
-		onSignIn,
 		headingLevel = 2,
 		verified,
-		class: className = ''
+		class: className = '',
+		...binding
 	}: Props = $props();
 
-	const status = $derived(flowStore.state.status);
-	const error = $derived(flowStore.state.error);
-	const session = $derived(flowStore.state.session);
-	const email = $derived(flowStore.state.email);
-	const resendStatus = $derived(flowStore.state.resendStatus);
-	const resendError = $derived(flowStore.state.resendError);
+	const flow: EmailVerificationState | undefined = $derived(binding.flowStore.state);
+	const status = $derived(flow?.status);
+	const error = $derived(flow?.error ?? null);
+	const session = $derived(flow?.session ?? null);
+	const email = $derived(flow?.email ?? null);
+	const resendStatus = $derived(flow?.resendStatus);
+	const resendError = $derived(flow?.resendError ?? null);
 
 	/**
 	 * The token this component has already handed to the flow.
@@ -88,29 +95,56 @@
 	 */
 	let requested: string | null = null;
 
+	/**
+	 * Whose exchange `requested` records, and what keys the rendered subtree.
+	 *
+	 * Managed: the view itself — a fresh owner is a fresh flow, owed its own
+	 * exchange and its own DOM, and each subtree dispatches to the view it was
+	 * rendered for. Standalone: one owner for the component's life, whatever
+	 * wrapper identity the consumer passes, so a wrapper rebuilt on every state
+	 * change neither re-exchanges a failed token nor remounts the focused DOM,
+	 * and dispatch reaches the current `flowStore`, as it always has.
+	 */
+	type Owner = symbol | PresentationView<EmailVerificationState, EmailVerificationAction>;
+	const standaloneOwner = Symbol('standalone');
+	const owner: Owner = $derived(binding.mode === 'managed' ? binding.flowStore : standaloneOwner);
+	const viewOf = (key: Owner) => (typeof key === 'symbol' ? binding.flowStore : key);
+	let requestedOwner: Owner | null = null;
+
 	$effect(() => {
+		const key = owner;
+		if (key !== requestedOwner) { requestedOwner = key; requested = null; }
+		const view = viewOf(key);
+		if (view.state === undefined) return;
 		if (token === null || token === requested) return;
 		// Reading status is what makes the line above safe to rely on: nothing is
 		// recorded as handed over until the flow is actually in a state to take it.
-		if (flowStore.state.status !== 'idle') return;
+		if (view.state.status !== 'idle') return;
 		requested = token;
-		flowStore.dispatch({ type: 'verificationRequested', token });
+		view.dispatch({ type: 'verificationRequested', token });
 	});
 
 	/** Whether the session produced by confirming has been handed over. */
 	let handedOver = false;
 
 	$effect(() => {
-		const state = flowStore.state;
+		if (binding.mode === 'managed') return;
+		const state = binding.flowStore.state;
 		if (state.status !== 'verified') {
 			handedOver = false;
 			return;
 		}
 		if (handedOver || state.session === null) return;
 		handedOver = true;
-		sessionStore.dispatch({ type: 'sessionEstablished', session: state.session });
-		onSuccess?.();
+		binding.sessionStore.dispatch({ type: 'sessionEstablished', session: state.session });
+		binding.onSuccess?.();
 	});
+
+	function signIn(key: Owner) {
+		if (binding.mode === 'managed') viewOf(key).dispatch({ type: 'signInRequested' });
+		else binding.onSignIn?.();
+	}
+	const offersSignIn = $derived(binding.mode === 'managed' || binding.onSignIn !== undefined);
 
 	/**
 	 * The default confirmed panel, focused when it replaces what was there.
@@ -131,6 +165,8 @@
 	});
 </script>
 
+{#if flow}
+{#each [owner] as key (key)}
 <div class="email-verification {className}">
 	{#if status === 'verifying'}
 		<p class="email-verification__working" role="status" aria-live="polite">Confirming your email…</p>
@@ -155,8 +191,8 @@
 						Your address is confirmed. You can sign in now.
 					{/if}
 				</p>
-				{#if session === null && onSignIn}
-					<button type="button" class="email-verification__action" onclick={() => onSignIn()}>
+				{#if session === null && offersSignIn}
+					<button type="button" class="email-verification__action" onclick={() => signIn(key)}>
 						Sign in
 					</button>
 				{/if}
@@ -213,7 +249,7 @@
 					type="button"
 					class="email-verification__action"
 					disabled={resendStatus === 'sending'}
-					onclick={() => flowStore.dispatch({ type: 'resendRequested' })}
+					onclick={() => viewOf(key).dispatch({ type: 'resendRequested' })}
 				>
 					{resendStatus === 'sending' ? 'Sending…' : 'Send another link'}
 				</button>
@@ -221,6 +257,8 @@
 		{/if}
 	{/if}
 </div>
+{/each}
+{/if}
 
 <style>
 	/* Scoped CSS over core's theme tokens — see `LoginForm` for why not Tailwind. */

@@ -9,13 +9,25 @@
 
 Inspired by [The Composable Architecture (TCA)](https://github.com/pointfreeco/swift-composable-architecture) from Swift/iOS, adapted for Svelte 5 and TypeScript.
 
+## Upgrade 1 — core 0.13
+
+Install `@composable-svelte/core` or pin `@composable-svelte/core@0.13.1`. Read the
+[release scope and migration notes](./docs/prerelease.md) before upgrading.
+
 ## Start here
 
-Read the [consumer guide](./docs/consumer.md) for a tested toolchain, lifecycle
+Start with the [application authoring contract](./docs/application-contract.md),
+the authoritative architecture guide for application authors and AI agents.
+Then read the [consumer guide](./docs/consumer.md) for a tested toolchain, lifecycle
 rules, server boundaries and guidance for coding agents. A runnable
 [Vite starter](./consumer/README.md) ships in this package: copy it out of
 `node_modules`, install its dependencies, and run its checks. No repository
 checkout or contributor skills are needed.
+
+For implementation, read the [agent authoring patterns](./docs/agent-patterns.md),
+copy from the [executable examples](./docs/examples/agent-patterns/README.md), and
+use the [owned-work testing guide](./docs/testing-owned-work.md). These references
+ship with the installed version and cover factoring, ownership and async correctness.
 
 ## Packages
 
@@ -32,6 +44,14 @@ checkout or contributor skills are needed.
 
 Install the packages you need; their manifests declare compatible peers.
 See the [component catalog](./docs/components.md) for public import paths.
+
+The development-only `@composable-svelte/architecture` checker pairs with
+core 0.13.x. Install it in `devDependencies` with
+`npm install --save-dev @composable-svelte/architecture@0.13.1`, the version the
+bundled starter pins.
+The runtime companion packages listed above declare `@composable-svelte/core ^0.13.1`
+in their coordinated releases. `@composable-svelte/code` requires Svelte `^5.30.0`,
+so an application that includes it needs Svelte 5.30 or newer.
 
 ## Features
 
@@ -53,14 +73,14 @@ See the [component catalog](./docs/components.md) for public import paths.
 ## Installation
 
 ```bash
-npm install @composable-svelte/core
+npm install @composable-svelte/core@0.13.1
 # or
-pnpm add @composable-svelte/core
+pnpm add @composable-svelte/core@0.13.1
 # or
-yarn add @composable-svelte/core
+yarn add @composable-svelte/core@0.13.1
 ```
 
-**Peer Dependencies**: Svelte 5.0.0 or higher. Tailwind CSS (v3 or v4) is an
+**Peer Dependencies**: Svelte 5.20.0 or higher. Tailwind CSS (v3 or v4) is an
 optional peer dependency — required if you use the component library.
 
 ## Styling & Theming
@@ -282,6 +302,22 @@ export const store = createStore({
   </button>
 </div>
 ```
+
+### Native commands in managed feature views
+
+Components that own an editor, player or canvas can observe commands reduced by
+their **own** managed child view with `observeChildActions` from
+`@composable-svelte/core/application`. Use `isManagedChildView` to choose this
+path when the same component also accepts a standalone `Store`. The complete
+[typed bridge](./docs/examples/agent-patterns/src/native-commands.ts) is part of
+the compiled agent-pattern examples; the [application contract](./docs/application-contract.md#native-commands-from-child-views)
+explains delivery and cleanup.
+
+Attach after the native engine is ready. Commands dispatched before attachment
+are dropped, and a retired owner stops delivering without a final callback. A
+child action that retires its own owner is not delivered. Use the parent reducer
+for business results such as a saved document or completed transcript; the
+observer is for local native commands such as focus or seek.
 
 ## Documentation
 

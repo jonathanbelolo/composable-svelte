@@ -144,7 +144,7 @@
 			{copied === 'codes' ? 'Copied' : 'Copy codes'}
 		</button>
 		{#if onAcknowledged}
-			<button type="button" class="recovery-codes__action" onclick={() => onAcknowledged()}>
+			<button type="button" class="recovery-codes__action" onclick={() => onAcknowledged?.()}>
 				{acknowledgeLabel ?? 'I have saved them'}
 			</button>
 		{/if}

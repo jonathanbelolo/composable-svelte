@@ -66,7 +66,7 @@
 	}: CollapsibleProps = $props();
 
 	// Generate unique IDs for ARIA relationships
-	const uid = Math.random().toString(36).substring(2, 9);
+	const uid = $props.id();
 	const contentId = `collapsible-content-${uid}`;
 	const triggerId = `collapsible-trigger-${uid}`;
 
@@ -79,7 +79,6 @@
 </script>
 
 <div
-	role="region"
 	class={cn('space-y-2', className)}
 	data-state={$store.isExpanded ? 'open' : 'closed'}
 >

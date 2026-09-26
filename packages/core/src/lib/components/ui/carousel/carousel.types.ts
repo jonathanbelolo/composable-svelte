@@ -32,6 +32,8 @@ export interface CarouselState<T = unknown> {
   isAutoPlaying: boolean;
   /** Whether the carousel is in a transitioning state */
   isTransitioning: boolean;
+  /** Rendering-phase correlation; optional for existing manually constructed state. */
+  transitionId?: number | undefined;
   /** Whether the carousel loops (wraps from last to first) */
   loop: boolean;
   /** Auto-play interval in milliseconds (0 = disabled) */
@@ -45,11 +47,11 @@ export type CarouselAction =
   | { type: 'nextSlide' }
   | { type: 'previousSlide' }
   | { type: 'goToSlide'; index: number }
-  | { type: 'autoPlayStarted' }
+  | { type: 'autoPlayStarted'; interval?: number | undefined }
   | { type: 'autoPlayStopped' }
   | { type: 'autoPlayTick' }
-  | { type: 'transitionStarted' }
-  | { type: 'transitionCompleted' }
+  | { type: 'transitionStarted'; transitionId?: number | undefined }
+  | { type: 'transitionCompleted'; transitionId?: number | undefined }
   | { type: 'slidesUpdated'; slides: CarouselSlide<unknown>[] };
 
 /**

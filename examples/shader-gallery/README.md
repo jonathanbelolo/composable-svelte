@@ -74,8 +74,8 @@ whole page, and it owns every texture, program and frame.
 ### `ShaderImage2.svelte`
 
 Renders a plain `<img>` and registers it with the overlay through Svelte
-context — `registerImageElement(id, element, src, shader, onTextureLoaded?)` —
-then unregisters on destroy. It creates no canvas and no texture of its own; the
+context — `registerImageElement(id, element, src, shader, onTextureLoaded?) => boolean` —
+and unregisters on destroy only if registration succeeded. It creates no canvas and no texture of its own; the
 overlay draws over the element where it sits, and tracks its position as the
 page scrolls.
 
@@ -112,3 +112,25 @@ This pattern is useful for:
 - Additional memory overhead for WebGL textures. The overlay tracks this against
   a `memoryBudget` and refuses registrations that would exceed it
 - Not suitable for very large numbers of images (texture limits)
+
+## Rendering ownership and tests
+
+The reducer tracks image IDs and source URLs only. The framework overlay owns
+DOM measurement, position tracking, textures and rendering. The small gallery
+integration accepts successful registrations and releases the captured image
+when its source, ID or mounted lifetime ends; failed registration leaves the
+ordinary image visible. A replacement source gets a fresh image node so an old
+fade cannot make the replacement disappear. `width` and `height` configure the
+container width and minimum height, accepting CSS strings or pixel numbers.
+
+Run `pnpm check`, `pnpm build`, and `pnpm test` in this directory. The tests use
+Chromium (`pnpm exec playwright install chromium`) and the published package
+entry points, including real WebGL registration and fallback behavior. No local
+package-source aliases are needed.
+
+After WebGL context loss, the current gallery remains in plain-image mode:
+owned fades are aborted, images become visible, and rendering stops. Remounting
+the gallery can recreate enhancement. A context-restored event alone does not
+mean textures have finished rebuilding, so this demo never hides content on
+that event. The store models shader selection and image inventory; unused
+engine initialization and canvas-size placeholders have been removed.

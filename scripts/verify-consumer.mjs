@@ -24,12 +24,20 @@ for(const name of names){
  run('tar',['-xzf',tar,'-C',out],root);
 }
 const pkg=name=>join(unpacked,name,'package');
+// The starter declares the checker; install the workspace checker's archive so an unpublished
+// checker version resolves locally. The shipped pin must name the version packed with it.
+const checkerDir=join(root,'packages','architecture');
+const checkerVersion=JSON.parse(readFileSync(join(checkerDir,'package.json'),'utf8')).version;
+run('npm',['pack','--ignore-scripts','--pack-destination',packs,'--loglevel','error'],checkerDir);
+const checker=`file:${join(packs,`composable-svelte-architecture-${checkerVersion}.tgz`)}`;
+assert.equal(JSON.parse(readFileSync(join(pkg('core'),'consumer','package.json'),'utf8')).devDependencies['@composable-svelte/architecture'],checkerVersion,'starter checker pin differs from the packed checker');
 // Prove the shipped starter works with core alone before satellite packages
 // could accidentally satisfy an undeclared dependency.
 const starter=join(scratch,'starter');
 cpSync(join(pkg('core'),'consumer'),starter,{recursive:true});
 const starterManifest=JSON.parse(readFileSync(join(starter,'package.json'),'utf8'));
 starterManifest.dependencies['@composable-svelte/core']=deps['@composable-svelte/core'];
+starterManifest.devDependencies['@composable-svelte/architecture']=checker;
 writeFileSync(join(starter,'package.json'),JSON.stringify(starterManifest,null,2));
 run('npm',['install','--ignore-scripts','--no-audit','--no-fund'],starter);
 run('npx',['playwright','install','chromium'],starter);
@@ -41,6 +49,7 @@ console.log('Standalone core starter passed without satellite packages');
 cpSync(join(pkg('core'),'consumer'),app,{recursive:true});
 const manifest=JSON.parse(readFileSync(join(app,'package.json'),'utf8'));
 manifest.dependencies={...manifest.dependencies,...deps};
+manifest.devDependencies['@composable-svelte/architecture']=checker;
 manifest.devDependencies.tailwindcss3='npm:tailwindcss@3.4.17';
 manifest.devDependencies.autoprefixer='10.4.21';
 writeFileSync(join(app,'package.json'),JSON.stringify(manifest,null,2));
@@ -68,11 +77,13 @@ for(const name of names){
 let docs=0,links=0;
 function checkDocs(dir){
  for(const entry of readdirSync(dir,{withFileTypes:true})){
+  if(entry.isSymbolicLink())continue;
   const file=join(dir,entry.name);
-  if(entry.isDirectory()){if(['docs','dist','consumer'].includes(entry.name)||dir.includes('/docs')||dir.includes('/dist')||dir.includes('/consumer'))checkDocs(file);continue;}
+  if(entry.isDirectory()){if(entry.name==='node_modules')continue;checkDocs(file);continue;}
   if(!file.endsWith('.md'))continue;
   docs++;
-  for(const m of readFileSync(file,'utf8').matchAll(/\[[^\]]+\]\(([^)]+)\)/g)){
+  const stripped=readFileSync(file,'utf8').replace(/(?:^|\n)(`{3,}|~{3,})[^\n]*\n[\s\S]*?\n\1 *(?=\n|$)/g,'\n');
+  for(const m of stripped.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)){
    const link=m[1];assert.notEqual(link,'#',`${file}: placeholder documentation link`);if(/^(?:[a-z]+:|#)/i.test(link))continue;
    links++;assert.ok(existsSync(resolve(dirname(file),link.split('#')[0])),`${file}: unshipped link ${link}`);
   }
@@ -82,6 +93,8 @@ for(const name of names)checkDocs(pkg(name));
 assert.ok(docs>=34&&links>=20,`Documentation inventory too small: ${docs} docs, ${links} links`);
 assert.ok(existsSync(join(pkg('core'),'docs/consumer.md')));
 assert.ok(existsSync(join(pkg('auth'),'docs/http-contract.md')));
+assert.ok(existsSync(join(pkg('code'),'recipes/managed/README.md')));
+assert.ok(existsSync(join(pkg('charts'),'fixtures/installed-consumer/README.md')));
 console.log(`${docs} packed documents, ${links} relative links, ${Object.values(required).flat().length} README/guide files verified`);
 // Bundle the safe-to-mount README examples into the real production application.
 const appFile=join(app,'src/App.svelte');
@@ -123,8 +136,72 @@ for(const name of names){
 }
 assert.ok(imports.length>=48,'Typed entry point inventory shrank');
 writeFileSync(join(app,'readme-examples/exports.ts'),imports.join('\n'));
+// The managed configuration reaches internal declaration modules through the
+// public StoreConfig type. Prove those packed types remain precise, not `any`.
+writeFileSync(join(app,'readme-examples/managed-execution.ts'), `
+import {createStore, Effect, type StoreConfig} from '@composable-svelte/core';
+type State = {count: number; child: {name: string} | null};
+type Action = {type: 'increment'};
+const config: StoreConfig<State, Action, {}> = {
+ initialState: {count: 0, child: null}, dependencies: {},
+ reducer: (state, _action) => [{...state, count: state.count + 1}, Effect.none()],
+ execution: {mode: 'managed', slots: {select: state => state.child ? [[{slot: 'child'}]] : []}}
+};
+export function managedConsumer() { const store = createStore(config); store.dispatch({type:'increment'}); store.destroy(); }
+const invalid: StoreConfig<State, Action, {}> = {...config, execution: {
+ mode: 'managed',
+ // @ts-expect-error owner paths must contain typed slot/key parts
+ slots: {select: () => [[{bogus: 'child'}]]}
+}};
+void invalid;
+`);
+
+writeFileSync(join(app,'readme-examples/component-props.ts'), `
+import type {ComponentProps} from 'svelte';
+import {ApplicationHost as Component0} from '@composable-svelte/core/application';
+type Props0 = ComponentProps<typeof Component0>;
+const valid0: keyof Props0 = 'app';
+// @ts-expect-error packed component props must not fall back to ambient any
+const invalid0: keyof Props0 = '__not_a_component_property__';
+import {AuthGuard as Component1} from '@composable-svelte/auth';
+type Props1 = ComponentProps<typeof Component1>;
+const valid1: keyof Props1 = 'store';
+// @ts-expect-error packed component props must not fall back to ambient any
+const invalid1: keyof Props1 = '__not_a_component_property__';
+import {StandardStreamingChat as Component2} from '@composable-svelte/chat';
+type Props2 = ComponentProps<typeof Component2>;
+const valid2: keyof Props2 = 'store';
+// @ts-expect-error packed component props must not fall back to ambient any
+const invalid2: keyof Props2 = '__not_a_component_property__';
+import {Chart as Component3} from '@composable-svelte/charts';
+type Props3 = ComponentProps<typeof Component3>;
+const valid3: keyof Props3 = 'store';
+// @ts-expect-error packed component props must not fall back to ambient any
+const invalid3: keyof Props3 = '__not_a_component_property__';
+import {CodeEditor as Component4} from '@composable-svelte/code';
+type Props4 = ComponentProps<typeof Component4>;
+const valid4: keyof Props4 = 'store';
+// @ts-expect-error packed component props must not fall back to ambient any
+const invalid4: keyof Props4 = '__not_a_component_property__';
+import {Scene as Component5} from '@composable-svelte/graphics';
+type Props5 = ComponentProps<typeof Component5>;
+const valid5: keyof Props5 = 'store';
+// @ts-expect-error packed component props must not fall back to ambient any
+const invalid5: keyof Props5 = '__not_a_component_property__';
+import {Map as Component6} from '@composable-svelte/maps';
+type Props6 = ComponentProps<typeof Component6>;
+const valid6: keyof Props6 = 'store';
+// @ts-expect-error packed component props must not fall back to ambient any
+const invalid6: keyof Props6 = '__not_a_component_property__';
+import {VideoEmbed as Component7} from '@composable-svelte/media';
+type Props7 = ComponentProps<typeof Component7>;
+const valid7: keyof Props7 = 'url';
+// @ts-expect-error packed component props must not fall back to ambient any
+const invalid7: keyof Props7 = '__not_a_component_property__';
+`);
 run('npm',['run','check']);
-run('npx',['tsc','--noEmit','--module','NodeNext','--moduleResolution','NodeNext','--target','ES2022','--lib','ESNext,DOM,DOM.Iterable','--strict','--skipLibCheck','readme-examples/exports.ts']);
+run('npx',['tsc','--noEmit','--module','ESNext','--moduleResolution','Bundler','--target','ES2022','--lib','ESNext,DOM,DOM.Iterable','--strict','--skipLibCheck','readme-examples/exports.ts','readme-examples/managed-execution.ts','readme-examples/component-props.ts']);
+run('npx',['tsc','--noEmit','--module','NodeNext','--moduleResolution','NodeNext','--target','ES2022','--lib','ESNext,DOM,DOM.Iterable','--strict','--skipLibCheck','readme-examples/exports.ts','readme-examples/managed-execution.ts','readme-examples/component-props.ts']);
 console.log(`${imports.length} typed entry points passed Bundler and NodeNext resolution`);
 run('npm',['test']);
 run('npm',['run','test:ssr']);
@@ -144,18 +221,28 @@ function rejects(label,file,change,command,args,pattern){
   console.log(`Positive control rejected: ${label}`);
  } finally {writeFileSync(file,original);}
 }
+function passes(label,file,change,command,args){
+ const original=readFileSync(file,'utf8'),mutated=change(original);
+ assert.notEqual(mutated,original,`${label}: mutation did not apply`);
+ writeFileSync(file,mutated);
+ try {
+  execFileSync(command,args,{cwd:app,stdio:'pipe',env:{...process.env,TZ:'UTC'}});
+  console.log(`Positive check passed: ${label}`);
+ } finally {writeFileSync(file,original);}
+}
 const example=path=>join(app,'readme-examples',path);
 rejects('missing core store export',example('core/counter-store.ts'),s=>s.replace('export const store','const store'),'npm',['run','check'],/declares 'store' locally, but it is not exported/);
 rejects('obsolete editor option',example('code/Editor.svelte'),s=>s.replace('value:', 'code:'),'npm',['run','check'],/does not exist in type/);
 rejects('obsolete map provider',example('maps/stores.ts'),s=>s.replace('createInitialMapState({','createInitialMapState({provider: \'maplibre\','),'npm',['run','check'],/does not exist in type/);
 rejects('wrong effect action',example('code/code.test.ts'),s=>s.replace("type: 'highlighted'","type: 'highlightCompleted'"),'npm',['test','--','readme-examples/code/code.test.ts'],/highlightCompleted/);
 rejects('node canvas array state',example('code/Canvas.svelte'),s=>s.replace(/nodes: \{[\s\S]*?\n      \},/,'nodes: [],'),'npm',['run','check'],/not assignable to type/);
-rejects('missing node action lifting',example('code/Canvas.svelte'),s=>s.replace(' liftAction={(action) => action}',''),'npm',['run','check'],/liftAction/);
+passes('optional node action lifting omission',example('code/Canvas.svelte'),s=>s.replace(' liftAction={(action) => action}',''),'npm',['run','check']);
+rejects('incompatible node canvas action mapper',example('code/Canvas.svelte'),s=>s.replace('liftAction={(action) => action}','liftAction={(action) => ({ wrong: true })}'),'npm',['run','check'],/not assignable to type.*NodeCanvasAction/);
 rejects('obsolete audio factory option',example('media/media.test.ts'),s=>s.replace('createInitialAudioPlayerState()','createInitialAudioPlayerState({tracks: []})'),'npm',['run','check'],/does not exist in type/);
-rejects('double-wrapped dismiss',example('core/navigation.test.ts'),s=>s.replace(
- /dismiss: createDismissDependency<ParentAction>\([\s\S]*?\n      \)/,
- "dismiss: () => Effect.run(async dispatch => dispatch({ type: 'destination', action: { type: 'dismiss' } }))"
-),'npm',['test','--','readme-examples/core/navigation.test.ts'],/next received action was.*presented/);
+rejects('stale managed view replaced by current authority',example('core/navigation.test.ts'),s=>s.replace(
+ 'stale.dismiss();',
+ 'current.dismiss();'
+),'npm',['test','--','readme-examples/core/navigation.test.ts'],/expected null to deeply equal/);
 rejects('missing animation guard',example('core/animation.test.ts'),s=>s.replace(
  "if (state.presentation.status !== 'presented') return [state, Effect.none()];", ''
 ),'npm',['test','--','readme-examples/core/animation.test.ts'],/expected 'dismissing' to be 'idle'/);
@@ -170,6 +257,9 @@ const index=join(pkg('core'),'docs/README.md');
 const indexText=readFileSync(index,'utf8');
 writeFileSync(index,indexText+'\n[Missing deployment guide](#)\n');
 try {assert.throws(()=>checkDocs(pkg('core')),/placeholder documentation link/);console.log('Positive control rejected: placeholder documentation link');}
+finally {writeFileSync(index,indexText);}
+writeFileSync(index,indexText+'\n```markdown\n[Ignored code example link](#)\n```\n');
+try {assert.doesNotThrow(()=>checkDocs(pkg('core')));console.log('Positive check passed: fenced code link ignored');}
 finally {writeFileSync(index,indexText);}
 // Exercise the documented Tailwind 3 path using the same browser assertions.
 const viteFile=join(app,'vite.config.ts'),cssFile=join(app,'src/app.css');

@@ -23,15 +23,25 @@
 	 * Pattern A: it animates nothing.
 	 */
 	import type { Snippet } from 'svelte';
+	import type { PresentationView } from '@composable-svelte/core/application';
 
 	import type { OAuthProvider } from '../flows/oauth-pending.js';
 	import type { OAuthStartAction, OAuthStartState } from '../flows/oauth-start/types.js';
 
-	interface Props {
+	interface StandaloneBinding {
+		mode?: 'standalone' | undefined;
 		flowStore: {
 			readonly state: OAuthStartState;
 			dispatch(action: OAuthStartAction): void;
 		};
+	}
+
+	interface ManagedBinding {
+		mode: 'managed';
+		flowStore: PresentationView<OAuthStartState, OAuthStartAction>;
+	}
+
+	interface PresentationProps {
 		/**
 		 * The providers to offer, in order.
 		 *
@@ -56,19 +66,29 @@
 		class?: string | undefined;
 	}
 
+	type Props = PresentationProps & (StandaloneBinding | ManagedBinding);
+
 	let {
-		flowStore,
 		providers,
 		returnTo = null,
 		icon,
 		header,
 		headingLevel = 2,
-		class: className = ''
+		class: className = '',
+		...binding
 	}: Props = $props();
 
-	const status = $derived(flowStore.state.status);
-	const inFlight = $derived(flowStore.state.provider);
-	const error = $derived(flowStore.state.error);
+	/** `undefined` only for a managed view whose owner has retired. See `LoginForm`. */
+	const flow: OAuthStartState | undefined = $derived(binding.flowStore.state);
+
+	type Owner = symbol | PresentationView<OAuthStartState, OAuthStartAction>;
+	const standaloneOwner = Symbol('standalone');
+	const owner: Owner = $derived(binding.mode === 'managed' ? binding.flowStore : standaloneOwner);
+	const viewOf = (key: Owner) => (typeof key === 'symbol' ? binding.flowStore : key);
+
+	const status = $derived(flow?.status);
+	const inFlight = $derived(flow?.provider ?? null);
+	const error = $derived(flow?.error ?? null);
 
 	/**
 	 * Whether *this* provider is the one being worked on.
@@ -114,71 +134,75 @@
 	 */
 	const disabled = (id: OAuthProvider): boolean => inFlight === id && status === 'starting';
 
-	function choose(id: OAuthProvider) {
-		flowStore.dispatch({ type: 'authorizationRequested', provider: id, returnTo });
+	function choose(id: OAuthProvider, key: Owner) {
+		viewOf(key).dispatch({ type: 'authorizationRequested', provider: id, returnTo });
 	}
 </script>
 
-<div class="oauth-signin {className}">
-	<!--
-		The error sits outside the provider list, so it is still shown if the list
-		is ever empty, and the list is still shown when there is an error — there
-		is no branch here on which nothing is clickable.
-	-->
-	{#if error}
-		<div class="oauth-signin__error" role="alert" aria-live="polite" data-error-code={error.code}>
-			{error.message}
+{#if flow}
+	{#each [owner] as key (key)}
+		<div class="oauth-signin {className}">
+			<!--
+				The error sits outside the provider list, so it is still shown if the list
+				is ever empty, and the list is still shown when there is an error — there
+				is no branch here on which nothing is clickable.
+			-->
+			{#if error}
+				<div class="oauth-signin__error" role="alert" aria-live="polite" data-error-code={error.code}>
+					{error.message}
+				</div>
+			{/if}
+
+			{#if providers.length > 0}
+				{#if header}
+					{@render header()}
+				{:else}
+					<svelte:element this={`h${headingLevel}`} class="oauth-signin__title">
+						Or continue with
+					</svelte:element>
+				{/if}
+
+				<ul class="oauth-signin__list">
+					{#each providers as provider (provider.id)}
+						<li>
+							<!--
+								A `<button>`, never an `<a href>`. Two reasons: the authorize URL
+								does not exist until `beginOAuth` answers, so there is nothing to
+								put in an `href`; and a ctrl-click on a link would open the
+								authorize page in a new tab, whose `sessionStorage` is a *copy*
+								taken at open time — so the record written afterwards would be
+								written into the wrong tab and the callback could never verify it.
+							-->
+							<button
+								type="button"
+								class="oauth-signin__button"
+								disabled={disabled(provider.id)}
+								onclick={() => choose(provider.id, key)}
+							>
+								{#if icon}
+									<span class="oauth-signin__icon" aria-hidden="true">
+										{@render icon({ provider })}
+									</span>
+								{/if}
+								<span>
+									{#if busy(provider.id)}
+										{status === 'redirecting' ? `Taking you to ${provider.label}…` : 'Connecting…'}
+									{:else}
+										Continue with {provider.label}
+									{/if}
+								</span>
+							</button>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+
+			<p class="oauth-signin__status" role="status" aria-live="polite">
+				{announcement}
+			</p>
 		</div>
-	{/if}
-
-	{#if providers.length > 0}
-		{#if header}
-			{@render header()}
-		{:else}
-			<svelte:element this={`h${headingLevel}`} class="oauth-signin__title">
-				Or continue with
-			</svelte:element>
-		{/if}
-
-		<ul class="oauth-signin__list">
-			{#each providers as provider (provider.id)}
-				<li>
-					<!--
-						A `<button>`, never an `<a href>`. Two reasons: the authorize URL
-						does not exist until `beginOAuth` answers, so there is nothing to
-						put in an `href`; and a ctrl-click on a link would open the
-						authorize page in a new tab, whose `sessionStorage` is a *copy*
-						taken at open time — so the record written afterwards would be
-						written into the wrong tab and the callback could never verify it.
-					-->
-					<button
-						type="button"
-						class="oauth-signin__button"
-						disabled={disabled(provider.id)}
-						onclick={() => choose(provider.id)}
-					>
-						{#if icon}
-							<span class="oauth-signin__icon" aria-hidden="true">
-								{@render icon({ provider })}
-							</span>
-						{/if}
-						<span>
-							{#if busy(provider.id)}
-								{status === 'redirecting' ? `Taking you to ${provider.label}…` : 'Connecting…'}
-							{:else}
-								Continue with {provider.label}
-							{/if}
-						</span>
-					</button>
-				</li>
-			{/each}
-		</ul>
-	{/if}
-
-	<p class="oauth-signin__status" role="status" aria-live="polite">
-		{announcement}
-	</p>
-</div>
+	{/each}
+{/if}
 
 <style>
 	/* Scoped CSS over core's theme tokens — see `LoginForm` for why not Tailwind. */

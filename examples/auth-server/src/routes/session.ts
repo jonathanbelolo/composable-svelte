@@ -10,7 +10,7 @@
 import type { FastifyInstance } from 'fastify';
 
 import { requireAccount } from '../guard.js';
-import { clear, currentAccount, establish, sessionWindows, snapshot } from '../session.js';
+import { clear, currentAccount, currentSession, establish, sessionWindows, snapshot } from '../session.js';
 import type { ServerContext } from '../server.js';
 
 export async function sessionRoutes(
@@ -71,8 +71,8 @@ export async function sessionRoutes(
 	 * 204, because the client never reads the response.
 	 */
 	app.post('/auth/logout', async (request, reply) => {
-		const current = currentAccount(request, store, { now, idleMs });
-		clear(reply, store, current === null ? null : current.session, secureCookie);
+		const session = currentSession(request, store, { now, idleMs });
+		clear(reply, store, session, secureCookie);
 		return reply.status(204).send();
 	});
 

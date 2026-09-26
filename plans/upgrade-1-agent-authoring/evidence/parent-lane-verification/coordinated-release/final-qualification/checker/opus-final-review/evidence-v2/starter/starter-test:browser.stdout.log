@@ -1,0 +1,17 @@
+
+> test:browser
+> playwright test --config playwright.config.ts && playwright test --config playwright.lifetime.config.ts
+
+
+Running 2 tests using 2 workers
+
+  ✓  1 browser/production-boundary.spec.ts:5:1 › production output excludes the lifetime fixture (9ms)
+  ✓  2 browser/app.spec.ts:2:1 › state, effects and both themes work in the production build (374ms)
+
+  2 passed (3.8s)
+
+Running 1 test using 1 worker
+
+  ✓  1 browser/lifetime/lifetime.spec.ts:3:1 › whole-app retirement isolates a fresh instance from a late service result (318ms)
+
+  1 passed (3.6s)

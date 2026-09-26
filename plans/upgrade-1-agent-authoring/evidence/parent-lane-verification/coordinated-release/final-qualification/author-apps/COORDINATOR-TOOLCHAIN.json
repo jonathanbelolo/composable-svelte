@@ -1,0 +1,11 @@
+{
+  "node": "24.10.0",
+  "npm": "11.6.0",
+  "agyExecutable": "/Users/jonathanbelolo/.local/bin/agy",
+  "agyExecutableSHA256": "42e76bedafb5896bc6a6eefb61902162f6ba08ddf59efd3357767102e3a59a0c",
+  "model": "gemini-3.8-flash-high",
+  "effort": "high",
+  "claudeCLI": "2.1.283",
+  "reviewModel": "claude-opus-5-5",
+  "deadline": null
+}

@@ -139,6 +139,10 @@ export const emailVerificationReducer: Reducer<
 			return [{ ...state, error: null, resendError: null }, Effect.none()];
 		}
 
+		case 'signInRequested': {
+			return [state, Effect.none()];
+		}
+
 		default: {
 			const _exhaustive: never = action;
 			void _exhaustive;

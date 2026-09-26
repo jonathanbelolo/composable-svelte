@@ -1,0 +1,39 @@
+--- /var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/tmp.baHyI1c5MR/package/src/semantic-context.mjs	1985-10-26 09:15:00
++++ src/semantic-context.mjs	2026-09-26 17:45:35
+@@ -55,6 +55,12 @@
+       const typeOnly = (ts.isTypeNode(node) && !isInstantiationExpression(node)) || ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node)
+         || ts.isImportDeclaration(node) || ts.isExportDeclaration(node);
+       const runtime = parentRuntime && !typeOnly && unit.kind !== 'binding';
++      // Template binding patterns (snippet parameters, {#each} items, {@const} and {:then}/{:catch} patterns) are declarations
++      // only: a default initializer there is never evaluated, so it is refused rather than silently skipped.
++      if (unit.kind === 'binding' && (ts.isVariableDeclaration(node) || ts.isBindingElement(node)) && node.initializer) {
++        errors.push({code: 'unsupported-construct', construct: 'template-binding-default', path: module.path, span: unit.nodeSpan(node),
++          message: 'Defaults in snippet parameters and in {#each}, {@const} and {#await} destructuring are not analyzed; pass the value explicitly or apply the default in script.'});
++      }
+       const record = {node, unit, module, function: fn, class: cls, snippet:snippetFor(unit), runtime, id: id(module, unit, node)};
+       info.set(node, record);
+       nodes.push(record);
+--- /var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/tmp.baHyI1c5MR/package/README.md	1985-10-26 09:15:00
++++ README.md	2026-09-26 17:45:35
+@@ -115,6 +115,11 @@
+   executors are unsupported. Await independent requests one after another instead.
+ - TypeScript instantiation expressions such as `reducer<Row>` are analyzed as the
+   underlying value.
++- Default values in template binding patterns are unsupported: snippet parameters
++  (`{#snippet row(item = fallback)}`), `{#each}` destructuring (`{#each rows as {x = 1}}`),
++  `{@const}` destructuring and `{:then}`/`{:catch}` destructuring. They are reported as `template-binding-default`.
++  Pass the value explicitly or apply the default in script. The same patterns without
++  defaults are supported.
+ 
+ Independent source review and functional tests remain required. The result always
+ includes `manualReviewRequired: true` and the bounded qualification scope. Preserve
+--- /var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/tmp.baHyI1c5MR/package/CHANGELOG.md	1985-10-26 09:15:00
++++ CHANGELOG.md	2026-09-26 17:45:35
+@@ -15,6 +15,7 @@
+ ### Changed
+ 
+ - The starter policy approves exactly core 0.13.1; its supported range is a pairing bound, not an approval.
++- Default values in snippet parameters and in `{#each}`, `{@const}`, `{:then}` and `{:catch}` destructuring are now reported as unsupported (`template-binding-default`). Earlier releases skipped them without analysis. Patterns without defaults are unaffected.
+ 
+ ## [0.13.0] - 2026-09-24
+ 

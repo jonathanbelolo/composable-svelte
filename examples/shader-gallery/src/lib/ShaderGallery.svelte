@@ -7,8 +7,9 @@
 import { setContext } from 'svelte';
 import type { Snippet } from 'svelte';
 import type { Store } from '@composable-svelte/core';
-import { WebGLOverlay } from '@composable-svelte/graphics';
+import { WebGLOverlay, OverlayError, type ShaderEffect } from '@composable-svelte/graphics';
 import type { ShaderGalleryState, ShaderGalleryAction } from './shader-types';
+import { GALLERY_CONTEXT_KEY, passthroughShader, type ShaderGalleryContext } from './gallery-context';
 
 // Props
 let {
@@ -26,6 +27,14 @@ let {
 // WebGLOverlay component reference
 let overlayComponent: WebGLOverlay | null = $state(null);
 
+// Context loss uses a stable plain-image recovery policy for this mount.
+// onContextRestored precedes async texture readiness, so it must not re-hide DOM.
+let fallback = $state(false);
+function loseEnhancement(): void {
+  fallback = true;
+  overlayComponent?.stop();
+}
+
 // Track registered image elements
 const imageElements = new Map<string, HTMLImageElement>();
 
@@ -36,37 +45,38 @@ function registerImageElement(
   id: string,
   element: HTMLImageElement,
   src: string,
-  shader: any,
+  shader: ShaderEffect | undefined,
   onTextureLoaded?: () => void
-): void {
+): boolean {
   if (!overlayComponent) {
     console.warn('[ShaderGallery] Overlay not initialized yet');
-    return;
+    return false;
   }
 
-  // Store element reference
-  imageElements.set(id, element);
-
   // Register with WebGLOverlay
-  overlayComponent.registerElement({
+  const result = overlayComponent.registerElement({
     id,
     domElement: element,
-    shader,
+    shader: shader ?? passthroughShader,
     ...(onTextureLoaded !== undefined && { onTextureLoaded })
   });
 
-  // Dispatch to store for tracking.
-  //
-  // The overlay tracks the element's position itself, so the
-  // `getBoundingClientRect()` that used to sit here was measured, assigned, and
-  // never read — a forced layout per registration, for nothing.
-  store.dispatch({ type: 'registerImage', id, src, element });
+  if (result instanceof OverlayError) {
+    return false;
+  }
+
+  imageElements.set(id, element);
+  store.dispatch({ type: 'registerImage', id, src });
+  return true;
 }
 
 /**
  * Unregister an image element
  */
-function unregisterImageElement(id: string): void {
+function unregisterImageElement(id: string, element: HTMLImageElement): void {
+  if (imageElements.get(id) !== element) {
+    return;
+  }
   imageElements.delete(id);
   overlayComponent?.unregisterElement(id);
   store.dispatch({ type: 'unregisterImage', id });
@@ -75,12 +85,12 @@ function unregisterImageElement(id: string): void {
 /**
  * Update shader for an image element
  */
-function updateImageShader(id: string, shader: any): void {
+function updateImageShader(id: string, shader: ShaderEffect | undefined): void {
   if (!overlayComponent) {
     console.warn('[ShaderGallery] Overlay not initialized yet');
     return;
   }
-  overlayComponent.updateElementShader(id, shader);
+  overlayComponent.updateElementShader(id, shader ?? passthroughShader);
 }
 
 /**
@@ -96,16 +106,17 @@ function updateImagePosition(id: string): void {
 }
 
 // Provide gallery methods to child components
-setContext('shader-gallery', {
+setContext<ShaderGalleryContext>(GALLERY_CONTEXT_KEY, {
+  isFallback: () => fallback,
   registerImageElement,
   unregisterImageElement,
   updateImageShader,
   updateImagePosition
 });
 
-// Format width/height
-const widthStyle = typeof width === 'number' ? `${width}px` : width;
-const heightStyle = typeof height === 'number' ? `${height}px` : height;
+// Format width/height reactively
+const widthStyle = $derived(typeof width === 'number' ? `${width}px` : width);
+const heightStyle = $derived(typeof height === 'number' ? `${height}px` : height);
 </script>
 
 <style>
@@ -120,9 +131,13 @@ const heightStyle = typeof height === 'number' ? `${height}px` : height;
   }
 </style>
 
-<div class="gallery-container">
+<div
+  class="gallery-container"
+  style:width={widthStyle}
+  style:min-height={heightStyle}
+>
   <!-- WebGLOverlay handles canvas and rendering -->
-  <WebGLOverlay bind:this={overlayComponent} />
+  <WebGLOverlay bind:this={overlayComponent} options={{ onContextLost: loseEnhancement }} />
 
   <!-- Gallery content (images in DOM) -->
   <div class="gallery-content">

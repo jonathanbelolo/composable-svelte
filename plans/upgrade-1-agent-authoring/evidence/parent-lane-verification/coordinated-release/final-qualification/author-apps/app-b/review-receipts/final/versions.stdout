@@ -1,0 +1,22 @@
+v24.10.0
+11.6.0
+Version 5.9.3
+svelte-check, 4.3.3
+vite/7.3.6 darwin-arm64 node-v24.10.0
+vitest/4.0.7 darwin-arm64 node-v24.10.0
+Version 1.56.1
+final-account-dashboard@ /private/tmp/composable-final-authoring/app-b
+├── @composable-svelte/auth@0.3.0
+├── @composable-svelte/charts@0.3.0
+├── @composable-svelte/core@0.13.1
+├── @playwright/test@1.56.1
+├── @sveltejs/vite-plugin-svelte@6.2.1
+├── @types/node@22.18.6
+├── @vitest/browser-playwright@4.0.7
+├── playwright@1.56.1
+├── svelte-check@4.3.3
+├── svelte@5.55.3
+├── typescript@5.9.3
+├── vite@7.3.6
+└── vitest@4.0.7
+

@@ -1,9 +1,10 @@
 <script lang="ts">
+  import type { HTMLAttributes } from 'svelte/elements';
   import { cn } from '../../../utils.js';
 
-  interface Props {
+  interface Props extends Omit<HTMLAttributes<HTMLDivElement>, 'class' | 'children'> {
     variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | undefined;
-    class?: string | undefined;
+    class?: HTMLAttributes<HTMLDivElement>['class'] | undefined;
     children?: import('svelte').Snippet | undefined;
   }
 

@@ -1,0 +1,15 @@
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/auth
+
+12:54:15 PM [vite] (client) Re-optimizing dependencies because lockfile has changed
+ ✓ |chromium| tests/signup-flow.test.ts (15 tests) 12ms
+ ✓ |chromium| tests/managed-auth-sibling-ownership.test.ts (2 tests) 474ms
+ ✓ |chromium| tests/signup-form.test.ts (14 tests) 554ms
+ ✓ |chromium| tests/managed-forms.test.ts (12 tests) 508ms
+ ✓ |chromium| tests/auth-feature.test.ts (41 tests) 3556ms
+
+ Test Files  5 passed (5)
+      Tests  84 passed (84)
+   Start at  12:54:15
+   Duration  6.15s (transform 0ms, setup 0ms, collect 5.87s, tests 5.10s, environment 0ms, prepare 485ms)
+

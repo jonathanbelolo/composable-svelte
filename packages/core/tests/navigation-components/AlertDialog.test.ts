@@ -9,28 +9,68 @@
  * tell those two apart.
  */
 
-import { render } from 'vitest-browser-svelte';
-import { describe, it, expect, vi } from 'vitest';
+import { flushSync, mount, unmount, type Component } from 'svelte';
+import { describe, it, expect, vi, onTestFinished } from 'vitest';
 
 import AlertDialogTestWrapper from './AlertDialogTestWrapper.svelte';
 import { createStore } from '../../src/lib/store.svelte.js';
 import { Effect } from '../../src/lib/effect.js';
+import { ManagedIntegrationBuilder, optionalSlot, type PresentationView } from '../../src/lib/navigation/managed-integration.js';
+import type { PresentationAction } from '../../src/lib/navigation/types.js';
+import type { Reducer } from '../../src/lib/types.js';
+
+interface ChildState {
+	type: 'test';
+	state: { value: string };
+}
 
 interface ParentState {
-	destination: { type: 'test'; state: { value: string } } | null;
+	destination: ChildState | null;
 }
-type ParentAction = { type: 'noop' };
 
-function parent() {
-	return createStore<ParentState, ParentAction>({
+type ChildAction = { type: 'noop' };
+type ParentAction = { type: 'destination'; action: PresentationAction<ChildAction> };
+
+const destinationSlot = optionalSlot<ParentState, ParentAction>()('destination');
+const parentReducer: Reducer<ParentState, ParentAction> = (state) => [state, Effect.none()];
+const childReducer: Reducer<ChildState, ChildAction> = (state) => [state, Effect.none()];
+
+function parent(): {
+	parentStore: ReturnType<typeof createStore<ParentState, ParentAction>>;
+	store: PresentationView<ChildState, ChildAction>;
+} {
+	const composition = new ManagedIntegrationBuilder<ParentState, ParentAction, undefined>(
+		parentReducer
+	)
+		.with(destinationSlot, childReducer)
+		.build();
+	const parentStore = createStore<ParentState, ParentAction>({
 		initialState: { destination: { type: 'test', state: { value: 'x' } } },
-		reducer: (state) => [state, Effect.none()]
+		...composition
+	});
+	onTestFinished(() => parentStore.destroy());
+	const store = composition.bind(parentStore, destinationSlot);
+	if (!store) throw new Error('Expected the alert-dialog fixture destination to be present');
+	return { parentStore, store };
+}
+
+function renderManaged<const Props extends Record<string, unknown>>(
+	component: Component<Props>,
+	props: Props
+) {
+	const target = document.createElement('div');
+	document.body.append(target);
+	const instance = mount(component, { target, props });
+	flushSync();
+	onTestFinished(async () => {
+		await unmount(instance);
+		target.remove();
 	});
 }
 
 describe('AlertDialog naming', () => {
 	it('is named by its title, and that title actually exists', async () => {
-		render(AlertDialogTestWrapper, { parentStore: parent() });
+		renderManaged(AlertDialogTestWrapper, { store: parent().store });
 
 		const dialog = document.querySelector('[role="alertdialog"]');
 		expect(dialog).not.toBeNull();
@@ -48,7 +88,7 @@ describe('AlertDialog naming', () => {
 	});
 
 	it('is described by its description, which also exists', async () => {
-		render(AlertDialogTestWrapper, { parentStore: parent() });
+		renderManaged(AlertDialogTestWrapper, { store: parent().store });
 
 		const dialog = document.querySelector('[role="alertdialog"]')!;
 		const describedBy = dialog.getAttribute('aria-describedby');
@@ -62,7 +102,7 @@ describe('AlertDialog naming', () => {
 	it('falls back to a direct name when there is no title', async () => {
 		// The inverse. `aria-labelledby` pointing at an absent title is worse than
 		// a generic name, so a consumer without a title opts out and names it.
-		render(AlertDialogTestWrapper, { parentStore: parent(), unlabelled: true });
+		renderManaged(AlertDialogTestWrapper, { store: parent().store, unlabelled: true });
 
 		const dialog = document.querySelector('[role="alertdialog"]')!;
 		expect(dialog.getAttribute('aria-labelledby')).toBeNull();
@@ -73,7 +113,7 @@ describe('AlertDialog naming', () => {
 		// The asymmetry this review found. `aria-labelledby` was guarded against
 		// naming a missing element; `aria-describedby` was not, so a dialog with a
 		// title and no description referenced an id that never rendered.
-		render(AlertDialogTestWrapper, { parentStore: parent(), twice: true });
+		renderManaged(AlertDialogTestWrapper, { store: parent().store, twice: true });
 
 		for (const dialog of document.querySelectorAll('[role="alertdialog"]')) {
 			const describedBy = dialog.getAttribute('aria-describedby');
@@ -86,7 +126,7 @@ describe('AlertDialog naming', () => {
 	});
 
 	it('gives two dialogs on one page distinct title ids', async () => {
-		render(AlertDialogTestWrapper, { parentStore: parent(), twice: true });
+		renderManaged(AlertDialogTestWrapper, { store: parent().store, twice: true });
 
 		const ids = [...document.querySelectorAll('[role="alertdialog"]')].map((d) =>
 			d.getAttribute('aria-labelledby')
@@ -99,7 +139,7 @@ describe('AlertDialog naming', () => {
 	});
 
 	it('renders the title as a heading, at rank 2 by default', async () => {
-		render(AlertDialogTestWrapper, { parentStore: parent() });
+		renderManaged(AlertDialogTestWrapper, { store: parent().store });
 
 		const heading = document.querySelector('[role="alertdialog"] h2');
 		expect(heading, 'the title must be a heading, or it is not in the outline').not.toBeNull();
@@ -112,8 +152,8 @@ describe('AlertDialog actions', () => {
 		// reducer that owns the dismissal transition.
 		const onConfirm = vi.fn();
 		const onCancel = vi.fn();
-		const parentStore = parent();
-		render(AlertDialogTestWrapper, { parentStore, onConfirm, onCancel });
+		const { parentStore, store } = parent();
+		renderManaged(AlertDialogTestWrapper, { store, onConfirm, onCancel });
 
 		// Native `.click()`, not `userEvent.click`. With no `presentation` prop the
 		// dialog renders at opacity 0 — it is mounted and interactive, but
@@ -135,7 +175,7 @@ describe('AlertDialog actions', () => {
 	it('puts the confirming action last in DOM order', async () => {
 		// Which is the order the tab key and a screen reader follow, whatever the
 		// visual order the footer's flex direction produces.
-		render(AlertDialogTestWrapper, { parentStore: parent() });
+		renderManaged(AlertDialogTestWrapper, { store: parent().store });
 
 		const labels = [...document.querySelectorAll('[role="alertdialog"] button')].map((b) =>
 			b.textContent?.trim()

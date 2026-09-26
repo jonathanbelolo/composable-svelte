@@ -1,0 +1,73 @@
+{
+  "schema": "composable-svelte/consumer-architecture-policy",
+  "schemaVersion": 2,
+  "catalogVersion": 2,
+  "policyId": "bundled-graphics",
+  "policyVersion": "0.13.1",
+  "supportedCore": {
+    "min": "0.13.1",
+    "maxExclusive": "0.14.0-0"
+  },
+  "project": {
+    "tsconfig": "tsconfig.json",
+    "roots": [
+      "src/main.ts"
+    ]
+  },
+  "rules": {
+    "active": [
+      {
+        "id": "routing/no-manual-browser-authority",
+        "severity": "error"
+      },
+      {
+        "id": "presentation/no-subscription-orchestration",
+        "severity": "error"
+      },
+      {
+        "id": "reducers/pure-decisions",
+        "severity": "error"
+      },
+      {
+        "id": "resources/no-unowned-infrastructure",
+        "severity": "error"
+      },
+      {
+        "id": "motion/no-competing-playback",
+        "severity": "error"
+      }
+    ],
+    "inactive": [
+      {
+        "id": "presentation/no-fabricated-view",
+        "reason": "supported-replacement-pending",
+        "detail": "Not enforced by this checker; requires independent architectural review."
+      },
+      {
+        "id": "adapters/least-authority",
+        "reason": "supported-replacement-pending",
+        "detail": "Not enforced by this checker; requires independent architectural review."
+      }
+    ]
+  },
+  "capabilityGrants": [],
+  "qualificationRecords": [],
+  "exceptions": [],
+  "opaquePackages": [
+    {
+      "name": "@composable-svelte/core",
+      "version": "0.13.1",
+      "provenance": "registry"
+    },
+    {
+      "name": "@composable-svelte/graphics",
+      "version": "0.3.0",
+      "provenance": "registry"
+    },
+    {
+      "name": "svelte",
+      "version": "5.55.3",
+      "provenance": "registry"
+    }
+  ]
+}

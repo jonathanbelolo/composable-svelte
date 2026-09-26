@@ -1,0 +1,4 @@
+
+> @composable-svelte/media@0.4.1 typecheck /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/media
+> tsc --noEmit
+

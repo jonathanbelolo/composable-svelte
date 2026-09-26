@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import { createStore } from '../../../store.svelte.js';
 	import { comboboxReducer } from './combobox.reducer.js';
 	import { createInitialComboboxState } from './combobox.types.js';
@@ -6,6 +7,7 @@
 	import { animateChevron, animateDropdownIn, animateDropdownOut } from '../../../animation/animate.js';
 	import { Spinner } from '../spinner/index.js';
 	import { cn } from '../../../utils.js';
+	import { createDismissalBoundary } from '../../../actions/dismissalBoundary.js';
 
 	/**
 	 * Combobox component - Searchable select with async loading support.
@@ -98,6 +100,7 @@
 		onchange,
 		debounceDelay = 300
 	}: ComboboxProps = $props();
+	const registerDismissal = createDismissalBoundary();
 
 	// Create combobox store with reducer
 	const store = createStore({
@@ -119,6 +122,7 @@
 			}
 		}
 	});
+	onDestroy(() => store.destroy());
 
 	// Sync external value changes to store.
 	//
@@ -149,6 +153,9 @@
 	let containerElement: HTMLElement | null = $state(null);
 	let inputElement: HTMLInputElement | null = $state(null);
 	let dropdownElement: HTMLElement | null = $state(null);
+	const uid = $props.id();
+	const dropdownId = `combobox-dropdown-${uid}`;
+	const optionId = (index: number) => `combobox-option-${uid}-${index}`;
 	// Captured once, never reactive. The other three disclosure chevrons place
 	// themselves declaratively so the server can render them at the right angle;
 	// this one did not, which left its resting transform as `none` — correct by
@@ -159,6 +166,7 @@
 		: 'rotate(0deg)';
 
 	let chevronElement: SVGElement | null = $state(null);
+	let restoringInputFocus = false;
 
 	// Get display value for input
 	const displayValue = $derived.by(() => {
@@ -166,7 +174,7 @@
 			return $store.searchQuery;
 		}
 
-		if ($store.selected) {
+		if ($store.selected !== null && $store.selected !== undefined) {
 			const selectedOption = $store.options.find((o) => o.value === $store.selected);
 			return selectedOption?.label || '';
 		}
@@ -174,13 +182,10 @@
 		return '';
 	});
 
-	// Get selected option for display when not focused
-	const selectedOption = $derived(
-		$store.options.find((o) => o.value === $store.selected)
-	);
+
 
 	function handleInputFocus() {
-		if (disabled) return;
+		if (disabled || restoringInputFocus) return;
 		store.dispatch({ type: 'opened' });
 	}
 
@@ -218,11 +223,6 @@
 				event.preventDefault();
 				store.dispatch({ type: 'enter' });
 				break;
-			case 'Escape':
-				event.preventDefault();
-				store.dispatch({ type: 'escape' });
-				inputElement?.blur();
-				break;
 		}
 	}
 
@@ -240,21 +240,23 @@
 		inputElement?.focus();
 	}
 
-	// Close on click outside
-	function handleClickOutside(event: MouseEvent) {
-		if (containerElement && !containerElement.contains(event.target as Node)) {
-			store.dispatch({ type: 'closed' });
-		}
-	}
-
+	const isVisible = $derived($store.dropdown.status !== 'idle');
 	$effect(() => {
-		const isOpen = $store.dropdown.status !== 'idle';
-		if (!isOpen) return;
-
-		document.addEventListener('click', handleClickOutside);
-		return () => {
-			document.removeEventListener('click', handleClickOutside);
-		};
+		if (!isVisible || !containerElement) return;
+		return registerDismissal({
+			node: containerElement,
+			identity: () => store,
+			onPointerOutside: () => {
+				if ($store.dropdown.status === 'opening' || $store.dropdown.status === 'open') store.dispatch({ type: 'closed' });
+			},
+			onEscape: () => {
+				if ($store.dropdown.status !== 'opening' && $store.dropdown.status !== 'open') return;
+				store.dispatch({ type: 'escape' });
+				restoringInputFocus = true;
+				try { inputElement?.focus(); }
+				finally { restoringInputFocus = false; }
+			}
+		});
 	});
 
 	// Animate dropdown open/close using centralized animation system
@@ -296,7 +298,9 @@
 			aria-label={ariaLabel ?? placeholder}
 			aria-expanded={$store.dropdown.status !== 'idle'}
 			aria-autocomplete="list"
-			aria-controls="combobox-dropdown"
+			aria-controls={$store.dropdown.status !== 'idle' ? dropdownId : undefined}
+			aria-activedescendant={$store.dropdown.status !== 'idle' && !$store.isLoading && $store.filteredOptions[$store.highlightedIndex]
+				? optionId($store.highlightedIndex) : undefined}
 			onfocus={handleInputFocus}
 			onclick={handleInputClick}
 			oninput={handleInputChange}
@@ -309,7 +313,7 @@
 				<div class="text-muted-foreground">
 					<Spinner size="sm" />
 				</div>
-			{:else if $store.selected && !disabled}
+			{:else if $store.selected !== null && $store.selected !== undefined && !disabled}
 				<button
 					type="button"
 					class="text-muted-foreground hover:text-foreground"
@@ -349,6 +353,7 @@
 				class="text-muted-foreground hover:text-foreground flex items-center"
 				aria-label="Toggle options"
 				aria-expanded={$store.dropdown.status !== 'idle'}
+				aria-controls={$store.dropdown.status !== 'idle' ? dropdownId : undefined}
 				{disabled}
 				tabindex="-1"
 				onclick={() => store.dispatch({ type: 'toggled' })}
@@ -378,7 +383,7 @@
 	{#if $store.dropdown.status === 'opening' || $store.dropdown.status === 'open' || $store.dropdown.status === 'closing'}
 		<div
 			bind:this={dropdownElement}
-			id="combobox-dropdown"
+			id={dropdownId}
 			class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-popover shadow-md"
 			role="listbox"
 		>
@@ -393,6 +398,7 @@
 				{:else}
 					{#each $store.filteredOptions as option, index}
 						<button
+							id={optionId(index)}
 							type="button"
 							class={cn(
 								'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-left outline-none',

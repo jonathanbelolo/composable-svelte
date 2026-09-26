@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { createStore } from '@composable-svelte/core';
 	import {
 		EmailVerification,
@@ -61,10 +62,24 @@
 	let attempt = $state(0);
 	let signInOffered = $state(0);
 
-	const sessionStore = makeSessionStore();
+	const sessionStore = $derived.by(() => {
+		void attempt;
+		void selected;
+		return untrack(makeSessionStore);
+	});
 	const flowStore = $derived.by(() => {
 		void attempt;
-		return createEmailVerificationStore(SCENARIOS[selected]!.deps(), 'ada@example.com');
+		const scenario = SCENARIOS[selected]!;
+		return untrack(() => createEmailVerificationStore(scenario.deps(), 'ada@example.com'));
+	});
+
+	$effect(() => {
+		const currentSession = sessionStore;
+		const currentFlow = flowStore;
+		return () => {
+			currentSession.destroy();
+			currentFlow.destroy();
+		};
 	});
 
 	// Shows the helper doing its one job, without touching window.location.

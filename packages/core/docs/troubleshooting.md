@@ -457,20 +457,25 @@ case 'modal':
   )(state, action, deps);
 ```
 
-**Cause 2: deps.dismiss() not provided**
+**Cause 2: the child has no managed dismiss dependency**
 
 ```typescript
-// ❌ BAD: Missing dismiss in dependencies
+// Missing dismissal authority
 const deps = {
   apiClient: new ApiClient()
 };
 
-// ✅ GOOD: Include dismiss callback
+// Inject this only through an admitted optional/destination integration.
+import { managedDismissDependency } from '@composable-svelte/core/application';
+
 const deps = {
   apiClient: new ApiClient(),
-  dismiss: () => store.dispatch({ type: 'modal', action: { type: 'dismiss' } })
+  dismiss: managedDismissDependency()
 };
 ```
+
+Return `deps.dismiss()` from the reducer as an effect. Do not replace it with a raw
+parent dispatch closure; that can target a replacement presentation.
 
 ### Scoped Store Issues
 

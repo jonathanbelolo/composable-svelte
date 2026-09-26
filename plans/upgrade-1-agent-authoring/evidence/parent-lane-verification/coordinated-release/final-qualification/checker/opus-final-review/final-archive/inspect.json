@@ -1,0 +1,207 @@
+{
+  "archive": "/private/tmp/composable-final-checker/opus-final-review/final-archive/composable-svelte-architecture-0.13.1.tgz",
+  "sha256": "cd12784eb9288aa510b2f980eb3d0ef57efce8c3d8d8318ab72cee32ce67e51a",
+  "files": [
+    {
+      "path": "package.json",
+      "sha256": "3c016fc9c7fb7f0b135412463df6b61438f2c84e713f3d9f961e68871745433d",
+      "bytes": 1197
+    },
+    {
+      "path": "README.md",
+      "sha256": "f986d23a61fa435906662d595abb8781ef7fbc069d2e61e30533b8c63788e33f",
+      "bytes": 9213
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "983cea60df74fe83ef605296ed3f8a76769dc9727e2a268594f51ab99be3f9a9",
+      "bytes": 1072
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "be7d8954cf50d414cec2d31facf439a05b815cd3b2c6f8e70f452e3cd5298ec6",
+      "bytes": 2313
+    },
+    {
+      "path": "bin/composable-svelte-architecture.mjs",
+      "sha256": "f7e5903ac712bd53b1d5e53fc746ae416673b50860153f1b40cc79d0f0d20f64",
+      "bytes": 253
+    },
+    {
+      "path": "policies/starter.json",
+      "sha256": "f2821ebf0fa5cd34b346361089edd56bb4ec01a40c59eb969c60f90c7e77d190",
+      "bytes": 1607
+    },
+    {
+      "path": "policies/chat.json",
+      "sha256": "4e958b18f465a2bb65cff36ecf97f76e66a7da3bed83942ef5397f0c9030436f",
+      "bytes": 1715
+    },
+    {
+      "path": "policies/code.json",
+      "sha256": "669cd1a15dcba7a7c3e6ebe572888e4611e0e214dd2e607c744076182762e437",
+      "bytes": 1715
+    },
+    {
+      "path": "policies/media.json",
+      "sha256": "717854d1add64795bf06a7d8ecf73a768dd8fb717cf706b3846b0e5384b501c3",
+      "bytes": 1717
+    },
+    {
+      "path": "policies/chat-code-media.json",
+      "sha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327",
+      "bytes": 1949
+    },
+    {
+      "path": "policies/maps.json",
+      "sha256": "6c60262dc74594255ba2d245b4a0b057edc008bb450ff7b4309a975b1d5c760a",
+      "bytes": 1715
+    },
+    {
+      "path": "policies/graphics.json",
+      "sha256": "5b66bb6ec3b309fba9f4696f07ac35f5f7b9c86e75520d11d9de966b2fe0f03b",
+      "bytes": 1723
+    },
+    {
+      "path": "policies/charts.json",
+      "sha256": "853f929a63217a9667ec64e928dbd8767c15ad49ff82e75e802e4209e4398645",
+      "bytes": 1719
+    },
+    {
+      "path": "policies/auth.json",
+      "sha256": "ab100ba510f5cdc4931bca33e0dc398d21f1382010b51ed44242d30dc6846662",
+      "bytes": 1715
+    },
+    {
+      "path": "src/anchors.mjs",
+      "sha256": "1fe2b4ecd94fb33007a68a31a486e5d7ad0ebe7e7f7e79de0306c2e2f41bef57",
+      "bytes": 7437
+    },
+    {
+      "path": "src/authority-values.mjs",
+      "sha256": "1a9d9236cbd42c3a9fb1190a944e14e83351c8249b924899cbc58b1bf399dd14",
+      "bytes": 7686
+    },
+    {
+      "path": "src/bundled-policy.mjs",
+      "sha256": "d64e226cd19522dc90bd09d6c5ac0003d0bfdaea64a777e11736b5e85af99880",
+      "bytes": 7807
+    },
+    {
+      "path": "src/check.mjs",
+      "sha256": "c966b7a550fcd6e06588193f5cff2df6817faaef6831b06a2a427dbb14951d01",
+      "bytes": 23787
+    },
+    {
+      "path": "src/detector-catalog.mjs",
+      "sha256": "d7e869e1f32b60bfe4d86844f461b13409377fa8a67b61fca1eb839983ab9a73",
+      "bytes": 2357
+    },
+    {
+      "path": "src/expression-values.mjs",
+      "sha256": "45fd04ee0d983860e5d62232a53397f2cf1e32289c8d2f2e9051e71de037d0e2",
+      "bytes": 13476
+    },
+    {
+      "path": "src/framework-seeds.mjs",
+      "sha256": "a5b8260a636450d7e835d863b61048a11fcb7941fd7bdc24c807d94199a035b8",
+      "bytes": 8136
+    },
+    {
+      "path": "src/graph.mjs",
+      "sha256": "8fd61b4429ad1f49509f526f0303171dca5e2ae8d5b44f6840aa82d38054a4d6",
+      "bytes": 27212
+    },
+    {
+      "path": "src/policy.mjs",
+      "sha256": "e6a5a1893ace7f00124e16ed6b13b73c120e5bcdadc529d0172fc6cf123228f2",
+      "bytes": 23978
+    },
+    {
+      "path": "src/primitive-catalog.mjs",
+      "sha256": "cbc22e4f29be4ee1e0df8c3f1e858a8b60583eb82640b64bd40955bf83df5cd4",
+      "bytes": 4234
+    },
+    {
+      "path": "src/rules/motion-syntax.mjs",
+      "sha256": "cea699b7f0d50847d3d9a98de1c1bf710058e0e02ea76dc46d115706cf3bc11f",
+      "bytes": 6869
+    },
+    {
+      "path": "src/rules/routing-template.mjs",
+      "sha256": "040db5b5068c13bdab73850d63dba27ec2ae65a86e82c77024b0571b48036cbe",
+      "bytes": 6097
+    },
+    {
+      "path": "src/rules/semantic-rules.mjs",
+      "sha256": "1f716fc589a7cd708526e77dd3177f980235d2f617312efb387bec061b184ce5",
+      "bytes": 15354
+    },
+    {
+      "path": "src/semantic-context.mjs",
+      "sha256": "8cdcdef380ad18e17c48517f0869168c7a0e4e761fdb8acf7740a45cd2fe03aa",
+      "bytes": 6360
+    },
+    {
+      "path": "src/semantic-flow.mjs",
+      "sha256": "b58997fb0af0e7fe8a5cfb96497a1c9031ed3294f283f3bb1121e9cfa7d11e7b",
+      "bytes": 71504
+    },
+    {
+      "path": "src/semantic-origins.mjs",
+      "sha256": "6870ea7d286f0919e0c01c5a28e85cf832b485a30e9399840acd59e8419a62f5",
+      "bytes": 10792
+    },
+    {
+      "path": "src/semantic-parse.mjs",
+      "sha256": "801529673aa5ffa8a692a600187ecd76fa383a76ad3046f1c5360e41e6f76ab3",
+      "bytes": 24380
+    },
+    {
+      "path": "src/semantic-types.mjs",
+      "sha256": "e6def7d4a1796f2eb59e2c63ae07ce59c8d7ad6f300b67440f8ed20afa55ca11",
+      "bytes": 37490
+    },
+    {
+      "path": "src/semantic-zones.mjs",
+      "sha256": "d30827a0f492ca4fd006574e4a77229af0d2007fc7a1b03772b766ef46e200ea",
+      "bytes": 6292
+    },
+    {
+      "path": "src/semantics.mjs",
+      "sha256": "7076ba42ad26af6d02680e483180f44bd12a1b9ac572f375c4a2d7349c637423",
+      "bytes": 6145
+    },
+    {
+      "path": "src/svelte-runes.mjs",
+      "sha256": "af713c682aefde22f4710cb01698eeb85893ca4aa71b4c186de582d3cc721c1d",
+      "bytes": 1454
+    },
+    {
+      "path": "src/symbols.mjs",
+      "sha256": "401ec803cea0ab934ef8a85a9e6d1e6bb6b5511c23a1e75419cb8516b33e320d",
+      "bytes": 12421
+    },
+    {
+      "path": "src/taint-values.mjs",
+      "sha256": "9f380dfff7e991153bdcdd911afbc41d6c477502549ee3ea715085518d2c40e8",
+      "bytes": 8028
+    },
+    {
+      "path": "src/template-seeds.mjs",
+      "sha256": "43bf8c232a7e0e806157eb3dce6318b1d6f2c9296dd85fd4ab9b992870e49878",
+      "bytes": 30977
+    },
+    {
+      "path": "src/version.mjs",
+      "sha256": "666c41fc04d4ba60d3f81e96d56a6c651f0ca8c9c4c41d99f4d89e262018277c",
+      "bytes": 2639
+    },
+    {
+      "path": "src/zone-graph.mjs",
+      "sha256": "1fd0933f0b1966c4079cc1a43bcdbfc2ea29a5ba3a6429f8d61da3ddef27827c",
+      "bytes": 5662
+    }
+  ],
+  "status": "archive-matches-source"
+}

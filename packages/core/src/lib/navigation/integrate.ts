@@ -13,6 +13,7 @@
  * @packageDocumentation
  */
 
+import { ManagedIntegrationBuilder } from './managed-integration.js';
 import type { Reducer } from '../types.js';
 import { ifLetPresentation } from './if-let.js';
 import { Effect } from '../effect.js';
@@ -117,6 +118,13 @@ class IntegrationBuilder<State, Action extends { type: string }, Dependencies = 
 
 	constructor(coreReducer?: Reducer<State, Action, Dependencies>) {
 		this.coreReducer = coreReducer;
+	}
+
+	/** Opt-in spike: preserve the established builder entry point and legacy defaults. */
+	managed(): ManagedIntegrationBuilder<State, Action, Dependencies> {
+		if (this.integrations.length) throw new Error('Call managed() before registering legacy integrations');
+		const core = this.coreReducer ?? ((state: State) => [state, Effect.none<Action>()] as const);
+		return new ManagedIntegrationBuilder(core);
 	}
 
 	/**

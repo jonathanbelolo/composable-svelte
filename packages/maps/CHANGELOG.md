@@ -9,7 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 has one of six features built. 3D buildings, marker clustering, geocoding,
 drawing tools and routing are not implemented. See the README.
 
-## [Unreleased]
+## [0.3.0] - 2026-09-26
+
+### Added
+
+- `Map`, `MapPrimitive`, `GeoJSONLayer`, `HeatmapLayer`, `MapPopup`, and
+  `TileProviderControl` accept managed child views through the state, dispatch,
+  and subscribe contract while continuing to accept standalone Stores.
+- `MapAction` includes `mapClicked` for a managed feature to present a map click
+  to its parent reducer. Exhaustive switches over `MapAction` must handle it.
+- Managed owner retirement releases the attached map adapter promptly, including
+  a supplied adapter, and prevents late native callbacks from reaching a new view.
+- Maps-owned Chromium tests cover the real MapLibre engine and managed component.
+
+### Changed
+
+- Requires `@composable-svelte/core` `^0.13.1` and Svelte `^5.20.0` as peers.
+
+### Fixed
+
+- Prevent synchronous native `moveend` callbacks from reentering a programmatic
+  viewport update and repeatedly calling map setters.
+- Reconcile engine-clamped center, zoom, bearing, and pitch back to map state
+  after programmatic viewport updates.
+- Apply zoom before center in a combined viewport update so a valid
+  high-latitude target is not clamped using the previous zoom level.
+- Finish a programmatic viewport setter group if a synchronous structural
+  store replaces the requested viewport with an equal-value object.
+- Keep the packaged `MapPrimitive.svelte` valid JavaScript after Svelte package
+  strips TypeScript from its native move handler signature; the installed
+  managed recipe now server renders.
+- Flush layers queued while a GeoJSON source loads, and use full style reloads
+  for public style or tile-provider changes so declarative layers reappear.
+- Apply `MapPopup` `isOpen` and `position` prop changes after its first open.
 
 ## [0.2.1] - 2026-09-18
 

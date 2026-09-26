@@ -1,0 +1,220 @@
+{
+  "schema": "opus-final-review/scoped-checker-delta/v2",
+  "authoritative": true,
+  "baseline": "/private/tmp/composable-final-qualification/repo/packages/architecture",
+  "final": "/private/tmp/composable-final-checker/packages/architecture",
+  "finalArchive": {
+    "sha256": "cd12784eb9288aa510b2f980eb3d0ef57efce8c3d8d8318ab72cee32ce67e51a",
+    "sri": "sha512-LAm/0jRDaTNRUs+DIaRjp6J1RdUF/BPU/3qN+87tT5DifvxlAeWmtRj2Am91YsvAbkW1qs6IzwSRtcN/aeNpvw==",
+    "files": 40,
+    "bytes": 99447
+  },
+  "superseded": {
+    "f3c91ee6ae078312cc1f289034d3245266ff74f5ba116c12641001611933808f": "Opus corrections 1-4, before the template-binding-default closure",
+    "b62cf88f15d8dd42ed7202c482c27d34e73b0194cf47f4ee16226c3da579529b": "finalizer candidate"
+  },
+  "sourceAtPack": {
+    "path": "opus-final-review/SOURCE-AT-PACK-v2.sha256",
+    "sha256": "c52c8d91ea4b859b7ce5dc067ca1cc09b965887c4e7639e9568d002c6bcb0bb9"
+  },
+  "note": "package-lock.json is the local parser-dependency install record and is not packed. Top-level FINAL-SCOPED-CHECKER-DELTA.json is a coordinator preview; this file is the authoritative delta.",
+  "count": 28,
+  "files": [
+    {
+      "path": "CHANGELOG.md",
+      "baseline": "d6280815c768e0932323b786c9ae9997eb92037d9595ab2a5dbd890f84f01dae",
+      "finalizer": "6b92480e2c0b9b0c8c7baff0df55999a96d07f06350b2d4c31f7e515b49e4a07",
+      "final": "be7d8954cf50d414cec2d31facf439a05b815cd3b2c6f8e70f452e3cd5298ec6",
+      "changedByOpusFinalReview": true
+    },
+    {
+      "path": "README.md",
+      "baseline": "e9d38314b360068838dd8b634c83b7b86474732ca720592d13b0fe916af379b2",
+      "finalizer": "dbd094ee387671eae3ebdf9835218cb0d8399869a84fee734cb43ff7a5786e89",
+      "final": "f986d23a61fa435906662d595abb8781ef7fbc069d2e61e30533b8c63788e33f",
+      "changedByOpusFinalReview": true
+    },
+    {
+      "path": "package-lock.json",
+      "baseline": null,
+      "finalizer": "400061f9baecc249fd5a81dd77f7f180f277ac6f01c84e27e8172fea0081d5fd",
+      "final": "400061f9baecc249fd5a81dd77f7f180f277ac6f01c84e27e8172fea0081d5fd",
+      "changedByOpusFinalReview": false
+    },
+    {
+      "path": "package.json",
+      "baseline": "22c2371c679c37abcf81ab1ab40755963beea0691a7ca596aac3c840ec718661",
+      "finalizer": "3c016fc9c7fb7f0b135412463df6b61438f2c84e713f3d9f961e68871745433d",
+      "final": "3c016fc9c7fb7f0b135412463df6b61438f2c84e713f3d9f961e68871745433d",
+      "changedByOpusFinalReview": false
+    },
+    {
+      "path": "policies/auth.json",
+      "baseline": null,
+      "finalizer": "ab100ba510f5cdc4931bca33e0dc398d21f1382010b51ed44242d30dc6846662",
+      "final": "ab100ba510f5cdc4931bca33e0dc398d21f1382010b51ed44242d30dc6846662",
+      "changedByOpusFinalReview": false
+    },
+    {
+      "path": "policies/charts.json",
+      "baseline": null,
+      "finalizer": "853f929a63217a9667ec64e928dbd8767c15ad49ff82e75e802e4209e4398645",
+      "final": "853f929a63217a9667ec64e928dbd8767c15ad49ff82e75e802e4209e4398645",
+      "changedByOpusFinalReview": false
+    },
+    {
+      "path": "policies/chat-code-media.json",
+      "baseline": null,
+      "finalizer": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327",
+      "final": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327",
+      "changedByOpusFinalReview": false
+    },
+    {
+      "path": "policies/chat.json",
+      "baseline": null,
+      "finalizer": "4e958b18f465a2bb65cff36ecf97f76e66a7da3bed83942ef5397f0c9030436f",
+      "final": "4e958b18f465a2bb65cff36ecf97f76e66a7da3bed83942ef5397f0c9030436f",
+      "changedByOpusFinalReview": false
+    },
+    {
+      "path": "policies/code.json",
+      "baseline": null,
+      "finalizer": "669cd1a15dcba7a7c3e6ebe572888e4611e0e214dd2e607c744076182762e437",
+      "final": "669cd1a15dcba7a7c3e6ebe572888e4611e0e214dd2e607c744076182762e437",
+      "changedByOpusFinalReview": false
+    },
+    {
+      "path": "policies/graphics.json",
+      "baseline": null,
+      "finalizer": "5b66bb6ec3b309fba9f4696f07ac35f5f7b9c86e75520d11d9de966b2fe0f03b",
+      "final": "5b66bb6ec3b309fba9f4696f07ac35f5f7b9c86e75520d11d9de966b2fe0f03b",
+      "changedByOpusFinalReview": false
+    },
+    {
+      "path": "policies/maps.json",
+      "baseline": null,
+      "finalizer": "6c60262dc74594255ba2d245b4a0b057edc008bb450ff7b4309a975b1d5c760a",
+      "final": "6c60262dc74594255ba2d245b4a0b057edc008bb450ff7b4309a975b1d5c760a",
+      "changedByOpusFinalReview": false
+    },
+    {
+      "path": "policies/media.json",
+      "baseline": null,
+      "finalizer": "717854d1add64795bf06a7d8ecf73a768dd8fb717cf706b3846b0e5384b501c3",
+      "final": "717854d1add64795bf06a7d8ecf73a768dd8fb717cf706b3846b0e5384b501c3",
+      "changedByOpusFinalReview": false
+    },
+    {
+      "path": "policies/starter.json",
+      "baseline": "389430147e64045cc17a59db23a3672f3849abf339f9a6e96ae13acde2dcd8b3",
+      "finalizer": "f2821ebf0fa5cd34b346361089edd56bb4ec01a40c59eb969c60f90c7e77d190",
+      "final": "f2821ebf0fa5cd34b346361089edd56bb4ec01a40c59eb969c60f90c7e77d190",
+      "changedByOpusFinalReview": false
+    },
+    {
+      "path": "src/bundled-policy.mjs",
+      "baseline": "f43f1416ce2e78c44572c54cee14c3e85a677caed47f77d4b2afef81161f4207",
+      "finalizer": "d64e226cd19522dc90bd09d6c5ac0003d0bfdaea64a777e11736b5e85af99880",
+      "final": "d64e226cd19522dc90bd09d6c5ac0003d0bfdaea64a777e11736b5e85af99880",
+      "changedByOpusFinalReview": false
+    },
+    {
+      "path": "src/bundled-policy.test.mjs",
+      "baseline": "7dfd60e840782d255276817dfac2756325a48f633c8ddd56ed13151692971657",
+      "finalizer": "f965c9ba8ca3642e36480fabad9e490e58e346b5db49733a5f481b9f89271b20",
+      "final": "f965c9ba8ca3642e36480fabad9e490e58e346b5db49733a5f481b9f89271b20",
+      "changedByOpusFinalReview": false
+    },
+    {
+      "path": "src/check.mjs",
+      "baseline": "7ca110b723aeecb1a8a84d43d254f8f034d25b3ddb184e422e02b9fb362fc4d4",
+      "finalizer": "c966b7a550fcd6e06588193f5cff2df6817faaef6831b06a2a427dbb14951d01",
+      "final": "c966b7a550fcd6e06588193f5cff2df6817faaef6831b06a2a427dbb14951d01",
+      "changedByOpusFinalReview": false
+    },
+    {
+      "path": "src/check.test.mjs",
+      "baseline": "fb6650950d58ee1480f36775314ec8c44224ecb39fbaca51be2054cc9dc40356",
+      "finalizer": "96cf6a7935abdc6a3c11332b07ad62c16ac3d39dae8eeeb8d9e05fac41c50733",
+      "final": "96cf6a7935abdc6a3c11332b07ad62c16ac3d39dae8eeeb8d9e05fac41c50733",
+      "changedByOpusFinalReview": false
+    },
+    {
+      "path": "src/computed-data-keys-cli.test.mjs",
+      "baseline": "833811abeea74c28d8ac1571db46cf5edda3423f4f70547325bfe6e0dfe610ec",
+      "finalizer": "acdebf40b463b450da7d69c6bb650bc528f28fa629ee20266a9b720d21fb0832",
+      "final": "acdebf40b463b450da7d69c6bb650bc528f28fa629ee20266a9b720d21fb0832",
+      "changedByOpusFinalReview": false
+    },
+    {
+      "path": "src/expression-values.mjs",
+      "baseline": "07b15e7d905053e56bb629ea9c7313346a1c28e2c0c1d056ba0743641df983b6",
+      "finalizer": "45fd04ee0d983860e5d62232a53397f2cf1e32289c8d2f2e9051e71de037d0e2",
+      "final": "45fd04ee0d983860e5d62232a53397f2cf1e32289c8d2f2e9051e71de037d0e2",
+      "changedByOpusFinalReview": false
+    },
+    {
+      "path": "src/getter-promise-compat.test.mjs",
+      "baseline": null,
+      "finalizer": "b02a6153d3805bb6eba5d98061c65ffe68cb670e2a1cfbd31a9fbba3817f9f03",
+      "final": "3b32033abc615df5f15430f04637d4e0541136a52aafbf8bfbc6465da45acbe8",
+      "changedByOpusFinalReview": true
+    },
+    {
+      "path": "src/graph.test.mjs",
+      "baseline": "3111b168b802a5879cce3b30e38a5c5e3a6b6ae9255a194738901b83f8c2c1dd",
+      "finalizer": "6aea4b1e5d415800e8a08430043362fd10a8b7242a12e6f59a2ce310bb964cb5",
+      "final": "6aea4b1e5d415800e8a08430043362fd10a8b7242a12e6f59a2ce310bb964cb5",
+      "changedByOpusFinalReview": false
+    },
+    {
+      "path": "src/instantiation-expression.test.mjs",
+      "baseline": null,
+      "finalizer": "5f861d16f2d389f68158d6be4d58c7ae7ca9cc6acb98527644687d5f70a0863b",
+      "final": "7d77ba7aa4547eaf46af0ed7f1f92eb430fd251becf792c9b46c8f1faf5bba2f",
+      "changedByOpusFinalReview": true
+    },
+    {
+      "path": "src/qualification.test.mjs",
+      "baseline": "9634569021901f222651cf66dd8e90245122bfd9145f238e161a52162d2a5e1b",
+      "finalizer": "d663739c6da9c33cd4ce7fea12a3a9b05dd606cd23abaa82c5fa46260eaec9df",
+      "final": "d663739c6da9c33cd4ce7fea12a3a9b05dd606cd23abaa82c5fa46260eaec9df",
+      "changedByOpusFinalReview": false
+    },
+    {
+      "path": "src/semantic-context.mjs",
+      "baseline": "711832a649ccd0f25a7395f9c0f95e0c66d1372f8e8d461e8e65123cb55643fd",
+      "finalizer": "711832a649ccd0f25a7395f9c0f95e0c66d1372f8e8d461e8e65123cb55643fd",
+      "final": "8cdcdef380ad18e17c48517f0869168c7a0e4e761fdb8acf7740a45cd2fe03aa",
+      "changedByOpusFinalReview": true
+    },
+    {
+      "path": "src/semantic-flow.mjs",
+      "baseline": "c9672b49f1439cddf0e6362674d117b4095a7f6517fac7c767b062c9ba126a95",
+      "finalizer": "1b564143f246167140437ae3cb9490123821624e97dee262fbf5a3ee7913211f",
+      "final": "b58997fb0af0e7fe8a5cfb96497a1c9031ed3294f283f3bb1121e9cfa7d11e7b",
+      "changedByOpusFinalReview": true
+    },
+    {
+      "path": "src/symbols.mjs",
+      "baseline": "2a844729ae51ed94b104e958ffd087688dbef5ace8c4d1b9341ce53ff6260d56",
+      "finalizer": "2a844729ae51ed94b104e958ffd087688dbef5ace8c4d1b9341ce53ff6260d56",
+      "final": "401ec803cea0ab934ef8a85a9e6d1e6bb6b5511c23a1e75419cb8516b33e320d",
+      "changedByOpusFinalReview": true
+    },
+    {
+      "path": "src/template-binding-default.test.mjs",
+      "baseline": null,
+      "finalizer": null,
+      "final": "9a91ba491889bae6891fcfad6e0e217d1c18030bb27cfe5b7a4e562cb3ef9776",
+      "changedByOpusFinalReview": true
+    },
+    {
+      "path": "test/installed-bin-smoke.mjs",
+      "baseline": "49ec603c1cbd15d72c606ee68051d6caa682becfa27bdb9799ebab220f1fa0e5",
+      "finalizer": "b8ec1556dd17651e1368aa7bc85b52c034bbc7af5866cc720bf2ab063dd7a596",
+      "final": "b8ec1556dd17651e1368aa7bc85b52c034bbc7af5866cc720bf2ab063dd7a596",
+      "changedByOpusFinalReview": false
+    }
+  ]
+}

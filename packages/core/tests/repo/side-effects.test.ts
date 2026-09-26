@@ -32,39 +32,17 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { kindOf, walkFiles, listDirs } from './walk.js';
+import { packageCapabilities } from './package-capabilities.js';
 import { fileURLToPath } from 'node:url';
 import { join, relative } from 'node:path';
+import ts from 'typescript';
+import { parse as parseSvelte } from 'svelte/compiler';
 
 const repoRoot = fileURLToPath(new URL('../../../../', import.meta.url));
 const packagesDir = join(repoRoot, 'packages');
 
 /** Bare `import 'x';` — no bindings, so it is kept only for its side effect. */
 const BARE_IMPORT = /^[ \t]*import[ \t]+['"]([^'"]+)['"][ \t]*;?[ \t]*$/gm;
-
-/**
- * A top-level assignment into an imported binding — `Effect.api = api;`.
- *
- * The second way a module exists only for its side effect, and the one the
- * first version of this guard could not see: `dist/api/effect-api.js` attaches
- * `Effect.api` at import time exactly as `effect-websocket.js` attaches
- * `Effect.websocket`, but it is reached through a *binding* re-export
- * (`export { api } from './effect-api.js'`) rather than a bare import. An unused
- * binding re-export out of a side-effect-free module is dropped before the
- * assignment ever runs, and `Effect.api` was `undefined` in every bundled
- * consumer while this guard was green (AUDIT-2026-09-03-FINDINGS P1).
- *
- * Leading whitespace is allowed. The first version anchored at column 0 so
- * that an assignment inside a function body would not count, and the R0
- * review showed the cost: the same assignment indented by two spaces — a
- * top-level `try`, `if` or block, all of them import-time code — made the
- * guard report core's api chain as clean. An assignment in a function body
- * now matches too; that is a false positive the `sideEffects` list can carry
- * (measured over every package's dist: none today), where the miss was
- * silent. Bracket access and the logical assignments are the other spellings.
- * A JSDoc example is still not code: block comments are stripped first.
- */
-const IMPORTED_MUTATION =
-	/^[ \t]*([A-Za-z_$][\w$]*)(?:\.[\w$]+|\[[^\]]+\])+\s*(?:\?\?|\|\||&&)?=(?!=)/gm;
 
 /**
  * Minified module syntax — `import{Effect}from'./e.js'`, `export*from` — which
@@ -76,31 +54,277 @@ export function looksMinified(source: string): boolean {
 
 /** The local names a module's `import` statements bind. */
 export function importBindings(source: string): Set<string> {
-	const out = new Set<string>();
-	const re = /^import\s+(?:([A-Za-z_$][\w$]*)\s*,?\s*)?(?:\*\s+as\s+([A-Za-z_$][\w$]*)|\{([^}]*)\})?\s*from\s*['"]/gm;
-	for (const m of source.matchAll(re)) {
-		if (m[1]) out.add(m[1]);
-		if (m[2]) out.add(m[2]);
-		if (m[3]) {
-			for (const part of m[3].split(',')) {
-				const name = part.trim().split(/\s+as\s+/).pop()?.trim();
-				if (name) out.add(name);
+	const sourceFile = ts.createSourceFile('module.ts', source, ts.ScriptTarget.Latest, true);
+	const bindings = new Set<string>();
+
+	for (const stmt of sourceFile.statements) {
+		if (ts.isImportDeclaration(stmt) && stmt.importClause) {
+			if (stmt.importClause.name) {
+				bindings.add(stmt.importClause.name.text);
+			}
+			const namedBindings = stmt.importClause.namedBindings;
+			if (namedBindings) {
+				if (ts.isNamespaceImport(namedBindings)) {
+					bindings.add(namedBindings.name.text);
+				} else if (ts.isNamedImports(namedBindings)) {
+					for (const el of namedBindings.elements) {
+						bindings.add(el.name.text);
+					}
+				}
 			}
 		}
 	}
-	return out;
+
+	return bindings;
 }
 
-/** Source with block comments removed, so a commented-out assignment is not a marker. */
-function withoutBlockComments(source: string): string {
-	return source.replace(/\/\*[\s\S]*?\*\//g, '');
-}
-
-/** The imported bindings a module assigns into at its top level. */
-export function mutatedImports(source: string): string[] {
-	const bindings = importBindings(source);
-	const roots = [...withoutBlockComments(source).matchAll(IMPORTED_MUTATION)].map((m) => m[1]!);
-	return [...new Set(roots.filter((root) => bindings.has(root)))];
+/**
+ * Import-time structural reachability for this repository's emitted syntax,
+ * not a JavaScript interpreter. Branches
+ * are conservatively visited; local calls and aliases are followed by lexical
+ * symbols. Dormant function bodies are not roots. Foreign higher-order calls,
+ * runtime code generation, getters, and functions returned by factories are
+ * outside this guard; real packed-consumer bundle tests remain authoritative.
+ */
+export function mutatedImports(source: string, svelte = false): string[] {
+	if (svelte) {
+		// Published Svelte components retain markup. Only their module script
+		// executes on import; instance scripts execute when a component is made.
+		const component = parseSvelte(source, { modern: true });
+		if (!component.module) return [];
+		const text = (node: object): string => {
+			if (!('start' in node) || typeof node.start !== 'number' || !('end' in node) || typeof node.end !== 'number') {
+				throw new Error('Cannot inspect Svelte module script: compiler source positions unavailable');
+			}
+			return source.slice(node.start, node.end);
+		};
+		// Imports written in instance scripts are hoisted by the compiler and
+		// may be referenced by module code; instance statements still stay dormant.
+		const imports = component.instance?.content.body.filter(statement => statement.type === 'ImportDeclaration') ?? [];
+		source = imports.map(text).join('\n') + '\n' + text(component.module.content);
+	}
+	if (importBindings(source).size === 0) return [];
+	const fileName = '/side-effect-module.ts';
+	const file = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true);
+	// One in-memory file: symbol binding supplies lexical scope without loading
+	// dependencies, checking types, or executing any source from the repository.
+	const host: ts.CompilerHost = {
+		getSourceFile: (name) => name === fileName ? file : undefined,
+		getDefaultLibFileName: () => '', writeFile: () => {},
+		getCurrentDirectory: () => '/', getDirectories: () => [],
+		fileExists: (name) => name === fileName,
+		readFile: (name) => name === fileName ? source : undefined,
+		getCanonicalFileName: (name) => name, useCaseSensitiveFileNames: () => true,
+		getNewLine: () => '\n'
+	};
+	const program = ts.createProgram([fileName], { noLib: true, noResolve: true }, host);
+	const diagnostics = program.getSyntacticDiagnostics(file);
+	if (diagnostics.length > 0) {
+		throw new Error('Cannot inspect import-time mutations: ' + diagnostics.map(diagnostic => ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')).join('; '));
+	}
+	const checker = program.getTypeChecker();
+	type Fn = ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction | ts.MethodDeclaration;
+	type Value = { roots: Set<string>; functions: Set<Fn> };
+	type Environment = Map<ts.Symbol, Value>;
+	const empty = (): Value => ({ roots: new Set(), functions: new Set() });
+	const merge = (values: Value[]): Value => ({
+		roots: new Set(values.flatMap(value => [...value.roots])),
+		functions: new Set(values.flatMap(value => [...value.functions]))
+	});
+	const imported = new Map<ts.Symbol, string>();
+	for (const statement of file.statements) {
+		if (!ts.isImportDeclaration(statement) || !statement.importClause || statement.importClause.isTypeOnly) continue;
+		const clause = statement.importClause;
+		const names: ts.Identifier[] = [];
+		if (clause.name) names.push(clause.name);
+		if (clause.namedBindings) {
+			if (ts.isNamespaceImport(clause.namedBindings)) names.push(clause.namedBindings.name);
+			else for (const item of clause.namedBindings.elements) if (!item.isTypeOnly) names.push(item.name);
+		}
+		for (const name of names) {
+			const symbol = checker.getSymbolAtLocation(name);
+			if (symbol) imported.set(symbol, name.text);
+		}
+	}
+	const mutations = new Set<string>();
+	const activeCalls = new Map<Fn, Set<string>>();
+	const isFn = (node: ts.Node): node is Fn => ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) || ts.isArrowFunction(node) || ts.isMethodDeclaration(node);
+	function value(expression: ts.Node, env: Environment, seen = new Set<ts.Symbol>()): Value {
+		if (isFn(expression)) return { roots: new Set(), functions: new Set([expression]) };
+		if (ts.isParenthesizedExpression(expression) || ts.isAsExpression(expression) || ts.isNonNullExpression(expression) || ts.isTypeAssertionExpression(expression)) return value(expression.expression, env, seen);
+		if (ts.isConditionalExpression(expression)) return merge([value(expression.whenTrue, env, seen), value(expression.whenFalse, env, seen)]);
+		if (ts.isBinaryExpression(expression) && [ts.SyntaxKind.BarBarToken, ts.SyntaxKind.AmpersandAmpersandToken, ts.SyntaxKind.QuestionQuestionToken].includes(expression.operatorToken.kind)) return merge([value(expression.left, env, seen), value(expression.right, env, seen)]);
+		if (ts.isPropertyAccessExpression(expression) || ts.isElementAccessExpression(expression)) {
+			// Property aliases still mutate the imported object; known local method
+			// symbols are also callable without evaluating dormant method bodies.
+			const base = value(expression.expression, env, seen);
+			const property = ts.isPropertyAccessExpression(expression) ? expression.name.text
+				: expression.argumentExpression && ts.isStringLiteralLike(expression.argumentExpression) ? expression.argumentExpression.text : undefined;
+			const symbol = property ? checker.getTypeAtLocation(expression.expression).getProperty(property) : undefined;
+			const members = symbol && !seen.has(symbol) ? (symbol.declarations ?? []).map(declaration => {
+				if (isFn(declaration)) return value(declaration, env, new Set(seen).add(symbol));
+				if (ts.isPropertyAssignment(declaration)) return value(declaration.initializer, env, new Set(seen).add(symbol));
+				if (ts.isShorthandPropertyAssignment(declaration)) return value(declaration.name, env, new Set(seen).add(symbol));
+				return empty();
+			}) : [];
+			return merge([{ roots: base.roots, functions: new Set() }, ...members]);
+		}
+		if (!ts.isIdentifier(expression)) return empty();
+		const symbol = checker.getSymbolAtLocation(expression);
+		if (!symbol || seen.has(symbol)) return empty();
+		if (imported.has(symbol)) return { roots: new Set([imported.get(symbol)!]), functions: new Set() };
+		if (env.has(symbol)) return env.get(symbol)!;
+		const next = new Set(seen).add(symbol);
+		return merge((symbol.declarations ?? []).map(declaration => {
+			if (isFn(declaration)) return value(declaration, env, next);
+			if ((ts.isVariableDeclaration(declaration) || ts.isParameter(declaration)) && declaration.initializer) return value(declaration.initializer, env, next);
+			return empty();
+		}));
+	}
+	function assign(name: ts.BindingName, assigned: Value, env: Environment) {
+		if (ts.isIdentifier(name)) {
+			const symbol = checker.getSymbolAtLocation(name);
+			if (symbol) env.set(symbol, assigned);
+		} else {
+			for (const item of name.elements) if (ts.isBindingElement(item)) assign(item.name, assigned, env);
+		}
+	}
+	function mark(target: ts.Expression, env: Environment) {
+		if (ts.isParenthesizedExpression(target)) { mark(target.expression, env); return; }
+		if (ts.isArrayLiteralExpression(target)) {
+			for (const item of target.elements) if (!ts.isOmittedExpression(item)) mark(ts.isSpreadElement(item) ? item.expression : item, env);
+			return;
+		}
+		if (ts.isObjectLiteralExpression(target)) {
+			for (const item of target.properties) {
+				if (ts.isPropertyAssignment(item)) mark(item.initializer, env);
+				if (ts.isSpreadAssignment(item)) mark(item.expression, env);
+			}
+			return;
+		}
+		if (ts.isPropertyAccessExpression(target) || ts.isElementAccessExpression(target)) {
+			for (const root of value(target.expression, env).roots) mutations.add(root);
+		}
+	}
+	function call(fn: Fn, args: readonly ts.Expression[], env: Environment) {
+		if (!fn.body) return;
+		const local = new Map(env);
+		const argumentsValues = fn.parameters.map((parameter, index) => {
+			const argument = args[index];
+			const assigned = argument ? value(argument, env) : parameter.initializer ? value(parameter.initializer, local) : empty();
+			assign(parameter.name, assigned, local);
+			return assigned;
+		});
+		const key = JSON.stringify(argumentsValues.map(item => [[...item.roots].sort(), [...item.functions].map(fn => fn.pos).sort()]));
+		const calls = activeCalls.get(fn) ?? new Set<string>();
+		if (calls.has(key)) return;
+		calls.add(key); activeCalls.set(fn, calls);
+		fn.parameters.forEach((parameter, index) => {
+			if (!args[index] && parameter.initializer) visit(parameter.initializer, local);
+			assign(parameter.name, argumentsValues[index]!, local);
+		});
+		visit(fn.body, local);
+		// Calls can assign a module/outer lexical alias. Local parameters and
+		// declarations must not escape into a caller with a similarly named binding.
+		for (const [symbol, assigned] of local) {
+			if (symbol.declarations?.some(declaration => declaration.pos < fn.pos || declaration.end > fn.end)) env.set(symbol, assigned);
+		}
+		calls.delete(key);
+	}
+	function joinEnvironments(env: Environment, branches: Environment[]) {
+		const symbols = new Set(branches.flatMap(branch => [...branch.keys()]));
+		for (const symbol of symbols) env.set(symbol, merge(branches.map(branch => branch.get(symbol) ?? empty())));
+	}
+	function visit(node: ts.Node, env: Environment): void {
+		if (isFn(node) || ts.isGetAccessor(node) || ts.isSetAccessor(node) || ts.isConstructorDeclaration(node)) return;
+		if (ts.isClassDeclaration(node) || ts.isClassExpression(node)) {
+			for (const clause of node.heritageClauses ?? []) visit(clause, env);
+			for (const member of node.members) {
+				if (member.name && ts.isComputedPropertyName(member.name)) visit(member.name.expression, env);
+				if (ts.isClassStaticBlockDeclaration(member)) visit(member.body, env);
+				if (ts.isPropertyDeclaration(member) && member.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.StaticKeyword) && member.initializer) visit(member.initializer, env);
+			}
+			return;
+		}
+		if (ts.isIfStatement(node)) {
+			visit(node.expression, env);
+			const yes = new Map(env), no = new Map(env);
+			visit(node.thenStatement, yes);
+			if (node.elseStatement) visit(node.elseStatement, no);
+			joinEnvironments(env, [yes, no]); return;
+		}
+		if (ts.isSwitchStatement(node)) {
+			visit(node.expression, env);
+			const before = new Map(env), branches = [before];
+			let previous = before;
+			for (const clause of node.caseBlock.clauses) {
+				const branch = new Map(before);
+				joinEnvironments(branch, [before, previous]);
+				if (ts.isCaseClause(clause)) visit(clause.expression, branch);
+				for (const statement of clause.statements) visit(statement, branch);
+				branches.push(branch); previous = branch;
+			}
+			joinEnvironments(env, branches); return;
+		}
+		if (ts.isTryStatement(node)) {
+			const before = new Map(env), success = new Map(env);
+			visit(node.tryBlock, success);
+			const failure = new Map(before);
+			joinEnvironments(failure, [before, success]);
+			if (node.catchClause) visit(node.catchClause.block, failure);
+			joinEnvironments(env, [success, failure]);
+			if (node.finallyBlock) visit(node.finallyBlock, env);
+			return;
+		}
+		if (ts.isForOfStatement(node) || ts.isForInStatement(node)) {
+			visit(node.expression, env);
+			const before = new Map(env);
+			if (!ts.isVariableDeclarationList(node.initializer)) mark(node.initializer, env);
+			visit(node.initializer, env); visit(node.statement, env);
+			joinEnvironments(env, [before, new Map(env)]); return;
+		}
+		if (ts.isForStatement(node) || ts.isWhileStatement(node) || ts.isDoStatement(node)) {
+			if (ts.isForStatement(node) && node.initializer) visit(node.initializer, env);
+			const before = new Map(env);
+			if (ts.isForStatement(node)) {
+				if (node.condition) visit(node.condition, env);
+				visit(node.statement, env);
+				if (node.incrementor) visit(node.incrementor, env);
+			} else { visit(node.expression, env); visit(node.statement, env); }
+			joinEnvironments(env, [before, new Map(env)]); return;
+		}
+		if (ts.isVariableDeclaration(node)) {
+			if (node.initializer) { visit(node.initializer, env); assign(node.name, value(node.initializer, env), env); }
+			return;
+		}
+		if (ts.isBinaryExpression(node) && node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment && node.operatorToken.kind <= ts.SyntaxKind.LastAssignment) {
+			mark(node.left, env);
+			visit(node.left, env); visit(node.right, env);
+			if (ts.isIdentifier(node.left)) {
+				const logical = [ts.SyntaxKind.BarBarEqualsToken, ts.SyntaxKind.AmpersandAmpersandEqualsToken, ts.SyntaxKind.QuestionQuestionEqualsToken].includes(node.operatorToken.kind);
+				assign(node.left, logical ? merge([value(node.left, env), value(node.right, env)]) : value(node.right, env), env);
+			}
+			return;
+		}
+		if (ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node)) {
+			if (node.operator === ts.SyntaxKind.PlusPlusToken || node.operator === ts.SyntaxKind.MinusMinusToken) mark(node.operand, env);
+			visit(node.operand, env); return;
+		}
+		if (ts.isDeleteExpression(node)) { mark(node.expression, env); visit(node.expression, env); return; }
+		if (ts.isCallExpression(node)) {
+			visit(node.expression, env);
+			for (const argument of node.arguments) visit(argument, env);
+			if (ts.isPropertyAccessExpression(node.expression) && (node.expression.name.text === 'call' || node.expression.name.text === 'apply')) {
+				const argumentsList = node.expression.name.text === 'call' ? node.arguments.slice(1)
+					: node.arguments[1] && ts.isArrayLiteralExpression(node.arguments[1]) ? [...node.arguments[1].elements] : [];
+				for (const fn of value(node.expression.expression, env).functions) call(fn, argumentsList, env);
+			} else for (const fn of value(node.expression, env).functions) call(fn, node.arguments, env);
+			return;
+		}
+		ts.forEachChild(node, child => visit(child, env));
+	}
+	visit(file, new Map());
+	return [...mutations];
 }
 
 /** Translate one `sideEffects` glob into a regex. Supports `*` and `**`. */
@@ -237,6 +461,15 @@ const packages = listDirs(packagesDir).filter((name) =>
 	existsSync(join(packagesDir, name, 'package.json'))
 );
 
+function isPublishedFile(directory: string, files: string[], subpath: string): boolean {
+	if (subpath.split('/').includes('..') || !existsSync(join(directory,subpath))) return false;
+	const matches = (pattern: string) => {
+		const value = pattern.replace(/^\.\//,'').replace(/\/$/,'');
+		return subpath === value || subpath.startsWith(`${value}/`) || globToRegExp(value).test(subpath);
+	};
+	return files.some(pattern => !pattern.startsWith('!') && matches(pattern)) && !files.some(pattern => pattern.startsWith('!') && matches(pattern.slice(1)));
+}
+
 function isInstalledFilePath(source: string, index: number): boolean {
 	return source.slice(0, index).endsWith('node_modules/');
 }
@@ -249,6 +482,17 @@ describe('side-effect imports survive tree-shaking', () => {
 		expect(isInstalledFilePath(imported, imported.indexOf('@scope'))).toBe(false);
 	});
 
+	it('installed file references require actual published content', () => {
+		const dir=mkdtempSync(join(tmpdir(),'installed-doc-reference-'));
+		try {
+			mkdirSync(join(dir,'docs')); writeFileSync(join(dir,'docs/guide.md'),'Guide');
+			expect(isPublishedFile(dir,['docs'],'docs/guide.md')).toBe(true);
+			expect(isPublishedFile(dir,['dist'],'docs/guide.md')).toBe(false);
+			expect(isPublishedFile(dir,['docs','!docs/guide.md'],'docs/guide.md')).toBe(false);
+			expect(isPublishedFile(dir,['docs'],'docs/missing.md')).toBe(false);
+		} finally {rmSync(dir,{recursive:true,force:true});}
+	});
+
 	it('the glob translation is right', () => {
 		expect(globToRegExp('**/*.css').test('dist/styles/globals.css')).toBe(true);
 		expect(globToRegExp('dist/index.js').test('dist/index.js')).toBe(true);
@@ -256,7 +500,7 @@ describe('side-effect imports survive tree-shaking', () => {
 		expect(globToRegExp('**/*.svelte').test('dist/node-canvas/NodeCanvas.svelte')).toBe(true);
 	});
 
-	it.each(packages)('%s is built, so this guard is not vacuous', (name) => {
+	it.each(packages.filter(name => packageCapabilities(join(packagesDir,name)).requiresDist))('%s is built, so this guard is not vacuous', (name) => {
 		// `return`-ing on a missing dist scores as a pass, which made this silently
 		// meaningless on a fresh clone: dist is gitignored and the root `test`
 		// script has no build dependency.
@@ -288,7 +532,14 @@ describe('side-effect imports survive tree-shaking', () => {
 				const [full, pkg, subpath] = match as unknown as [string, string, string];
 				// `…/dist/…` in prose is a file path being described, not a specifier
 				// anyone imports — the exports map deliberately does not expose it.
-				if (isInstalledFilePath(source, match.index!) || !packages.includes(pkg) || subpath.startsWith('dist') || seen.has(full)) continue;
+				if (!packages.includes(pkg) || subpath.split('/').includes('...')) continue;
+				if (isInstalledFilePath(source, match.index!)) {
+					const directory = join(packagesDir,pkg);
+					const metadata = JSON.parse(readFileSync(join(directory,'package.json'),'utf8'));
+					if (!isPublishedFile(directory, metadata.files ?? [], subpath)) broken.push(`${full} — installed documentation/file path is absent or not published`);
+					continue;
+				}
+				if (subpath.startsWith('dist') || seen.has(full)) continue;
 				seen.add(full);
 
 				const target = resolveSubpath(join(packagesDir, pkg), `./${subpath}`);
@@ -345,9 +596,8 @@ describe('side-effect imports survive tree-shaking', () => {
 		}
 	);
 
-	it.each(packages)('%s ships dist in the shape the markers read', (name) => {
-		// Every regex in this file — BARE_IMPORT, IMPORTED_MUTATION,
-		// importBindings, relativeDeps — assumes one statement per line with
+	it.each(packages.filter(name => packageCapabilities(join(packagesDir,name)).requiresDist))('%s ships dist in the shape the markers read', (name) => {
+		// The remaining BARE_IMPORT and relativeDeps markers assume one statement per line with
 		// whitespace after `import` and `export`. A minified emission matches
 		// none of them, and the chain walk would go silent rather than red.
 		const dist = join(packagesDir, name, 'dist');
@@ -388,7 +638,7 @@ export function uncoveredChains(pkgDir: string, sideEffects: unknown, entries: s
 		const bare = [...source.matchAll(BARE_IMPORT)]
 			.map((m) => m[1]!)
 			.filter((spec) => !/\.(css|scss|sass|less)$/.test(spec));
-		const mutated = mutatedImports(source);
+		const mutated = mutatedImports(source, file.endsWith('.svelte'));
 
 		if (bare.length > 0 || mutated.length > 0) {
 			const gap = chain.find((m) => !covered(sideEffects, relative(pkgDir, m)));
@@ -450,13 +700,72 @@ describe('the chain walk itself', () => {
 		expect(mutatedImports("import { Effect } from './e.js';\n/* Effect.api = 1; */\n")).toEqual([]);
 		// Indented: a top-level block, the shape that evaded the column-0 form.
 		expect(mutatedImports("import { Effect } from './e.js';\ntry {\n  Effect.api = 1;\n} catch {}\n")).toEqual(['Effect']);
-		// A function body matches too — accepted; see IMPORTED_MUTATION.
-		expect(mutatedImports("import { Effect } from './e.js';\nfunction f() {\n  Effect.api = 1;\n}\n")).toEqual(['Effect']);
+		// A dormant uncalled function body must be negative.
+		expect(mutatedImports("import { Effect } from './e.js';\nfunction f() {\n  Effect.api = 1;\n}\n")).toEqual([]);
 		expect(mutatedImports("import { Effect } from './e.js';\nEffect['api'] = 1;\n")).toEqual(['Effect']);
 		expect(mutatedImports("import { Effect } from './e.js';\nEffect.api ??= 1;\n")).toEqual(['Effect']);
 		expect(mutatedImports("import { Effect } from './e.js';\nEffect.api === 1;\n")).toEqual([]);
 		expect(mutatedImports("import { Effect } from './e.js';\nEffect.api == 1;\n")).toEqual([]);
 		expect(mutatedImports("const Local = {};\nLocal.x = 1;\n")).toEqual([]);
+	});
+
+	it('dormant uncalled functions and async loaders are negative', () => {
+		expect(
+			mutatedImports(
+				"import Prism from 'prismjs';\nexport async function loadLanguage(lang) {\n  Prism.languages[lang] = {};\n}\n"
+			)
+		).toEqual([]);
+		expect(
+			mutatedImports(
+				"import { Effect } from './e.js';\nconst init = () => { Effect.api = 1; };\nexport const helper = 42;\n"
+			)
+		).toEqual([]);
+	});
+
+	it('invokes local functions and aliases reached during module initialization', () => {
+		// Local alias invoked immediately
+		expect(
+			mutatedImports("import { Effect } from './e.js';\nconst register = () => Effect.api = 1;\nregister();\n")
+		).toEqual(['Effect']);
+		// Called local function declared before or after (hoisted)
+		expect(
+			mutatedImports("import { Effect } from './e.js';\nregister();\nfunction register() {\n  Effect.api = 1;\n}\n")
+		).toEqual(['Effect']);
+		// IIFEs (arrow function and function expression)
+		expect(
+			mutatedImports("import { Effect } from './e.js';\n(() => { Effect.api = 1; })();\n")
+		).toEqual(['Effect']);
+		expect(
+			mutatedImports("import { Effect } from './e.js';\n(function() { Effect['api'] = 1; })();\n")
+		).toEqual(['Effect']);
+		// Import aliases
+		expect(
+			mutatedImports("import { Effect as Renamed } from './e.js';\nRenamed.api = 1;\n")
+		).toEqual(['Renamed']);
+	});
+
+	it('respects lexical shadowing for parameters and local variables', () => {
+		expect(
+			mutatedImports("import { Effect } from './e.js';\nfunction apply(Effect) {\n  Effect.api = 1;\n}\napply({});\n")
+		).toEqual([]);
+		expect(
+			mutatedImports("import { Effect } from './e.js';\nfunction setup() {\n  const Effect = {};\n  Effect.api = 1;\n}\nsetup();\n")
+		).toEqual([]);
+		expect(
+			mutatedImports("import { Effect } from './e.js';\n{\n  const Effect = {};\n  Effect.api = 1;\n}\n")
+		).toEqual([]);
+	});
+
+	it('bounds recursive function calls during initialization', () => {
+		expect(
+			mutatedImports("import { Effect } from './e.js';\nfunction loop(n) {\n  if (n > 0) loop(n - 1);\n}\nloop(5);\n")
+		).toEqual([]);
+	});
+
+	it('detects inline assignment expressions and ignores comments and strings', () => {
+		expect(mutatedImports("import { Effect } from './e.js';\nconst x = (Effect.api = 1);\n")).toEqual(['Effect']);
+		expect(mutatedImports("import { Effect } from './e.js';\nconsole.log(Effect.api = 1);\n")).toEqual(['Effect']);
+		expect(mutatedImports("import { Effect } from './e.js';\n// Effect.api = 1;\n/* Effect.api = 2; */\nconst s = 'Effect.api = 3';\n")).toEqual([]);
 	});
 
 	it('tells minified module syntax from the shape the markers read', () => {
@@ -565,4 +874,94 @@ describe('JSDoc examples name the right package', () => {
 				offenders.join('\n')
 		).toEqual([]);
 	});
+});
+
+describe('import-time reachability qualification', () => {
+ const imported = "import { Effect as E } from './effect.js';\n";
+ it.each([
+  ['dormant declared function', 'function dormant() { E.api = 1; }', []],
+  ['dormant arrow', 'const dormant = () => { E.api = 1; };', []],
+  ['declared startup function', 'function register() { E.api = 1; } register();', ['E']],
+  ['hoisted startup function', 'register(); function register() { E.api = 1; }', ['E']],
+  ['arrow startup function', 'const register = () => { E.api = 1; }; register();', ['E']],
+  ['IIFE expression', '(function () { E.api = 1; })();', ['E']],
+  ['arrow IIFE', '(() => { E.api = 1; })();', ['E']],
+  ['nested dormant closure', 'function register() { function later() { E.api = 1; } } register();', []],
+  ['called local alias', 'const alias = E; alias.api = 1;', ['E']],
+  ['function alias call', 'function register() { E.api = 1; } const run = register; run();', ['E']],
+  ['shadowed parameter', 'function register(E) { E.api = 1; } register({});', []],
+  ['parameter import alias', 'function register(value) { value.api = 1; } register(E);', ['E']],
+  ['top-level block', 'if (enabled) { E["api"] ||= 1; }', ['E']],
+  ['inline expression', 'const value = (E.api ??= 1);', ['E']],
+  ['recursive local call', 'function register() { E.api = 1; register(); } register();', ['E']],
+  ['string and comment only', 'const text = "E.api = 1"; /* E.api = 1; */', []],
+  ['called function local shadow', 'function register() { const E = {}; E.api = 1; } register();', []],
+  ['class static initialization', 'class Registration { static { E.api = 1; } }', ['E']],
+ ] as const)('%s', (_name, body, expected) => {
+  expect(mutatedImports(imported + body)).toEqual(expected);
+ });
+});
+
+describe('lexical reachability counterexamples', () => {
+ const imported = "import { Effect as E } from './effect.js';\n";
+ it.each([
+  ['nested block shadow does not hide outer import', 'function run(){ { const E = {}; E.api = 1; } E.api = 2; } run();', ['E']],
+  ['local function closes over block shadow', '{ const E = {}; function run(){ E.api = 1; } run(); }', []],
+  ['logical read is not mutation', '!E.api; +E.api; -E.api; ~E.api;', []],
+  ['increment is mutation', 'E.api++;', ['E']],
+  ['instance initializer is dormant', 'class Example { field = (E.api = 1); }', []],
+  ['provided argument skips default initializer', 'function run(value = (E.api = 1)){} run(0);', []],
+  ['omitted argument evaluates default initializer', 'function run(value = (E.api = 1)){} run();', ['E']],
+  ['branch keeps possible imported alias', 'let alias = E; if (flag) alias = {}; alias.api = 1;', ['E']],
+  ['recursive argument forwarding', 'function run(value){ if(flag) run(E); value.api = 1; } run({});', ['E']],
+  ['called function publishes module alias', 'let alias; function setup(){ alias = E; } setup(); alias.api = 1;', ['E']],
+ ] as const)('%s', (_name, body, expected) => expect(mutatedImports(imported+body)).toEqual(expected));
+});
+
+describe('static callable member boundaries', () => {
+ const imported = "import { Effect as E } from './effect.js';\n";
+ it.each([
+  ['binding does not invoke a function', 'function register(){ E.api = 1; } const bound = register.bind(null);', []],
+  ['inspecting does not invoke a function', 'function register(){ E.api = 1; } register.toString();', []],
+  ['local callable property', 'const registry = { install: () => { E.api = 1; } }; registry.install();', ['E']],
+  ['local callable bracket property', 'const registry = { install: () => { E.api = 1; } }; registry["install"]();', ['E']],
+  ['local object import alias', 'const registry = { effect: E }; registry.effect.api = 1;', ['E']],
+  ['explicit call forwards parameters', 'function register(value){ value.api = 1; } register.call(null, E);', ['E']],
+  ['explicit apply forwards parameters', 'function register(value){ value.api = 1; } register.apply(null, [E]);', ['E']],
+ ] as const)('%s', (_name, body, expected) => expect(mutatedImports(imported+body)).toEqual(expected));
+});
+
+describe('independent review control flow and write targets', () => {
+ const imported = "import { Effect as E } from './effect.js';\n";
+ it.each([
+  ['logical alias', 'const alias = E || {}; alias.api = 1;', ['E']],
+  ['nullish grouped alias', '(fallback ?? E).api = 1;', ['E']],
+  ['logical assignment retains prior alias', 'let alias = E; alias ||= {}; alias.api = 1;', ['E']],
+  ['array destructuring target', '[E.api] = [1];', ['E']],
+  ['object destructuring target', '({api: E.api} = {api: 1});', ['E']],
+  ['switch branch join', 'let alias; switch(mode){ case 1: alias = E; break; default: alias = {}; } alias.api = 1;', ['E']],
+  ['try branch join', 'let alias; try { alias = E; } catch { alias = {}; } alias.api = 1;', ['E']],
+  ['for of writes target', 'for(E.api of items){}', ['E']],
+  ['for in writes target', 'for(E.api in items){}', ['E']],
+  ['possibly empty loop preserves alias', 'let alias = E; for(const item of items){ alias = {}; } alias.api = 1;', ['E']],
+ ] as const)('%s', (_name, body, expected) => expect(mutatedImports(imported+body)).toEqual(expected));
+});
+
+
+it('fails closed for malformed syntax instead of reporting a clean mutation set', () => {
+	expect(() => mutatedImports("import { E } from './e.js'; E.api = ;")).toThrow('Cannot inspect import-time mutations');
+});
+
+
+describe('published Svelte source boundaries', () => {
+	it('inspects module script and ignores markup', () => {
+		expect(mutatedImports("<script module>import { E } from './e.js'; E.api = 1;</script><div>content</div>", true)).toEqual(['E']);
+	});
+	it('does not treat instance initialization as import-time execution', () => {
+		expect(mutatedImports("<script>import { E } from './e.js'; E.api = 1;</script><div>content</div>", true)).toEqual([]);
+	});
+});
+
+it('includes instance imports hoisted into the Svelte module by the compiler', () => {
+ expect(mutatedImports("<script module>E.api = 1;</script><script>import { E } from './e.js';</script><div></div>", true)).toEqual(['E']);
 });

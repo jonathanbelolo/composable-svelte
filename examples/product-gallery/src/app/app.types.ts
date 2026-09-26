@@ -5,10 +5,7 @@ import type {
   ProductDetailState,
   ProductDetailAction
 } from '../features/product-detail/product-detail.types.js';
-
-// ============================================================================
-// App State
-// ============================================================================
+import { createProductDetailState } from '../features/product-detail/product-detail.types.js';
 
 export type ViewMode = 'grid' | 'list' | 'favorites';
 
@@ -18,47 +15,48 @@ export interface AppState {
   filters: FilterState;
   viewMode: ViewMode;
   sidebarExpanded: boolean;
-  productDetail: ProductDetailState | null;  // Tree-based navigation (what to show)
-  presentation: PresentationState<ProductDetailState>;  // Animation lifecycle
+  productDetail: ProductDetailState | null;
+  presentation: PresentationState<ProductDetailState>;
 }
 
 export interface FilterState {
   selectedCategories: ProductCategory[];
 }
 
-// ============================================================================
-// App Actions
-// ============================================================================
-
-export type PresentationEvent =
-  | { type: 'presentationCompleted' }
-  | { type: 'dismissalCompleted' };
+export type PresentationEvent = { type: 'dismissalRequested' };
 
 export type AppAction =
   | { type: 'productClicked'; productId: string }
+  | { type: 'filtersCleared' }
   | { type: 'categoryToggled'; category: ProductCategory }
   | { type: 'viewModeChanged'; mode: ViewMode }
   | { type: 'sidebarToggled' }
-  | { type: 'cartItemAdded'; productId: string; quantity: number }
-  | { type: 'productDeleted'; productId: string }
   | { type: 'favoriteToggled'; productId: string }
   | { type: 'productDetail'; action: PresentationAction<ProductDetailAction> }
   | { type: 'presentation'; event: PresentationEvent };
 
-// ============================================================================
-// Factory Functions
-// ============================================================================
+export interface AppInitialInput {
+  readonly products: readonly Product[];
+  readonly url: string;
+}
 
-export function createInitialAppState(products: Product[]): AppState {
+export function createInitialAppState(
+  products: readonly Product[],
+  productId: string | null = null
+): AppState {
+  const selected = productId && products.some((product) => product.id === productId)
+    ? productId
+    : null;
+  const productDetail = selected ? createProductDetailState(selected) : null;
   return {
-    products,
+    products: [...products],
     cart: { items: [] },
-    filters: {
-      selectedCategories: []
-    },
+    filters: { selectedCategories: [] },
     viewMode: 'grid',
     sidebarExpanded: true,
-    productDetail: null,
-    presentation: { status: 'idle' }
+    productDetail,
+    presentation: productDetail
+      ? { status: 'presented', content: productDetail }
+      : { status: 'idle' }
   };
 }

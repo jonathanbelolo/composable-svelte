@@ -50,6 +50,7 @@
 
 	/** The source the playback state below currently describes. A plain `let`. */
 	let sourceUrl: string | undefined;
+	let playbackToken = 0;
 
 	/**
 	 * A new `attachment` is a new video, and `error` never unset itself.
@@ -70,6 +71,8 @@
 		sourceUrl = url;
 		if (isFirstRun) return;
 
+		playbackToken++;
+		endSeek();
 		error = null;
 		// Or the complaint about the *previous* source is painted over the new one
 		// — the same latch this reset exists to break, one variable along.
@@ -148,13 +151,21 @@
 			playbackRate = videoRef.playbackRate;
 		}
 
+		const doc = containerRef?.ownerDocument ?? document;
 		// Outside the `if`: the teardown below removes this unconditionally, so
 		// registering it conditionally is an asymmetry waiting to bite.
-		document.addEventListener('fullscreenchange', handleFullscreenChange);
+		doc.addEventListener('fullscreenchange', handleFullscreenChange);
 
 		return () => {
-			document.removeEventListener('fullscreenchange', handleFullscreenChange);
+			doc.removeEventListener('fullscreenchange', handleFullscreenChange);
 			if (controlsTimeout) clearTimeout(controlsTimeout);
+			endSeek();
+			playbackToken++;
+			if (videoRef) {
+				videoRef.pause();
+				videoRef.removeAttribute('src');
+				videoRef.load();
+			}
 		};
 	});
 
@@ -164,7 +175,10 @@
 		if (isPlaying) {
 			videoRef.pause();
 		} else {
+			const token = ++playbackToken;
 			videoRef.play().catch((err) => {
+				if (token !== playbackToken || sourceUrl !== attachment.url) return;
+				if (err instanceof Error && err.name === 'AbortError') return;
 				// Deliberately not `error`. Everything below — the whole control
 				// bar and the play overlay — renders behind `{#if !error}`, so one
 				// rejected `play()` used to remove the player permanently. A
@@ -212,8 +226,39 @@
 		isLoading = false;
 	}
 
+	let seekCleanup: (() => void) | null = null;
+
+	function endSeek() {
+		if (seekCleanup) {
+			seekCleanup();
+			seekCleanup = null;
+		}
+		isSeeking = false;
+	}
+
 	function handleSeekStart() {
+		endSeek();
 		isSeeking = true;
+
+		const win = videoRef?.ownerDocument.defaultView;
+		if (!win) { endSeek(); return; }
+		const onRelease = () => endSeek();
+
+		win.addEventListener('mouseup', onRelease);
+		win.addEventListener('touchend', onRelease);
+		win.addEventListener('touchcancel', onRelease);
+		win.addEventListener('pointerup', onRelease);
+		win.addEventListener('pointercancel', onRelease);
+		win.addEventListener('blur', onRelease);
+
+		seekCleanup = () => {
+			win.removeEventListener('mouseup', onRelease);
+			win.removeEventListener('touchend', onRelease);
+			win.removeEventListener('touchcancel', onRelease);
+			win.removeEventListener('pointerup', onRelease);
+			win.removeEventListener('pointercancel', onRelease);
+			win.removeEventListener('blur', onRelease);
+		};
 	}
 
 	function handleSeek(event: Event) {
@@ -225,7 +270,7 @@
 	}
 
 	function handleSeekEnd() {
-		isSeeking = false;
+		endSeek();
 	}
 
 	function handleVolumeChange(event: Event) {
@@ -253,12 +298,13 @@
 
 	async function toggleFullscreen() {
 		if (!containerRef) return;
+		const doc = containerRef.ownerDocument ?? document;
 
 		try {
-			if (!isFullscreen) {
-				await containerRef.requestFullscreen();
+			if (doc.fullscreenElement === containerRef) {
+				await doc.exitFullscreen();
 			} else {
-				await document.exitFullscreen();
+				await containerRef.requestFullscreen();
 			}
 		} catch (err) {
 			console.error('Fullscreen error:', err);
@@ -267,10 +313,11 @@
 
 	async function togglePictureInPicture() {
 		if (!videoRef) return;
+		const doc = videoRef.ownerDocument;
 
 		try {
-			if (document.pictureInPictureElement) {
-				await document.exitPictureInPicture();
+			if (doc.pictureInPictureElement === videoRef) {
+				await doc.exitPictureInPicture();
 			} else {
 				await videoRef.requestPictureInPicture();
 			}
@@ -280,7 +327,8 @@
 	}
 
 	function handleFullscreenChange() {
-		isFullscreen = !!document.fullscreenElement;
+		const doc = containerRef?.ownerDocument ?? document;
+		isFullscreen = !!containerRef && doc.fullscreenElement === containerRef;
 	}
 
 	function handleMouseMove() {
@@ -400,10 +448,15 @@
 						max={duration || 0}
 						value={currentTime}
 						oninput={handleSeek}
+						onchange={handleSeekEnd}
 						onmousedown={handleSeekStart}
 						onmouseup={handleSeekEnd}
 						ontouchstart={handleSeekStart}
 						ontouchend={handleSeekEnd}
+						ontouchcancel={handleSeekEnd}
+						onpointerdown={handleSeekStart}
+						onpointerup={handleSeekEnd}
+						onpointercancel={handleSeekEnd}
 						disabled={isLoading}
 						style="--progress: {progress}%"
 					/>

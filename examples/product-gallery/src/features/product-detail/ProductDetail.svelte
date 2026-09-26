@@ -1,73 +1,22 @@
 <script lang="ts">
-  import type { ScopableStore } from '@composable-svelte/core';
+  import type { PresentationView } from '@composable-svelte/core/application';
+  import { FeatureOutlet, type FeatureViewPropsOf } from '@composable-svelte/core/application';
   import type { ProductDetailState, ProductDetailAction } from './product-detail.types.js';
   import type { Product } from '../../models/product.js';
   import { formatPrice, getStockStatus, isInStock } from '../../models/product.js';
-  import { Sheet } from '@composable-svelte/core/navigation-components';
-  import { Modal } from '@composable-svelte/core/navigation-components';
-  import { Alert } from '@composable-svelte/core/navigation-components';
-  import { Popover } from '@composable-svelte/core/navigation-components';
-  import { scopeToDestination } from '@composable-svelte/core/navigation';
-  import AddToCart from '../add-to-cart/AddToCart.svelte';
-  import Share from '../share/Share.svelte';
-  import QuickView from '../quick-view/QuickView.svelte';
-  import DeleteAlert from '../delete-alert/DeleteAlert.svelte';
-  import type { AddToCartState, AddToCartAction } from '../add-to-cart/add-to-cart.types.js';
-  import type { ShareState, ShareAction } from '../share/share.types.js';
-  import type { QuickViewState, QuickViewAction } from '../quick-view/quick-view.types.js';
-  import type { DeleteAlertState, DeleteAlertAction } from '../delete-alert/delete-alert.types.js';
+  import { productDetailComposition } from './product-detail.reducer.js';
 
   // ============================================================================
   // Props
   // ============================================================================
 
-  interface ProductDetailProps {
-    store: ScopableStore<ProductDetailState, ProductDetailAction>;
+  type ProductDetailProps = Omit<FeatureViewPropsOf<typeof productDetailComposition>, 'store'> & {
+    store: PresentationView<ProductDetailState, ProductDetailAction>;
     product: Product;
     onBack?: () => void;
-  }
+  };
 
-  let { store, product, onBack }: ProductDetailProps = $props();
-
-  // ============================================================================
-  // Scoped Stores
-  // ============================================================================
-
-  const addToCartStore = $derived(
-    scopeToDestination<AddToCartState, AddToCartAction>(store, ['destination'], 'addToCart', 'destination')
-  );
-
-  const shareStore = $derived(
-    scopeToDestination<ShareState, ShareAction>(store, ['destination'], 'share', 'destination')
-  );
-
-  const quickViewStore = $derived(
-    scopeToDestination<QuickViewState, QuickViewAction>(store, ['destination'], 'quickView', 'destination')
-  );
-
-  const deleteAlertStore = $derived(
-    scopeToDestination<DeleteAlertState, DeleteAlertAction>(store, ['destination'], 'deleteAlert', 'destination')
-  );
-
-  const infoStore = $derived(
-    scopeToDestination(store, ['destination'], 'info', 'destination')
-  );
-
-  // ============================================================================
-  // Presentation State for Animations
-  // ============================================================================
-
-  const addToCartPresentation = $derived(
-    store.state.destination?.type === 'addToCart' ? store.state.presentation : undefined
-  );
-
-  const sharePresentation = $derived(
-    store.state.destination?.type === 'share' ? store.state.presentation : undefined
-  );
-
-  // ============================================================================
-  // Handlers
-  // ============================================================================
+  let { store, views, surface, product, onBack }: ProductDetailProps = $props();
 
 </script>
 
@@ -75,7 +24,7 @@
 <!-- ProductDetail View -->
 <!-- ============================================================================ -->
 
-<div class="flex flex-col h-full bg-background">
+<div use:surface class="flex flex-col h-full bg-background">
   <!-- Header -->
   <div class="flex items-center gap-4 p-4 border-b">
     {#if onBack}
@@ -98,13 +47,7 @@
         ℹ️
       </button>
 
-      {#if infoStore}
-        <Popover store={infoStore} style="top: 100%; right: 0;">
-          {#snippet children()}
-            {@render infoContent()}
-          {/snippet}
-        </Popover>
-      {/if}
+      <FeatureOutlet view={views.destination} />
     </div>
   </div>
 
@@ -182,86 +125,3 @@
     </div>
   </div>
 </div>
-
-<!-- ============================================================================ -->
-<!-- Navigation Destinations -->
-<!-- ============================================================================ -->
-
-<!-- AddToCart Sheet -->
-<Sheet
-  store={addToCartStore}
-  presentation={addToCartPresentation}
-  onPresentationComplete={() => {
-    store.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } });
-  }}
-  onDismissalComplete={() => {
-    store.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } });
-  }}
->
-  {#snippet children()}
-    {#if addToCartStore.state}
-      <AddToCart store={addToCartStore} {product} />
-    {/if}
-  {/snippet}
-</Sheet>
-
-<!-- Share Sheet -->
-<Sheet
-  store={shareStore}
-  presentation={sharePresentation}
-  onPresentationComplete={() => {
-    store.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } });
-  }}
-  onDismissalComplete={() => {
-    store.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } });
-  }}
->
-  {#snippet children()}
-    {#if shareStore.state}
-      <Share store={shareStore} {product} />
-    {/if}
-  {/snippet}
-</Sheet>
-
-<!-- QuickView Modal -->
-<Modal store={quickViewStore}>
-  {#snippet children()}
-    {#if quickViewStore.state}
-      <QuickView store={quickViewStore} {product} />
-    {/if}
-  {/snippet}
-</Modal>
-
-<!-- Delete Alert -->
-<Alert store={deleteAlertStore}>
-  {#snippet children()}
-    {#if deleteAlertStore.state}
-      <DeleteAlert store={deleteAlertStore} {product} />
-    {/if}
-  {/snippet}
-</Alert>
-
-{#snippet infoContent()}
-      <div class="p-4 w-64">
-        <h4 class="font-semibold mb-2">Product Information</h4>
-        <dl class="space-y-2 text-sm">
-          <div>
-            <dt class="text-muted-foreground">Product ID</dt>
-            <dd class="font-mono">{product.id}</dd>
-          </div>
-          <div>
-            <dt class="text-muted-foreground">Category</dt>
-            <dd class="capitalize">{product.category}</dd>
-          </div>
-          <div>
-            <dt class="text-muted-foreground">Stock</dt>
-            <dd>{product.stock} units</dd>
-          </div>
-          <div>
-            <dt class="text-muted-foreground">Favorite</dt>
-            <dd>{product.isFavorite ? 'Yes' : 'No'}</dd>
-          </div>
-        </dl>
-      </div>
-    
-{/snippet}

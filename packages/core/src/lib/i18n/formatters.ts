@@ -107,7 +107,7 @@ export function createIntlFormatters(): IntlFormatters {
         return formatter.format(date);
       } catch (error) {
         console.error('[i18n] Date formatting error:', error);
-        return date.toISOString();
+        return Number.isNaN(date.getTime()) ? String(date) : date.toISOString();
       }
     },
 
@@ -223,7 +223,7 @@ export function createIntlFormatters(): IntlFormatters {
         return formatter.format(value, unit);
       } catch (error) {
         console.error('[i18n] Relative time formatting error:', error);
-        return date.toISOString();
+        return Number.isNaN(date.getTime()) ? String(date) : date.toISOString();
       }
     }
   };

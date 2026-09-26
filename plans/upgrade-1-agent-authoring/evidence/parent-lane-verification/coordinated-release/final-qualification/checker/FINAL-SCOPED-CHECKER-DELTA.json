@@ -1,0 +1,156 @@
+{
+  "baseline": "/private/tmp/composable-final-qualification/repo/packages/architecture",
+  "candidate": "/private/tmp/composable-final-checker/packages/architecture",
+  "files": [
+    {
+      "path": "packages/architecture/CHANGELOG.md",
+      "before": "d6280815c768e0932323b786c9ae9997eb92037d9595ab2a5dbd890f84f01dae",
+      "after": "6b92480e2c0b9b0c8c7baff0df55999a96d07f06350b2d4c31f7e515b49e4a07",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/CHANGELOG.md"
+    },
+    {
+      "path": "packages/architecture/README.md",
+      "before": "e9d38314b360068838dd8b634c83b7b86474732ca720592d13b0fe916af379b2",
+      "after": "dbd094ee387671eae3ebdf9835218cb0d8399869a84fee734cb43ff7a5786e89",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/README.md"
+    },
+    {
+      "path": "packages/architecture/package.json",
+      "before": "22c2371c679c37abcf81ab1ab40755963beea0691a7ca596aac3c840ec718661",
+      "after": "3c016fc9c7fb7f0b135412463df6b61438f2c84e713f3d9f961e68871745433d",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/package.json"
+    },
+    {
+      "path": "packages/architecture/policies/auth.json",
+      "before": null,
+      "after": "ab100ba510f5cdc4931bca33e0dc398d21f1382010b51ed44242d30dc6846662",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/policies/auth.json"
+    },
+    {
+      "path": "packages/architecture/policies/charts.json",
+      "before": null,
+      "after": "853f929a63217a9667ec64e928dbd8767c15ad49ff82e75e802e4209e4398645",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/policies/charts.json"
+    },
+    {
+      "path": "packages/architecture/policies/chat-code-media.json",
+      "before": null,
+      "after": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/policies/chat-code-media.json"
+    },
+    {
+      "path": "packages/architecture/policies/chat.json",
+      "before": null,
+      "after": "4e958b18f465a2bb65cff36ecf97f76e66a7da3bed83942ef5397f0c9030436f",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/policies/chat.json"
+    },
+    {
+      "path": "packages/architecture/policies/code.json",
+      "before": null,
+      "after": "669cd1a15dcba7a7c3e6ebe572888e4611e0e214dd2e607c744076182762e437",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/policies/code.json"
+    },
+    {
+      "path": "packages/architecture/policies/graphics.json",
+      "before": null,
+      "after": "5b66bb6ec3b309fba9f4696f07ac35f5f7b9c86e75520d11d9de966b2fe0f03b",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/policies/graphics.json"
+    },
+    {
+      "path": "packages/architecture/policies/maps.json",
+      "before": null,
+      "after": "6c60262dc74594255ba2d245b4a0b057edc008bb450ff7b4309a975b1d5c760a",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/policies/maps.json"
+    },
+    {
+      "path": "packages/architecture/policies/media.json",
+      "before": null,
+      "after": "717854d1add64795bf06a7d8ecf73a768dd8fb717cf706b3846b0e5384b501c3",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/policies/media.json"
+    },
+    {
+      "path": "packages/architecture/policies/starter.json",
+      "before": "389430147e64045cc17a59db23a3672f3849abf339f9a6e96ae13acde2dcd8b3",
+      "after": "f2821ebf0fa5cd34b346361089edd56bb4ec01a40c59eb969c60f90c7e77d190",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/policies/starter.json"
+    },
+    {
+      "path": "packages/architecture/src/bundled-policy.mjs",
+      "before": "f43f1416ce2e78c44572c54cee14c3e85a677caed47f77d4b2afef81161f4207",
+      "after": "d64e226cd19522dc90bd09d6c5ac0003d0bfdaea64a777e11736b5e85af99880",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/src/bundled-policy.mjs"
+    },
+    {
+      "path": "packages/architecture/src/bundled-policy.test.mjs",
+      "before": "7dfd60e840782d255276817dfac2756325a48f633c8ddd56ed13151692971657",
+      "after": "f965c9ba8ca3642e36480fabad9e490e58e346b5db49733a5f481b9f89271b20",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/src/bundled-policy.test.mjs"
+    },
+    {
+      "path": "packages/architecture/src/check.mjs",
+      "before": "7ca110b723aeecb1a8a84d43d254f8f034d25b3ddb184e422e02b9fb362fc4d4",
+      "after": "c966b7a550fcd6e06588193f5cff2df6817faaef6831b06a2a427dbb14951d01",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/src/check.mjs"
+    },
+    {
+      "path": "packages/architecture/src/check.test.mjs",
+      "before": "fb6650950d58ee1480f36775314ec8c44224ecb39fbaca51be2054cc9dc40356",
+      "after": "96cf6a7935abdc6a3c11332b07ad62c16ac3d39dae8eeeb8d9e05fac41c50733",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/src/check.test.mjs"
+    },
+    {
+      "path": "packages/architecture/src/computed-data-keys-cli.test.mjs",
+      "before": "833811abeea74c28d8ac1571db46cf5edda3423f4f70547325bfe6e0dfe610ec",
+      "after": "acdebf40b463b450da7d69c6bb650bc528f28fa629ee20266a9b720d21fb0832",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/src/computed-data-keys-cli.test.mjs"
+    },
+    {
+      "path": "packages/architecture/src/expression-values.mjs",
+      "before": "07b15e7d905053e56bb629ea9c7313346a1c28e2c0c1d056ba0743641df983b6",
+      "after": "45fd04ee0d983860e5d62232a53397f2cf1e32289c8d2f2e9051e71de037d0e2",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/src/expression-values.mjs"
+    },
+    {
+      "path": "packages/architecture/src/getter-promise-compat.test.mjs",
+      "before": null,
+      "after": "b02a6153d3805bb6eba5d98061c65ffe68cb670e2a1cfbd31a9fbba3817f9f03",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/src/getter-promise-compat.test.mjs"
+    },
+    {
+      "path": "packages/architecture/src/graph.test.mjs",
+      "before": "3111b168b802a5879cce3b30e38a5c5e3a6b6ae9255a194738901b83f8c2c1dd",
+      "after": "6aea4b1e5d415800e8a08430043362fd10a8b7242a12e6f59a2ce310bb964cb5",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/src/graph.test.mjs"
+    },
+    {
+      "path": "packages/architecture/src/instantiation-expression.test.mjs",
+      "before": null,
+      "after": "5f861d16f2d389f68158d6be4d58c7ae7ca9cc6acb98527644687d5f70a0863b",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/src/instantiation-expression.test.mjs"
+    },
+    {
+      "path": "packages/architecture/src/qualification.test.mjs",
+      "before": "9634569021901f222651cf66dd8e90245122bfd9145f238e161a52162d2a5e1b",
+      "after": "d663739c6da9c33cd4ce7fea12a3a9b05dd606cd23abaa82c5fa46260eaec9df",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/src/qualification.test.mjs"
+    },
+    {
+      "path": "packages/architecture/src/semantic-context.mjs",
+      "before": "711832a649ccd0f25a7395f9c0f95e0c66d1372f8e8d461e8e65123cb55643fd",
+      "after": "8eae33a653f7512603d1fe920b5d003828908853873c8d1c1a34b25010bc98f4",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/src/semantic-context.mjs"
+    },
+    {
+      "path": "packages/architecture/src/semantic-flow.mjs",
+      "before": "c9672b49f1439cddf0e6362674d117b4095a7f6517fac7c767b062c9ba126a95",
+      "after": "1b564143f246167140437ae3cb9490123821624e97dee262fbf5a3ee7913211f",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/src/semantic-flow.mjs"
+    },
+    {
+      "path": "packages/architecture/test/installed-bin-smoke.mjs",
+      "before": "49ec603c1cbd15d72c606ee68051d6caa682becfa27bdb9799ebab220f1fa0e5",
+      "after": "b8ec1556dd17651e1368aa7bc85b52c034bbc7af5866cc720bf2ab063dd7a596",
+      "source": "/private/tmp/composable-final-checker/packages/architecture/test/installed-bin-smoke.mjs"
+    }
+  ]
+}

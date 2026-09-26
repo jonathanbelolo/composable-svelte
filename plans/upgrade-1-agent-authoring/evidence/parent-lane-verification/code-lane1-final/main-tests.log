@@ -1,0 +1,264 @@
+
+> @composable-svelte/code@0.4.1 test /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code
+> vitest run && vitest run --config vitest.ssr.config.ts
+
+1:17:11 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code - using default configuration.
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code
+
+1:17:11 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code - using default configuration.
+1:17:11 PM [vite] (client) Re-optimizing dependencies because lockfile has changed
+ ✓ |chromium| tests/code-editor-save.test.ts (19 tests) 7ms
+ ✓ |chromium| tests/code-editor-format-freshness.test.ts (13 tests) 82ms
+stderr | tests/managed/code-editor-veto.test.ts > a parent that declines an edit (standalone) > a store without subscribeToActions reverts a declined edit as well
+[CodeEditor] this store is neither a managed child view nor a Store with subscribeToActions, so undo / redo / insertText / deleteSelection / selectAll / focus / blur cannot reach the editor. It still renders and edits. Likely causes: a wrapper or copy of a managed view (pass the view you were given, unwrapped); an ApplicationStore (render the feature through FeatureViews or FeatureOutlet and pass its FeatureViewProps store); two copies of @composable-svelte/core, so a genuine view is not recognised (dedupe the dependency); or a custom Store without subscribeToActions (implement it).
+ ✓ |chromium| tests/managed/code-editor-veto.test.ts (10 tests) 333ms
+stderr | tests/code-editor-ordering.test.ts > a store without subscribeToActions > renders and edits, warns once per store, and names the likely causes
+[CodeEditor] this store is neither a managed child view nor a Store with subscribeToActions, so undo / redo / insertText / deleteSelection / selectAll / focus / blur cannot reach the editor. It still renders and edits. Likely causes: a wrapper or copy of a managed view (pass the view you were given, unwrapped); an ApplicationStore (render the feature through FeatureViews or FeatureOutlet and pass its FeatureViewProps store); two copies of @composable-svelte/core, so a genuine view is not recognised (dedupe the dependency); or a custom Store without subscribeToActions (implement it).
+ ✓ |chromium| tests/code-editor-ordering.test.ts (7 tests) 246ms
+ ✓ |chromium| tests/proof/owner-seam-feasibility.test.ts (4 tests) 55ms
+ ✓ |chromium| tests/view-source.test.ts (5 tests) 2ms
+ ✓ |chromium| tests/proof/command-queue.reducer.test.ts (7 tests) 1ms
+stderr | tests/managed/code-highlight-managed.test.ts > standalone CodeHighlight > a store without subscribeToActions warns once and still renders
+[CodeHighlight] this store is neither a managed child view nor a Store with subscribeToActions, so a codeChanged dispatched from outside is highlighted twice. It still renders and edits. Likely causes: a wrapper or copy of a managed view (pass the view you were given, unwrapped); an ApplicationStore (render the feature through FeatureViews or FeatureOutlet and pass its FeatureViewProps store); two copies of @composable-svelte/core, so a genuine view is not recognised (dedupe the dependency); or a custom Store without subscribeToActions (implement it).
+ ✓ |chromium| tests/managed/code-highlight-managed.test.ts (6 tests) 564ms
+ ✓ |chromium| tests/code-editor-mount-lifetime.browser.test.ts (2 tests) 209ms
+stderr | tests/managed/code-editor-managed.test.ts > a hand-bound view outlives its owner > warns once when the store prop is swapped after mount, and stays bound to the first
+[CodeEditor] the store prop changed after mount. This component stays bound to the store it mounted with. Wrap it in {#key store} to rebind, as FeatureViews and FeatureOutlet do for each managed owner.
+stderr | tests/code-highlight-escaping.test.ts > CodeHighlight escapes unhighlighted source > does not execute markup after highlighting fails
+[CodeHighlight] Highlighting error: [Error: no highlighter available]
+ ✓ |chromium| tests/node-canvas-props.test.ts (1 test) 612ms
+     ✓ follow changes made after mount  612ms
+ ✓ |chromium| tests/proof/command-queue.managed.test.ts (25 tests) 1436ms
+ ✓ |chromium| tests/code-boundaries.test.ts (11 tests) 13ms
+ ✓ |chromium| tests/code-highlight-escaping.test.ts (4 tests) 208ms
+ ✓ |chromium| tests/code-graph-boundaries.browser.test.ts (2 tests) 20ms
+stderr | tests/code-highlight.test.ts > CodeHighlight Reducer > handles highlighting errors gracefully
+[CodeHighlight] Highlighting error: [Error: Highlighting failed]
+ ✓ |chromium| tests/code-highlight.test.ts (9 tests) 2ms
+ ✓ |chromium| tests/managed/code-editor-managed.test.ts (24 tests) 1686ms
+     ✓ closing a panel while its editor is being created runs nothing, leaks no editor and logs nothing  330ms
+ ✓ |chromium| tests/node-canvas-autolayout.test.ts (3 tests) 1ms
+ ✓ |chromium| tests/node-canvas-validation.test.ts (4 tests) 1ms
+ ✓ |chromium| tests/code-editor-state.test.ts (6 tests) 2734ms
+     ✓ shows on the root element  633ms
+     ✓ is visible in the light theme too  329ms
+     ✓ dispatching blur blurs it  531ms
+     ✓ clears when a language is selected again  682ms
+ ✓ |chromium| tests/code-editor-commands.test.ts (10 tests) 3281ms
+     ✓ undo and redo actually move the document  785ms
+     ✓ does not dispatch on every keystroke  336ms
+     ✓ a value dispatched during mount is not undoable  430ms
+ ✓ |chromium| tests/code-editor-reconfigure.test.ts (10 tests) 3322ms
+     ✓ restyles the content area, not only the chrome  432ms
+     ✓ flips editable and readOnly on the live view  430ms
+     ✓ unrelated store activity does not reconfigure the editor  531ms
+     ✓ a store value change reaches the editor  332ms
+     ✓ reaches the editor even while read-only  332ms
+     ✓ rapid switches land on the language the user last picked  556ms
+ ✓ |chromium| tests/proof/command-queue.canvas.test.ts (2 tests) 2028ms
+     ✓ zoomIn twice in one tick reaches only its own canvas, twice, without unliftAction  717ms
+     ✓ fitView returns a moved canvas to the fitted transform  1311ms
+ ✓ |chromium| tests/code-editor-toolbar.test.ts (8 tests) 4073ms
+     ✓ recovers after a failed format  354ms
+     ✓ still formats after a previous failure  829ms
+     ✓ actually shows and hides the gutter  631ms
+     ✓ shows and hides the fold gutter  632ms
+     ✓ keeps existing folds when the gutter is hidden and shown  688ms
+     ✓ turns on and off for real  631ms
+ ✓ |chromium| tests/code-highlight-gutter.test.ts (13 tests) 6023ms
+     ✓ disappears when toggled off  303ms
+     ✓ stays in place when the code scrolls horizontally  324ms
+     ✓ renders a band per requested line  304ms
+     ✓ ignores lines outside the document  305ms
+     ✓ is distinguishable from idle, and recovers  2607ms
+     ✓ re-highlights when a parent replaces the code  454ms
+     ✓ does not highlight twice for one external codeChanged  603ms
+ ✓ |chromium| tests/managed/node-canvas-managed.test.ts (8 tests) 10728ms
+     ✓ two same-tick zoomIns both land, on the addressed canvas only  1233ms
+     ✓ setViewport moves the canvas, clamped to its zoom bounds, and state learns the clamped value  1010ms
+     ✓ fitView restores the fitted viewport and centerView pans without zooming  2213ms
+     ✓ a burst in one drain runs in order: setViewport, then zoomIn  1208ms
+     ✓ removing a canvas logs nothing and leaves the sibling working  1513ms
+     ✓ selection dispatched by the canvas reaches its own owner  920ms
+     ✓ works with neither liftAction nor unliftAction, and survives its owner retiring  1115ms
+     ✓ a caller-supplied non-identity liftAction cannot kill setViewport or zoomIn  1515ms
+ ✓ |chromium| tests/node-canvas-viewport.test.ts (13 tests) 15969ms
+     ✓ setViewport moves it  1024ms
+     ✓ zoomIn and zoomOut move it  1608ms
+     ✓ fitView brings the canvas back to the fitted position  1609ms
+     ✓ the store learns about canvas-driven viewport changes  1206ms
+     ✓ a programmatic viewport change does not echo forever  1307ms
+     ✓ centres without changing the zoom  1513ms
+     ✓ clamps to maxZoom  1009ms
+     ✓ is exposed on the container  911ms
+     ✓ selectNode highlights the node  1010ms
+     ✓ keeps the source node identical and its selection visible across unrelated dispatches  1220ms
+     ✓ clearSelection unhighlights it  1412ms
+     ✓ stops nodes being draggable  1013ms
+     ✓ ignores a wrapping parent’s same-named actions  1128ms
+ ❯ |chromium| tests/code-editor-proof.test.ts (11 tests | 8 failed) 17171ms
+     × 1. repeated identical same-tick commands: both land in order without coalescing 2187ms
+     × 2. reentrant reducer follow-ups: chained commands execute in causal order 2128ms
+     × 3. pre-attachment and async-view-creation policy: commands buffer and drain once attached 2140ms
+     × 4. detach and reattach: unmount cleans up, detached commands execute upon remount without duplicate replay 2132ms
+     × 5. same-ID replacement: old owner is retired and new owner receives fresh queue 2129ms
+     ✓ 6. captured owner: dispatch on retired child view is dropped and does not mutate state 53ms
+     × 7. ack-through trimming & bounded capacity: protects memory in headless scenarios 2132ms
+     × 8. sibling isolation: commands to Editor A do not leak to Editor B 2132ms
+     × 9. SSR and hydration replay feasibility: state holds clean document and hydrates without error 2137ms
+     ✓ ChildView provides only state/dispatch/select/subscribe; subscribeToActions is absent 1ms
+     ✓ Without core API additions, owner-scoped action delivery cannot be implemented cleanly 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |chromium| tests/code-editor-proof.test.ts > Candidate 1: Ordered State-Carried Command Queue > 1. repeated identical same-tick commands: both land in order without coalescing
+Error: timed out waiting for EditorView in DOM
+
+Failure screenshot:
+  - tests/__screenshots__/code-editor-proof.test.ts/Candidate-1--Ordered-State-Carried-Command-Queue-1--repeated-identical-same-tick-commands--both-land-in-order-without-coalescing-1.png
+
+ ❯ waitFor tests/code-editor-proof.test.ts:55:7
+     53|   await new Promise((r) => setTimeout(r, 25));
+     54|  }
+     55|  throw new Error(`timed out waiting for ${what}`);
+       |       ^
+     56| }
+     57| 
+ ❯ mountProofEditor tests/code-editor-proof.test.ts:67:14
+ ❯ tests/code-editor-proof.test.ts:79:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  |chromium| tests/code-editor-proof.test.ts > Candidate 1: Ordered State-Carried Command Queue > 2. reentrant reducer follow-ups: chained commands execute in causal order
+Error: timed out waiting for EditorView in DOM
+
+Failure screenshot:
+  - tests/__screenshots__/code-editor-proof.test.ts/Candidate-1--Ordered-State-Carried-Command-Queue-2--reentrant-reducer-follow-ups--chained-commands-execute-in-causal-order-1.png
+
+ ❯ waitFor tests/code-editor-proof.test.ts:55:7
+     53|   await new Promise((r) => setTimeout(r, 25));
+     54|  }
+     55|  throw new Error(`timed out waiting for ${what}`);
+       |       ^
+     56| }
+     57| 
+ ❯ mountProofEditor tests/code-editor-proof.test.ts:67:14
+ ❯ tests/code-editor-proof.test.ts:106:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  |chromium| tests/code-editor-proof.test.ts > Candidate 1: Ordered State-Carried Command Queue > 3. pre-attachment and async-view-creation policy: commands buffer and drain once attached
+Error: timed out waiting for EditorView in DOM
+
+Failure screenshot:
+  - tests/__screenshots__/code-editor-proof.test.ts/Candidate-1--Ordered-State-Carried-Command-Queue-3--pre-attachment-and-async-view-creation-policy--commands-buffer-and-drain-once-attached-1.png
+
+ ❯ waitFor tests/code-editor-proof.test.ts:55:7
+     53|   await new Promise((r) => setTimeout(r, 25));
+     54|  }
+     55|  throw new Error(`timed out waiting for ${what}`);
+       |       ^
+     56| }
+     57| 
+ ❯ mountProofEditor tests/code-editor-proof.test.ts:67:14
+ ❯ tests/code-editor-proof.test.ts:136:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  |chromium| tests/code-editor-proof.test.ts > Candidate 1: Ordered State-Carried Command Queue > 4. detach and reattach: unmount cleans up, detached commands execute upon remount without duplicate replay
+Error: timed out waiting for View 1
+
+Failure screenshot:
+  - tests/__screenshots__/code-editor-proof.test.ts/Candidate-1--Ordered-State-Carried-Command-Queue-4--detach-and-reattach--unmount-cleans-up--detached-commands-execute-upon-remount-without-duplicate-replay-1.png
+
+ ❯ waitFor tests/code-editor-proof.test.ts:55:7
+     53|   await new Promise((r) => setTimeout(r, 25));
+     54|  }
+     55|  throw new Error(`timed out waiting for ${what}`);
+       |       ^
+     56| }
+     57| 
+ ❯ tests/code-editor-proof.test.ts:156:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  |chromium| tests/code-editor-proof.test.ts > Candidate 1: Ordered State-Carried Command Queue > 5. same-ID replacement: old owner is retired and new owner receives fresh queue
+Error: timed out waiting for EditorView in DOM
+
+Failure screenshot:
+  - tests/__screenshots__/code-editor-proof.test.ts/Candidate-1--Ordered-State-Carried-Command-Queue-5--same-ID-replacement--old-owner-is-retired-and-new-owner-receives-fresh-queue-1.png
+
+ ❯ waitFor tests/code-editor-proof.test.ts:55:7
+     53|   await new Promise((r) => setTimeout(r, 25));
+     54|  }
+     55|  throw new Error(`timed out waiting for ${what}`);
+       |       ^
+     56| }
+     57| 
+ ❯ mountProofEditor tests/code-editor-proof.test.ts:67:14
+ ❯ tests/code-editor-proof.test.ts:198:28
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  |chromium| tests/code-editor-proof.test.ts > Candidate 1: Ordered State-Carried Command Queue > 7. ack-through trimming & bounded capacity: protects memory in headless scenarios
+Error: timed out waiting for EditorView in DOM
+
+Failure screenshot:
+  - tests/__screenshots__/code-editor-proof.test.ts/Candidate-1--Ordered-State-Carried-Command-Queue-7--ack-through-trimming---bounded-capacity--protects-memory-in-headless-scenarios-1.png
+
+ ❯ waitFor tests/code-editor-proof.test.ts:55:7
+     53|   await new Promise((r) => setTimeout(r, 25));
+     54|  }
+     55|  throw new Error(`timed out waiting for ${what}`);
+       |       ^
+     56| }
+     57| 
+ ❯ mountProofEditor tests/code-editor-proof.test.ts:67:14
+ ❯ tests/code-editor-proof.test.ts:274:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  |chromium| tests/code-editor-proof.test.ts > Candidate 1: Ordered State-Carried Command Queue > 8. sibling isolation: commands to Editor A do not leak to Editor B
+Error: timed out waiting for EditorView in DOM
+
+Failure screenshot:
+  - tests/__screenshots__/code-editor-proof.test.ts/Candidate-1--Ordered-State-Carried-Command-Queue-8--sibling-isolation--commands-to-Editor-A-do-not-leak-to-Editor-B-1.png
+
+ ❯ waitFor tests/code-editor-proof.test.ts:55:7
+     53|   await new Promise((r) => setTimeout(r, 25));
+     54|  }
+     55|  throw new Error(`timed out waiting for ${what}`);
+       |       ^
+     56| }
+     57| 
+ ❯ mountProofEditor tests/code-editor-proof.test.ts:67:14
+ ❯ tests/code-editor-proof.test.ts:290:24
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+ FAIL  |chromium| tests/code-editor-proof.test.ts > Candidate 1: Ordered State-Carried Command Queue > 9. SSR and hydration replay feasibility: state holds clean document and hydrates without error
+Error: timed out waiting for EditorView in DOM
+
+Failure screenshot:
+  - tests/__screenshots__/code-editor-proof.test.ts/Candidate-1--Ordered-State-Carried-Command-Queue-9--SSR-and-hydration-replay-feasibility--state-holds-clean-document-and-hydrates-without-error-1.png
+
+ ❯ waitFor tests/code-editor-proof.test.ts:55:7
+     53|   await new Promise((r) => setTimeout(r, 25));
+     54|  }
+     55|  throw new Error(`timed out waiting for ${what}`);
+       |       ^
+     56| }
+     57| 
+ ❯ mountProofEditor tests/code-editor-proof.test.ts:67:14
+ ❯ tests/code-editor-proof.test.ts:333:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯
+
+
+ Test Files  1 failed | 26 passed (27)
+      Tests  8 failed | 229 passed (237)
+   Start at  13:17:11
+   Duration  20.25s (transform 0ms, setup 0ms, collect 18.64s, tests 70.81s, environment 0ms, prepare 49.71s)
+
+ ELIFECYCLE  Test failed. See above for more details.

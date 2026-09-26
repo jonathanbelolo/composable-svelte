@@ -1,0 +1,18 @@
+3:13:53 PM [vite-plugin-svelte] no Svelte config found at /private/tmp/composable-final-authoring/app-b - using default configuration.
+
+ RUN  v4.0.7 /private/tmp/composable-final-authoring/app-b
+
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > initial state starts on login route with anonymous session and open login flow 4ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > accepted sign-in changes the app route to dashboard and loads account data with chart 4ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > rejected sign-in does not change the app route 1ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > handles MFA challenge when requested, and accepted MFA changes app route 2ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > typed chart interactions route through the owning feature 1ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > password change follows documented acceptance rather than inferred object identity 1ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > logout removes former accounts views and pending work 0ms
+ ✓ tests/dashboard.test.ts > Brief B: Authenticated Account Dashboard > includes at least one delayed response after retirement in an application-level test 1ms
+
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+   Start at  15:13:53
+   Duration  1.87s (transform 1.16s, setup 0ms, collect 1.77s, tests 15ms, environment 0ms, prepare 3ms)
+

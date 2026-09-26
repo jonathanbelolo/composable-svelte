@@ -2,9 +2,16 @@
 	/**
 	 * A create-account form.
 	 *
-	 * The same two-store shape as `LoginForm`, and for the same reason: a signup
-	 * that ends in a session has to cross into the session store, and a required
-	 * prop makes a forgotten wiring a compile error rather than a silent no-op.
+	 * In standalone mode, the same two-store shape as `LoginForm`, and for the
+	 * same reason: a signup that ends in a session has to cross into the session
+	 * store, and a required prop makes a forgotten wiring a compile error rather
+	 * than a silent no-op.
+	 *
+	 * `mode="managed"` takes `createAuthFeature`'s signup view instead, and only
+	 * that: the feature hands a session over and routes "Sign in instead"
+	 * itself, so this form dispatches `signInRequested` rather than calling out.
+	 * As in `LoginForm`, a retired view renders nothing and the `Form` subtree is
+	 * keyed by the view.
 	 *
 	 * **It has two endings, and both are successes.** A backend that requires
 	 * email confirmation returns no session, and this renders the terminal panel
@@ -14,6 +21,7 @@
 	 */
 	import { Form, FormField } from '@composable-svelte/core/components/form';
 	import type { FormAction, FormState } from '@composable-svelte/core/components/form';
+	import type { PresentationView } from '@composable-svelte/core/application';
 	import type { Snippet } from 'svelte';
 
 	import PasswordCriteria from './PasswordCriteria.svelte';
@@ -22,13 +30,18 @@
 	import type { SignupFields } from '../flows/signup/schema.js';
 	import type { SessionAction } from '../session/types.js';
 
-	interface Props {
+	/** A store the form holds for its whole life; its state is always there. */
+	interface StandaloneSignupStore {
+		readonly state: SignupState;
+		dispatch(action: SignupAction): void;
+		subscribe(listener: (state: SignupState) => void): () => void;
+	}
+
+	/** The form performs the handoff: it needs the session store. */
+	interface StandaloneBinding {
+		mode?: 'standalone' | undefined;
 		/** The signup flow: fields, request, structured failure. */
-		flowStore: {
-			readonly state: SignupState;
-			dispatch(action: SignupAction): void;
-			subscribe(listener: (state: SignupState) => void): () => void;
-		};
+		flowStore: StandaloneSignupStore;
 		/** Where a session is handed over, when the backend issues one. */
 		sessionStore: { dispatch(action: SessionAction): void };
 		/** Called once, after a session has been established. */
@@ -40,6 +53,29 @@
 		onVerificationRequired?: ((email: string) => void) | undefined;
 		/** Offered when the address is already registered. */
 		onSignIn?: (() => void) | undefined;
+	}
+
+	/**
+	 * `createAuthFeature` hands a session over and presents sign-in as
+	 * reductions, so the form gets neither the session store nor a callback.
+	 * The terminal "check your email" state stays in the feature's state, where
+	 * the containing application reads it.
+	 */
+	interface ManagedBinding {
+		mode: 'managed';
+		/**
+		 * The feature's signup view, as `defineViews` hands it to a content
+		 * snippet. Its `state` is `undefined` once the flow's owner retires.
+		 */
+		flowStore: PresentationView<SignupState, SignupAction>;
+		sessionStore?: never;
+		onSuccess?: never;
+		onVerificationRequired?: never;
+		/** "Sign in instead" dispatches `signInRequested` to the view. */
+		onSignIn?: never;
+	}
+
+	interface PresentationProps {
 		header?: Snippet | undefined;
 		footer?: Snippet | undefined;
 		/** Replaces the whole "check your email" panel. Receives the address. */
@@ -52,12 +88,11 @@
 		class?: string | undefined;
 	}
 
+	type Props = PresentationProps & (StandaloneBinding | ManagedBinding);
+
+	// `binding` keeps `mode` with the store and callbacks it decides, so
+	// narrowing on `binding.mode` narrows them too.
 	let {
-		flowStore,
-		sessionStore,
-		onSuccess,
-		onVerificationRequired,
-		onSignIn,
 		header,
 		footer,
 		verification,
@@ -66,7 +101,8 @@
 		emailLabel = 'Email',
 		passwordLabel = 'Password',
 		confirmLabel = 'Confirm password',
-		class: className = ''
+		class: className = '',
+		...binding
 	}: Props = $props();
 
 	const uid = $props.id();
@@ -78,34 +114,93 @@
 	const confirmId = `${uid}-confirm`;
 	const confirmErrorId = `${uid}-confirm-error`;
 
-	// A stable fan-out re-pointed by an effect, so replacing `flowStore` does not
-	// silently detach the fields — see `LoginForm` for the failure this avoids.
+	/** `undefined` only for a managed view whose owner has retired. See `LoginForm`. */
+	const flow: SignupState | undefined = $derived(binding.flowStore.state);
+
+	// A stable fan-out re-pointed by an effect, so replacing a standalone
+	// `flowStore` does not silently detach the fields — see `LoginForm` for the
+	// failure this avoids. Managed subtrees subscribe to their own view instead.
 	const listeners = new Set<(state: FormState<SignupFields>) => void>();
 
 	$effect(() => {
-		return flowStore.subscribe((state) => {
+		if (binding.mode === 'managed') return;
+		return binding.flowStore.subscribe((state) => {
 			for (const listener of listeners) listener(state.form);
 		});
 	});
 
+	/** The standalone store's form slice; standalone state is never absent. */
+	function standaloneForm(): FormState<SignupFields> {
+		const state = binding.flowStore.state;
+		if (state === undefined) throw new Error('SignupForm: the form rendered without a flow');
+		return state.form;
+	}
+
 	const formStore = {
 		get state(): FormState<SignupFields> {
-			return flowStore.state.form;
+			return standaloneForm();
 		},
 		dispatch(action: FormAction<SignupFields>) {
-			flowStore.dispatch({ type: 'form', action });
+			binding.flowStore.dispatch({ type: 'form', action });
 		},
 		subscribe(listener: (state: FormState<SignupFields>) => void) {
 			listeners.add(listener);
-			listener(flowStore.state.form);
+			listener(standaloneForm());
 			return () => listeners.delete(listener);
 		}
 	};
 
-	const error = $derived(flowStore.state.error);
-	const status = $derived(flowStore.state.status);
+	/**
+	 * A keyed managed subtree keeps its state, dispatch and subscription on its
+	 * own view, so a departing subtree's blur lands on the view it belonged to.
+	 */
+	function managedFormStore(view: PresentationView<SignupState, SignupAction>) {
+		let last: FormState<SignupFields> | undefined;
+		function current(): FormState<SignupFields> {
+			const state = view.state;
+			if (state !== undefined) last = state.form;
+			// Unreachable: the subtree first renders under `{#if flow}`.
+			if (last === undefined) throw new Error('SignupForm: the form rendered without a flow');
+			return last;
+		}
+		return {
+			get state() {
+				return current();
+			},
+			dispatch(action: FormAction<SignupFields>) {
+				view.dispatch({ type: 'form', action });
+			},
+			subscribe(listener: (state: FormState<SignupFields>) => void) {
+				const unsubscribe = view.subscribe((state) => {
+					if (state !== undefined) {
+						last = state.form;
+						listener(state.form);
+					}
+				});
+				listener(current());
+				return unsubscribe;
+			}
+		};
+	}
+
+	/** One `Form` subtree per captured managed view; standalone keeps one. */
+	const formOwner = $derived(binding.mode === 'managed' ? binding.flowStore : null);
+	const activeFormStore = $derived(
+		binding.mode === 'managed' ? managedFormStore(binding.flowStore) : formStore
+	);
+
+	const error = $derived(flow?.error ?? null);
+	const status = $derived(flow?.status);
 	const isSubmitting = $derived(status === 'submitting');
-	const pendingEmail = $derived(flowStore.state.pendingEmail);
+	const pendingEmail = $derived(flow?.pendingEmail ?? null);
+
+	/** Managed, the offer is always the feature's; standalone, only with `onSignIn`. */
+	const offersSignIn = $derived(binding.mode === 'managed' || binding.onSignIn !== undefined);
+
+	function signInInstead() {
+		if (binding.mode === 'managed') binding.flowStore.dispatch({ type: 'signInRequested' });
+		else binding.onSignIn?.();
+	}
 
 	/** Whether this component has already reported the outcome it is looking at. */
 	let handedOver = false;
@@ -128,8 +223,11 @@
 		if (status === 'awaitingVerification') verifyPanel?.focus();
 	});
 
+	// Standalone only. Managed, `createAuthFeature` hands the session over and
+	// keeps the verification outcome in its own state.
 	$effect(() => {
-		const state = flowStore.state;
+		if (binding.mode === 'managed') return;
+		const state = binding.flowStore.state;
 
 		// Cleared whenever the flow leaves a terminal state, so a form that stays
 		// mounted across a second attempt reports that one too.
@@ -141,8 +239,8 @@
 
 		if (state.status === 'succeeded' && state.session !== null) {
 			handedOver = true;
-			sessionStore.dispatch({ type: 'sessionEstablished', session: state.session });
-			onSuccess?.();
+			binding.sessionStore.dispatch({ type: 'sessionEstablished', session: state.session });
+			binding.onSuccess?.();
 			return;
 		}
 
@@ -150,11 +248,12 @@
 			handedOver = true;
 			// Nothing is dispatched into the session store: there is no session.
 			// Saying otherwise would sign in an account that cannot be used yet.
-			onVerificationRequired?.(state.pendingEmail);
+			binding.onVerificationRequired?.(state.pendingEmail);
 		}
 	});
 </script>
 
+{#if flow}
 <div class="signup-form {className}">
 	{#if status === 'awaitingVerification' && pendingEmail !== null}
 		{#if verification}
@@ -193,19 +292,20 @@
 		{#if error}
 			<div class="signup-form__error" role="alert" aria-live="polite" data-error-code={error.code}>
 				<span>{error.message}</span>
-				{#if error.code === 'email_taken' && onSignIn}
+				{#if error.code === 'email_taken' && offersSignIn}
 					<!--
 						The whole point of `email_taken` being its own arm. "That address
 						is taken" is not something to apologise for; it is an offer.
 					-->
-					<button type="button" class="signup-form__error-action" onclick={() => onSignIn()}>
+					<button type="button" class="signup-form__error-action" onclick={signInInstead}>
 						Sign in instead
 					</button>
 				{/if}
 			</div>
 		{/if}
 
-		<Form store={formStore} class="signup-form__form">
+		{#key formOwner}
+		<Form store={activeFormStore} class="signup-form__form">
 			<FormField name="email">
 				{#snippet children({ field, send })}
 					<div class="signup-form__field">
@@ -300,12 +400,14 @@
 				{isSubmitting ? 'Creating account…' : submitLabel}
 			</button>
 		</Form>
+		{/key}
 
 		{#if footer}
 			<div class="signup-form__footer">{@render footer()}</div>
 		{/if}
 	{/if}
 </div>
+{/if}
 
 <style>
 	/* Scoped CSS over core's theme tokens — see `LoginForm` for why not Tailwind. */

@@ -7,6 +7,7 @@ import {
 	anonymousSubject,
 	hasAnyRole,
 	hasRole,
+	subjectDisplayName,
 	subjectFromSession,
 	subjectRoles
 } from '../src/lib/subject/helpers';
@@ -92,6 +93,46 @@ describe('subjectRoles', () => {
 		};
 
 		expect(subjectRoles(mixed)).toEqual(['agent', 'admin']);
+	});
+});
+
+describe('subjectDisplayName', () => {
+	it('returns null for anonymous subjects', () => {
+		expect(subjectDisplayName(anonymousSubject)).toBeNull();
+	});
+
+	it('returns null when attributes.display_name is missing', () => {
+		const noName: Subject = { kind: 'authenticated', id: 'x', attributes: {} };
+		expect(subjectDisplayName(noName)).toBeNull();
+	});
+
+	it('returns null when attributes.display_name is not a string (fail-safe)', () => {
+		const numeric: Subject = { kind: 'authenticated', id: 'x', attributes: { display_name: 42 } };
+		const boolName: Subject = { kind: 'authenticated', id: 'x', attributes: { display_name: true } };
+		const nullName: Subject = { kind: 'authenticated', id: 'x', attributes: { display_name: null } };
+		const objName: Subject = { kind: 'authenticated', id: 'x', attributes: { display_name: { name: 'Ada' } } };
+
+		expect(subjectDisplayName(numeric)).toBeNull();
+		expect(subjectDisplayName(boolName)).toBeNull();
+		expect(subjectDisplayName(nullName)).toBeNull();
+		expect(subjectDisplayName(objName)).toBeNull();
+	});
+
+	it('returns null when attributes.display_name is an empty string', () => {
+		const empty: Subject = { kind: 'authenticated', id: 'x', attributes: { display_name: '' } };
+		expect(subjectDisplayName(empty)).toBeNull();
+	});
+
+	it('returns display_name string when valid', () => {
+		const direct: Subject = {
+			kind: 'authenticated',
+			id: 'x',
+			attributes: { display_name: 'Ada Lovelace' }
+		};
+		expect(subjectDisplayName(direct)).toBe('Ada Lovelace');
+
+		const fromSession = subjectFromSession(session);
+		expect(subjectDisplayName(fromSession)).toBe('Booking Agent');
 	});
 });
 

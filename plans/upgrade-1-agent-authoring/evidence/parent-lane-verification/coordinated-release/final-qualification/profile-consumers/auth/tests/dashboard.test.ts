@@ -1,0 +1,1044 @@
+import { describe, it, expect } from 'vitest';
+import { createTestStore } from '@composable-svelte/core/test';
+import {
+  createInitialAppState,
+  composition,
+  auth,
+  type AppState,
+  type AppAction,
+  type AccountActivityRow,
+  type AccountData
+} from '../src/lib/model.js';
+import { createControlledBackend } from '../src/lib/controlled-backend.js';
+import type { AccountSnapshot, SessionSnapshot } from '@composable-svelte/auth';
+import type { ChangePasswordAction, LoginAction } from '@composable-svelte/auth/flows';
+
+const flush = async () => {
+  for (let i = 0; i < 20; i++) await Promise.resolve();
+};
+
+describe('Brief B: Authenticated Account Dashboard', () => {
+  // 1. Initial State
+  it('initial state starts on login route with anonymous session and open login flow', async () => {
+    const backend = createControlledBackend();
+    const initial = createInitialAppState({ route: 'login' });
+
+    const store = createTestStore({
+      initialState: initial,
+      reducer: composition.reducer,
+      execution: composition.execution,
+      dependencies: backend
+    });
+    store.exhaustivity = 'off';
+
+    expect(store.state.route).toBe('login');
+    expect(store.state.accountData).toBeNull();
+    expect(['unresolved', 'anonymous']).toContain(store.state.auth?.session.status);
+
+    // Open login
+    await store.send(
+      { type: 'auth', action: { type: 'presented', action: { type: 'openLogin' } } },
+      (state) => {
+        expect(state.auth?.login).not.toBeNull();
+        expect(state.auth?.login?.status).toBe('idle');
+      }
+    );
+  });
+
+  // 2. Accepted sign-in changes the app route to dashboard and loads account data
+  it('accepted sign-in changes the app route to dashboard and loads account data', async () => {
+    const backend = createControlledBackend();
+    const initial = createInitialAppState({ route: 'login' });
+
+    const store = createTestStore({
+      initialState: initial,
+      reducer: composition.reducer,
+      execution: composition.execution,
+      dependencies: backend
+    });
+    store.exhaustivity = 'off';
+
+    // 1. Open login
+    await store.send({
+      type: 'auth',
+      action: { type: 'presented', action: { type: 'openLogin' } }
+    });
+
+    // 2. Submit valid credentials via form actions
+    await store.send({
+      type: 'auth',
+      action: {
+        type: 'presented',
+        action: {
+          type: 'login',
+          action: {
+            type: 'presented',
+            action: {
+              type: 'form',
+              action: { type: 'fieldChanged', field: 'email', value: 'ada@example.com' }
+            }
+          }
+        }
+      }
+    });
+
+    await store.send({
+      type: 'auth',
+      action: {
+        type: 'presented',
+        action: {
+          type: 'login',
+          action: {
+            type: 'presented',
+            action: {
+              type: 'form',
+              action: { type: 'fieldChanged', field: 'password', value: 'ValidPassword123!' }
+            }
+          }
+        }
+      }
+    });
+
+    await store.send({
+      type: 'auth',
+      action: {
+        type: 'presented',
+        action: {
+          type: 'login',
+          action: {
+            type: 'presented',
+            action: {
+              type: 'form',
+              action: { type: 'submitTriggered' }
+            }
+          }
+        }
+      }
+    });
+
+    // 3. Receive effect completion: loginSucceeded -> handoff: accepted -> route changes to dashboard -> accountLoaded
+    await store.receive({ type: 'accountLoaded' });
+
+    // Documented acceptance: handoff is accepted, route changed to dashboard
+    expect(store.state.route).toBe('dashboard');
+    expect(store.state.auth?.session.status).toBe('authenticated');
+    expect(store.state.auth?.session.subject?.kind).toBe('authenticated');
+
+    // Account data loaded
+    expect(store.state.accountData).not.toBeNull();
+    expect(store.state.accountData?.email).toBe('ada@example.com');
+    expect(store.state.accountData?.displayName).toBe('Ada Lovelace');
+    expect(store.state.accountLoading).toBe(false);
+
+  });
+
+  // 3. Rejected sign-in does not change the app route
+  it('rejected sign-in does not change the app route', async () => {
+    const backend = createControlledBackend();
+    const initial = createInitialAppState({ route: 'login' });
+
+    const store = createTestStore({
+      initialState: initial,
+      reducer: composition.reducer,
+      execution: composition.execution,
+      dependencies: backend
+    });
+    store.exhaustivity = 'off';
+
+    // 1. Open login
+    await store.send({
+      type: 'auth',
+      action: { type: 'presented', action: { type: 'openLogin' } }
+    });
+
+    // 2. Submit wrong password
+    await store.send({
+      type: 'auth',
+      action: {
+        type: 'presented',
+        action: {
+          type: 'login',
+          action: {
+            type: 'presented',
+            action: {
+              type: 'form',
+              action: { type: 'fieldChanged', field: 'email', value: 'ada@example.com' }
+            }
+          }
+        }
+      }
+    });
+
+    await store.send({
+      type: 'auth',
+      action: {
+        type: 'presented',
+        action: {
+          type: 'login',
+          action: {
+            type: 'presented',
+            action: {
+              type: 'form',
+              action: { type: 'fieldChanged', field: 'password', value: 'WrongPassword123!' }
+            }
+          }
+        }
+      }
+    });
+
+    await store.send({
+      type: 'auth',
+      action: {
+        type: 'presented',
+        action: {
+          type: 'login',
+          action: {
+            type: 'presented',
+            action: {
+              type: 'form',
+              action: { type: 'submitTriggered' }
+            }
+          }
+        }
+      }
+    });
+
+    // Wait for login failure
+    let attempts = 0;
+    while (store.state.auth?.login?.error === null) {
+      if (++attempts > 50) throw new Error('Timeout waiting for login error');
+      await flush();
+    }
+
+    // Form remains in login state with error
+    expect(store.state.auth?.login?.error?.code).toBe('invalid_credentials');
+    expect(store.state.auth?.login?.status).toBe('idle');
+    expect(store.state.route).toBe('login');
+    expect(store.state.accountData).toBeNull();
+    expect(['unresolved', 'anonymous']).toContain(store.state.auth?.session.status);
+  });
+
+  // 4. Handles MFA challenge when requested, and accepted MFA changes app route
+  it('handles MFA challenge when requested, and accepted MFA changes app route', async () => {
+    const backend = createControlledBackend();
+    const initial = createInitialAppState({ route: 'login' });
+
+    const store = createTestStore({
+      initialState: initial,
+      reducer: composition.reducer,
+      execution: composition.execution,
+      dependencies: backend
+    });
+    store.exhaustivity = 'off';
+
+    // 1. Open login
+    await store.send({
+      type: 'auth',
+      action: { type: 'presented', action: { type: 'openLogin' } }
+    });
+
+    // 2. Submit MFA credentials
+    await store.send({
+      type: 'auth',
+      action: {
+        type: 'presented',
+        action: {
+          type: 'login',
+          action: {
+            type: 'presented',
+            action: {
+              type: 'form',
+              action: { type: 'fieldChanged', field: 'email', value: 'mfa@example.com' }
+            }
+          }
+        }
+      }
+    });
+
+    await store.send({
+      type: 'auth',
+      action: {
+        type: 'presented',
+        action: {
+          type: 'login',
+          action: {
+            type: 'presented',
+            action: {
+              type: 'form',
+              action: { type: 'fieldChanged', field: 'password', value: 'ValidPassword123!' }
+            }
+          }
+        }
+      }
+    });
+
+    await store.send({
+      type: 'auth',
+      action: {
+        type: 'presented',
+        action: {
+          type: 'login',
+          action: {
+            type: 'presented',
+            action: {
+              type: 'form',
+              action: { type: 'submitTriggered' }
+            }
+          }
+        }
+      }
+    });
+
+    // 3. Auth feature detects mfa_required, retires login and presents MFA challenge
+    let attempts = 0;
+    while (store.state.auth?.mfa === null || store.state.auth?.mfa === undefined) {
+      if (++attempts > 50) throw new Error('Timeout waiting for mfa');
+      await flush();
+    }
+
+    expect(store.state.auth?.login).toBeNull();
+    expect(store.state.auth?.mfa?.challengeId).toBe('mfa-challenge-1');
+    expect(store.state.route).toBe('login'); // Still on login route
+
+    // 4. Submit valid MFA code
+    await store.send({
+      type: 'auth',
+      action: {
+        type: 'presented',
+        action: {
+          type: 'mfa',
+          action: {
+            type: 'presented',
+            action: {
+              type: 'form',
+              action: { type: 'fieldChanged', field: 'code', value: '123456' }
+            }
+          }
+        }
+      }
+    });
+
+    await store.send({
+      type: 'auth',
+      action: {
+        type: 'presented',
+        action: {
+          type: 'mfa',
+          action: {
+            type: 'presented',
+            action: {
+              type: 'form',
+              action: { type: 'submitTriggered' }
+            }
+          }
+        }
+      }
+    });
+
+    // 5. Receive completion and account loading
+    await store.receive({ type: 'accountLoaded' });
+
+    expect(store.state.route).toBe('dashboard');
+    expect(store.state.auth?.session.status).toBe('authenticated');
+    if (store.state.auth?.session.subject?.kind === 'authenticated') {
+      expect(store.state.auth.session.subject.id).toBe('sub-mfa-1');
+    }
+    expect(store.state.accountData?.subjectId).toBe('sub-mfa-1');
+    expect(store.state.auth?.mfa).toBeNull();
+  });
+
+
+  // 6. Password change follows documented acceptance rather than inferred object identity
+  it('password change follows documented acceptance rather than inferred object identity', async () => {
+    const backend = createControlledBackend();
+    const initial: AppState = {
+      ...createInitialAppState({ route: 'dashboard' }),
+      auth: {
+        ...auth.initialState(),
+        session: {
+          status: 'authenticated',
+          subject: {
+            kind: 'authenticated',
+            id: 'sub-ada-1',
+            attributes: { display_name: 'Ada Lovelace' }
+          },
+          epoch: 1,
+          error: null,
+          expiresAt: null
+        }
+      },
+      accountData: {
+        subjectId: 'sub-ada-1',
+        email: 'ada@example.com',
+        displayName: 'Ada Lovelace',
+        role: 'Administrator',
+        metrics: []
+      }
+    };
+
+    const store = createTestStore({
+      initialState: initial,
+      reducer: composition.reducer,
+      execution: composition.execution,
+      dependencies: backend
+    });
+    store.exhaustivity = 'off';
+
+    // 1. Open change password
+    await store.send({
+      type: 'auth',
+      action: { type: 'presented', action: { type: 'openChangePassword' } }
+    });
+
+    expect(store.state.auth?.changePassword).not.toBeNull();
+
+    // 2. Submit new password
+    await store.send({
+      type: 'auth',
+      action: {
+        type: 'presented',
+        action: {
+          type: 'changePassword',
+          action: {
+            type: 'presented',
+            action: {
+              type: 'form',
+              action: { type: 'fieldChanged', field: 'password', value: 'NewPassword123!' }
+            }
+          }
+        }
+      }
+    });
+
+    await store.send({
+      type: 'auth',
+      action: {
+        type: 'presented',
+        action: {
+          type: 'changePassword',
+          action: {
+            type: 'presented',
+            action: {
+              type: 'form',
+              action: { type: 'fieldChanged', field: 'confirmPassword', value: 'NewPassword123!' }
+            }
+          }
+        }
+      }
+    });
+
+    await store.send({
+      type: 'auth',
+      action: {
+        type: 'presented',
+        action: {
+          type: 'changePassword',
+          action: {
+            type: 'presented',
+            action: {
+              type: 'form',
+              action: { type: 'submitTriggered' }
+            }
+          }
+        }
+      }
+    });
+
+    let attempts = 0;
+    while (store.state.passwordChangeMessage === null) {
+      if (++attempts > 50) throw new Error('Timeout waiting for password change message');
+      await flush();
+    }
+
+    // Documented acceptance: changePasswordOutcome was 'changed'
+    expect(store.state.passwordChangeMessage).toBe('Password successfully changed.');
+    expect(store.state.auth?.changePassword?.status).toBe('changed');
+
+    // 3. Test reauthentication requirement branch
+    backend.setReauthenticateForChangePassword(true);
+
+    // Restart change password
+    await store.send({
+      type: 'auth',
+      action: { type: 'presented', action: { type: 'restartChangePassword' } }
+    });
+
+    await store.send({
+      type: 'auth',
+      action: {
+        type: 'presented',
+        action: {
+          type: 'changePassword',
+          action: {
+            type: 'presented',
+            action: {
+              type: 'form',
+              action: { type: 'fieldChanged', field: 'password', value: 'AnotherPassword123!' }
+            }
+          }
+        }
+      }
+    });
+
+    await store.send({
+      type: 'auth',
+      action: {
+        type: 'presented',
+        action: {
+          type: 'changePassword',
+          action: {
+            type: 'presented',
+            action: {
+              type: 'form',
+              action: { type: 'fieldChanged', field: 'confirmPassword', value: 'AnotherPassword123!' }
+            }
+          }
+        }
+      }
+    });
+
+    await store.send({
+      type: 'auth',
+      action: {
+        type: 'presented',
+        action: {
+          type: 'changePassword',
+          action: {
+            type: 'presented',
+            action: {
+              type: 'form',
+              action: { type: 'submitTriggered' }
+            }
+          }
+        }
+      }
+    });
+
+    attempts = 0;
+    while (store.state.passwordChangeMessage !== 'Re-authentication required to change password.') {
+      if (++attempts > 50) throw new Error('Timeout waiting for re-authentication message');
+      await flush();
+    }
+
+    expect(store.state.passwordChangeMessage).toBe('Re-authentication required to change password.');
+  });
+
+  // 7. Logout removes former account's views and pending work
+  it('logout removes former accounts views and pending work', async () => {
+    const backend = createControlledBackend();
+    const initial: AppState = {
+      ...createInitialAppState({ route: 'dashboard' }),
+      auth: {
+        ...auth.initialState(),
+        session: {
+          status: 'authenticated',
+          subject: {
+            kind: 'authenticated',
+            id: 'sub-ada-1',
+            attributes: { display_name: 'Ada Lovelace' }
+          },
+          epoch: 1,
+          error: null,
+          expiresAt: null
+        }
+      },
+      accountData: {
+        subjectId: 'sub-ada-1',
+        email: 'ada@example.com',
+        displayName: 'Ada Lovelace',
+        role: 'Administrator',
+        metrics: [{ date: '2026-09-20', logins: 45, service: 'Security' }]
+      }
+    };
+
+    const store = createTestStore({
+      initialState: initial,
+      reducer: composition.reducer,
+      execution: composition.execution,
+      dependencies: backend
+    });
+    store.exhaustivity = 'off';
+
+    expect(store.state.route).toBe('dashboard');
+    expect(store.state.accountData).not.toBeNull();
+
+    // 1. Dispatch logout
+    await store.send({ type: 'logout' });
+
+    // Former account's views and state are immediately removed
+    expect(store.state.route).toBe('login');
+    expect(store.state.accountData).toBeNull();
+    expect(store.state.passwordChangeMessage).toBeNull();
+
+    // Session transitions to anonymous
+    await flush();
+    expect(store.state.auth?.session.status).toBe('anonymous');
+  });
+
+  // 8. Includes at least one delayed response after retirement in an application-level test
+  it('includes at least one delayed response after retirement in an application-level test', async () => {
+    const backend = createControlledBackend();
+    backend.setDelayChangePassword(true);
+
+    const initial: AppState = {
+      ...createInitialAppState({ route: 'dashboard' }),
+      auth: {
+        ...auth.initialState(),
+        session: {
+          status: 'authenticated',
+          subject: {
+            kind: 'authenticated',
+            id: 'sub-ada-1',
+            attributes: { display_name: 'Ada Lovelace' }
+          },
+          epoch: 1,
+          error: null,
+          expiresAt: null
+        }
+      },
+      accountData: {
+        subjectId: 'sub-ada-1',
+        email: 'ada@example.com',
+        displayName: 'Ada Lovelace',
+        role: 'Administrator',
+        metrics: []
+      }
+    };
+
+    const store = createTestStore({
+      initialState: initial,
+      reducer: composition.reducer,
+      execution: composition.execution,
+      dependencies: backend
+    });
+    store.exhaustivity = 'off';
+
+    // 1. Open change password
+    await store.send({
+      type: 'auth',
+      action: { type: 'presented', action: { type: 'openChangePassword' } }
+    });
+
+    expect(store.state.auth?.changePassword).not.toBeNull();
+
+    // 2. Submit change password request with controlled backend delaying response
+    await store.send({
+      type: 'auth',
+      action: {
+        type: 'presented',
+        action: {
+          type: 'changePassword',
+          action: {
+            type: 'presented',
+            action: {
+              type: 'form',
+              action: { type: 'fieldChanged', field: 'password', value: 'DelayedPassword123!' }
+            }
+          }
+        }
+      }
+    });
+
+    await store.send({
+      type: 'auth',
+      action: {
+        type: 'presented',
+        action: {
+          type: 'changePassword',
+          action: {
+            type: 'presented',
+            action: {
+              type: 'form',
+              action: { type: 'fieldChanged', field: 'confirmPassword', value: 'DelayedPassword123!' }
+            }
+          }
+        }
+      }
+    });
+
+    await store.send({
+      type: 'auth',
+      action: {
+        type: 'presented',
+        action: {
+          type: 'changePassword',
+          action: {
+            type: 'presented',
+            action: {
+              type: 'form',
+              action: { type: 'submitTriggered' }
+            }
+          }
+        }
+      }
+    });
+
+    // Wait until status is submitting (request is in-flight and held by backend)
+    let attempts = 0;
+    while (store.state.auth?.changePassword?.status !== 'submitting') {
+      if (++attempts > 50) throw new Error('Timeout waiting for changePassword status submitting');
+      await flush();
+    }
+    expect(store.state.auth?.changePassword?.status).toBe('submitting');
+
+    // 3. User logs out while changePassword request is in-flight!
+    // Retirement happens!
+    await store.send({ type: 'logout' });
+
+    // Account state and changePassword flow are immediately retired/cleared
+    expect(store.state.route).toBe('login');
+    expect(store.state.accountData).toBeNull();
+    expect(store.state.auth?.changePassword).toBeNull();
+
+    // 4. Now backend resolves delayed response after owner was retired!
+    backend.resolveDelayedChangePassword(null);
+    await flush();
+
+    // Invariant: late response from retired owner is completely dropped!
+    // - changePassword is still null (not re-created)
+    // - passwordChangeMessage is null
+    // - route remains login
+    // - session remains unauthenticated / anonymous
+    expect(store.state.auth?.changePassword).toBeNull();
+    expect(store.state.passwordChangeMessage).toBeNull();
+    expect(store.state.route).toBe('login');
+    expect(store.state.accountData).toBeNull();
+  });
+
+  // ---- Review additions (OPUS-APP-REVIEW.md R2–R6) ----
+
+  function deferred<T>() {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((yes) => { resolve = yes; });
+    return { promise, resolve };
+  }
+  const loginAction = (action: LoginAction): AppAction =>
+    ({ type: 'auth', action: { type: 'presented', action: { type: 'login', action: { type: 'presented', action } } } });
+  const passwordAction = (action: ChangePasswordAction): AppAction =>
+    ({ type: 'auth', action: { type: 'presented', action: { type: 'changePassword', action: { type: 'presented', action } } } });
+  async function until(check: () => boolean, label: string) {
+    for (let i = 0; i < 50 && !check(); i++) await flush();
+    if (!check()) throw new Error(`Timeout waiting for ${label}`);
+  }
+  function makeStore(backend = createControlledBackend()) {
+    const store = createTestStore({
+      initialState: createInitialAppState({ route: 'login' }),
+      reducer: composition.reducer,
+      execution: composition.execution,
+      dependencies: backend
+    });
+    store.exhaustivity = 'off';
+    return store;
+  }
+  async function signInThroughForm(store: ReturnType<typeof makeStore>, email: string) {
+    await store.send({ type: 'auth', action: { type: 'presented', action: { type: 'openLogin' } } });
+    await store.send(loginAction({ type: 'form', action: { type: 'fieldChanged', field: 'email', value: email } }));
+    await store.send(loginAction({ type: 'form', action: { type: 'fieldChanged', field: 'password', value: 'ValidPassword123!' } }));
+    await store.send(loginAction({ type: 'form', action: { type: 'submitTriggered' } }));
+    await until(() => store.state.route === 'dashboard', 'dashboard route');
+  }
+
+  it('logout offers a fresh sign-in so a different subject can sign in', async () => {
+    const store = makeStore();
+    await signInThroughForm(store, 'ada@example.com');
+    await until(() => store.state.accountData !== null, 'account');
+    await store.send({ type: 'logout' });
+    await until(() => store.state.auth?.session.status === 'anonymous', 'anonymous session');
+    // Without the app's explicit decision the login route would have no form.
+    expect(store.state.auth?.login).not.toBeNull();
+    expect(store.state.route).toBe('login');
+    expect(store.state.accountSubjectId).toBeNull();
+    // A former account's view does not survive into the next subject.
+    await store.send(loginAction({ type: 'form', action: { type: 'fieldChanged', field: 'email', value: 'mfa@example.com' } }));
+    await store.send(loginAction({ type: 'form', action: { type: 'fieldChanged', field: 'password', value: 'ValidPassword123!' } }));
+    await store.send(loginAction({ type: 'form', action: { type: 'submitTriggered' } }));
+    await until(() => store.state.auth?.mfa != null, 'mfa challenge');
+    expect(store.state.route).toBe('login');
+    expect(store.state.accountData).toBeNull();
+  });
+
+  it('a same-subject rotated password session keeps the account view; the outcome is read from changePasswordOutcome', async () => {
+    const backend = createControlledBackend();
+    const store = makeStore(backend);
+    await signInThroughForm(store, 'ada@example.com');
+    await until(() => store.state.accountData !== null, 'account');
+    const account = store.state.accountData;
+    const rotated: SessionSnapshot = { subject_id: 'sub-ada-1', display_name: 'Ada Lovelace', roles: ['member'] };
+    backend.changePassword = async () => rotated;
+    await store.send({ type: 'openChangePassword' });
+    await until(() => store.state.auth?.changePassword != null, 'change password flow');
+    await store.send(passwordAction({ type: 'form', action: { type: 'fieldChanged', field: 'password', value: 'RotatedPassword123!' } }));
+    await store.send(passwordAction({ type: 'form', action: { type: 'fieldChanged', field: 'confirmPassword', value: 'RotatedPassword123!' } }));
+    await store.send(passwordAction({ type: 'form', action: { type: 'submitTriggered' } }));
+    await until(() => store.state.passwordChangeMessage !== null, 'password outcome');
+    expect(store.state.passwordChangeMessage).toBe('Password successfully changed.');
+    // The accepted handoff (source changePassword) is not a new sign-in: same subject, same view.
+    expect(backend.counters.fetchAccountCalls).toBe(1);
+    expect(store.state.accountData).toBe(account);
+    expect(store.state.route).toBe('dashboard');
+  });
+
+  it.each([true, false])('delayed account load resolved after logout is dropped (logout=%s negative control)', async (logout) => {
+    const backend = createControlledBackend();
+    const calls: { signal: AbortSignal | undefined; work: ReturnType<typeof deferred<AccountSnapshot>> }[] = [];
+    // Deliberately ignores abort, so only managed retirement and the reducer gate can drop it.
+    backend.fetchAccount = (signal) => {
+      const work = deferred<AccountSnapshot>();
+      calls.push({ signal, work });
+      return work.promise;
+    };
+    const store = makeStore(backend);
+    await signInThroughForm(store, 'ada@example.com');
+    expect(store.state.accountLoading).toBe(true);
+    expect(calls).toHaveLength(1);
+    if (logout) {
+      await store.send({ type: 'logout' });
+      expect(calls[0]!.signal?.aborted).toBe(true);
+    }
+    calls[0]!.work.resolve({ email: 'ada@example.com', emailVerified: true, hasPassword: true, mfaEnabled: false, providers: [], pendingEmail: null });
+    await flush();
+    await flush();
+    if (logout) {
+      expect(store.state.route).toBe('login');
+      expect(store.state.accountData).toBeNull();
+      expect(store.state.accountLoading).toBe(false);
+    } else {
+      expect(store.state.route).toBe('dashboard');
+      expect(store.state.accountData?.subjectId).toBe('sub-ada-1');
+    }
+  });
+
+  it('an account result from before logout is rejected after the same subject signs in again', async () => {
+    const backend = createControlledBackend();
+    const calls: ReturnType<typeof deferred<AccountSnapshot>>[] = [];
+    backend.fetchAccount = () => {
+      const work = deferred<AccountSnapshot>();
+      calls.push(work);
+      return work.promise;
+    };
+    const store = makeStore(backend);
+    await signInThroughForm(store, 'ada@example.com');
+    const firstRequest = store.state.accountRequest;
+    await store.send({ type: 'logout' });
+    await until(() => store.state.auth?.login != null, 'fresh sign-in');
+    await signInThroughForm(store, 'ada@example.com');
+    expect(store.state.accountRequest).toBeGreaterThan(firstRequest);
+    // Public/queued result of the retired request (same subject, older epoch).
+    const stale: AccountData = { subjectId: 'sub-ada-1', email: 'stale@example.com', displayName: 'Stale', role: 'Member', metrics: [] };
+    await store.send({ type: 'accountLoaded', request: firstRequest, data: stale });
+    expect(store.state.accountData).toBeNull();
+    expect(store.state.accountLoading).toBe(true);
+    calls[1]!.resolve({ email: 'ada@example.com', emailVerified: true, hasPassword: true, mfaEnabled: false, providers: [], pendingEmail: null });
+    await until(() => store.state.accountData !== null, 'fresh account');
+    expect(store.state.accountData?.email).toBe('ada@example.com');
+  });
+
+
+  it('the dashboard is refused while logging out and always shows the current subject', async () => {
+    const backend = createControlledBackend();
+    backend.setDelayLogout(true);
+    const store = makeStore(backend);
+    await signInThroughForm(store, 'ada@example.com');
+    await until(() => store.state.accountData !== null, 'account');
+    await store.send({ type: 'logout' });
+    await until(() => store.state.auth?.session.status === 'loggingOut', 'logging out');
+    // Browser Forward to /dashboard while the former subject is still retained.
+    await store.send({ type: 'navigate', route: 'dashboard' });
+    expect(store.state.route).toBe('login');
+    expect(store.state.accountData).toBeNull();
+    backend.resolveDelayedLogout();
+    await until(() => store.state.auth?.session.status === 'anonymous', 'anonymous');
+
+    // Account state owned by another subject is replaced before the dashboard shows it.
+    const seeded = createTestStore({
+      initialState: {
+        ...createInitialAppState({
+          route: 'login',
+          initialData: { subjectId: 'sub-other', email: 'other@example.com', displayName: 'Other', role: 'Member', metrics: [] }
+        }),
+        auth: {
+          ...auth.initialState(),
+          session: {
+            status: 'authenticated',
+            subject: { kind: 'authenticated', id: 'sub-ada-1', attributes: { display_name: 'Ada Lovelace' } },
+            epoch: 1,
+            error: null,
+            expiresAt: null
+          }
+        }
+      },
+      reducer: composition.reducer,
+      execution: composition.execution,
+      dependencies: createControlledBackend()
+    });
+    seeded.exhaustivity = 'off';
+    await seeded.send({ type: 'navigate', route: 'dashboard' }, (state) => {
+      expect(state.route).toBe('dashboard');
+      expect(state.accountData).toBeNull();
+      expect(state.accountSubjectId).toBe('sub-ada-1');
+    });
+    await until(() => seeded.state.accountData !== null, 'current subject account');
+    expect(seeded.state.accountData?.subjectId).toBe('sub-ada-1');
+  });
+
+  // ---- r6: injected fetchActivity service (dependency superset composition) ----
+
+  it('the injected fetchActivity service supplies each subject its typed activity rows', async () => {
+    const backend = createControlledBackend();
+    const store = makeStore(backend);
+    await signInThroughForm(store, 'ada@example.com');
+    await until(() => store.state.accountData !== null, 'ada account');
+    expect(backend.counters.fetchActivityCalls).toBe(1);
+    expect(store.state.accountData?.metrics.map((row) => row.date)).toEqual([
+      '2026-09-20', '2026-09-21', '2026-09-22', '2026-09-23', '2026-09-24', '2026-09-25', '2026-09-26'
+    ]);
+    await store.send({ type: 'logout' });
+    await until(() => store.state.auth?.login != null && store.state.auth.session.status === 'anonymous', 'signed out');
+    await store.send(loginAction({ type: 'form', action: { type: 'fieldChanged', field: 'email', value: 'mfa@example.com' } }));
+    await store.send(loginAction({ type: 'form', action: { type: 'fieldChanged', field: 'password', value: 'ValidPassword123!' } }));
+    await store.send(loginAction({ type: 'form', action: { type: 'submitTriggered' } }));
+    await until(() => store.state.auth?.mfa != null, 'mfa challenge');
+    await store.send({ type: 'auth', action: { type: 'presented', action: { type: 'mfa', action: { type: 'presented', action: { type: 'form', action: { type: 'fieldChanged', field: 'code', value: '123456' } } } } } });
+    await store.send({ type: 'auth', action: { type: 'presented', action: { type: 'mfa', action: { type: 'presented', action: { type: 'form', action: { type: 'submitTriggered' } } } } } });
+    await until(() => store.state.accountData?.subjectId === 'sub-mfa-1', 'mfa account');
+    expect(backend.counters.fetchActivityCalls).toBe(2);
+    expect(store.state.accountData?.metrics).toEqual([
+      { date: '2026-09-24', logins: 2, service: 'Mobile App' },
+      { date: '2026-09-25', logins: 5, service: 'Web Dashboard' },
+      { date: '2026-09-26', logins: 1, service: 'Mobile App' }
+    ]);
+  });
+
+  it.each([true, false])('a delayed fetchActivity response is cancelled and rejected after logout (logout=%s negative control)', async (logout) => {
+    const backend = createControlledBackend({ delayActivity: true });
+    const store = makeStore(backend);
+    await signInThroughForm(store, 'ada@example.com');
+    expect(backend.counters.fetchActivityCalls).toBe(1);
+    expect(store.state.accountLoading).toBe(true);
+    const signal = backend.activitySignals[0];
+    expect(signal?.aborted).toBe(false);
+    if (logout) {
+      await store.send({ type: 'logout' });
+      // Owner-local cancellation reached the injected service's signal.
+      expect(signal?.aborted).toBe(true);
+    }
+    // The controlled service ignores abort and delivers its late result anyway.
+    backend.resolveDelayedActivity();
+    await flush();
+    await flush();
+    if (logout) {
+      expect(store.state.route).toBe('login');
+      expect(store.state.accountData).toBeNull();
+      expect(store.state.accountLoading).toBe(false);
+    } else {
+      expect(store.state.route).toBe('dashboard');
+      expect(store.state.accountData?.metrics).toHaveLength(7);
+    }
+  });
+
+  it('a superseded fetchActivity response is rejected after the same subject signs in again', async () => {
+    const backend = createControlledBackend({ delayActivity: true });
+    const store = makeStore(backend);
+    await signInThroughForm(store, 'ada@example.com');
+    await store.send({ type: 'logout' });
+    await until(() => store.state.auth?.session.status === 'anonymous', 'signed out');
+    // Sign in as the same subject again: a new request with a new epoch.
+    await signInThroughForm(store, 'ada@example.com');
+    expect(backend.counters.fetchActivityCalls).toBe(2);
+    expect(backend.activitySignals[0]?.aborted).toBe(true);
+    expect(backend.activitySignals[1]?.aborted).toBe(false);
+    const current = store.state.accountRequest;
+    // The first (retired) response arrives first: dropped.
+    backend.resolveDelayedActivity();
+    await flush();
+    await flush();
+    expect(store.state.accountData).toBeNull();
+    expect(store.state.accountLoading).toBe(true);
+    expect(store.state.accountRequest).toBe(current);
+    // The current response is accepted.
+    backend.resolveDelayedActivity();
+    await until(() => store.state.accountData !== null, 'current account');
+    expect(store.state.accountData?.metrics).toHaveLength(7);
+  });
+
+  it('a failed fetchActivity fails the whole account load without a partial view', async () => {
+    const backend = createControlledBackend();
+    backend.fetchActivity = async () => {
+      throw new Error('Activity service unavailable');
+    };
+    const store = makeStore(backend);
+    await signInThroughForm(store, 'ada@example.com');
+    await until(() => !store.state.accountLoading, 'load settled');
+    expect(backend.counters.fetchAccountCalls).toBe(1);
+    expect(store.state.accountError).toBe('Activity service unavailable');
+    expect(store.state.accountData).toBeNull();
+    expect(store.state.route).toBe('dashboard');
+  });
+
+  // ---- Sequential account → activity loading within the one owned effect ----
+
+  it('requests activity only after the account resolves, for that account’s subject', async () => {
+    const backend = createControlledBackend();
+    const account = deferred<AccountSnapshot>();
+    let accountSignal: AbortSignal | undefined;
+    backend.fetchAccount = (signal) => {
+      accountSignal = signal;
+      return account.promise;
+    };
+    const store = makeStore(backend);
+    await signInThroughForm(store, 'ada@example.com');
+    await flush();
+    expect(store.state.accountLoading).toBe(true);
+    expect(backend.counters.fetchActivityCalls).toBe(0);
+    account.resolve({ email: 'ada@example.com', emailVerified: true, hasPassword: true, mfaEnabled: false, providers: [], pendingEmail: null });
+    await until(() => store.state.accountData !== null, 'account with activity');
+    expect(backend.counters.fetchActivityCalls).toBe(1);
+    // The activity request carries the same owned signal as the account request.
+    expect(accountSignal).toBeDefined();
+    expect(backend.activitySignals[0]).toBe(accountSignal);
+    expect(backend.activitySignals[0]?.aborted).toBe(false);
+    expect(store.state.accountData?.metrics).toHaveLength(7);
+  });
+
+  it.each(['failed', 'retired'] as const)('a %s account load cannot obtain activity', async (outcome) => {
+    const backend = createControlledBackend();
+    const account = deferred<AccountSnapshot>();
+    let rejectAccount!: (reason: unknown) => void;
+    const pending = new Promise<AccountSnapshot>((resolve, reject) => {
+      rejectAccount = reject;
+      void account.promise.then(resolve);
+    });
+    // Ignores abort: only the owned effect decides whether activity follows.
+    backend.fetchAccount = () => pending;
+    const abortedAtCall: boolean[] = [];
+    const fetchActivity = backend.fetchActivity;
+    backend.fetchActivity = (subjectId, signal) => {
+      abortedAtCall.push(signal?.aborted === true);
+      return fetchActivity(subjectId, signal);
+    };
+    const store = makeStore(backend);
+    await signInThroughForm(store, 'ada@example.com');
+    if (outcome === 'failed') {
+      rejectAccount(new Error('Account service unavailable'));
+      await until(() => !store.state.accountLoading, 'load settled');
+      expect(store.state.accountError).toBe('Account service unavailable');
+    } else {
+      await store.send({ type: 'logout' });
+      account.resolve({ email: 'ada@example.com', emailVerified: true, hasPassword: true, mfaEnabled: false, providers: [], pendingEmail: null });
+      await flush();
+      await flush();
+      expect(store.state.route).toBe('login');
+      expect(store.state.accountLoading).toBe(false);
+    }
+    if (outcome === 'failed') {
+      // A failed account never requests activity.
+      expect(backend.counters.fetchActivityCalls).toBe(0);
+    } else {
+      // Retirement drops the effect's dispatches; any follow-up request is issued
+      // with the owned signal already aborted, which the service refuses.
+      expect(abortedAtCall.length).toBeLessThanOrEqual(1);
+      expect(abortedAtCall.every((aborted) => aborted)).toBe(true);
+    }
+    expect(store.state.accountData).toBeNull();
+  });
+});

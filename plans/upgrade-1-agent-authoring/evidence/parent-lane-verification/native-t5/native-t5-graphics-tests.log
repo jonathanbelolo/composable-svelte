@@ -1,0 +1,66 @@
+3:39:00 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics - using default configuration.
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics
+
+3:39:02 PM [vite-plugin-svelte] tests/graphics-managed-proof.test.svelte.ts:501:4 Avoid declaring classes below the top level scope
+https://svelte.dev/e/perf_avoid_nested_class
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at checkWebGLSupport (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/webgl-support.ts:43:15)
+    at createOverlay (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:53:23)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/WebGLOverlay.svelte:111:31
+    at untrack (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/internal/client/runtime.js:748:10)
+    at $effect (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/index-client.js:100:27)
+    at update_reaction (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/internal/client/runtime.js:297:16)
+    at update_effect (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/internal/client/runtime.js:477:18) undefined
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at checkWebGLSupport (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/webgl-support.ts:48:17)
+    at createOverlay (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:53:23)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/WebGLOverlay.svelte:111:31
+    at untrack (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/internal/client/runtime.js:748:10)
+    at $effect (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/index-client.js:100:27)
+    at update_reaction (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/internal/client/runtime.js:297:16)
+    at update_effect (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/internal/client/runtime.js:477:18) undefined
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at checkWebGLSupport (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/webgl-support.ts:48:47)
+    at createOverlay (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:53:23)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/WebGLOverlay.svelte:111:31
+    at untrack (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/internal/client/runtime.js:748:10)
+    at $effect (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/index-client.js:100:27)
+    at update_reaction (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/internal/client/runtime.js:297:16)
+    at update_effect (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/internal/client/runtime.js:477:18) undefined
+stderr | tests/graphics-managed-proof.test.svelte.ts > Batch D3 Graphics Managed Proof > binds declarative graphics components to one genuine managed view
+Failed to create overlay: WebGL not available (may be disabled or blocked)
+
+stderr | tests/graphics-managed-proof.test.svelte.ts > Batch D3 Graphics Managed Proof > destroys adapter promptly on retirement before DOM unmount with exact count = 1
+[graphics] sceneId "initial-scene" is already in use; scenes with this id under the same effect owner may cancel each other's animation frame loop
+
+stderr | tests/graphics-managed-proof.test.svelte.ts > Batch D3 Graphics Managed Proof > replaces same-ID feature with fresh adapter, disposing predecessor cleanly
+[graphics] sceneId "initial-scene" is already in use; scenes with this id under the same effect owner may cancel each other's animation frame loop
+
+stderr | tests/graphics-managed-proof.test.svelte.ts > Batch D3 Graphics Managed Proof > mounts two sibling scenes; retiring one disposes only its own adapter
+[graphics] sceneId "initial-scene" is already in use; scenes with this id under the same effect owner may cancel each other's animation frame loop
+
+stderr | tests/graphics-managed-proof.test.svelte.ts > Batch D3 Graphics Managed Proof > cancels delivery and disposes late engine when retirement occurs during async initialize
+[graphics] sceneId "initial-scene" is already in use; scenes with this id under the same effect owner may cancel each other's animation frame loop
+
+stderr | tests/graphics-managed-proof.test.svelte.ts > Batch D3 Graphics Managed Proof > releases a genuine managed overlay before its host unmounts
+[graphics] sceneId "initial-scene" is already in use; scenes with this id under the same effect owner may cancel each other's animation frame loop
+
+ ✓ tests/graphics-managed-proof.test.svelte.ts (14 tests) 1297ms
+     ✓ binds declarative graphics components to one genuine managed view  389ms
+ ✓ tests/composition.test.ts (6 tests) 33ms
+
+ Test Files  2 passed (2)
+      Tests  20 passed (20)
+   Start at  15:39:00
+   Duration  30.21s (transform 10.97s, setup 0ms, collect 25.52s, tests 1.33s, environment 2.42s, prepare 57ms)
+

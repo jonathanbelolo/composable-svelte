@@ -80,7 +80,7 @@
 	{placeholder}
 	{disabled}
 	{maxlength}
-	inputmode="numeric"
+	inputmode={oneTimeCode ? 'numeric' : 'text'}
 	autocomplete={oneTimeCode ? 'one-time-code' : 'off'}
 	autocapitalize="off"
 	autocorrect="off"

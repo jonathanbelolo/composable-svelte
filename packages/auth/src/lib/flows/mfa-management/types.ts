@@ -69,6 +69,16 @@ export interface MfaManagementState {
 	 * on another screen can recover.
 	 */
 	operation: MfaOperation | null;
+	/**
+	 * The operation whose result the last reduction accepted, or `null`.
+	 *
+	 * A one-reduction output: set by the arm that accepts a disable or
+	 * regenerate success or failure, and cleared by every other action —
+	 * including a refused result, such as one for an operation not in flight or
+	 * a replay of the same action. `createAuthFeature` reports `mfaOutcome` from
+	 * it, so an outcome follows only a transition that actually happened.
+	 */
+	settled: MfaOperation | null;
 }
 
 export type MfaManagementAction =

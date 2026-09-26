@@ -23,7 +23,7 @@
 -->
 <script lang="ts">
 	import type { Store } from '@composable-svelte/core';
-	import type { Snippet } from 'svelte';
+	import { untrack, type Snippet } from 'svelte';
 	import type { AuthError } from '../errors/types.js';
 	import type { SessionAction, SessionState } from '../session/types.js';
 
@@ -107,9 +107,16 @@
 	 */
 	const isAnonymous = $derived(state.status === 'anonymous');
 
+	let reportedAnonymous = false;
+
 	$effect(() => {
 		if (isAnonymous) {
-			onAnonymous?.();
+			if (!reportedAnonymous) {
+				reportedAnonymous = true;
+				untrack(() => onAnonymous?.());
+			}
+		} else {
+			reportedAnonymous = false;
 		}
 	});
 </script>

@@ -326,7 +326,7 @@ The store passes its `AbortSignal` as the executor's second argument. Hand it to
 
 ```typescript
 Effect.cancellable('fetch', async (dispatch, signal) => {
-  const response = await fetch('/api/data', { signal });
+  const response = await fetch('/api/data', { signal: signal ?? null });
   const data = await response.json();
   dispatch({ type: 'dataLoaded', data });
 });
@@ -336,12 +336,24 @@ Cooperating is optional. Dispatches from a cancelled effect are dropped whether
 or not the executor observes the signal, so cancellation is correct either way —
 using the signal additionally stops the work.
 
-Every executor receives a signal. For `Effect.cancellable` it is the effect's
-own, aborted by `Effect.cancel(id)`, by a newer effect under the same id, or by
-`destroy()`. For `run`, `debounced`, `throttled` and `afterDelay` it is the
-store's lifetime signal, aborted by `destroy()` only — none of those can be
-cancelled individually, but an executor that awaits something can still stop
-when the store goes away. `Effect.map` forwards it.
+Every executor started by Store or TestStore receives a signal. The public
+executor signature nevertheless keeps `signal?: AbortSignal` for compatibility
+with direct executor invocation, where a caller may omit it. A callback may ignore
+the second parameter without requiring it to be optional. For strict TypeScript,
+use `signal ?? null` in fetch options and `signal?.aborted` when checking it; narrow
+the value first if an injected service requires an `AbortSignal`.
+
+For `Effect.cancellable`, it is the effect's own signal, aborted by
+`Effect.cancel(id)`, a newer effect under the same id, cancellation of an owning
+group, or `destroy()`. In legacy execution, a `run`, `debounced`, `throttled` or
+`afterDelay` effect with a group receives its own signal, aborted with that group
+or by `destroy()`. Without a group, it receives the store's lifetime signal,
+aborted by `destroy()` only.
+
+Managed execution gives each executor its own signal, including ungrouped work.
+Live work is aborted when its owner or group is retired or the store is destroyed;
+normal completion retires ownership without aborting the signal. `Effect.map`
+forwards the signal.
 
 **When to use**:
 - Search-as-you-type

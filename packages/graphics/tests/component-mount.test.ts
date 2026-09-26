@@ -42,8 +42,7 @@ const makeStore = () =>
 let cleanup: Array<() => void> = [];
 
 afterEach(() => {
-  cleanup.forEach((fn) => fn());
-  cleanup = [];
+  while (cleanup.length > 0) cleanup.pop()!();
 });
 
 function mountComponent(Component: any, props: Record<string, unknown>) {
@@ -59,31 +58,36 @@ function mountComponent(Component: any, props: Record<string, unknown>) {
 
 describe('scene components mount cleanly', () => {
   it('Camera mounts with inline Vector3 props', async () => {
-    const target = mountComponent(Camera, {
-      store: makeStore(),
+    const store = makeStore();
+    cleanup.push(() => store.destroy());
+    mountComponent(Camera, {
+      store,
       position: [0, 5, 10],
       lookAt: [0, 0, 0],
       fov: 60
     });
 
     await settle();
-    expect(target).toBeTruthy();
+    expect(store.state.camera).toMatchObject({ position: [0, 5, 10], lookAt: [0, 0, 0], fov: 60 });
   });
 
   it('Mesh mounts with inline nested geometry and material', async () => {
     // geometry and material are nested object literals — fresh identities per
     // render, so the comparison has to recurse into them, not just compare keys.
-    const target = mountComponent(Mesh, {
-      store: makeStore(),
+    const store = makeStore();
+    cleanup.push(() => store.destroy());
+    mountComponent(Mesh, {
+      store,
       id: 'mesh-1',
-      geometry: { type: 'box', width: 1, height: 1, depth: 1 },
-      material: { type: 'standard', color: '#ff0000' },
+      geometry: { type: 'box', size: 1 },
+      material: { color: '#ff0000' },
       position: [0, 0, 0],
       rotation: [0, 0, 0]
     });
 
     await settle();
-    expect(target).toBeTruthy();
+    expect(store.state.meshes).toHaveLength(1);
+    expect(store.state.meshes[0]).toMatchObject({ id: 'mesh-1', geometry: { type: 'box', size: 1 }, material: { color: '#ff0000' }, position: [0, 0, 0], rotation: [0, 0, 0] });
   });
 });
 
@@ -126,7 +130,9 @@ describe('reducer cases are idempotent by value', () => {
       // size — which nothing could see while these tests were untyped.
       geometry: { type: 'box' as const, size: 1 },
       material: { color: '#ff0000' },
-      position: [0, 0, 0] as [number, number, number]
+      position: [0, 0, 0] as [number, number, number],
+      rotation: [0, 0, 0] as [number, number, number],
+      scale: [1, 1, 1] as [number, number, number]
     };
 
     const [withMesh] = graphicsReducer(
@@ -144,7 +150,9 @@ describe('reducer cases are idempotent by value', () => {
         updates: {
           geometry: { type: 'box', size: 1 },
           material: { color: '#ff0000' },
-          position: [0, 0, 0]
+          position: [0, 0, 0],
+          rotation: [0, 0, 0],
+          scale: [1, 1, 1]
         }
       },
       {} as never
@@ -163,7 +171,9 @@ describe('reducer cases are idempotent by value', () => {
       // size — which nothing could see while these tests were untyped.
       geometry: { type: 'box' as const, size: 1 },
       material: { color: '#ff0000' },
-      position: [0, 0, 0] as [number, number, number]
+      position: [0, 0, 0] as [number, number, number],
+      rotation: [0, 0, 0] as [number, number, number],
+      scale: [1, 1, 1] as [number, number, number]
     };
 
     const [withMesh] = graphicsReducer(

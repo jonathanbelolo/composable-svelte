@@ -37,7 +37,7 @@ describe('Combobox', () => {
 				expect(state.dropdown.status).toBe('opening');
 			});
 
-			vi.advanceTimersByTime(150);
+			await store.advanceTime(150);
 
 			await store.receive({ type: 'openingCompleted' }, (state) => {
 				expect(state.dropdown.status).toBe('open');
@@ -57,7 +57,7 @@ describe('Combobox', () => {
 				expect(state.dropdown.status).toBe('closing');
 			});
 
-			vi.advanceTimersByTime(100);
+			await store.advanceTime(100);
 
 			await store.receive({ type: 'closingCompleted' }, (state) => {
 				expect(state.dropdown.status).toBe('idle');
@@ -75,7 +75,7 @@ describe('Combobox', () => {
 				expect(state.dropdown.status).toBe('opening');
 			});
 
-			vi.advanceTimersByTime(150);
+			await store.advanceTime(150);
 
 			await store.receive({ type: 'openingCompleted' }, (state) => {
 				expect(state.dropdown.status).toBe('open');
@@ -85,7 +85,7 @@ describe('Combobox', () => {
 				expect(state.dropdown.status).toBe('closing');
 			});
 
-			vi.advanceTimersByTime(100);
+			await store.advanceTime(100);
 
 			await store.receive({ type: 'closingCompleted' }, (state) => {
 				expect(state.dropdown.status).toBe('idle');
@@ -106,7 +106,7 @@ describe('Combobox', () => {
 				expect(state.dropdown.status).toBe('closing');
 			});
 
-			vi.advanceTimersByTime(100);
+			await store.advanceTime(100);
 
 			await store.receive({ type: 'closingCompleted' }, (state) => {
 				expect(state.dropdown.status).toBe('idle');
@@ -133,7 +133,7 @@ describe('Combobox', () => {
 				expect(state.dropdown.status).toBe('opening');
 			});
 
-			vi.advanceTimersByTime(150);
+			await store.advanceTime(150);
 
 			await store.receive({ type: 'openingCompleted' }, (state) => {
 				expect(state.dropdown.status).toBe('open');
@@ -193,7 +193,7 @@ describe('Combobox', () => {
 				expect(state.dropdown.status).toBe('opening');
 			});
 
-			vi.advanceTimersByTime(150);
+			await store.advanceTime(150);
 
 			await store.receive({ type: 'openingCompleted' }, (state) => {
 				expect(state.dropdown.status).toBe('open');
@@ -235,6 +235,16 @@ describe('Combobox', () => {
 
 			// Should NOT call loadOptions immediately (debounced)
 			expect(loadOptions).not.toHaveBeenCalled();
+			await store.receive({ type: 'opened' });
+			await store.advanceTime(300);
+			await store.receive({ type: 'openingCompleted' });
+			await store.receive({ type: 'searchDebounced', query: 'test' });
+			await store.receive({ type: 'loadingCompleted' }, state => {
+				expect(state.isLoading).toBe(false);
+				expect(state.filteredOptions).toEqual([{ value: '1', label: 'Result: test' }]);
+			});
+			expect(loadOptions).toHaveBeenCalledExactlyOnceWith('test');
+			await store.finish();
 		});
 
 		it('should set loading state to true', async () => {
@@ -288,9 +298,12 @@ describe('Combobox', () => {
 		});
 
 		it('should debounce async search', async () => {
-			const loadOptions = vi.fn(async (query) => [
-				{ value: '1', label: `Result: ${query}` }
-			]);
+			let complete!: () => void;
+			const pending = new Promise<void>(resolve => { complete = resolve; });
+			const loadOptions = vi.fn(async (query) => {
+				await pending;
+				return [{ value: '1', label: `Result: ${query}` }];
+			});
 
 			// Explicit `<string>`: `createInitialComboboxState([], null, 300)` gets no
 			// options to infer from, so `T` lands on `null` and the reducer — which
@@ -313,8 +326,11 @@ describe('Combobox', () => {
 			await store.receive({ type: 'openingCompleted' });
 
 			// Now should receive searchDebounced and trigger load
-			await store.receive({ type: 'searchDebounced', query: 'test' });
-			await store.receive({ type: 'loadingStarted' });
+			await store.receive({ type: 'searchDebounced', query: 'test' }, state => {
+				expect(state.isLoading).toBe(true);
+			});
+
+			complete();
 
 			// Wait for async load to complete
 			await store.receive({ type: 'loadingCompleted' }, (state) => {
@@ -328,9 +344,12 @@ describe('Combobox', () => {
 		});
 
 		it('should cancel previous debounced search', async () => {
-			const loadOptions = vi.fn(async (query) => [
-				{ value: '1', label: `Result: ${query}` }
-			]);
+			let complete!: () => void;
+			const pending = new Promise<void>(resolve => { complete = resolve; });
+			const loadOptions = vi.fn(async (query) => {
+				await pending;
+				return [{ value: '1', label: `Result: ${query}` }];
+			});
 
 			// Explicit `<string>`: `createInitialComboboxState([], null, 300)` gets no
 			// options to infer from, so `T` lands on `null` and the reducer — which
@@ -352,7 +371,7 @@ describe('Combobox', () => {
 
 			// Second search before first debounce completes
 			await store.send({ type: 'searchChanged', query: 'test2' });
-			await store.advanceTime(300);
+			await store.advanceTime(150);
 
 			// The combobox debounces with afterDelay and a staleness guard, not
 			// Effect.debounced: the first timer still fires, and the reducer
@@ -364,9 +383,13 @@ describe('Combobox', () => {
 				expect(state.isLoading).toBe(false);
 			});
 
+			await store.advanceTime(150);
+
 			// Should receive searchDebounced for second query
-			await store.receive({ type: 'searchDebounced', query: 'test2' });
-			await store.receive({ type: 'loadingStarted' });
+			await store.receive({ type: 'searchDebounced', query: 'test2' }, state => {
+				expect(state.isLoading).toBe(true);
+			});
+			complete();
 			await store.receive({ type: 'loadingCompleted' });
 
 			// Should only call loadOptions with second query
@@ -380,7 +403,7 @@ describe('Combobox', () => {
 			const onChange = vi.fn();
 
 			const store = new TestStore({
-				initialState: createInitialComboboxState(testOptions),
+				initialState: { ...createInitialComboboxState(testOptions), dropdown: { status: 'open' as const } },
 				reducer: comboboxReducer,
 				dependencies: { onChange }
 			});
@@ -394,7 +417,7 @@ describe('Combobox', () => {
 				expect(state.dropdown.status).toBe('closing');
 			});
 
-			vi.advanceTimersByTime(100);
+			await store.advanceTime(100);
 
 			await store.receive({ type: 'closingCompleted' }, (state) => {
 				expect(state.dropdown.status).toBe('idle');
@@ -421,7 +444,7 @@ describe('Combobox', () => {
 				expect(state.dropdown.status).toBe('closing');
 			});
 
-			vi.advanceTimersByTime(100);
+			await store.advanceTime(100);
 
 			await store.receive({ type: 'closingCompleted' }, (state) => {
 				expect(state.dropdown.status).toBe('idle');
@@ -583,7 +606,7 @@ describe('Combobox', () => {
 				expect(state.dropdown.status).toBe('closing');
 			});
 
-			vi.advanceTimersByTime(100);
+			await store.advanceTime(100);
 
 			await store.receive({ type: 'closingCompleted' }, (state) => {
 				expect(state.dropdown.status).toBe('idle');
@@ -625,7 +648,7 @@ describe('Combobox', () => {
 				expect(state.dropdown.status).toBe('opening');
 			});
 
-			vi.advanceTimersByTime(150);
+			await store.advanceTime(150);
 
 			await store.receive({ type: 'openingCompleted' }, (state) => {
 				expect(state.dropdown.status).toBe('open');
@@ -646,7 +669,7 @@ describe('Combobox', () => {
 				expect(state.dropdown.status).toBe('opening');
 			});
 
-			vi.advanceTimersByTime(150);
+			await store.advanceTime(150);
 
 			await store.receive({ type: 'openingCompleted' }, (state) => {
 				expect(state.dropdown.status).toBe('open');
@@ -666,7 +689,7 @@ describe('Combobox', () => {
 				expect(state.filteredOptions).toHaveLength(0);
 			});
 
-			vi.advanceTimersByTime(150);
+			await store.advanceTime(150);
 
 			await store.receive({ type: 'openingCompleted' }, (state) => {
 				expect(state.dropdown.status).toBe('open');

@@ -13,8 +13,10 @@ type TestAction =
   | { type: 'loadData' }
   | { type: 'dataLoaded'; data: string };
 
+const server = typeof window === 'undefined' || typeof document === 'undefined';
+
 describe('Effect deferral configuration', () => {
-  describe('in browser environment (default behavior)', () => {
+  describe.runIf(!server)('in browser environment (default behavior)', () => {
     it('executes effects normally by default', async () => {
       let effectRan = false;
 
@@ -95,51 +97,27 @@ describe('Effect deferral configuration', () => {
   });
 
   describe('SSR configuration', () => {
-    it('accepts ssr.deferEffects config', () => {
-      const reducer: Reducer<TestState, TestAction> = (state) => [state, Effect.none()];
-
-      // Should not throw
-      const store = createStore({
-        initialState: { count: 0, data: null },
-        reducer,
-        ssr: {
-          deferEffects: true
-        }
-      });
-
-      expect(store.state).toEqual({ count: 0, data: null });
-    });
-
-    it('accepts ssr.deferEffects: false', () => {
-      const reducer: Reducer<TestState, TestAction> = (state) => [state, Effect.none()];
-
-      // Should not throw
-      const store = createStore({
-        initialState: { count: 0, data: null },
-        reducer,
-        ssr: {
-          deferEffects: false
-        }
-      });
-
-      expect(store.state).toEqual({ count: 0, data: null });
-    });
-
-    it('works without ssr config (undefined)', () => {
-      const reducer: Reducer<TestState, TestAction> = (state) => [state, Effect.none()];
-
-      // Should not throw
-      const store = createStore({
-        initialState: { count: 0, data: null },
-        reducer
-        // No ssr config
-      });
-
-      expect(store.state).toEqual({ count: 0, data: null });
+    it.each([true, false, undefined])('executes an actual effect according to deferEffects=%s and environment', deferEffects => {
+      let executions = 0;
+      const reducer: Reducer<TestState, TestAction> = (state, action) => {
+        if (action.type === 'loadData') return [{ ...state, count: state.count + 1 }, Effect.run(dispatch => {
+          executions++;
+          dispatch({ type: 'dataLoaded', data: 'executed' });
+        })];
+        if (action.type === 'dataLoaded') return [{ ...state, data: action.data }, Effect.none()];
+        return [state, Effect.none()];
+      };
+      const store = createStore({ initialState: { count: 0, data: null }, reducer, ...(deferEffects === undefined ? {} : { ssr: { deferEffects } }) });
+      store.dispatch({ type: 'loadData' });
+      const shouldExecute = !server || deferEffects === false;
+      expect(store.state.count).toBe(1);
+      expect(executions).toBe(shouldExecute ? 1 : 0);
+      expect(store.state.data).toBe(shouldExecute ? 'executed' : null);
+      store.destroy();
     });
   });
 
-  describe('effect execution behavior', () => {
+  describe.runIf(!server)('effect execution behavior', () => {
     it('Effect.batch works correctly', async () => {
       let effect1Ran = false;
       let effect2Ran = false;

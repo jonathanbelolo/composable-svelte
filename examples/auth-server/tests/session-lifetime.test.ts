@@ -79,13 +79,14 @@ describe('session lifetime', () => {
 	it('does not touch authenticatedAt while sliding — the pin', async () => {
 		await signInByLink(SEED.ada.email);
 		expect(live().authenticatedAt, 'a link sign-in proves no credential').toBe(0);
+		const before = live().idleExpiresAt;
 
 		clock.advance(60_000);
 		await h.deps.fetchAccount();
 
 		// The positive control: the request really did slide the window, so a
 		// green assertion below cannot mean "nothing happened at all".
-		expect(live().idleExpiresAt).toBeGreaterThan(0);
+		expect(live().idleExpiresAt).toBe(before + 60_000);
 		expect(live().authenticatedAt, 'sliding the session opened sudo mode').toBe(0);
 	});
 

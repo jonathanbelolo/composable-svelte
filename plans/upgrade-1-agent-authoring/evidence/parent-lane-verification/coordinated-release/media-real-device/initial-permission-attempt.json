@@ -1,0 +1,12 @@
+{
+  "source": "CUA-visible results-json in Chrome tab 2093487565",
+  "executedAt": "2026-09-26T12:11:04.480Z",
+  "harnessOverall": "FAIL",
+  "interpretation": "Microphone request did not resolve within the bounded 15-second permission wait; no hardware capture occurred. This is not a pass or evidence of recorder behavior.",
+  "cases": ["standalone-push-to-talk", "standalone-conversation", "managed-parent-conversation"],
+  "eachCase": {"gumCalls":1,"gumSuccesses":0,"gumErrors":0,"tracksAcquired":0,"recordersCreated":0,"recorderStarts":0,"dataavailable":0,"onstop":0,"transcribeCalls":0,"networkAttempts":0},
+  "suiteSafety": {"deviceActivityOutsideCase":0,"lateGrantTracksStopped":0,"networkAttemptsOutsideCase":0,"finalForcedStops":0,"eventsAfterCaseClose":0},
+  "environment": {"chrome":"152.0.0.0","nativeGetUserMedia":true,"nativeMediaRecorder":true,"nativeTrackStop":true,"webdriver":false},
+  "coreSha256":"30e044e139e831033e06fdf626db979875efa2f7c29d72dece33a21db112d18b",
+  "mediaSha256":"c0bfa6528fb6cd3dc68f2769237d3053514f76f79bc5197316b230eb07b78298"
+}

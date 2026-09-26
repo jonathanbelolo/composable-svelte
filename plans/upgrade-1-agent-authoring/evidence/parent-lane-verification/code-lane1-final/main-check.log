@@ -1,0 +1,81 @@
+
+> @composable-svelte/code@0.4.1 check /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code
+> svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings
+
+Loading svelte-check in workspace: /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code
+Getting Svelte diagnostics...
+
+/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code/tests/proof-components/code-editor-proof-reducer.ts:22:14
+Error: Type '(state: CodeEditorProofState, action: CodeEditorProofAction, deps: CodeEditorDependencies) => [...] | [...] | [...]' is not assignable to type 'Reducer<CodeEditorProofState, CodeEditorProofAction, CodeEditorDependencies>'.
+  Type '[CodeEditorProofState, { readonly origin?: Readonly<{ id: number; [ownerBrand]: true; }> | undefined; } & { readonly _tag: "None"; }] | [...] | [...]' is not assignable to type 'readonly [CodeEditorProofState, Effect<CodeEditorProofAction>]'.
+    Type '[{ commandQueue: readonly CommandQueueItem[]; nextCommandId: number; acknowledgedId: number; unattachedPolicy: "buffer" | "drop"; maxQueueCapacity: number | undefined; ... 23 more ...; formatError: string | null; }, any]' is not assignable to type 'readonly [CodeEditorProofState, Effect<CodeEditorProofAction>]'.
+      Type at position 0 in source is not compatible with type at position 0 in target.
+        The types of 'maxQueueCapacity' are incompatible between these types.
+          Type 'number | undefined' is not assignable to type 'number'.
+            Type 'undefined' is not assignable to type 'number'. 
+
+export const codeEditorProofReducer: Reducer<
+	CodeEditorProofState,
+
+/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code/tests/proof-components/ProofCodeEditor.svelte:4:16
+Error: Module '"@composable-svelte/core"' has no exported member 'ChildView'. (ts)
+	import type { EditorView } from 'codemirror';
+	import type { ChildView, Store } from '@composable-svelte/core';
+	import type {
+
+/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code/tests/proof-components/ProofCodeEditor.svelte:42:36
+Error: Parameter 'item' implicitly has an 'any' type. (ts)
+
+		const unexecuted = queue.filter((item) => item.id > lastExecutedId);
+		if (unexecuted.length === 0) return;
+
+/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code/tests/proof-components/ProofCodeEditor.svelte:70:3
+Error: Expected 3 arguments, but got 2. (ts)
+
+		createEditorView(editorElement, {
+			initialValue: initial.value,
+
+/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code/tests/proof-components/ProofCodeEditor.svelte:79:20
+Error: Parameter 'val' implicitly has an 'any' type. (ts)
+			enableAutocomplete: initial.enableAutocomplete,
+			onValueChange: (val, cursor) => {
+				codemirrorValue = val;
+
+/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code/tests/proof-components/ProofCodeEditor.svelte:79:25
+Error: Parameter 'cursor' implicitly has an 'any' type. (ts)
+			enableAutocomplete: initial.enableAutocomplete,
+			onValueChange: (val, cursor) => {
+				codemirrorValue = val;
+
+/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code/tests/proof-components/ProofCodeEditor.svelte:83:20
+Error: Parameter 'focused' implicitly has an 'any' type. (ts)
+			},
+			onFocusChange: (focused) => {
+				store.dispatch({ type: focused ? 'focused' : 'blurred' });
+
+/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code/tests/proof-components/ProofCodeEditor.svelte:86:22
+Error: Parameter 'canUndo' implicitly has an 'any' type. (ts)
+			},
+			onHistoryChange: (canUndo, canRedo) => {
+				store.dispatch({ type: 'historyChanged', canUndo, canRedo });
+
+/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code/tests/proof-components/ProofCodeEditor.svelte:86:31
+Error: Parameter 'canRedo' implicitly has an 'any' type. (ts)
+			},
+			onHistoryChange: (canUndo, canRedo) => {
+				store.dispatch({ type: 'historyChanged', canUndo, canRedo });
+
+/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code/tests/proof-components/ProofCodeEditor.svelte:101:52
+Error: Parameter 'item' implicitly has an 'any' type. (ts)
+				if (curState?.commandQueue && curState.commandQueue.length > 0) {
+					const pending = curState.commandQueue.filter((item) => item.id > lastExecutedId);
+					if (pending.length > 0) {
+
+/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code/tests/code-editor-proof.test.ts:172:10
+Error: Object is possibly 'undefined'. 
+		expect(store.state.commandQueue).toHaveLength(1);
+		expect(store.state.commandQueue[0].command).toEqual({ type: 'insertText', text: 'DETACHED_' });
+
+====================================
+svelte-check found 11 errors and 0 warnings in 3 files
+ ELIFECYCLE  Command failed with exit code 1.

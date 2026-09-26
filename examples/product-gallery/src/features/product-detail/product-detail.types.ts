@@ -14,16 +14,19 @@ export interface ProductDetailState {
   presentation: PresentationState<ProductDetailDestination>;
 }
 
+export interface InfoState { productId: string }
+export type InfoAction =
+  | { type: 'closeButtonTapped' }
+  | { type: 'cancelButtonTapped' }
+  | { type: 'presentationCompleted' }
+  | { type: 'dismissalCompleted' };
+
 export type ProductDetailDestination =
   | { type: 'addToCart'; state: AddToCartState }
   | { type: 'share'; state: ShareState }
   | { type: 'quickView'; state: QuickViewState }
   | { type: 'deleteAlert'; state: DeleteAlertState }
-  | { type: 'info'; state: { productId: string } };
-
-export type PresentationEvent =
-  | { type: 'presentationCompleted' }
-  | { type: 'dismissalCompleted' };
+  | { type: 'info'; state: InfoState };
 
 export type ProductDetailAction =
   | { type: 'addToCartButtonTapped' }
@@ -31,14 +34,16 @@ export type ProductDetailAction =
   | { type: 'quickViewButtonTapped' }
   | { type: 'deleteButtonTapped' }
   | { type: 'infoButtonTapped' }
-  | { type: 'destination'; action: PresentationAction<ProductDetailDestinationAction> }
-  | { type: 'presentation'; event: PresentationEvent };
+  | { type: 'rootPresentationCompleted' }
+  | { type: 'rootDismissalCompleted' }
+  | { type: 'destination'; action: PresentationAction<ProductDetailDestinationAction> };
 
 export type ProductDetailDestinationAction =
   | { type: 'addToCart'; action: AddToCartAction }
   | { type: 'share'; action: ShareAction }
   | { type: 'quickView'; action: QuickViewAction }
-  | { type: 'deleteAlert'; action: DeleteAlertAction };
+  | { type: 'deleteAlert'; action: DeleteAlertAction }
+  | { type: 'info'; action: InfoAction };
 
 // ============================================================================
 // Factory Functions
@@ -51,3 +56,5 @@ export function createProductDetailState(productId: string): ProductDetailState 
     presentation: { status: 'idle' }
   };
 }
+
+export function createInfoState(productId: string): InfoState { return { productId }; }

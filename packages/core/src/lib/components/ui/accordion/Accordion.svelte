@@ -4,6 +4,7 @@
 	import type { AccordionState, AccordionAction } from './accordion.types.js';
 
 	const ACCORDION_CONTEXT_KEY = Symbol('accordion');
+	const ACCORDION_ACTIVE_CONTEXT_KEY = Symbol('accordion-active');
 
 	export function setAccordionContext(store: Store<AccordionState, AccordionAction>) {
 		setContext(ACCORDION_CONTEXT_KEY, store);
@@ -16,14 +17,22 @@
 		}
 		return store;
 	}
+
+	export function isAccordionActive(): () => boolean {
+		return getContext<() => boolean>(ACCORDION_ACTIVE_CONTEXT_KEY) ?? (() => true);
+	}
+
 </script>
 
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { onDestroy, untrack, type Snippet } from 'svelte';
 	import { createStore } from '../../../store.svelte.js';
 	import { accordionReducer } from './accordion.reducer.js';
 	import { createInitialAccordionState } from './accordion.types.js';
-	import type { AccordionItem } from './accordion.types.js';
+	import type { AccordionItem as AccordionItemType } from './accordion.types.js';
+	import AccordionItem from './AccordionItem.svelte';
+	import AccordionTrigger from './AccordionTrigger.svelte';
+	import AccordionContent from './AccordionContent.svelte';
 	import { cn } from '../../../utils.js';
 
 	/**
@@ -45,7 +54,7 @@
 		/**
 		 * Accordion items (optional - use this for declarative mode or omit to use composition with AccordionItem children).
 		 */
-		items?: AccordionItem[] | undefined;
+		items?: AccordionItemType[] | undefined;
 
 		/**
 		 * Initially expanded item IDs.
@@ -94,6 +103,9 @@
 		children
 	}: AccordionProps = $props();
 
+	let active = true;
+	setContext(ACCORDION_ACTIVE_CONTEXT_KEY, () => active);
+
 	// Create accordion store with reducer
 	const store = createStore({
 		initialState: createInitialAccordionState(items || [], initialExpandedIds, allowMultiple, collapsible),
@@ -119,11 +131,26 @@
 	// Only track items prop, not store.state (to avoid re-running on item registration)
 	$effect(() => {
 		if (items) {
-			store.dispatch({ type: 'itemsChanged', items });
+			const nextItems = items;
+			untrack(() => store.dispatch({ type: 'itemsChanged', items: nextItems }));
 		}
+	});
+
+	onDestroy(() => {
+		active = false;
+		store.destroy();
 	});
 </script>
 
 <div class={cn('space-y-2', className)}>
-	{@render children?.()}
+	{#if children}
+		{@render children()}
+	{:else if items}
+		{#each items as item (item.id)}
+			<AccordionItem id={item.id} disabled={item.disabled}>
+				<AccordionTrigger>{item.title}</AccordionTrigger>
+				<AccordionContent>{item.content}</AccordionContent>
+			</AccordionItem>
+		{/each}
+	{/if}
 </div>

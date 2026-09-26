@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { animate } from 'motion';
+	import { untrack } from 'svelte';
 	import type { Store } from '../../types.js';
 	import type { ImageGalleryState, ImageGalleryAction } from './image-gallery.types.js';
 	import { Spinner } from '../ui/spinner/index.js';
@@ -166,65 +167,35 @@
 		store.dispatch({ type: 'touchEnd' });
 	}
 
-	// Lightbox open/close animations
+	// Each presentation object owns one playback. Unrelated image state must not
+	// restart it; cleanup retires completions even when the next owner has the same phase.
+	const presentation = $derived(storeState.lightbox.presentation);
+	const reducedMotion = $derived(storeState.prefersReducedMotion);
 	$effect(() => {
-		if (!lightboxElement) return;
-
-		if (storeState.lightbox.presentation.status === 'presenting') {
-			if (storeState.prefersReducedMotion) {
-				// Skip animation
-				store.dispatch({
-					type: 'presentation',
-					event: { type: 'presentationCompleted' }
-				});
-			} else {
-				// Animate in
-				animate(
-					lightboxElement,
-					{
-						opacity: [0, 1],
-						scale: [0.95, 1]
-					},
-					{
-						duration: 0.3,
-						ease: 'easeOut'
-					}
-				).finished.then(() => {
-					store.dispatch({
-						type: 'presentation',
-						event: { type: 'presentationCompleted' }
-					});
-				});
-			}
+		const element = lightboxElement;
+		const owner = presentation;
+		const reduced = reducedMotion;
+		if (!element || (owner.status !== 'presenting' && owner.status !== 'dismissing')) return;
+		let active = true;
+		const opening = owner.status === 'presenting';
+		const complete = () => {
+			if (!active || store.state.lightbox.presentation !== owner) return;
+			store.dispatch({type:'presentation',event:{type:opening ? 'presentationCompleted' : 'dismissalCompleted'}});
+		};
+		if (reduced) {
+			element.style.opacity = opening ? '1' : '0';
+			element.style.transform = opening ? 'scale(1)' : 'scale(0.95)';
+			untrack(complete);
+			return () => { active = false; };
 		}
-
-		if (storeState.lightbox.presentation.status === 'dismissing') {
-			if (storeState.prefersReducedMotion) {
-				// Skip animation
-				store.dispatch({
-					type: 'presentation',
-					event: { type: 'dismissalCompleted' }
-				});
-			} else {
-				// Animate out
-				animate(
-					lightboxElement,
-					{
-						opacity: [1, 0],
-						scale: [1, 0.95]
-					},
-					{
-						duration: 0.3,
-						ease: 'easeIn'
-					}
-				).finished.then(() => {
-					store.dispatch({
-						type: 'presentation',
-						event: { type: 'dismissalCompleted' }
-					});
-				});
-			}
-		}
+		const playback = animate(element, {
+			opacity: opening ? [0,1] : [1,0],
+			scale: opening ? [0.95,1] : [1,0.95]
+		}, {duration:0.3,ease:opening ? 'easeOut' : 'easeIn'});
+		void playback.finished.then(complete, error => {
+			if (active) console.error('[ImageLightbox] Animation failed', error);
+		});
+		return () => { active = false; playback.stop(); };
 	});
 
 	// Track index changes for callback

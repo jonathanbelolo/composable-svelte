@@ -1,5 +1,11 @@
 # Animated Navigation
 
+> **Legacy timing guide.** This page describes historical timer-driven
+> `PresentationState` patterns and lower-level helpers. For new managed
+> applications, use the [managed presentation guide](../application-presentation.md)
+> and its owner-bound component callbacks. The timer recommendations below do
+> not override the application authoring contract.
+
 State-driven animation system for Composable Svelte navigation components.
 
 ## Table of Contents
@@ -842,219 +848,40 @@ Dismissal timeouts should be longer (3x vs 2x) because:
 - User can't interact during stuck dismissal
 - Better to wait longer than leak resources
 
-## Integration with Navigation Components
+## Integration with navigation components
 
-### Component Contract
-
-Navigation components expect:
-
-1. **Scoped Store**: Store for destination content
-2. **Presentation State**: Current animation lifecycle
-3. **Callbacks**: `onPresentationComplete` and `onDismissalComplete`
-
-### Modal Example
+Dismissing navigation components receive an admitted `PresentationView`, not a raw or
+legacy scoped store. Managed composition supplies the view and feature surface; the
+component coordinates focus, dismissal, portal ownership, and visual completion.
 
 ```svelte
-import { Modal } from '@composable-svelte/core/navigation-components';
+<script lang="ts">
+  import { Modal } from '@composable-svelte/core/navigation-components';
+  import type { PresentationFeatureViewProps } from '@composable-svelte/core/application';
+
+  let { store, surface }: PresentationFeatureViewProps<ModalState, ModalAction> = $props();
+</script>
 
 <Modal
-  store={modalStore}
-  presentation={state.presentation}
-  onPresentationComplete={() => store.dispatch({
-    type: 'presentation',
-    event: { type: 'presentationCompleted' }
-  })}
-  onDismissalComplete={() => store.dispatch({
-    type: 'presentation',
-    event: { type: 'dismissalCompleted' }
-  })}
+  {store}
+  {presentation}
+  onPresentationComplete={() => dispatch({ type: 'presentationCompleted' })}
+  onDismissalComplete={() => dispatch({ type: 'dismissalCompleted' })}
 >
-  {#snippet children({ store: scopedStore })}
-    <div>
-      <h2>Modal Title</h2>
-      <p>{scopedStore.state.message}</p>
-      <button onclick={() => scopedStore.dismiss()}>Close</button>
-    </div>
-  {/snippet}
+  <section use:surface>
+    <h2>{store.state?.title}</h2>
+    <button onclick={() => store.dismiss()}>Close</button>
+  </section>
 </Modal>
 ```
 
-### Component Animation Logic
+The component may retain its visual shell while dismissal animation runs. The managed
+view remains the authority for state, actions, and owner-bound dismissal; lifecycle
+callbacks report animation completion and do not synthesize raw dismiss actions.
 
-Inside the component:
-
-```typescript
-// Watch presentation status and trigger animations
-$effect(() => {
-  if (!presentation || !modalElement) return;
-
-  if (presentation.status === 'presenting') {
-    animateModalIn(modalElement, springConfig).then(() => {
-      queueMicrotask(() => onPresentationComplete?.());
-    });
-  }
-
-  if (presentation.status === 'dismissing') {
-    animateModalOut(modalElement, springConfig).then(() => {
-      queueMicrotask(() => onDismissalComplete?.());
-    });
-  }
-});
-```
-
-### Visibility Logic
-
-```typescript
-// Component remains mounted during dismissing state
-const visible = $derived(
-  (store !== null && store.state !== null) ||
-  (presentation?.status !== 'idle' && presentation?.status !== undefined)
-);
-
-// Only allow interactions when fully presented
-const interactionsEnabled = $derived(
-  presentation ? presentation.status === 'presented' : visible
-);
-```
-
-### Complete Integration Example
-
-```typescript
-// State
-interface AppState {
-  addItemDestination: AddItemState | null;
-  presentation: PresentationState<AddItemState>;
-}
-
-// Actions
-type AppAction =
-  | { type: 'addButtonTapped' }
-  | { type: 'destination'; action: PresentationAction<AddItemAction> }
-  | { type: 'presentation'; event: PresentationEvent };
-
-// Reducer
-const reducer: Reducer<AppState, AppAction> = (state, action) => {
-  switch (action.type) {
-    case 'addButtonTapped': {
-      return [
-        {
-          ...state,
-          addItemDestination: initialAddItemState,
-          presentation: {
-            status: 'presenting',
-            content: initialAddItemState,
-            duration: 300
-          }
-        },
-        Effect.batch(
-          Effect.afterDelay(300, (d) => d({
-            type: 'presentation',
-            event: { type: 'presentationCompleted' }
-          })),
-          Effect.afterDelay(600, (d) => d({
-            type: 'presentation',
-            event: { type: 'presentationTimeout' }
-          }))
-        )
-      ];
-    }
-
-    case 'presentation': {
-      if (action.event.type === 'presentationCompleted' ||
-          action.event.type === 'presentationTimeout') {
-        if (state.presentation.status !== 'presenting') {
-          return [state, Effect.none()];
-        }
-
-        return [
-          {
-            ...state,
-            presentation: {
-              status: 'presented',
-              content: state.presentation.content
-            }
-          },
-          Effect.none()
-        ];
-      }
-
-      if (action.event.type === 'dismissalCompleted' ||
-          action.event.type === 'dismissalTimeout') {
-        if (state.presentation.status !== 'dismissing') {
-          return [state, Effect.none()];
-        }
-
-        return [
-          {
-            ...state,
-            addItemDestination: null,
-            presentation: { status: 'idle' }
-          },
-          Effect.none()
-        ];
-      }
-
-      return [state, Effect.none()];
-    }
-
-    case 'destination': {
-      if (action.action.type === 'dismiss') {
-        if (state.presentation.status !== 'presented') {
-          return [state, Effect.none()];
-        }
-
-        return [
-          {
-            ...state,
-            presentation: {
-              status: 'dismissing',
-              content: state.presentation.content,
-              duration: 200
-            }
-          },
-          Effect.batch(
-            Effect.afterDelay(200, (d) => d({
-              type: 'presentation',
-              event: { type: 'dismissalCompleted' }
-            })),
-            Effect.afterDelay(600, (d) => d({
-              type: 'presentation',
-              event: { type: 'dismissalTimeout' }
-            }))
-          )
-        ];
-      }
-
-      // Handle presented child actions via ifLet
-      return ifLet(...)(state, action);
-    }
-  }
-};
-
-```
-
-The component. `presentation` drives the animation and the two completion
-callbacks feed it back into the reducer, which is what advances the lifecycle
-past `presenting` and `dismissing`:
-
-```svelte
-<Modal
-  store={addItemStore}
-  presentation={state.presentation}
-  onPresentationComplete={() => store.dispatch({
-    type: 'presentation',
-    event: { type: 'presentationCompleted' }
-  })}
-  onDismissalComplete={() => store.dispatch({
-    type: 'presentation',
-    event: { type: 'dismissalCompleted' }
-  })}
->
-  {#snippet children({ store: scopedStore })}
-    <AddItemForm store={scopedStore} />
-  {/snippet}
-</Modal>
-```
+For reducer-driven dismissal, inject `managedDismissDependency()` from the application
+subpath and return `deps.dismiss()` as an effect. If it performs asynchronous cleanup,
+the request is honored only while its originating presentation owner remains live.
 
 ## Testing Animated Features
 

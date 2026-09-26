@@ -289,7 +289,7 @@ describe('the read-back accessors', () => {
 		const mountedCanvas = target.querySelector('canvas');
 		expect(mountedCanvas, 'the component rendered no canvas').not.toBeNull();
 		expect(api.getCanvas(), 'the overlay is drawing to some other canvas').toBe(mountedCanvas);
-		expect(api.getContext(), 'the context the overlay is drawing with').toBe(fake.context);
+		expect(api.getContext(), 'the context the overlay is drawing with').toBe(mountedCanvas!.getContext('webgl'));
 	});
 
 	it('reports a frame rate once the loop has run', async () => {
@@ -472,4 +472,10 @@ describe('targetFPS reaches the render loop', () => {
 		expect(slow, 'the 10fps overlay drew at 60fps').toBeLessThan(fast / 2);
 		expect(slow, 'the 10fps overlay drew nothing at all').toBeGreaterThan(0);
 	});
+});
+
+it('returns the structured invalid-element error for null input without throwing', async () => {
+ const {api}=await overlayComponent();const report=vi.spyOn(console,'error').mockImplementation(()=>{});
+ const result=api.registerElement({id:'nullish',domElement:null as unknown as HTMLElement,shader:'ripple-gentle'});
+ expect(result).toHaveProperty('code','INVALID_ELEMENT_TYPE');expect(report).toHaveBeenCalledTimes(1);
 });

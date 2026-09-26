@@ -1,0 +1,88 @@
+
+> @composable-svelte/chat@0.4.1 test /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/chat
+> vitest run && vitest run --config vitest.ssr.config.ts
+
+1:20:36 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/chat - using default configuration.
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/chat
+
+1:20:36 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/chat - using default configuration.
+1:20:36 PM [vite] (client) Re-optimizing dependencies because lockfile has changed
+stderr | tests/attachment-fade.test.ts > VideoPlayer controls > says so when playback will not start
+Video playback error: [NotAllowedError: no]
+ ✓ |chromium| tests/attachment-fade.test.ts (17 tests) 514ms
+ ✓ |chromium| tests/managed-collaborative.test.ts (6 tests) 11ms
+ ✓ |chromium| tests/message-editing.test.ts (14 tests) 182ms
+stderr | tests/cleanup-tracker.test.ts > post-disposal behavior and fake timer accounting > does not create active interval or run callback when setInterval is called after dispose
+[CleanupTracker] Setting interval after dispose
+stderr | tests/cleanup-tracker.test.ts > post-disposal behavior and fake timer accounting > does not create active timer or run callback when setTimeout is called after dispose
+[CleanupTracker] Setting timeout after dispose
+stderr | tests/cleanup-tracker.test.ts > post-disposal behavior and fake timer accounting > immediately runs cleanup added after dispose and safely catches errors
+[CleanupTracker] Adding cleanup after dispose
+stderr | tests/cleanup-tracker.test.ts > post-disposal behavior and fake timer accounting > immediately runs cleanup added after dispose and safely catches errors
+[CleanupTracker] Adding cleanup after dispose
+stderr | tests/cleanup-tracker.test.ts > post-disposal behavior and fake timer accounting > immediately runs cleanup added after dispose and safely catches errors
+[CleanupTracker] Error during post-dispose cleanup: [Error: cleanup error]
+stderr | tests/cleanup-tracker.test.ts > post-disposal behavior and fake timer accounting > dispose is idempotent and safely handles throwing cleanups
+[CleanupTracker] Error during cleanup: [Error: first cleanup error]
+stderr | tests/cleanup-tracker.test.ts > post-disposal behavior and fake timer accounting > dispose is idempotent and safely handles throwing cleanups
+[CleanupTracker] Already disposed
+stderr | tests/cleanup-tracker.test.ts > post-disposal behavior and fake timer accounting > does not add event listener or increase resource count when called after dispose
+[CleanupTracker] Adding event listener after dispose
+stderr | tests/cleanup-tracker.test.ts > review followups: tracked interval and native listener retirement > reentrant throwing late cleanup does not truncate its caller or later cleanup
+[CleanupTracker] Adding cleanup after dispose
+stderr | tests/cleanup-tracker.test.ts > review followups: tracked interval and native listener retirement > reentrant throwing late cleanup does not truncate its caller or later cleanup
+[CleanupTracker] Error during post-dispose cleanup: [Error: expected late cleanup]
+ ✓ |chromium| tests/cleanup-tracker.test.ts (18 tests) 79ms
+ ✓ |chromium| tests/attachment-wiring.test.ts (4 tests) 323ms
+ ✓ |chromium| tests/video-embed-lazy.test.ts (4 tests) 895ms
+     ✓ loads, so the extractor returns real video data  849ms
+ ✓ |chromium| tests/message-entry.test.ts (7 tests) 367ms
+ ✓ |chromium| tests/collaborative-connection.test.ts (16 tests) 456ms
+ ✓ |chromium| tests/attachment-upload.test.ts (12 tests) 471ms
+ ✓ |chromium| tests/pdf-render.test.ts (2 tests) 54ms
+ ✓ |chromium| tests/markdown-sanitize.test.ts (21 tests) 16ms
+ ✓ |chromium| tests/attachment-a11y.test.ts (8 tests) 23ms
+ ✓ |chromium| tests/managed-chat.test.ts (26 tests) 517ms
+ ✓ |chromium| tests/readme-recipes.test.ts (2 tests) 131ms
+ ✓ |chromium| tests/presence-sizing.test.ts (9 tests) 7ms
+ ✓ |chromium| tests/reaction-picker-lifecycle.test.ts (15 tests) 12ms
+ ✓ |chromium| tests/message-labels.test.ts (6 tests) 7ms
+ ✓ |chromium| tests/chat-optional-video.test.ts (1 test) 66ms
+ ✓ |chromium| tests/streaming-chat-attachments.test.ts (32 tests) 7ms
+ ✓ |chromium| tests/cursor-visibility.test.ts (7 tests) 6ms
+ ✓ |chromium| tests/attachment-preview-lifecycle.test.ts (10 tests) 968ms
+     ✓ a modal hydrated already presented can still be dismissed  906ms
+ ✓ |chromium| tests/collaborative-presence.test.ts (19 tests) 10ms
+ ✓ |chromium| tests/stream-ownership.test.ts (25 tests) 7ms
+ ✓ |chromium| tests/attachment-lifetimes.test.ts (22 tests) 1677ms
+ ✓ |chromium| tests/collaborative-selectors.test.ts (10 tests) 1ms
+ ✓ |chromium| tests/media-type-conformance.test.ts (3 tests) 0ms
+ ✓ |chromium| tests/markdown-languages.test.ts (3 tests) 1ms
+ ✓ |chromium| tests/teststore-example.test.ts (1 test) 2ms
+ ✓ |chromium| tests/collaborative-heartbeat.test.ts (1 test) 2ms
+ ✓ |chromium| tests/cursor-blur-lifetime.test.ts (2 tests) 4ms
+ ✓ |chromium| tests/reactions.test.ts (7 tests) 1ms
+ ✓ |chromium| tests/chat-behavior.test.ts (7 tests) 147ms
+ ✓ |chromium| tests/auto-scroll.test.ts (2 tests) 1786ms
+     ✓ keeps following while its own animation runs  1101ms
+     ✓ still lets the user scroll away mid-stream  685ms
+
+ Test Files  33 passed (33)
+      Tests  339 passed (339)
+   Start at  13:20:36
+   Duration  4.59s (transform 0ms, setup 273ms, collect 20.18s, tests 8.75s, environment 0ms, prepare 61.24s)
+
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/chat
+
+ ✓ tests/ssr/message-entry-ssr.test.ts (2 tests) 13ms
+ ✓ tests/ssr/video-embed-ssr.test.ts (3 tests) 555ms
+     ✓ renders the embed once the process is warm  549ms
+ ✓ tests/ssr/managed-ssr.test.ts (6 tests) 38ms
+
+ Test Files  3 passed (3)
+      Tests  11 passed (11)
+   Start at  13:20:41
+   Duration  1.96s (transform 2.49s, setup 0ms, collect 3.59s, tests 606ms, environment 0ms, prepare 7ms)
+

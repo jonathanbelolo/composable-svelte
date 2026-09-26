@@ -1,45 +1,66 @@
 <script lang="ts">
-  import { createStore, Effect } from '@composable-svelte/core';
-  import type { PresentationState } from '@composable-svelte/core/navigation';
+  import { Effect } from '@composable-svelte/core';
+  import type { Reducer } from '@composable-svelte/core';
+  import {
+    ApplicationHost,
+    ApplicationRoot,
+    defineApplication,
+    ManagedIntegrationBuilder,
+    optionalSlot,
+    scopeTo
+  } from '@composable-svelte/core/application';
+  import type { PresentationAction, PresentationState } from '@composable-svelte/core/navigation';
   import { Modal } from '@composable-svelte/core/navigation-components';
   import { Button } from '@composable-svelte/core/components/ui';
 
   interface DemoState {
     showModal: boolean;
+    modalContent: boolean | null;
     presentation: PresentationState<boolean>;
   }
 
-  type PresentationEvent =
+  type ModalContentAction =
     | { type: 'presentationCompleted' }
     | { type: 'dismissalCompleted' };
 
   type DemoAction =
     | { type: 'openModal' }
     | { type: 'closeModal' }
-    | { type: 'presentation'; event: PresentationEvent };
+    | { type: 'modalContent'; action: PresentationAction<ModalContentAction> };
 
-  const demoStore = createStore<DemoState, DemoAction>({
-    initialState: {
-      showModal: false,
-      presentation: { status: 'idle' }
-    },
-    reducer: (state, action) => {
+  const reducer: Reducer<DemoState, DemoAction, undefined> = (state, action) => {
+      if (action.type === 'modalContent') {
+        if (action.action.type === 'dismiss') {
+          if (state.presentation.status !== 'presented') return [state, Effect.none()];
+          return [{ ...state, presentation: { status: 'dismissing' as const, content: true } }, Effect.none()];
+        }
+        if (action.action.action.type === 'presentationCompleted') {
+          if (state.presentation.status !== 'presenting') return [state, Effect.none()];
+          return [{ ...state, presentation: { status: 'presented' as const, content: state.presentation.content } }, Effect.none()];
+        }
+        if (state.presentation.status !== 'dismissing') {
+          return [state, Effect.none()];
+        }
+        return [{ showModal: false, modalContent: null, presentation: { status: 'idle' as const } }, Effect.none()];
+      }
       switch (action.type) {
         case 'openModal':
+          if (state.presentation.status === 'presenting' || state.presentation.status === 'presented') {
+            return [state, Effect.none()];
+          }
           return [
             {
               showModal: true,
+              modalContent: true,
               presentation: {
                 status: 'presenting' as const,
-                content: true,
-                duration: 300
+                content: true
               }
             },
-            Effect.afterDelay(300, (d) => d({ type: 'presentation', event: { type: 'presentationCompleted' } }))
+            Effect.none()
           ];
 
         case 'closeModal':
-          // Only allow dismissal if we're in presented state
           if (state.presentation.status !== 'presented') {
             return [state, Effect.none()];
           }
@@ -48,54 +69,40 @@
               ...state,
               presentation: {
                 status: 'dismissing' as const,
-                content: state.presentation.content,
-                duration: 200
+                content: state.presentation.content
               }
             },
-            Effect.afterDelay(200, (d) => d({ type: 'presentation', event: { type: 'dismissalCompleted' } }))
+            Effect.none()
           ];
-
-        case 'presentation':
-          if (action.event.type === 'presentationCompleted') {
-            return [
-              {
-                ...state,
-                presentation: {
-                  status: 'presented' as const,
-                  content: state.presentation.status === 'presenting' ? state.presentation.content : true
-                }
-              },
-              Effect.none()
-            ];
-          }
-          if (action.event.type === 'dismissalCompleted') {
-            return [
-              {
-                showModal: false,
-                presentation: { status: 'idle' as const }
-              },
-              Effect.none()
-            ];
-          }
-          return [state, Effect.none()];
 
         default:
           return [state, Effect.none()];
       }
-    },
-    dependencies: {}
-  });
+  };
 
-  // Create a store wrapper with dismiss() method for Modal component
-  const storeWithDismiss = $derived({
-    ...demoStore,
-    state: $demoStore,
-    dispatch: demoStore.dispatch,
-    dismiss: () => demoStore.dispatch({ type: 'closeModal' })
+  const modalSlot = optionalSlot<DemoState, DemoAction>()('modalContent');
+  const childReducer: Reducer<boolean, ModalContentAction, undefined> = (state) => [state, Effect.none()];
+  const composition = new ManagedIntegrationBuilder(reducer)
+    .with(modalSlot, childReducer, {
+      dismissal: 'deferred',
+      replaceOn: (action) => action.type === 'openModal'
+    })
+    .build();
+  const application = defineApplication(composition, {
+    initialState: (): DemoState => ({
+      showModal: false,
+      modalContent: null,
+      presentation: { status: 'idle' }
+    })
   });
-
-  const state = $derived($demoStore);
 </script>
+
+<ApplicationRoot definition={application} options={{ dependencies: undefined, initial: { input: undefined } }}>
+{#snippet children(app)}
+<ApplicationHost {app}>
+{@const demoStore = app.store}
+{@const state = app.store.state}
+{@const modalView = scopeTo(app.store, modalSlot)}
 
 <div class="space-y-12">
   <!-- Live Demo Section -->
@@ -108,22 +115,7 @@
     </div>
 
     <div class="flex flex-col items-center justify-center gap-6 p-12 rounded-lg border-2 bg-card">
-      <!-- Test with plain button first -->
-      <button
-        type="button"
-        onclick={() => {
-          console.log('Plain button clicked!');
-          demoStore.dispatch({ type: 'openModal' });
-        }}
-        class="px-4 py-2 bg-blue-500 text-white rounded"
-      >
-        Test Plain Button
-      </button>
-
-      <Button onclick={() => {
-        console.log('Button component clicked!');
-        demoStore.dispatch({ type: 'openModal' });
-      }}>
+      <Button onclick={() => demoStore.dispatch({ type: 'openModal' })}>
         Open Modal
       </Button>
       <p class="text-sm text-muted-foreground">
@@ -194,13 +186,16 @@
 
 <!-- Modal Implementation -->
 {#if state.showModal}
+  <!--
+    Interim legacy bridge: this demo keeps explicit PresentationState so the existing
+    animation callbacks remain visible. The framework-owned view supplies lifetime and
+    dismissal authority; it does not synthesize these presentation states.
+  -->
   <Modal
-    store={storeWithDismiss}
+    store={modalView}
     presentation={state.presentation}
-    onPresentationComplete={() =>
-      demoStore.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } })}
-    onDismissalComplete={() =>
-      demoStore.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })}
+    onPresentationComplete={() => modalView?.dispatch({ type: 'presentationCompleted' })}
+    onDismissalComplete={() => modalView?.dispatch({ type: 'dismissalCompleted' })}
   >
     {#snippet children()}
       <div class="bg-background rounded-lg shadow-xl max-w-md w-full p-6 space-y-6">
@@ -240,3 +235,6 @@
     {/snippet}
   </Modal>
 {/if}
+</ApplicationHost>
+{/snippet}
+</ApplicationRoot>

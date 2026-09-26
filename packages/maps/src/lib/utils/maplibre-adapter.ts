@@ -26,6 +26,49 @@ export class MaplibreAdapter implements MapAdapter {
   private markers: Map<string, maplibregl.Marker> = new Map();
   private layers: Map<string, Layer> = new Map();
   private popups: Map<string, maplibregl.Popup> = new Map();
+  currentFlightId = 0;
+  private pendingLayers: globalThis.Map<string, Layer> = new globalThis.Map();
+  private styleReadyListener: (() => void) | null = null;
+  private listeningMap: maplibregl.Map | null = null;
+
+  private clearStyleReadyListener(): void {
+    if (this.styleReadyListener && this.listeningMap) {
+      for (const event of ['style.load', 'styledata', 'idle'] as const) {
+        this.listeningMap.off(event, this.styleReadyListener);
+      }
+    }
+    this.styleReadyListener = null;
+    this.listeningMap = null;
+  }
+
+  private ensureStyleReadyListener(): void {
+    if (!this.map || this.styleReadyListener) return;
+
+    const currentMap = this.map;
+    this.listeningMap = currentMap;
+
+    const onStyleReady = () => {
+      if (this.map !== currentMap || this.styleReadyListener !== onStyleReady) return;
+      // isStyleLoaded is also false while a GeoJSON source loads. style.load
+      // will not fire again for that source, so wait for its later data/idle.
+      if (!currentMap.isStyleLoaded()) return;
+      this.clearStyleReadyListener();
+
+      const queued = Array.from(this.pendingLayers.values());
+      this.pendingLayers.clear();
+
+      for (const pending of queued) {
+        if (this.map === currentMap) {
+          this.addLayer(pending, true);
+        }
+      }
+    };
+
+    this.styleReadyListener = onStyleReady;
+    for (const event of ['style.load', 'styledata', 'idle'] as const) {
+      currentMap.on(event, onStyleReady);
+    }
+  }
 
   initialize(container: HTMLElement, options: MapInitOptions): void {
     this.map = new maplibregl.Map({
@@ -58,6 +101,7 @@ export class MaplibreAdapter implements MapAdapter {
   flyTo(options: FlyToOptions): void {
     if (!this.map) return;
 
+    const flightId = ++this.currentFlightId;
     // Use flyTo for all animations - it works perfectly
     const flyToParams = {
       center: options.center,
@@ -67,7 +111,7 @@ export class MaplibreAdapter implements MapAdapter {
       ...(options.duration !== undefined ? { duration: options.duration } : {}),
       ...(options.essential !== undefined ? { essential: options.essential } : {})
     };
-    this.map.flyTo(flyToParams);
+    this.map.flyTo(flyToParams, { flightId });
   }
 
   fitBounds(bounds: BBox, padding?: number): void {
@@ -151,13 +195,14 @@ export class MaplibreAdapter implements MapAdapter {
       return;
     }
 
-    // Wait for style to load before adding layers (skip check when retrying from styledata)
+    // Wait for the whole style, including pending sources, to be ready.
     if (!skipStyleCheck && !this.map.isStyleLoaded()) {
-      this.map.once('styledata', () => {
-        this.addLayer(layer, true); // Skip style check on retry
-      });
+      this.pendingLayers.set(layer.id, layer);
+      this.ensureStyleReadyListener();
       return;
     }
+
+    this.pendingLayers.delete(layer.id);
 
     // Check if source already exists (can happen on style changes)
     if (this.map.getSource(layer.id)) {
@@ -185,6 +230,8 @@ export class MaplibreAdapter implements MapAdapter {
   }
 
   removeLayer(id: string): void {
+    this.pendingLayers.delete(id);
+    if (this.pendingLayers.size === 0) this.clearStyleReadyListener();
     if (!this.map) return;
 
     // Remove main layer
@@ -206,12 +253,19 @@ export class MaplibreAdapter implements MapAdapter {
   }
 
   toggleLayerVisibility(id: string): void {
+    const pending = this.pendingLayers.get(id);
+    if (pending) {
+      this.pendingLayers.set(id, { ...pending, visible: !pending.visible });
+    }
+
     if (!this.map) return;
 
     const layer = this.layers.get(id);
     if (!layer) return;
 
-    const visibility = layer.visible ? 'visible' : 'none';
+    const nextVisible = !layer.visible;
+    this.layers.set(id, { ...layer, visible: nextVisible });
+    const visibility = nextVisible ? 'visible' : 'none';
 
     // Toggle main layer
     if (this.map.getLayer(id)) {
@@ -225,6 +279,11 @@ export class MaplibreAdapter implements MapAdapter {
   }
 
   updateLayerStyle(id: string, style: Partial<LayerStyle>): void {
+    const pending = this.pendingLayers.get(id);
+    if (pending) {
+      this.pendingLayers.set(id, { ...pending, style: { ...pending.style, ...style } });
+    }
+
     if (!this.map) return;
 
     const layer = this.layers.get(id);
@@ -265,9 +324,11 @@ export class MaplibreAdapter implements MapAdapter {
 
   changeStyle(styleURL: string): void {
     if (!this.map) return;
-
-    // Change the map style
-    this.map.setStyle(styleURL);
+    // A full reload emits style.load, which MapPrimitive uses to restore the
+    // declarative layers. A diff can remove them without emitting style.load.
+    this.clearStyleReadyListener();
+    this.map.setStyle(styleURL, { diff: false });
+    if (this.pendingLayers.size > 0) this.ensureStyleReadyListener();
   }
 
   on(event: string, handler: Function): void {
@@ -284,6 +345,9 @@ export class MaplibreAdapter implements MapAdapter {
   }
 
   destroy(): void {
+    this.clearStyleReadyListener();
+    this.pendingLayers.clear();
+    this.currentFlightId = 0;
     // Clean up markers
     this.markers.forEach((marker) => marker.remove());
     this.markers.clear();

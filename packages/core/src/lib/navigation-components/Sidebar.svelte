@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import SidebarPrimitive from './primitives/SidebarPrimitive.svelte';
-  import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
+  import { assertPresentationView, type PresentationView } from '../navigation/managed-integration.js';
   import type { PresentationState } from '../navigation/types.js';
   import type { SpringConfig } from '../animation/spring-config.js';
   import { cn } from '../utils.js';
@@ -12,9 +12,9 @@
 
   interface SidebarProps<State, Action> {
     /**
-     * Scoped store for the sidebar content.
+     * Managed presentation view for the sidebar content.
      */
-    store: ScopedDestinationStore<State, Action> | null;
+    store?: PresentationView<State, Action> | undefined;
 
     /**
      * Presentation state for animation lifecycle.
@@ -74,7 +74,7 @@
       [
         {
           visible: boolean;
-          store: ScopedDestinationStore<State, Action> | null;
+          store: PresentationView<State, Action> | undefined;
           side: 'left' | 'right';
           width: string;
         }
@@ -95,6 +95,13 @@
     width = '240px',
     children: renderContent
   }: SidebarProps<unknown, unknown> = $props();
+
+  const admittedStore = $derived.by(() => {
+    if (store !== undefined) {
+      assertPresentationView(store);
+    }
+    return store;
+  });
 
   // ============================================================================
   // Computed Classes
@@ -119,7 +126,7 @@
 <!-- ============================================================================ -->
 
 <SidebarPrimitive
-  {store}
+  store={admittedStore}
   {presentation}
   {onPresentationComplete}
   {onDismissalComplete}
@@ -128,8 +135,8 @@
   {side}
   {width}
 >
-  {#snippet children({ visible, store, side, width, bindContent })}
-    {#if visible && store}
+  {#snippet children({ visible, store: primitiveStore, side, width, bindContent })}
+    {#if visible}
       <!-- Outer wrapper: Motion One animates its margin and transform. -->
       <div
         use:bindContent
@@ -143,7 +150,7 @@
           style="width: {width}; height: 100%"
           aria-label="Sidebar navigation"
         >
-          {@render renderContent?.({ visible, store, side, width })}
+          {@render renderContent?.({ visible, store: primitiveStore, side, width })}
         </nav>
       </div>
     {/if}

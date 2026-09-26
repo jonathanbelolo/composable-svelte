@@ -76,6 +76,12 @@ export const dropdownMenuReducer: Reducer<
 	DropdownMenuDependencies
 > = (state, action, deps) => {
 	switch (action.type) {
+		case 'itemsChanged': {
+			if (state.items === action.items) return [state, Effect.none()];
+			const current = state.items[state.highlightedIndex];
+			const highlightedIndex = current ? action.items.findIndex(item => item.id === current.id && !item.disabled && !item.isSeparator) : -1;
+			return [{ ...state, items: action.items, highlightedIndex }, Effect.none()];
+		}
 		case 'opened': {
 			// Only refuse a redundant open. Reopening while an exit is still in
 			// flight is allowed: blocking it would make the menu ignore a click for
@@ -176,11 +182,11 @@ export const dropdownMenuReducer: Reducer<
 			};
 
 			// Call onSelect callback if provided
-			if (deps.onSelect) {
+			if (deps?.onSelect) {
 				return [
 					newState,
 					Effect.run(async (dispatch) => {
-						deps.onSelect!(item);
+						deps?.onSelect?.(item);
 					})
 				];
 			}
@@ -306,6 +312,7 @@ export const dropdownMenuReducer: Reducer<
 
 		case 'presentation': {
 			if (action.event.type === 'presentationCompleted') {
+				if (state.presentation.status !== 'presenting') return [state, Effect.none()];
 				return [
 					{
 						...state,
@@ -320,6 +327,7 @@ export const dropdownMenuReducer: Reducer<
 			}
 
 			if (action.event.type === 'dismissalCompleted') {
+				if (state.presentation.status !== 'dismissing') return [state, Effect.none()];
 				return [
 					{
 						...state,

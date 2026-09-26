@@ -1,0 +1,6 @@
+
+> @composable-svelte/auth@0.2.1 build /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/auth
+> svelte-package -o dist && node ../../scripts/emit-svelte-declaration-bridges.mjs dist
+
+src/lib -> dist
+Emitted 25 NodeNext Svelte declaration bridges

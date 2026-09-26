@@ -1,0 +1,28 @@
+{
+  "name": "final-account-dashboard-auth-only-production-derivative",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "svelte-check --tsconfig tsconfig.json",
+    "build": "vite build",
+    "test": "vitest run",
+    "test:ssr": "node scripts/ssr.mjs",
+    "test:browser": "playwright test"
+  },
+  "dependencies": {
+    "@composable-svelte/core": "file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz",
+    "@composable-svelte/auth": "file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-auth-0.3.0.tgz",
+    "svelte": "5.55.3"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "svelte-check": "4.3.3",
+    "vite": "7.3.6",
+    "@sveltejs/vite-plugin-svelte": "6.2.1",
+    "vitest": "4.0.7",
+    "@vitest/browser-playwright": "4.0.7",
+    "@playwright/test": "1.56.1",
+    "playwright": "1.56.1",
+    "@types/node": "22.18.6"
+  }
+}

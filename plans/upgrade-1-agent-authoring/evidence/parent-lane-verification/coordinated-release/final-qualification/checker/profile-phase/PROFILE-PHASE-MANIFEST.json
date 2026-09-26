@@ -1,0 +1,165 @@
+{
+  "schema": "composable-final-checker/profile-phase-manifest/v1",
+  "generatedAt": "2026-09-26T13:47:13.445Z",
+  "status": "PARTIAL PROFILE PREPARATION - pending independent review; not a final release artifact",
+  "checkerArchive": {
+    "finalCandidate": {
+      "path": "profile-phase/P3-archive/composable-svelte-architecture-0.13.1.tgz",
+      "sha256": "356f4697b8ceaa82f2f9c2456402e456582767b98f80ec6e80eb6c52741060be",
+      "integrity": "sha512-WFVfqsTIZb91/blHYPdjbsSrEiiEj3S1z+RrO40GqS/fL8nd6lSN175hGDA/yC6G8PXeGYV2iAmhqghHpKymCw==",
+      "bytes": 94553,
+      "fileCount": 36
+    },
+    "starterPreparationPredecessor": {
+      "path": "composable-svelte-architecture-0.13.1.tgz",
+      "sha256": "7cae973afd0303d16b8fbc205d357be2a381344e95b27fd67f70718a12d03843",
+      "integrity": "sha512-boC+4UJPbklBvKJ750sdoDSm8zHtk/94EL+qowxBd61RUKK/EaprRaFetOPgY6mT7aerb/EbALhlBOuEvZIW+g==",
+      "bytes": 93384,
+      "fileCount": 32
+    },
+    "supersededInterim": {
+      "sha256": "02dc833e727ac998293a717ddc8df15ad15cc14fdbcf11ad47daff20048dde68",
+      "note": "P3 interim (pre comment fix); bytes deleted, receipts kept as superseded evidence only"
+    }
+  },
+  "registered": {
+    "starter": {
+      "path": "packages/architecture/policies/starter.json",
+      "sha256": "f2821ebf0fa5cd34b346361089edd56bb4ec01a40c59eb969c60f90c7e77d190"
+    },
+    "chat": {
+      "path": "packages/architecture/policies/chat.json",
+      "sha256": "4e958b18f465a2bb65cff36ecf97f76e66a7da3bed83942ef5397f0c9030436f"
+    },
+    "code": {
+      "path": "packages/architecture/policies/code.json",
+      "sha256": "669cd1a15dcba7a7c3e6ebe572888e4611e0e214dd2e607c744076182762e437"
+    },
+    "media": {
+      "path": "packages/architecture/policies/media.json",
+      "sha256": "717854d1add64795bf06a7d8ecf73a768dd8fb717cf706b3846b0e5384b501c3"
+    },
+    "chat-code-media": {
+      "path": "packages/architecture/policies/chat-code-media.json",
+      "sha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327"
+    }
+  },
+  "notRegistered": {
+    "auth": {
+      "proposedPolicy": "profile-phase/P1-policies/bundled/auth.json",
+      "sha256": "ab100ba510f5cdc4931bca33e0dc398d21f1382010b51ed44242d30dc6846662",
+      "reason": "shipped R4 fixture fails closed with unsupported-construct; see P2 receipt"
+    },
+    "maps": {
+      "proposedPolicy": "profile-phase/P1-policies/bundled/maps.json",
+      "sha256": "6c60262dc74594255ba2d245b4a0b057edc008bb450ff7b4309a975b1d5c760a",
+      "reason": "shipped R4 fixture fails closed with unsupported-construct; see P2 receipt"
+    },
+    "graphics": {
+      "proposedPolicy": "profile-phase/P1-policies/bundled/graphics.json",
+      "sha256": "5b66bb6ec3b309fba9f4696f07ac35f5f7b9c86e75520d11d9de966b2fe0f03b",
+      "reason": "shipped R4 fixture fails closed with unsupported-construct; see P2 receipt"
+    },
+    "charts": {
+      "proposedPolicy": "profile-phase/P1-policies/bundled/charts.json",
+      "sha256": "853f929a63217a9667ec64e928dbd8767c15ad49ff82e75e802e4209e4398645",
+      "reason": "shipped R4 fixture fails closed with unsupported-construct; see P2 receipt"
+    }
+  },
+  "externalAppBPolicy": {
+    "path": "profile-phase/P1-policies/external-appb/app-b-auth-charts.json",
+    "sha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de",
+    "note": "external only; not in registry or archive; requires independent review/pin"
+  },
+  "receipts": {
+    "p2PreRegistration": {
+      "path": "profile-phase/P2-pre-registration/profile-qualification-receipt.json",
+      "sha256": "59de32cafc770f41e45930bc8421a34b0bbc9646a5eb89fc9c34f38a67e8fb5c",
+      "verdict": "EXPECTATION_FAILURES"
+    },
+    "p2AuthorAppCompatibility": {
+      "path": "profile-phase/P2-author-app-compatibility/author-app-compatibility-receipt.json",
+      "sha256": "b6d85b2e117b134f646ac6f2b16a4b0c9a67679c3aa91d3a9258a9ed328f5f11",
+      "verdict": "EXPECTATION_FAILURES"
+    },
+    "p3PostRegistrationSuperseded": {
+      "path": "profile-phase/P3-post-registration/profile-qualification-receipt.json",
+      "sha256": "d65c247e65d80435541fe691532c483bf41463ee3101c1cd694365a62b4eaa3b",
+      "verdict": "ALL_EXPECTATIONS_MET"
+    },
+    "p4FinalCandidate": {
+      "path": "profile-phase/P4-final-candidate/profile-qualification-receipt.json",
+      "sha256": "361f6d2c15bc71c5361df517b3be140e07b873dfd5aa9413c8ba6b1f6702f0a1",
+      "verdict": "ALL_EXPECTATIONS_MET"
+    }
+  },
+  "runtimeReceiptsReused": [
+    {
+      "checkpoint": "minimum",
+      "path": "/private/tmp/companion-runtime-release/matrix-r4/minimum/qualification-receipt.json",
+      "sha256": "d4336b4b6a47d98a1a6e04b8f33f22a1e3e7b37d221f9fcdb2b4b84b003c4762"
+    },
+    {
+      "checkpoint": "newer",
+      "path": "/private/tmp/companion-runtime-release/matrix-r4/newer/qualification-receipt.json",
+      "sha256": "9eedd66437c92efd2f6b14ede7bd40588185672d6a945f5cedfd0e77e9159911"
+    }
+  ],
+  "harness": {
+    "path": "/private/tmp/composable-final-qualification/repo/scripts/verify-release-archives.mjs",
+    "sha256": "01e71e02ca3205096e35902d9eebbba788ee4c169c9a7cf8f64e7ab4359552c9",
+    "edited": false
+  },
+  "orchestration": {
+    "qualify-profiles.mjs": "cc217fc5166ee94550cffe1d66fbde611a269cd5c03bae5035ba754f63a1ef16",
+    "author-app-compatibility.mjs": "ad55e50284d6b0f7f3d2b0de0789181a43a46896389a8a9d70a2264d040d03a5",
+    "generate-policies.mjs": "7ab4b3dddd1c520f2b87a28cf76d7278db9f0babc8ab87e4cb341d3106ca147a"
+  },
+  "packageDelta": [
+    {
+      "path": "CHANGELOG.md",
+      "before": "066f38af5d1698e5b82d47b33e7129d937dc6c923aa8fee5fa13ef1fc16bb7af",
+      "after": "ea29c19d6037e14adb16cabc489729c4daa4643bb44422568fca205fdfdeb0c1"
+    },
+    {
+      "path": "README.md",
+      "before": "c9505722e33433073da40ad0a05f8a711d586d7648a423c944af126d3a547c36",
+      "after": "0197f50b43e3c8873836eb01491ee81601bec6187e1989d17aa5101e2ed879a1"
+    },
+    {
+      "path": "policies/chat-code-media.json",
+      "before": null,
+      "after": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327"
+    },
+    {
+      "path": "policies/chat.json",
+      "before": null,
+      "after": "4e958b18f465a2bb65cff36ecf97f76e66a7da3bed83942ef5397f0c9030436f"
+    },
+    {
+      "path": "policies/code.json",
+      "before": null,
+      "after": "669cd1a15dcba7a7c3e6ebe572888e4611e0e214dd2e607c744076182762e437"
+    },
+    {
+      "path": "policies/media.json",
+      "before": null,
+      "after": "717854d1add64795bf06a7d8ecf73a768dd8fb717cf706b3846b0e5384b501c3"
+    },
+    {
+      "path": "src/bundled-policy.mjs",
+      "before": "4bb72a598c8dd112ac452acc3b717936d62abcbc6567b31e7e1673daeae5d7b1",
+      "after": "0cd6ff4f61a684f9622270c3f84fc6ff54bc0e99fdeb816a7bdd8ef519f3d10c"
+    },
+    {
+      "path": "src/bundled-policy.test.mjs",
+      "before": "020686a24e8262b8ff16e4811e327aa7859161e9da5ecfc0b0aa08116e8c792a",
+      "after": "7c951604558365a2482b79cbbe8ba8095b09c8213be6706510c72a823b7d4695"
+    },
+    {
+      "path": "src/check.test.mjs",
+      "before": "37de61c050228b2eabcd623e21c974bc251f5e6c8c3d7cceecc08453c421d56e",
+      "after": "996a01170df61c25b520e7bf6817bb3ba0842734866d7893d749aed2a2598be0"
+    }
+  ]
+}

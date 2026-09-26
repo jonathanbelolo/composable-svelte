@@ -1,15 +1,9 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { playwright } from '@vitest/browser-playwright';
-import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [svelte()],
-  resolve: {
-    alias: {
-      '$lib': resolve(__dirname, '../../packages/core/src/lib')
-    }
-  },
   test: {
     browser: {
       enabled: true,

@@ -35,6 +35,17 @@ export interface MagicLinkSignInState {
 	token: string | null;
 	error: AuthError | null;
 	session: SessionSnapshot | null;
+	/**
+	 * One-reduction marker: the terminal verdict admitted in this reduction,
+	 * cleared before every other action.
+	 */
+	settled: 'succeeded' | 'failed' | null;
+	/**
+	 * Monotonically increasing attempt id for effect correlation.
+	 * Incremented on every token change and submission start, so that late or
+	 * stale results from cancelled or superseded attempts are discarded.
+	 */
+	attempt: number;
 }
 
 export type MagicLinkSignInAction =
@@ -42,9 +53,13 @@ export type MagicLinkSignInAction =
 	| { type: 'tokenProvided'; token: string }
 	/** The user pressed the button. The only thing that spends the token. */
 	| { type: 'signInRequested' }
-	| { type: 'signInSucceeded'; session: SessionSnapshot }
-	| { type: 'signInFailed'; error: AuthError }
-	| { type: 'errorDismissed' };
+	| { type: 'signInSucceeded'; session: SessionSnapshot; attempt?: number }
+	| { type: 'signInFailed'; error: AuthError; attempt?: number }
+	| { type: 'errorDismissed' }
+	/** "Send me a new link", from an expired or missing link. */
+	| { type: 'requestNewLinkRequested' }
+	/** "Start again" or "Sign in another way", to return to sign-in. */
+	| { type: 'startOverRequested' };
 
 export interface MagicLinkSignInDependencies {
 	signInWithMagicLink: AuthDependencies['signInWithMagicLink'];

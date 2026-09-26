@@ -1,9 +1,11 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { createStore } from '@composable-svelte/core';
-  import { Form, FormField } from '@composable-svelte/core/components/form';
+  import { Form, FormField, type FormAction, type FormState } from '@composable-svelte/core/components/form';
   import { Button, Input } from '@composable-svelte/core/components/ui';
   import { appReducer } from './app.reducer.js';
   import { createInitialAppState } from './app.state.js';
+  import type { RegistrationFormData } from '../features/registration/registration.types.js';
 
   // Create parent store
   const parentStore = createStore({
@@ -12,43 +14,27 @@
     dependencies: {}
   });
 
-  // Create reactive wrapper for form state
-  let formStoreState = $state(parentStore.state.registrationForm);
-
-  $effect(() => {
-    formStoreState = parentStore.state.registrationForm;
+  onDestroy(() => {
+    parentStore.destroy();
   });
 
+  // Direct reactive wrapper for form state
   const formStore = {
     get state() {
-      return formStoreState;
+      return parentStore.state.registrationForm;
     },
-    dispatch(action: any) {
+    dispatch(action: FormAction<RegistrationFormData>) {
       parentStore.dispatch({ type: 'registrationForm', action });
     },
-    subscribe(listener: any) {
+    subscribe(listener: (state: FormState<RegistrationFormData>) => void) {
       // Must emit the form slice, not parent state: FormField reads
       // `$store.data[name]`, and parent state has no `data`.
-      return parentStore.subscribe((s: any) => listener(s.registrationForm));
+      return parentStore.subscribe((s) => listener(s.registrationForm));
     }
   };
 
-  // Subscribe to parent state
-  let registrationSuccess = $state(parentStore.state.registrationSuccess);
-  let registeredUser = $state(parentStore.state.registeredUser);
-
-  $effect(() => {
-    registrationSuccess = parentStore.state.registrationSuccess;
-    registeredUser = parentStore.state.registeredUser;
-  });
-
   function resetRegistration() {
     parentStore.dispatch({ type: 'registrationReset' });
-    // Also reset the form
-    parentStore.dispatch({
-      type: 'registrationForm',
-      action: { type: 'formReset' }
-    });
   }
 </script>
 
@@ -57,7 +43,7 @@
     <h1 class="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
     <p class="text-gray-600 mb-8">Registration form with cross-field validation</p>
 
-    {#if registrationSuccess && registeredUser}
+    {#if parentStore.state.registrationSuccess && parentStore.state.registeredUser}
       <!-- Success State -->
       <div class="bg-white shadow-sm rounded-lg p-8" data-testid="success-state">
         <div class="text-center">
@@ -67,8 +53,8 @@
             </svg>
           </div>
           <h2 class="text-2xl font-semibold text-gray-900 mb-2">Registration Successful!</h2>
-          <p class="text-gray-600 mb-4">Welcome, <span class="font-medium">{registeredUser.username}</span>!</p>
-          <p class="text-sm text-gray-500 mb-6">A confirmation email has been sent to {registeredUser.email}</p>
+          <p class="text-gray-600 mb-4">Welcome, <span class="font-medium">{parentStore.state.registeredUser.username}</span>!</p>
+          <p class="text-sm text-gray-500 mb-6">A confirmation email has been sent to {parentStore.state.registeredUser.email}</p>
           <Button onclick={resetRegistration} variant="outline">
             Register Another Account
           </Button>
@@ -94,9 +80,11 @@
                     onblur={() => send({ type: 'fieldBlurred', field: 'username' })}
                     class="w-full"
                     placeholder="john_doe"
+                    error={Boolean(field.error && field.touched)}
+                    errorId="username-error"
                   />
                   {#if field.error && field.touched}
-                    <p class="text-sm text-red-600 mt-1" data-testid="username-error">{field.error}</p>
+                    <p id="username-error" class="text-sm text-red-600 mt-1" data-testid="username-error">{field.error}</p>
                   {/if}
                   {#if field.isValidating}
                     <p class="text-sm text-gray-500 mt-1" data-testid="username-validating">Checking availability...</p>
@@ -121,9 +109,11 @@
                     onblur={() => send({ type: 'fieldBlurred', field: 'email' })}
                     class="w-full"
                     placeholder="john@example.com"
+                    error={Boolean(field.error && field.touched)}
+                    errorId="email-error"
                   />
                   {#if field.error && field.touched}
-                    <p class="text-sm text-red-600 mt-1" data-testid="email-error">{field.error}</p>
+                    <p id="email-error" class="text-sm text-red-600 mt-1" data-testid="email-error">{field.error}</p>
                   {/if}
                   {#if field.isValidating}
                     <p class="text-sm text-gray-500 mt-1" data-testid="email-validating">Checking availability...</p>
@@ -147,9 +137,11 @@
                     onblur={() => send({ type: 'fieldBlurred', field: 'password' })}
                     class="w-full"
                     placeholder="••••••••"
+                    error={Boolean(field.error && field.touched)}
+                    errorId="password-error"
                   />
                   {#if field.error && field.touched}
-                    <p class="text-sm text-red-600 mt-1" data-testid="password-error">{field.error}</p>
+                    <p id="password-error" class="text-sm text-red-600 mt-1" data-testid="password-error">{field.error}</p>
                   {/if}
                   <p class="text-xs text-gray-500 mt-1">
                     Minimum 8 characters, must include uppercase, lowercase, and number
@@ -173,9 +165,11 @@
                     onblur={() => send({ type: 'fieldBlurred', field: 'confirmPassword' })}
                     class="w-full"
                     placeholder="••••••••"
+                    error={Boolean(field.error && field.touched)}
+                    errorId="confirm-password-error"
                   />
                   {#if field.error && field.touched}
-                    <p class="text-sm text-red-600 mt-1" data-testid="confirm-password-error">{field.error}</p>
+                    <p id="confirm-password-error" class="text-sm text-red-600 mt-1" data-testid="confirm-password-error">{field.error}</p>
                   {/if}
                 </div>
               {/snippet}
@@ -186,6 +180,7 @@
               type="submit"
               class="w-full"
               data-testid="submit-button"
+              disabled={formStore.state.isSubmitting}
             >
               {formStore.state.isSubmitting ? 'Creating Account...' : 'Create Account'}
             </Button>

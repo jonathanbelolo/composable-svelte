@@ -150,8 +150,9 @@ void main() {
   float r = texture2D(uTexture, coord + vec2(splitOffset, 0.0)).r;
   float g = texture2D(uTexture, coord).g;
   float b = texture2D(uTexture, coord - vec2(splitOffset, 0.0)).b;
+  float a = texture2D(uTexture, coord).a;
 
-  gl_FragColor = vec4(r, g, b, 1.0);
+  gl_FragColor = vec4(r, g, b, a);
 }
 `;
 

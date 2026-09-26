@@ -1,7 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { productDetailReducer, type ProductDetailDependencies } from '../product-detail.reducer.js';
 import type { ProductDetailState } from '../product-detail.types.js';
-import { Effect } from '@composable-svelte/core';
 
 describe('ProductDetail Reducer', () => {
   const initialState: ProductDetailState = {
@@ -90,22 +89,19 @@ describe('ProductDetail Reducer', () => {
   });
 
   describe('destination - addToCart flow', () => {
-    it('observes addToCart completion and dismisses', () => {
+    it('observes the reducer-owned add output and starts dismissal', () => {
       const state: ProductDetailState = {
         productId: 'prod-1',
         destination: {
           type: 'addToCart',
           state: { productId: 'prod-1', quantity: 3 }
         },
-        presentation: { status: 'idle' }
-      };
-
-      let cartAdded = false;
-      const deps: ProductDetailDependencies = {
-        onCartItemAdded: (productId, quantity) => {
-          cartAdded = true;
-          expect(productId).toBe('prod-1');
-          expect(quantity).toBe(3);
+        presentation: {
+          status: 'presented',
+          content: {
+            type: 'addToCart',
+            state: { productId: 'prod-1', quantity: 3 }
+          }
         }
       };
 
@@ -117,16 +113,16 @@ describe('ProductDetail Reducer', () => {
             type: 'presented',
             action: {
               type: 'addToCart',
-              action: { type: 'addButtonTapped' }
+              action: { type: 'addConfirmed', productId: 'prod-1', quantity: 3 }
             }
           }
         },
-        deps
+        mockDeps
       );
 
-      expect(newState.destination).toBeNull();
-      // Effect.batch() optimizes single effects - returns Run instead of Batch
-      expect(effect._tag).toBe('Run');
+      expect(newState.destination).toBe(state.destination);
+      expect(newState.presentation.status).toBe('dismissing');
+      expect(effect._tag).toBe('None');
     });
   });
 
@@ -138,7 +134,13 @@ describe('ProductDetail Reducer', () => {
           type: 'share',
           state: { productId: 'prod-1', selectedMethod: 'twitter' }
         },
-        presentation: { status: 'idle' }
+        presentation: {
+          status: 'presented',
+          content: {
+            type: 'share',
+            state: { productId: 'prod-1', selectedMethod: 'twitter' }
+          }
+        }
       };
 
       const [newState] = productDetailReducer(
@@ -164,7 +166,7 @@ describe('ProductDetail Reducer', () => {
   });
 
   describe('destination - deleteAlert flow', () => {
-    it('observes delete confirmation and dismisses alert', () => {
+    it('observes the reducer-owned delete output and starts dismissal', () => {
       const state: ProductDetailState = {
         productId: 'prod-1',
         destination: {
@@ -173,14 +175,13 @@ describe('ProductDetail Reducer', () => {
             productId: 'prod-1'
           }
         },
-        presentation: { status: 'idle' }
+        presentation: {
+          status: 'presented',
+          content: { type: 'deleteAlert', state: { productId: 'prod-1' } }
+        }
       };
 
-      const deps: ProductDetailDependencies = {
-        onProductDeleted: vi.fn()
-      };
-
-      const [newState] = productDetailReducer(
+      const [newState, effect] = productDetailReducer(
         state,
         {
           type: 'destination',
@@ -188,14 +189,16 @@ describe('ProductDetail Reducer', () => {
             type: 'presented',
             action: {
               type: 'deleteAlert',
-              action: { type: 'confirmButtonTapped' }
+              action: { type: 'deleteConfirmed', productId: 'prod-1' }
             }
           }
         },
-        deps
+        mockDeps
       );
 
-      expect(newState.destination).toBeNull();
+      expect(newState.destination).toBe(state.destination);
+      expect(newState.presentation.status).toBe('dismissing');
+      expect(effect._tag).toBe('None');
     });
 
     it('dismisses on delete cancel', () => {
@@ -207,7 +210,10 @@ describe('ProductDetail Reducer', () => {
             productId: 'prod-1'
           }
         },
-        presentation: { status: 'idle' }
+        presentation: {
+          status: 'presented',
+          content: { type: 'deleteAlert', state: { productId: 'prod-1' } }
+        }
       };
 
       const [newState] = productDetailReducer(
@@ -225,19 +231,23 @@ describe('ProductDetail Reducer', () => {
         mockDeps
       );
 
-      expect(newState.destination).toBeNull();
+      expect(newState.destination).toBe(state.destination);
+      expect(newState.presentation.status).toBe('dismissing');
     });
   });
 
   describe('destination - dismiss', () => {
-    it('dismisses any destination on dismiss action', () => {
+    it('retains the exact destination during dismissal and clears it on case-owned completion', () => {
       const state: ProductDetailState = {
         productId: 'prod-1',
         destination: {
           type: 'info',
           state: { productId: 'prod-1' }
         },
-        presentation: { status: 'idle' }
+        presentation: {
+          status: 'presented',
+          content: { type: 'info', state: { productId: 'prod-1' } }
+        }
       };
 
       const [newState] = productDetailReducer(
@@ -249,7 +259,26 @@ describe('ProductDetail Reducer', () => {
         mockDeps
       );
 
-      expect(newState.destination).toBeNull();
+      expect(newState.destination).toBe(state.destination);
+      expect(newState.presentation).toEqual({
+        status: 'dismissing',
+        content: state.destination,
+        duration: 300
+      });
+
+      const [completed] = productDetailReducer(
+        newState,
+        {
+          type: 'destination',
+          action: {
+            type: 'presented',
+            action: { type: 'info', action: { type: 'dismissalCompleted' } }
+          }
+        },
+        mockDeps
+      );
+      expect(completed.destination).toBeNull();
+      expect(completed.presentation).toEqual({ status: 'idle' });
     });
   });
 });

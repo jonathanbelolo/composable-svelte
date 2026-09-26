@@ -20,7 +20,7 @@ import { isDev } from '../dependencies/utils.js';
  */
 function interpolate(template: string, params: Record<string, any>): string {
   return template.replace(/\{(\w+)\}/g, (match, key) => {
-    return key in params ? String(params[key]) : match;
+    return Object.prototype.hasOwnProperty.call(params, key) ? String(params[key]) : match;
   });
 }
 
@@ -46,7 +46,7 @@ export function createTranslator(
       const cacheKey = `${locale}:${namespace}`;
       const translations = i18nState.translations[cacheKey];
 
-      if (translations && key in translations) {
+      if (translations && Object.prototype.hasOwnProperty.call(translations, key)) {
         const value = translations[key];
 
         // If it's a function (pre-compiled ICU message), call it with params

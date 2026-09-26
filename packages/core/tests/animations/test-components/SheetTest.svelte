@@ -1,9 +1,11 @@
 <script lang="ts">
-	let { startOpen = false }: { startOpen?: boolean } = $props();
+	let { startOpen = false, side = 'bottom' }: { startOpen?: boolean; side?: 'bottom' | 'left' | 'right' } = $props();
 
+	import { onDestroy } from 'svelte';
 	import { createStore } from '../../../src/lib/store.svelte.js';
 	import Sheet from '../../../src/lib/navigation-components/Sheet.svelte';
-	import type { PresentationState } from '../../../src/lib/navigation/types.js';
+	import { optionalSlot, ManagedIntegrationBuilder } from '../../../src/lib/navigation/managed-integration.js';
+	import type { PresentationState, PresentationAction } from '../../../src/lib/navigation/types.js';
 	import { Effect } from '../../../src/lib/effect.js';
 	// The value `Effect` shadows the type of the same name, which lives in
 	// `types.ts`. Aliased so the reducer's return type resolves.
@@ -21,11 +23,14 @@
 	type TestAction =
 		| { type: 'openSheet' }
 		| { type: 'dismissSheet' }
+		| { type: 'sheetContent'; action: PresentationAction<{ type: 'inert' }> }
 		| { type: 'presentation'; event: { type: 'presentationCompleted' | 'dismissalCompleted' } };
 
 	// ============================================================================
 	// Reducer
 	// ============================================================================
+
+	const childReducer = (s: string): [string, EffectType<{ type: 'inert' }>] => [s, Effect.none()];
 
 	function testReducer(state: TestState, action: TestAction): [TestState, EffectType<TestAction>] {
 		switch (action.type) {
@@ -50,6 +55,15 @@
 					},
 					Effect.none()
 				];
+
+			case 'sheetContent':
+				if (action.action.type === 'dismiss') {
+					if (state.presentation.status !== 'presented') {
+						return [{ ...state, sheetContent: state.presentation.status === 'idle' ? null : state.presentation.content }, Effect.none()];
+					}
+					return [{ ...state, sheetContent: state.presentation.content, presentation: { ...state.presentation, status: 'dismissing' } }, Effect.none()];
+				}
+				return [state, Effect.none()];
 
 			case 'presentation':
 				if (action.event.type === 'presentationCompleted') {
@@ -85,8 +99,11 @@
 	}
 
 	// ============================================================================
-	// Store
+	// Store & Managed Composition
 	// ============================================================================
+
+	const sheetSlot = optionalSlot<TestState, TestAction>()('sheetContent');
+	const composition = new ManagedIntegrationBuilder<TestState, TestAction, undefined>(testReducer).with(sheetSlot, childReducer).build();
 
 	const store = createStore({
 		// `startOpen` mounts already `presented` — what SSR hydration produces for a
@@ -102,19 +119,11 @@
 					sheetContent: null,
 					presentation: { status: 'idle' as const }
 				}) satisfies TestState,
-		reducer: testReducer
+		...composition
 	});
 
-	// Scoped store for sheet
-	const sheetStore = $derived(
-		store.state.sheetContent
-			? {
-					state: store.state.sheetContent,
-					dispatch: store.dispatch,
-					dismiss: () => store.dispatch({ type: 'dismissSheet' })
-				}
-			: null
-	);
+	onDestroy(() => store.destroy());
+	const sheetStore = $derived(store.state.sheetContent != null ? composition.bind(store, sheetSlot) : undefined);
 
 	// Expose store for testing (attach to window)
 	if (typeof window !== 'undefined') {
@@ -134,6 +143,9 @@
 
 <!-- Sheet Component -->
 <Sheet
+	backdropClass="actual-sheet-backdrop"
+	class="actual-sheet-content"
+	{side}
 	store={sheetStore}
 	presentation={store.state.presentation}
 	onPresentationComplete={() =>
@@ -142,7 +154,6 @@
 		store.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })}
 >
 	{#snippet children({ store: scopedStore })}
-		<div data-testid="sheet-backdrop" class="sheet-test-backdrop"></div>
 		<div data-testid="sheet-content" class="sheet-test-content">
 			<h2>Test Sheet</h2>
 			<p>{scopedStore!.state}</p>
@@ -163,12 +174,6 @@
 </Sheet>
 
 <style>
-	.sheet-test-backdrop {
-		position: fixed;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.5);
-	}
-
 	.sheet-test-content {
 		position: fixed;
 		left: 0;

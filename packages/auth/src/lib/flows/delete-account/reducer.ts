@@ -16,7 +16,7 @@ import type {
 const DELETE_EFFECT_ID = 'auth/flows/delete-account';
 
 export function createInitialDeleteAccountState(): DeleteAccountState {
-	return { status: 'idle', error: null };
+	return { status: 'idle', error: null, settled: null };
 }
 
 export const deleteAccountReducer: Reducer<
@@ -26,15 +26,15 @@ export const deleteAccountReducer: Reducer<
 > = (state, action, deps) => {
 	switch (action.type) {
 		case 'confirmationRequested': {
-			if (state.status !== 'idle') return [state, Effect.none()];
-			return [{ ...state, status: 'confirming', error: null }, Effect.none()];
+			if (state.status !== 'idle') return state.settled === null ? [state, Effect.none()] : [{ ...state, settled: null }, Effect.none()];
+			return [{ ...state, status: 'confirming', error: null, settled: null }, Effect.none()];
 		}
 
 		case 'confirmationDismissed': {
 			// Refused while deleting: a confirmation that can be cancelled after the
 			// request is out lies about what happened.
-			if (state.status !== 'confirming') return [state, Effect.none()];
-			return [{ ...state, status: 'idle' }, Effect.none()];
+			if (state.status !== 'confirming') return state.settled === null ? [state, Effect.none()] : [{ ...state, settled: null }, Effect.none()];
+			return [{ ...state, status: 'idle', settled: null }, Effect.none()];
 		}
 
 		case 'deletionRequested': {
@@ -42,10 +42,10 @@ export const deleteAccountReducer: Reducer<
 			// `confirming`, so the confirmation step is a property of the flow
 			// rather than of whichever markup happens to be rendered. A consumer
 			// who builds their own dialog, or none, cannot skip it by accident.
-			if (state.status !== 'confirming') return [state, Effect.none()];
+			if (state.status !== 'confirming') return state.settled === null ? [state, Effect.none()] : [{ ...state, settled: null }, Effect.none()];
 
 			return [
-				{ ...state, status: 'deleting', error: null },
+				{ ...state, status: 'deleting', error: null, settled: null },
 				Effect.cancellable<DeleteAccountAction>(DELETE_EFFECT_ID, async (dispatch, signal) => {
 					try {
 						await deps.deleteAccount(signal);
@@ -58,7 +58,14 @@ export const deleteAccountReducer: Reducer<
 		}
 
 		case 'deletionSucceeded': {
-			return [{ status: 'deleted', error: null }, Effect.none()];
+			return [
+				{
+					status: 'deleted',
+					error: null,
+					settled: state.status === 'deleting' ? 'deleted' : null
+				},
+				Effect.none()
+			];
 		}
 
 		case 'deletionFailed': {
@@ -67,17 +74,30 @@ export const deleteAccountReducer: Reducer<
 			// recovery is: prompt, sign in again, press again — which means asking
 			// afresh, so the user re-confirms an action they may have been
 			// interrupted out of.
-			return [{ ...state, status: 'idle', error: action.error }, Effect.none()];
+			return [
+				{
+					...state,
+					status: 'idle',
+					error: action.error,
+					settled: state.status === 'deleting' ? 'failed' : null
+				},
+				Effect.none()
+			];
 		}
 
 		case 'errorDismissed': {
-			return [state.error === null ? state : { ...state, error: null }, Effect.none()];
+			return [
+				state.error === null && state.settled === null
+					? state
+					: { ...state, error: null, settled: null },
+				Effect.none()
+			];
 		}
 
 		default: {
 			const _exhaustive: never = action;
 			void _exhaustive;
-			return [state, Effect.none()];
+			return [{ ...state, settled: null }, Effect.none()];
 		}
 	}
 };

@@ -14,6 +14,7 @@
   const state = $derived($store);
   const t = $derived(createTranslator($store.i18n, 'common'));
   const formatters = $derived(createFormatters($store.i18n));
+  const locale = $derived($store.i18n.currentLocale);
   const comments = $derived(
     state.comments.filter((c) => c.postId === post.id)
   );
@@ -35,11 +36,11 @@
 
 <div class="comments-page">
   <nav class="breadcrumb">
-    <a href={listURL()} onclick={(e) => { e.preventDefault(); navigateToList(); }}>
+    <a href={listURL(locale)} onclick={(e) => { e.preventDefault(); navigateToList(); }}>
       {t('nav.allPosts')}
     </a>
     <span class="separator">›</span>
-    <a href={postURL(post.id)} onclick={(e) => { e.preventDefault(); navigateToPost(); }}>
+    <a href={postURL(post.id, locale)} onclick={(e) => { e.preventDefault(); navigateToPost(); }}>
       {post.title}
     </a>
     <span class="separator">›</span>
@@ -74,7 +75,7 @@
 
     <footer>
       <a
-        href={postURL(post.id)}
+        href={postURL(post.id, locale)}
         class="back-link"
         onclick={(e) => { e.preventDefault(); navigateToPost(); }}
       >

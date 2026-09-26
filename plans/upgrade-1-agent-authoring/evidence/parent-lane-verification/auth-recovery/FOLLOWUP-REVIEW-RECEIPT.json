@@ -1,0 +1,7 @@
+{
+  "logPath": "/private/tmp/auth-recovery-followup-parent-opus-review-continuation.jsonl",
+  "logSha256": "883c552b0d0f27c67ef1f98089a4affefc18ab795aad90293a3642b581148507",
+  "result": "success",
+  "initialInvocation": "Timed out at240 seconds while reading scoped files; resumed same session to obtain final verdict",
+  "testRunsByReviewer": false
+}

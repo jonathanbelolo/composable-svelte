@@ -22,7 +22,7 @@ import type {
   Unsubscribe,
   MessageSerializer
 } from './types.js';
-import { WebSocketError, WS_ERROR_CODES, JSONSerializer } from './types.js';
+import { WebSocketError, WS_ERROR_CODES, JSONSerializer, isValidCloseCode } from './types.js';
 
 /**
  * Create a production WebSocket client.
@@ -65,6 +65,8 @@ export function createLiveWebSocket<T = unknown>(
 ): WebSocketClient<T> {
   // State
   let socket: WebSocket | null = null;
+  // Explicit client operations retire all tails/callbacks from the prior operation.
+  let lifecycle: object = {};
   let state: ConnectionState = {
     status: 'disconnected',
     url: null,
@@ -121,9 +123,6 @@ export function createLiveWebSocket<T = unknown>(
    * (R1-REVIEW 1.1; W3, W8).
    */
   const openedSockets = new WeakSet<WebSocket>();
-  /** Close codes a browser refuses from script: everything but 1000 and 3000–4999. */
-  const isValidCloseCode = (code: number): boolean =>
-    Number.isInteger(code) && (code === 1000 || (code >= 3000 && code <= 4999));
 
   // ========================================
   // Internal Helpers
@@ -226,25 +225,20 @@ export function createLiveWebSocket<T = unknown>(
    * never was — so the first failed attempt was the last
    * (AUDIT-2026-09-03-FINDINGS W1).
    */
-  function attemptFailed(ws: WebSocket, error: WebSocketError, reject: (error: unknown) => void): void {
-    if (failedSockets.has(ws)) return;
+  function attemptFailed(ws: WebSocket, error: WebSocketError, reject: (error: unknown) => void, owner: object): void {
+    if (owner !== lifecycle || socket !== ws || failedSockets.has(ws)) return;
     failedSockets.add(ws);
-    if (connectionTimeoutTimer) {
+    const retry = state.status === 'reconnecting';
+    if (connectionTimeoutTimer !== null) {
       clearTimeout(connectionTimeoutTimer);
       connectionTimeoutTimer = null;
     }
     abandonSocket(ws);
     stats.errors++;
-    updateState({ lastError: error });
-    notifyEventListeners({ type: 'error', error, timestamp: Date.now() });
-
-    if (state.status === 'reconnecting') {
-      reject(error);
-      scheduleReconnect();
-      return;
-    }
-    updateState({ status: 'failed' });
+    updateState({ lastError: error, status: retry ? 'reconnecting' : 'failed' });
     reject(error);
+    notifyEventListeners({ type: 'error', error, timestamp: Date.now() });
+    if (owner === lifecycle && retry && socket === null && state.status === 'reconnecting') scheduleReconnect();
   }
 
   /**
@@ -253,6 +247,14 @@ export function createLiveWebSocket<T = unknown>(
    * `connect()` and a successful open reset that.
    */
   function openSocket(url: string, protocols: string[]): Promise<void> {
+    const owner = lifecycle;
+    const reconnecting = state.status === 'reconnecting';
+    // Defensive retirement: no untracked transport may survive replacement.
+    if (socket) {
+      if (connectionTimeoutTimer !== null) clearTimeout(connectionTimeoutTimer);
+      connectionTimeoutTimer = null;
+      releaseSocket(1000, 'Connection replaced');
+    }
     let ws: WebSocket;
     try {
       ws = new WebSocket(url, protocols);
@@ -266,10 +268,9 @@ export function createLiveWebSocket<T = unknown>(
       stats.errors++;
       updateState({ lastError: wsError });
       notifyEventListeners({ type: 'error', error: wsError, timestamp: Date.now() });
-      if (state.status === 'reconnecting') {
-        scheduleReconnect();
-      } else {
-        updateState({ status: 'failed' });
+      if (owner === lifecycle) {
+        if (reconnecting) scheduleReconnect();
+        else updateState({ status: 'failed' });
       }
       return Promise.reject(wsError);
     }
@@ -278,9 +279,10 @@ export function createLiveWebSocket<T = unknown>(
     const attempts = state.status === 'reconnecting' ? state.reconnectAttempts : 0;
 
     return new Promise((resolve, reject) => {
-      pendingConnect = reject;
+      const pending = reject;
+      pendingConnect = pending;
       const settle = <A extends unknown[]>(fn: (...args: A) => void) => (...args: A) => {
-        pendingConnect = null;
+        if (pendingConnect === pending) pendingConnect = null;
         fn(...args);
       };
       resolve = settle(resolve);
@@ -288,7 +290,7 @@ export function createLiveWebSocket<T = unknown>(
 
       // Connection timeout
       connectionTimeoutTimer = setTimeout(() => {
-        if (ws.readyState === WebSocket.CONNECTING) {
+        if (owner === lifecycle && socket === ws && ws.readyState === WebSocket.CONNECTING) {
           attemptFailed(
             ws,
             new WebSocketError(
@@ -296,16 +298,18 @@ export function createLiveWebSocket<T = unknown>(
               WS_ERROR_CODES.CONNECTION_TIMEOUT,
               true
             ),
-            reject
+            reject,
+            owner
           );
         }
       }, connectionTimeout);
 
       ws.onopen = () => {
+        if (owner !== lifecycle || socket !== ws) return;
         openedSockets.add(ws);
         // Settled before any listener runs: a `connected` listener that calls
         // disconnect() must not reject the connect() that just succeeded.
-        pendingConnect = null;
+        if (pendingConnect === pending) pendingConnect = null;
         if (connectionTimeoutTimer) {
           clearTimeout(connectionTimeoutTimer);
           connectionTimeoutTimer = null;
@@ -318,6 +322,8 @@ export function createLiveWebSocket<T = unknown>(
           reconnectAttempts: 0
         });
 
+        resolve();
+        if (attempts > 0) stats.reconnects++;
         notifyEventListeners({
           type: 'connected',
           url,
@@ -325,8 +331,7 @@ export function createLiveWebSocket<T = unknown>(
           timestamp: Date.now()
         });
 
-        if (attempts > 0) {
-          stats.reconnects++;
+        if (attempts > 0 && owner === lifecycle && socket === ws) {
           notifyEventListeners({
             type: 'reconnected',
             attempts,
@@ -334,11 +339,10 @@ export function createLiveWebSocket<T = unknown>(
             timestamp: Date.now()
           });
         }
-
-        resolve();
       };
 
       ws.onerror = (event) => {
+        if (owner !== lifecycle || socket !== ws) return;
         const error = new WebSocketError(
           'Connection failed',
           WS_ERROR_CODES.CONNECTION_FAILED,
@@ -347,7 +351,7 @@ export function createLiveWebSocket<T = unknown>(
         );
         if (!openedSockets.has(ws)) {
           // Never opened: the attempt failed.
-          attemptFailed(ws, error, reject);
+          attemptFailed(ws, error, reject, owner);
           return;
         }
         // Established: report it and leave the status and the handlers alone.
@@ -358,6 +362,7 @@ export function createLiveWebSocket<T = unknown>(
       };
 
       ws.onmessage = (event) => {
+        if (owner !== lifecycle || socket !== ws) return;
         stats.messagesReceived++;
 
         // Calculate bytes received
@@ -396,17 +401,21 @@ export function createLiveWebSocket<T = unknown>(
       };
 
       ws.onclose = (event) => {
+        if (owner !== lifecycle || socket !== ws) return;
         if (!openedSockets.has(ws)) {
           // Closed before it opened, with no error event first.
           attemptFailed(
             ws,
             new WebSocketError('Connection closed before it opened', WS_ERROR_CODES.CONNECTION_FAILED, true, event),
-            reject
+            reject,
+            owner
           );
           return;
         }
 
         const wasConnected = state.status === 'connected';
+        abandonSocket(ws);
+        updateState({ status: 'disconnected', connectedAt: null });
 
         // A close the peer means as a fault of ours is reported as one.
         if (PROTOCOL_CLOSE_CODES.has(event.code)) {
@@ -421,11 +430,7 @@ export function createLiveWebSocket<T = unknown>(
           notifyEventListeners({ type: 'error', error: fault, timestamp: Date.now() });
         }
 
-        updateState({
-          status: 'disconnected',
-          connectedAt: null
-        });
-
+        if (owner !== lifecycle) return;
         notifyEventListeners({
           type: 'disconnected',
           code: event.code,
@@ -435,7 +440,8 @@ export function createLiveWebSocket<T = unknown>(
         });
 
         // Reconnect by what the close code says, not by wasClean (W3).
-        if (wasConnected && reconnectConfig.enabled && state.url && shouldReconnect(event)) {
+        if (owner !== lifecycle) return;
+        if (wasConnected && reconnectConfig.enabled && state.url && shouldReconnect(event) && owner === lifecycle) {
           ladderDelay = 0;
           scheduleReconnect();
         }
@@ -453,10 +459,35 @@ export function createLiveWebSocket<T = unknown>(
       );
     }
 
+    const owner = (lifecycle = {});
+    const wasLive = state.status === 'connected' || (socket !== null && openedSockets.has(socket));
+    // A closing socket and its unfinished handshake no longer own this client.
+    if (socket) {
+      if (connectionTimeoutTimer) {
+        clearTimeout(connectionTimeoutTimer);
+        connectionTimeoutTimer = null;
+      }
+      releaseSocket(1000, 'Connection replaced');
+    }
+
     // Clear any pending reconnect
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
+    }
+
+    if (wasLive) {
+      updateState({ status: 'disconnected', connectedAt: null });
+      notifyEventListeners({
+        type: 'disconnected',
+        code: 1000,
+        reason: 'Connection replaced',
+        wasClean: false,
+        timestamp: Date.now()
+      });
+      if (owner !== lifecycle) {
+        throw new WebSocketError('Disconnected before the connection opened', WS_ERROR_CODES.CONNECTION_FAILED, false);
+      }
     }
 
     // A user connect() is the one place the ladder starts over.
@@ -473,7 +504,7 @@ export function createLiveWebSocket<T = unknown>(
 
   /** One rung of the ladder: open a socket without touching the attempt count. */
   function attemptReconnect(): void {
-    if (!state.url) return;
+    if (!state.url || state.status !== 'reconnecting' || socket !== null) return;
     openSocket(state.url, state.protocols).catch(() => {
       // attemptFailed has already reported it and scheduled the next rung.
     });
@@ -520,6 +551,7 @@ export function createLiveWebSocket<T = unknown>(
    */
   function reconnect(reason = 'Reconnect requested', cause?: WebSocketError): void {
     if (!state.url) return;
+    const owner = lifecycle = {};
     if (cause) {
       // What the caller found out — a missed pong, say — reported as an error
       // event before the connection is dropped, so a UI sees the cause.
@@ -527,6 +559,7 @@ export function createLiveWebSocket<T = unknown>(
       updateState({ lastError: cause });
       notifyEventListeners({ type: 'error', error: cause, timestamp: Date.now() });
     }
+    if (owner !== lifecycle) return;
     if (!reconnectConfig.enabled) {
       void disconnect(1000, reason);
       return;
@@ -547,6 +580,7 @@ export function createLiveWebSocket<T = unknown>(
     if (wasLive) {
       notifyEventListeners({ type: 'disconnected', code: 1000, reason, wasClean: false, timestamp: Date.now() });
     }
+    if (owner !== lifecycle) return;
     ladderDelay = 0;
     scheduleReconnect();
   }
@@ -560,6 +594,7 @@ export function createLiveWebSocket<T = unknown>(
       );
     }
 
+    lifecycle = {};
     // Clear reconnect timer
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
@@ -596,8 +631,12 @@ export function createLiveWebSocket<T = unknown>(
   }
 
   function scheduleReconnect(): void {
-    if (!state.url) return;
-
+    if (!state.url || socket !== null) return;
+    if (reconnectTimer !== null) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    const owner = lifecycle;
     const attempt = state.reconnectAttempts + 1;
 
     // Check max attempts
@@ -624,6 +663,14 @@ export function createLiveWebSocket<T = unknown>(
       reconnectAttempts: attempt
     });
 
+    // Enroll before notification: a reentrant disconnect/reconnect can retire it.
+    reconnectTimer = setTimeout(() => {
+      // Obsolete callback must never erase newer timer identity; verify ownership first.
+      if (owner !== lifecycle) return;
+      reconnectTimer = null;
+      attemptReconnect();
+    }, delay);
+
     notifyEventListeners({
       type: 'reconnecting',
       attempt,
@@ -631,11 +678,6 @@ export function createLiveWebSocket<T = unknown>(
       maxAttempts: reconnectConfig.maxAttempts,
       timestamp: Date.now()
     });
-
-    reconnectTimer = setTimeout(() => {
-      reconnectTimer = null;
-      attemptReconnect();
-    }, delay);
   }
 
   // ========================================

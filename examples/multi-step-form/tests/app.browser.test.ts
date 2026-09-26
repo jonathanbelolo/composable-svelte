@@ -185,7 +185,7 @@ describe('Multi-Step Form - Integrated Mode', () => {
       // Click Next
       const nextButton = container.querySelector('[data-testid="next-button"]') as HTMLButtonElement;
       await userEvent.click(nextButton);
-      await waitForUpdates();
+      await expect.poll(() => container.querySelector('[data-testid="address-step"]')).not.toBeNull();
 
       // Should be on step 2
       const addressStep = container.querySelector('[data-testid="address-step"]');
@@ -218,7 +218,7 @@ describe('Multi-Step Form - Integrated Mode', () => {
 
       const nextButton = container.querySelector('[data-testid="next-button"]') as HTMLButtonElement;
       await userEvent.click(nextButton);
-      await waitForUpdates();
+      await expect.poll(() => container.querySelector('[data-testid="address-step"]')).not.toBeNull();
     }
 
     test('shows validation error for street too short', async () => {
@@ -334,7 +334,7 @@ describe('Multi-Step Form - Integrated Mode', () => {
 
       const nextButton = container.querySelector('[data-testid="next-button"]') as HTMLButtonElement;
       await userEvent.click(nextButton);
-      await waitForUpdates();
+      await expect.poll(() => container.querySelector('[data-testid="address-step"]')).not.toBeNull();
     }
 
     test('goes back to step 1 from step 2', async () => {
@@ -383,7 +383,7 @@ describe('Multi-Step Form - Integrated Mode', () => {
 
       let nextButton = container.querySelector('[data-testid="next-button"]') as HTMLButtonElement;
       await userEvent.click(nextButton);
-      await waitForUpdates();
+      await expect.poll(() => container.querySelector('[data-testid="address-step"]')).not.toBeNull();
 
       // Fill step 2
       const streetInput = container.querySelector('#street') as HTMLInputElement;
@@ -404,7 +404,7 @@ describe('Multi-Step Form - Integrated Mode', () => {
 
       nextButton = container.querySelector('[data-testid="next-button"]') as HTMLButtonElement;
       await userEvent.click(nextButton);
-      await waitForUpdates();
+      await expect.poll(() => container.querySelector('[data-testid="review-step"]')).not.toBeNull();
     }
 
     test('displays all personal info data on review step', async () => {
@@ -518,7 +518,7 @@ describe('Multi-Step Form - Integrated Mode', () => {
 
       let nextButton = container.querySelector('[data-testid="next-button"]') as HTMLButtonElement;
       await userEvent.click(nextButton);
-      await waitForUpdates();
+      await expect.poll(() => container.querySelector('[data-testid="address-step"]')).not.toBeNull();
 
       // Step 2
       const streetInput = container.querySelector('#street') as HTMLInputElement;
@@ -539,7 +539,7 @@ describe('Multi-Step Form - Integrated Mode', () => {
 
       nextButton = container.querySelector('[data-testid="next-button"]') as HTMLButtonElement;
       await userEvent.click(nextButton);
-      await waitForUpdates();
+      await expect.poll(() => container.querySelector('[data-testid="review-step"]')).not.toBeNull();
     }
 
     test('successfully submits and shows success screen', async () => {
@@ -577,6 +577,9 @@ describe('Multi-Step Form - Integrated Mode', () => {
 
       // Check button text changed
       expect(submitButton.textContent).toContain('Submitting');
+
+      // Await the observable terminal result; component cleanup owns pending resources.
+      await expect.poll(() => container.querySelector('[data-testid="success-state"]'), { timeout: 3000 }).not.toBeNull();
     });
 
     test('allows starting over from success screen', async () => {
@@ -629,7 +632,7 @@ describe('Multi-Step Form - Integrated Mode', () => {
 
       const nextButton = container.querySelector('[data-testid="next-button"]') as HTMLButtonElement;
       await userEvent.click(nextButton);
-      await waitForUpdates();
+      await expect.poll(() => container.querySelector('[data-testid="address-step"]')).not.toBeNull();
     }
 
     test('can click on completed step to navigate back', async () => {

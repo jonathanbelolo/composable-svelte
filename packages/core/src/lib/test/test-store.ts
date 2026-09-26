@@ -190,6 +190,34 @@
  * store.assertNoPendingActions(); // ✅ Passes even with unasserted actions
  * ```
  *
+ * ## Cleanup settlement and cancellation
+ *
+ * `destroy()` is synchronous and idempotent. `destroyAndSettle(timeout = 1000)`
+ * also waits for outstanding subscription cleanup and reports failures through
+ * its promise, even on a dispatch-only store. Its deadline is real time; it
+ * never advances fake time. Start it, advance the test's fake clock as needed,
+ * then await it. A timeout names pending subscriptions, which remain observed
+ * and may be awaited again. Abandoned executor promises are excluded.
+ *
+ * Automatic test teardown remains best-effort for legacy compatibility: it
+ * waits up to 50ms on real time (one real deadline checkpoint under fake timers)
+ * and reports recorded errors with the "and nothing asked" diagnostic. Pending
+ * cleanup alone cannot fail a legacy test. Use the explicit method when cleanup
+ * settlement is part of the test contract; late failures after that best-effort
+ * window have no owning-test guarantee.
+ *
+ * Both Cancellable and grouped Run drop asynchronous post-abort rejections in
+ * TestStore. Production instead logs non-AbortError failures. Synchronous throws
+ * during self-cancellation are reported by both. Shared managed-executor parity
+ * is a separate contract; this legacy difference is deliberate.
+ *
+ * ## Subscription Dispatch Gating
+ *
+ * TestStore gates dispatches from subscription callbacks. Once a subscription is
+ * cancelled (via `Effect.cancel`, group cancellation, replacement, or store
+ * destruction), dispatches from retained callbacks are dropped to match runtime
+ * store behavior.
+ *
  * ## Rejections and the test hook
  *
  * An executor that rejects fails the next `receive()`, `send()` or
@@ -201,7 +229,11 @@
  * `it.concurrent` is not supported: the hook binds to the current test.
  */
 
-import type { Reducer, Effect, Dispatch } from '../types.js';
+import type { Reducer, Effect, Dispatch, StoreExecutionConfig } from '../types.js';
+import type { ResourceRecord } from '../execution/resources.js';
+import { EffectRuntime, type RuntimeEvent } from '../execution/runtime.js';
+import { TurnQueue, type TurnEnvelope, type TurnEvent } from '../execution/turn-queue.js';
+import { DeterministicScheduler, type ExecutionScheduler } from '../execution/scheduler.js';
 import { stableStringify } from '../utils/stable-stringify.js';
 import { realClearTimeout, realSetTimeout, sleep, timersAreFaked } from './real-timers.js';
 
@@ -212,6 +244,9 @@ export interface TestStoreConfig<State, Action, Dependencies = any> {
   initialState: State;
   reducer: Reducer<State, Action, Dependencies>;
   dependencies?: Dependencies;
+  /** Opt-in production-equivalent FIFO execution. Default remains legacy. */
+  execution?: StoreExecutionConfig<State, Action, Dependencies> | undefined;
+  maxHistorySize?: number | undefined;
 }
 
 /**
@@ -241,6 +276,8 @@ const SAFETY_TICK_MS = 10;
 
 const json = (value: unknown): string => JSON.stringify(value);
 
+class CleanupSettlementTimeout extends Error {}
+
 /**
  * TestStore for testing reducers and effects.
  *
@@ -261,6 +298,16 @@ const json = (value: unknown): string => JSON.stringify(value);
  */
 export class TestStore<State, Action, Dependencies = any> {
   private _state: State;
+  private _managedQueue: TurnQueue<State, Action, Dependencies> | undefined;
+  private _managedRuntime: EffectRuntime<Action> | undefined;
+  private _managedScheduler: ExecutionScheduler | undefined;
+  private _receivedSnapshots: State[] = [];
+  /** Event projection for diagnostic labels only; runtime owns liveness and cancellation. */
+  private _observedResources = new Map<symbol, ResourceRecord>();
+  private _sentTurns = new Map<TurnEnvelope<Action>, {resolve: (state: State) => void; reject: (error: unknown) => void}>();
+
+  /** Internal shared-runtime observation, matching the production adapter. */
+  get _runtime(): EffectRuntime<Action> | undefined { return this._managedRuntime; }
 
   /**
    * Current state (read-only).
@@ -298,6 +345,8 @@ export class TestStore<State, Action, Dependencies = any> {
   private _debounceTimers = new Map<string, PendingTimer>();
   private _throttleState = new Map<string, { lastRun: number; timer?: PendingTimer }>();
   private _subscriptionCleanups = new Map<string, () => void | Promise<void>>();
+  /** Cleanup settlement is distinct from abandoned executor settlement. */
+  private _pendingCleanups = new Map<Promise<void>, string>();
   /** In-flight cancellables by id, so re-registering one aborts its predecessor. */
   private _inFlightEffects = new Map<string, AbortController>();
   /**
@@ -327,9 +376,93 @@ export class TestStore<State, Action, Dependencies = any> {
   public exhaustivity: 'on' | 'off' = 'on';
 
   constructor(config: TestStoreConfig<State, Action, Dependencies>) {
+    if (config.execution?.mode !== 'managed' && config.execution &&
+        (config.execution.scheduler !== undefined || config.execution.slots !== undefined || config.execution._reduce !== undefined || config.execution._initial !== undefined || config.execution._initialization !== undefined || config.execution.rootThrottleCapacity !== undefined)) {
+      throw new TypeError('Managed execution options require execution.mode: managed');
+    }
     this._state = config.initialState;
     this.reducer = config.reducer;
     this.dependencies = config.dependencies ?? ({} as Dependencies);
+    if (config.execution?.mode === 'managed') {
+      this._managedScheduler = config.execution.scheduler ?? new DeterministicScheduler();
+      this._managedRuntime = new EffectRuntime<Action>({
+        scheduler: this._managedScheduler,
+        rootThrottleCapacity: config.execution.rootThrottleCapacity,
+        dispatch: (action, origin) => {
+          try { this._managedQueue!.enqueue({action, origin, source: 'effect'}); }
+          catch (error) { this._managedRuntime!.reportFailure(error, 'reduction'); }
+        },
+        isServer: () => false,
+        onEvent: event => this._observeRuntime(event),
+        // Execution/cleanup failures already arrive as typed events; diagnostic sink
+        // failures use onError and must not disappear only in the testing adapter.
+        onError: (error, context) => { if (context === 'observer') this._recordManagedFailure(error); }
+      });
+      this._managedQueue = new TurnQueue({
+        initialState: config.initialState,
+        reducer: config.reducer,
+        dependencies: config.dependencies,
+        execution: config.execution,
+        maxHistorySize: config.maxHistorySize,
+        runtime: this._managedRuntime,
+        onStateCommitted: state => { this._state = state; },
+        onTurn: event => this._observeTurn(event),
+        onSubscriberError: error => this._recordManagedFailure(error)
+      });
+    }
+  }
+
+  /** Internal qualification harness; application activation belongs to the host owner. */
+  _activateInitialization(claim: { readonly live: boolean }): void {
+    if (!this._managedQueue) throw new Error('Initialization requires managed execution');
+    void this._ensureHooked();
+    this._managedQueue.activateInitialization(claim);
+  }
+  _releaseInitialization(claim: { readonly live: boolean }): void { this._managedQueue?.releaseInitialization(claim); }
+
+  private _observeTurn(event: TurnEvent<State, Action>): void {
+    const sent = this._sentTurns.get(event.envelope);
+    if (sent) {
+      this._sentTurns.delete(event.envelope);
+      if (event.type === 'committed') sent.resolve(event.state);
+      else sent.reject(event.type === 'rejected' ? event.error : new Error(`[TestStore] send turn dropped: ${event.reason}`));
+    } else if (event.type === 'committed') {
+      this.receivedActions.push(event.envelope.action);
+      this._receivedSnapshots.push(event.state);
+    }
+    this._notify();
+  }
+
+  private _observeRuntime(event: RuntimeEvent): void {
+    if (event.type === 'failure') this._recordManagedFailure(event.error, event.phase === 'cleanup');
+    if (event.type === 'started') {
+      this._observedResources.set(event.record.uid, event.record);
+      void event.record.cleanupSettlement.then(() => this._notify());
+    } else if (event.type === 'settled') this._observedResources.delete(event.record.uid);
+    this._notify();
+  }
+
+  private _recordManagedFailure(error: unknown, cleanup = false): void {
+    this._failures.push(error);
+    this._notify();
+    if (this._hook === 'armed' || this._hook === 'pending' || (cleanup && this._destroyed)) return;
+    queueMicrotask(() => {
+      const index = this._failures.indexOf(error);
+      if (index === -1) return;
+      this._failures.splice(index, 1);
+      throw error;
+    });
+  }
+
+  /** Managed subscriptions use the same queue and committed snapshots as production. */
+  subscribe(listener: (state: State) => void): () => void {
+    if (!this._managedQueue) throw new Error('[TestStore] subscribe requires managed execution');
+    return this._managedQueue.subscribe(listener);
+  }
+
+  subscribeToActions(listener: (action: Action, state: State) => void): () => void {
+    if (!this._managedQueue) throw new Error('[TestStore] subscribeToActions requires managed execution');
+    return this._managedQueue.subscribeToActions(listener);
   }
 
   /**
@@ -338,8 +471,10 @@ export class TestStore<State, Action, Dependencies = any> {
    * With exhaustivity on, every action an effect has delivered must have been
    * asserted with `receive()` before the next `send()` — TCA's rule, and the
    * one that makes a test's transcript complete. The assertion runs on the
-   * state the reducer returned, before the effect executes, so an effect that
-   * dispatches synchronously cannot make it see a later state
+   * state the reducer returned. Legacy execution asserts before executing the
+   * effect; managed execution records each committed snapshot and immediately
+   * continues the production FIFO drain. Awaiting a managed assertion never
+   * suspends effect execution, and synchronous dispatch cannot change its snapshot
    * (AUDIT-2026-09-03-FINDINGS N9).
    *
    * @param action - The action to dispatch
@@ -350,6 +485,27 @@ export class TestStore<State, Action, Dependencies = any> {
     assert?: StateAssertion<State>
   ): Promise<void> {
     this._assertAlive('send');
+    if (this._managedQueue) {
+      // Hook registration and assertion promises never hold up production turn execution.
+      void this._ensureHooked();
+      this._throwFailures();
+      if (this.exhaustivity === 'on' && this.receivedActions.length) this.assertNoPendingActions();
+      const envelope: TurnEnvelope<Action> = {action, source: 'external'};
+      let resolve!: (state: State) => void, reject!: (error: unknown) => void;
+      const committed = new Promise<State>((yes, no) => { resolve = yes; reject = no; });
+      this._sentTurns.set(envelope, {resolve, reject});
+      try { this._managedQueue.enqueue(envelope); }
+      catch (error) {
+        this._sentTurns.delete(envelope); reject(error);
+        await committed.catch(() => {});
+        await this._ensureHooked();
+        throw error;
+      }
+      const snapshot = await committed;
+      await this._ensureHooked();
+      if (assert) await assert(snapshot);
+      return;
+    }
     await this._ensureHooked();
     this._throwFailures();
     // Operands ordered unlike assertNoPendingActions()'s, which the mutation
@@ -410,17 +566,18 @@ export class TestStore<State, Action, Dependencies = any> {
     await this._ensureHooked();
     this._throwFailures();
 
+    let claimed: {snapshot: State};
     if (Array.isArray(partialAction)) {
       if (partialAction.length === 0) {
         throw new TypeError('[TestStore] receive([]) names no action; pass at least one partial.');
       }
-      await this._until(
+      claimed = await this._until(
         () => this._claimMany(partialAction),
         timeout,
         () => this._timeoutMessage(`Expected to receive actions matching ${json(partialAction)}`, timeout)
       );
     } else {
-      await this._until(
+      claimed = await this._until(
         () => this._claimOne(partialAction),
         timeout,
         () => this._timeoutMessage(`Expected to receive action matching ${json(partialAction)}`, timeout)
@@ -428,12 +585,12 @@ export class TestStore<State, Action, Dependencies = any> {
     }
 
     if (assert) {
-      await assert(this._state);
+      await assert(this._managedQueue ? claimed.snapshot : this._state);
     }
   }
 
   /** The single-partial step: consumed, waiting, or a failure. */
-  private _claimOne(partial: PartialAction<Action>): true | undefined {
+  private _claimOne(partial: PartialAction<Action>): {snapshot: State} | undefined {
     this._throwFailures();
     if (this.receivedActions.length === 0) return undefined;
 
@@ -441,7 +598,7 @@ export class TestStore<State, Action, Dependencies = any> {
       const head = this.receivedActions[0]!;
       if (this._matchesPartialAction(head, partial)) {
         this.receivedActions.shift();
-        return true;
+        return {snapshot: this._managedQueue ? this._receivedSnapshots.shift()! : this._state};
       }
       // The queue already holds the answer: not a reason to keep waiting.
       const later = this.receivedActions.findIndex((action) => this._matchesPartialAction(action, partial));
@@ -456,11 +613,11 @@ export class TestStore<State, Action, Dependencies = any> {
     const index = this.receivedActions.findIndex((action) => this._matchesPartialAction(action, partial));
     if (index === -1) return undefined;
     this.receivedActions.splice(index, 1);
-    return true;
+    return {snapshot: this._managedQueue ? this._receivedSnapshots.splice(index, 1)[0]! : this._state};
   }
 
   /** The array step: the next N are a permutation of the partials, or a failure, or waiting. */
-  private _claimMany(partials: PartialAction<Action>[]): true | undefined {
+  private _claimMany(partials: PartialAction<Action>[]): {snapshot: State} | undefined {
     this._throwFailures();
 
     if (this.exhaustivity === 'on') {
@@ -481,7 +638,8 @@ export class TestStore<State, Action, Dependencies = any> {
       }
       if (remaining.length > 0) return undefined;
       this.receivedActions.splice(0, consumed);
-      return true;
+      const snapshots = this._receivedSnapshots.splice(0, consumed);
+      return {snapshot: this._managedQueue ? snapshots[consumed - 1]! : this._state};
     }
 
     const taken = new Set<number>();
@@ -492,8 +650,10 @@ export class TestStore<State, Action, Dependencies = any> {
       if (index === -1) return undefined;
       taken.add(index);
     }
+    const snapshot = this._managedQueue ? this._receivedSnapshots[Math.max(...taken)]! : this._state;
     this.receivedActions = this.receivedActions.filter((_, i) => !taken.has(i));
-    return true;
+    this._receivedSnapshots = this._receivedSnapshots.filter((_, i) => !taken.has(i));
+    return {snapshot};
   }
 
   /**
@@ -506,7 +666,7 @@ export class TestStore<State, Action, Dependencies = any> {
    * test never advanced, and a test that omitted `advanceTime()` passed
    * (R1-REVIEW 1.6).
    */
-  private _until<T>(check: () => T | undefined, timeout: number, describeTimeout: () => string): Promise<T> {
+  private _until<T>(check: () => T | undefined, timeout: number, describeTimeout: () => string, timeoutError: (message: string) => Error = message => new Error(message)): Promise<T> {
     const first = check();
     if (first !== undefined) return Promise.resolve(first);
 
@@ -537,7 +697,7 @@ export class TestStore<State, Action, Dependencies = any> {
       const deadline = realSetTimeout(() => {
         if (done) return;
         stop();
-        reject(new Error(describeTimeout()));
+        reject(timeoutError(describeTimeout()));
       }, timeout);
       const scheduleTick = (): void => {
         tick = realSetTimeout(() => {
@@ -557,6 +717,19 @@ export class TestStore<State, Action, Dependencies = any> {
 
   /** What a wait was waiting on, for its timeout message. */
   private _timeoutMessage(expectation: string, timeout: number): string {
+    if (this._managedRuntime) {
+      const details = this._describeManagedResources();
+      return (
+        `${expectation} within ${timeout}ms.\n` +
+        `Received actions: ${this._describeQueue()}\n` +
+        `Managed resources pending: ${this._managedRuntime.pendingWorkCount}.` +
+        (details ? `\n${details}\n` : ' ') +
+        `Advance the injected scheduler explicitly for timer or frame work.\n` +
+        `If the expected callback belongs to cancelled or retired work, managed dispatch drops it; assert the surviving state instead of receiving that callback. ` +
+        `Already queued actions still require the reducer's request acceptance checks. ` +
+        `See the installed guide: node_modules/@composable-svelte/core/docs/testing-owned-work.md (relative to your project).`
+      );
+    }
     const timers = [...this._timers]
       .map((timer) => `  ${timer.kind}${timer.id !== undefined ? ` '${timer.id}'` : ''} due in ${timer.due - Date.now()} ms`)
       .join('\n');
@@ -568,6 +741,26 @@ export class TestStore<State, Action, Dependencies = any> {
         ? `Timers pending on the test clock — advance it with advanceTime(ms):\n${timers}\n`
         : 'Timers pending: (none)\n')
     );
+  }
+
+  private _describeManagedResources(): string {
+    if (!this._managedRuntime) return '';
+    const live = [...this._observedResources.values()].filter((record) => record.live);
+    const cleanups = this._managedRuntime.resourceScope.pendingCleanupCount;
+    const lines: string[] = [];
+    for (const record of live) {
+      lines.push(`  ${this._formatObservedResource(record)}`);
+    }
+    if (cleanups > 0) {
+      lines.push(`  Pending cleanup(s): ${cleanups}`);
+    }
+    return lines.join('\n');
+  }
+
+  private _formatObservedResource(record: ResourceRecord): string {
+    const parts = [record.kind ?? 'resource', record.description];
+    if (record.id !== undefined) parts.push(record.id);
+    return parts.filter(Boolean).join(' ');
   }
 
   /**
@@ -599,8 +792,16 @@ export class TestStore<State, Action, Dependencies = any> {
     this._hook = 'pending';
     this._hookReady = import('vitest')
       .then(({ onTestFinished }) => {
-        onTestFinished(() => {
+        onTestFinished(async () => {
           this.destroy();
+          // Legacy hooks are best-effort: they must not require consumers to
+          // advance fake time after the test body or await an arbitrary close.
+          // Explicit destroyAndSettle remains the strict, caller-budgeted API.
+          try {
+            await this._waitForCleanups(timersAreFaked() ? 0 : 50);
+          } catch (error) {
+            if (!(error instanceof CleanupSettlementTimeout)) throw error;
+          }
           this._throwUnconsumed();
         });
         this._hook = 'armed';
@@ -627,7 +828,7 @@ export class TestStore<State, Action, Dependencies = any> {
    * test hook to report it otherwise, an unconsumed rejection is rethrown on
    * a microtask, as an unhandled rejection.
    */
-  private _track(label: string, promise: Promise<void>): void {
+  private _track(label: string, promise: Promise<void>, kind: 'effect' | 'cleanup' = 'effect'): void {
     const key = Symbol(label);
     this._inFlight++;
     this._running.set(key, label);
@@ -644,7 +845,7 @@ export class TestStore<State, Action, Dependencies = any> {
         settle();
         this._failures.push(error);
         this._notify();
-        if (this._hook === 'armed' || this._hook === 'pending') return;
+        if (this._hook === 'armed' || this._hook === 'pending' || (kind === 'cleanup' && this._destroyed)) return;
         queueMicrotask(() => {
           const index = this._failures.indexOf(error);
           if (index === -1) return;
@@ -664,6 +865,22 @@ export class TestStore<State, Action, Dependencies = any> {
       result = Promise.reject(error);
     }
     this._track(label, result);
+  }
+
+  /** Observe every cleanup, including one started before destroy(). */
+  private _runCleanup(label: string, body: () => void | Promise<void>): void {
+    let result: Promise<void>;
+    try {
+      result = Promise.resolve(body());
+    } catch (error) {
+      result = Promise.reject(error);
+    }
+    this._track(label, result, 'cleanup');
+    const observed = result.then(() => {}, () => {}).then(() => {
+      this._pendingCleanups.delete(observed);
+      this._notify();
+    });
+    this._pendingCleanups.set(observed, label);
   }
 
   private _joinGroups(groups: readonly string[] | undefined, dispose: Disposer): () => void {
@@ -716,16 +933,30 @@ export class TestStore<State, Action, Dependencies = any> {
       leave();
       controller.abort();
     });
+    let synchronousError: unknown = undefined;
+    let threwSynchronously = false;
     let execution: Promise<void>;
     try {
       execution = Promise.resolve(execute(gatedDispatch, controller.signal));
     } catch (error) {
+      synchronousError = error;
+      threwSynchronously = true;
       execution = Promise.reject(error);
     }
     execution = execution.finally(() => leave());
     const settledOrAborted = new Promise<void>((resolve, reject) => {
-      controller.signal.addEventListener('abort', () => resolve(), { once: true });
-      execution.then(resolve, (error: unknown) => {
+      if (controller.signal.aborted) {
+        if (threwSynchronously) reject(synchronousError);
+        else resolve();
+        return;
+      }
+      const onAbort = () => resolve();
+      controller.signal.addEventListener('abort', onAbort, { once: true });
+      execution.then(() => {
+        controller.signal.removeEventListener('abort', onAbort);
+        resolve();
+      }, (error: unknown) => {
+        controller.signal.removeEventListener('abort', onAbort);
         if (controller.signal.aborted) resolve();
         else reject(error);
       });
@@ -785,6 +1016,30 @@ export class TestStore<State, Action, Dependencies = any> {
    */
   async finish(timeout: number = 1000): Promise<void> {
     this._assertAlive('finish');
+    if (this._managedRuntime) {
+      await this._ensureHooked();
+      await Promise.resolve();
+      this._throwFailures();
+      const timers = [...this._observedResources.values()].filter(record => record.live && record.kind === 'timer');
+      if (timers.length && (this._managedScheduler instanceof DeterministicScheduler || timersAreFaked())) {
+        throw new Error(`[TestStore] finish(): ${timers.length} pending timer(s): ${timers.map(record => `${record.description} ${record.id ?? ''}`).join(', ')}; advance explicitly or cancel.`);
+      }
+      await this._until(
+        () => {
+          this._throwFailures();
+          return this._managedRuntime!.pendingWorkCount === 0 ? true : undefined;
+        },
+        timeout,
+        () => {
+          const details = this._describeManagedResources();
+          return `[TestStore] finish(): ${this._managedRuntime!.pendingWorkCount} managed resource(s) still pending after ${timeout}ms${details ? `:\n${details}` : ''}\n` +
+            `Resolve the controlled service or cancel through its owning feature; identical local keys in sibling owners are independent. ` +
+            `For teardown, use destroyAndSettle() and settle any asynchronous cleanup. ` +
+            `See the installed guide: node_modules/@composable-svelte/core/docs/testing-owned-work.md (relative to your project).`;
+        }
+      );
+      this._throwFailures();this.assertNoPendingActions();return;
+    }
     await this._ensureHooked();
     this._throwFailures();
     await this.advanceTime(0);
@@ -852,6 +1107,7 @@ export class TestStore<State, Action, Dependencies = any> {
    */
   dispatch(action: Action): void {
     if (this._destroyed) return;
+    if (this._managedQueue) { this._managedQueue.enqueue({action, source: 'external'}); return; }
     this.receivedActions.push(action);
     const [newState, newEffect] = this.reducer(this._state, action, this.dependencies);
     this._state = newState;
@@ -870,7 +1126,7 @@ export class TestStore<State, Action, Dependencies = any> {
    * Get action history.
    */
   getHistory(): ReadonlyArray<Action> {
-    return this.actionHistory;
+    return this._managedQueue?.history ?? this.actionHistory;
   }
 
   /**
@@ -879,12 +1135,13 @@ export class TestStore<State, Action, Dependencies = any> {
    * cancellable, disarms every timer so nothing fires into the next test,
    * runs every subscription cleanup (a rejecting one is recorded), and drops
    * every later `dispatch()`. Idempotent. `send()`, `receive()`, `finish()`
-   * and `advanceTime()` throw after it. The owning test's finish hook calls
-   * it, so a store that a test abandons mid-flight is stopped anyway.
+   * and `advanceTime()` throw after it. The owning test's finish hook initiates
+   * teardown and best-effort cleanup settlement, so a store that a test abandons mid-flight is stopped anyway.
    */
   destroy(): void {
     if (this._destroyed) return;
     this._destroyed = true;
+    if (this._managedQueue) { this._managedQueue.destroy(); this._notify(); return; }
     this._lifetime.abort();
 
     for (const group of [...this._groupMembers.keys()]) this._cancelGroup(group);
@@ -896,18 +1153,53 @@ export class TestStore<State, Action, Dependencies = any> {
     this._debounceTimers.clear();
     this._throttleState.clear();
 
-    const cleanups = [...this._subscriptionCleanups.values()];
+    const cleanups = [...this._subscriptionCleanups.entries()];
     this._subscriptionCleanups.clear();
-    for (const cleanup of cleanups) {
-      try {
-        Promise.resolve(cleanup()).catch((error: unknown) => {
-          this._failures.push(error);
-        });
-      } catch (error) {
-        this._failures.push(error);
-      }
+    for (const [id, cleanup] of cleanups) {
+      this._runCleanup(`Subscription '${id}' destroy cleanup`, cleanup);
     }
     this._notify();
+  }
+
+  /**
+   * Stop the store and observe subscription cleanups, including cleanup already
+   * started by cancellation or replacement. The deadline uses real time even
+   * under fake timers; it never advances the test clock. A timed-out cleanup is
+   * still observed and can be awaited again. Abandoned executor promises are
+   * deliberately excluded. The owning test's hook uses a separate best-effort checkpoint.
+   */
+  async destroyAndSettle(timeout = 1000): Promise<void> {
+    if (this._managedQueue) {
+      const hooked = this._ensureHooked();
+      this.destroy();
+      await hooked;
+      await this._waitForCleanups(timeout);
+      this._throwFailures();
+      return;
+    }
+    // Arms synchronously before destroy can invoke a rejecting cleanup, even
+    // for stores previously used only through dispatch().
+    await this._ensureHooked();
+    this.destroy();
+    await this._waitForCleanups(timeout);
+    this._throwFailures();
+  }
+
+  private _waitForCleanups(timeout: number): Promise<true> {
+    if (this._managedRuntime) return this._until(
+      () => this._managedRuntime!.resourceScope.pendingCleanupCount === 0 ? true : undefined,
+      timeout,
+      () => `[TestStore] destroyAndSettle() timed out with ${this._managedRuntime!.resourceScope.pendingCleanupCount} pending managed cleanup(s)`,
+      message => new CleanupSettlementTimeout(message)
+    );
+    return this._until(
+      () => this._pendingCleanups.size === 0 ? true : undefined,
+      timeout,
+      () => `[TestStore] destroyAndSettle() timed out with ${this._pendingCleanups.size} pending subscription cleanup(s):\n` +
+        [...this._pendingCleanups.values()].map(label => `  ${label}`).join('\n') +
+        (timersAreFaked() ? '\nA cleanup waiting on fake timers needs the test to advance that clock; this method never advances it.' : ''),
+      message => new CleanupSettlementTimeout(message)
+    );
   }
 
   private _assertAlive(method: string): void {
@@ -946,6 +1238,9 @@ export class TestStore<State, Action, Dependencies = any> {
    */
   async advanceTime(ms: number): Promise<void> {
     this._assertAlive('advanceTime');
+    if (this._managedScheduler instanceof DeterministicScheduler) {
+      await this._managedScheduler.advanceTime(ms);return;
+    }
     // Import vi dynamically to avoid issues in non-test environments
     const { vi } = await import('vitest');
 
@@ -959,7 +1254,8 @@ export class TestStore<State, Action, Dependencies = any> {
     // Twenty-one documented examples in this repo were unrunnable because of it.
     if (typeof vi !== 'undefined' && vi.isFakeTimers?.()) {
       // Synchronous advancement: fires every timer due within `ms`.
-      vi.advanceTimersByTime(ms);
+      if (this._managedRuntime) await vi.advanceTimersByTimeAsync(ms);
+      else vi.advanceTimersByTime(ms);
     } else if (ms > 0) {
       // Real timers: the only way to reach the same point is to wait.
       await sleep(ms);
@@ -1015,6 +1311,7 @@ export class TestStore<State, Action, Dependencies = any> {
    * its own, by name; the synchronous part of every executor runs now.
    */
   private _executeEffect(effect: Effect<Action>): void {
+    if (this._destroyed) return;
     const dispatch: Dispatch<Action> = (action: Action) => this.dispatch(action);
     const signal = this._lifetime.signal;
 
@@ -1031,44 +1328,37 @@ export class TestStore<State, Action, Dependencies = any> {
         break;
 
       case 'Cancellable': {
-        // `Effect.cancel(id)` carries no work — it cancels. TestStore used to run
-        // its no-op executor and stop there, so a reducer whose disconnect is
-        // `Effect.cancel(subscriptionId)` tore nothing down under test while
-        // doing so correctly in production. A consumer writing the obvious
-        // TestStore disconnect test got a green vacuous pass.
+        // Snapshot and detach all predecessors before any user abort/cleanup
+        // callback. New work installed by those callbacks survives this cancel.
+        const existing = this._inFlightEffects.get(effect.id);
         const cleanup = this._subscriptionCleanups.get(effect.id);
-        if (typeof cleanup === 'function') {
-          this._subscriptionCleanups.delete(effect.id);
-          this._run(`Subscription '${effect.id}' cleanup`, cleanup);
+        const previousTimer = this._debounceTimers.get(effect.id);
+        const previousThrottle = this._throttleState.get(effect.id);
+        this._inFlightEffects.delete(effect.id);
+        this._subscriptionCleanups.delete(effect.id);
+        this._debounceTimers.delete(effect.id);
+        this._throttleState.delete(effect.id);
+        if (previousTimer !== undefined) this._disarm(previousTimer);
+        if (previousThrottle?.timer !== undefined) this._disarm(previousThrottle.timer);
+
+        const controller = effect.cancelOnly ? undefined : new AbortController();
+        let leaveGroups = (): void => {};
+        const retire = () => {
+          leaveGroups();
+          if (controller && this._inFlightEffects.get(effect.id) === controller) this._inFlightEffects.delete(effect.id);
+        };
+        if (controller) {
+          this._inFlightEffects.set(effect.id, controller);
+          leaveGroups = this._joinGroups(effect.groups, () => controller.abort());
+          controller.signal.addEventListener('abort', retire, { once: true });
         }
-        // A debounce or throttle under this id is cancelled too, as the store does.
-        this._clearTimers(effect.id);
-        if (effect.cancelOnly) {
-          // A bare `Effect.cancel(id)` must also abort an in-flight cancellable
-          // registered under that id, not only tear down a subscription.
-          this._inFlightEffects.get(effect.id)?.abort();
-          this._inFlightEffects.delete(effect.id);
+        existing?.abort();
+        if (typeof cleanup === 'function') this._runCleanup(`Subscription '${effect.id}' cleanup`, cleanup);
+        if (!controller) break;
+        if (this._destroyed || controller.signal.aborted || this._inFlightEffects.get(effect.id) !== controller) {
+          controller.abort();
           break;
         }
-
-        // Supersession, which TestStore used to not model at all. It ran
-        // `effect.execute(dispatch)` with no controller, no registry and no
-        // gating — so re-registering an id did not cancel the effect already
-        // running under it, and both dispatched. A reducer using a fixed
-        // cancellation id to make a second request supersede the first (the
-        // session logout does; so does the login flow) behaved one way in
-        // production and another under test, and the obvious supersession test
-        // passed for the wrong reason or failed for a confusing one.
-        this._inFlightEffects.get(effect.id)?.abort();
-
-        const controller = new AbortController();
-        this._inFlightEffects.set(effect.id, controller);
-        // Its groups' disposer aborts the same controller Effect.cancel(id) would.
-        let leaveGroups = (): void => {};
-        leaveGroups = this._joinGroups(effect.groups, () => {
-          leaveGroups();
-          controller.abort();
-        });
 
         // Gated exactly as the real store gates it: a cancelled effect's
         // actions are unwanted whether or not its author honoured the signal.
@@ -1077,18 +1367,19 @@ export class TestStore<State, Action, Dependencies = any> {
           dispatch(action);
         };
 
+        let synchronousError: unknown = undefined;
+        let threwSynchronously = false;
         let execution: Promise<void>;
         try {
           execution = Promise.resolve(effect.execute(guardedDispatch, controller.signal));
         } catch (error) {
+          synchronousError = error;
+          threwSynchronously = true;
           execution = Promise.reject(error);
         }
         execution = execution.finally(() => {
-          leaveGroups();
-          // Only if still ours — a superseding effect owns the slot now.
-          if (this._inFlightEffects.get(effect.id) === controller) {
-            this._inFlightEffects.delete(effect.id);
-          }
+          controller.signal.removeEventListener('abort', retire);
+          retire();
         });
         // An aborted cancellable leaves the in-flight count at abort time: its
         // dispatches are gated off, so nothing it does afterwards can reach
@@ -1096,8 +1387,18 @@ export class TestStore<State, Action, Dependencies = any> {
         // a superseded fetch that never settles held finish() until its
         // timeout (R1-REVIEW 1.6).
         const settledOrAborted = new Promise<void>((resolve, reject) => {
-          controller.signal.addEventListener('abort', () => resolve(), { once: true });
-          execution.then(resolve, (error: unknown) => {
+          if (controller.signal.aborted) {
+            if (threwSynchronously) reject(synchronousError);
+            else resolve();
+            return;
+          }
+          const onAbort = () => resolve();
+          controller.signal.addEventListener('abort', onAbort, { once: true });
+          execution.then(() => {
+            controller.signal.removeEventListener('abort', onAbort);
+            resolve();
+          }, (error: unknown) => {
+            controller.signal.removeEventListener('abort', onAbort);
             if (controller.signal.aborted) resolve();
             else reject(error);
           });
@@ -1154,29 +1455,51 @@ export class TestStore<State, Action, Dependencies = any> {
         break;
 
       case 'Subscription': {
-        // Re-registering the same id replaces the previous subscription, as the
-        // real store does.
         const previous = this._subscriptionCleanups.get(effect.id);
-        if (typeof previous === 'function') {
-          this._subscriptionCleanups.delete(effect.id);
-          this._run(`Subscription '${effect.id}' cleanup`, previous);
-        }
         this._run(`Subscription '${effect.id}' setup`, () => {
-          const cleanup = effect.setup(dispatch);
+          let live = true;
           let leave = (): void => {};
-          const teardown = () => {
+          let cleanup: (() => void | Promise<void>) | undefined;
+          const teardown = (): void | Promise<void> => {
+            if (!live) return;
+            live = false;
             leave();
-            return cleanup();
+            if (this._subscriptionCleanups.get(effect.id) === teardown) this._subscriptionCleanups.delete(effect.id);
+            const dispose = cleanup;
+            cleanup = undefined;
+            if (typeof dispose === 'function') return dispose();
           };
           this._subscriptionCleanups.set(effect.id, teardown);
-          // The group's disposer tears it down once, if it is still the live one.
-          leave = this._joinGroups(effect.groups, () => {
-            leave();
-            if (this._subscriptionCleanups.get(effect.id) === teardown) {
-              this._subscriptionCleanups.delete(effect.id);
-              this._run(`Subscription '${effect.id}' cleanup`, teardown);
+          leave = this._joinGroups(effect.groups, () => this._runCleanup(`Subscription '${effect.id}' cleanup`, teardown));
+          if (typeof previous === 'function') this._runCleanup(`Subscription '${effect.id}' cleanup`, previous);
+          // Identity is a defensive ownership check alongside the liveness gate.
+          if (!live || this._destroyed || this._subscriptionCleanups.get(effect.id) !== teardown) {
+            this._runCleanup(`Subscription '${effect.id}' cleanup`, teardown);
+            return;
+          }
+          const gatedDispatch: Dispatch<Action> = action => {
+            if (live && !this._destroyed) dispatch(action);
+          };
+          try {
+            const returnedCleanup = effect.setup(gatedDispatch);
+            if (returnedCleanup && typeof (returnedCleanup as unknown as { then?: unknown }).then === 'function') {
+              this._runCleanup(`Subscription '${effect.id}' cleanup`, teardown);
+              // Async setup is invalid, but still observe its promise and
+              // dispose any cleanup function it eventually supplies.
+              this._run(`Subscription '${effect.id}' invalid setup`, () =>
+                Promise.resolve(returnedCleanup).then(value => {
+                  if (typeof value === 'function') this._runCleanup(`Subscription '${effect.id}' late setup cleanup`, value);
+                }, () => {})
+              );
+              throw new TypeError(`Subscription '${effect.id}' setup must return a cleanup function synchronously; received a Promise`);
             }
-          });
+            if (!live) {
+              if (typeof returnedCleanup === 'function') this._runCleanup(`Subscription '${effect.id}' cleanup`, returnedCleanup);
+            } else cleanup = returnedCleanup;
+          } catch (error) {
+            this._runCleanup(`Subscription '${effect.id}' cleanup`, teardown);
+            throw error;
+          }
         });
         break;
       }
@@ -1186,18 +1509,6 @@ export class TestStore<State, Action, Dependencies = any> {
         const _exhaustive: never = effect;
         throw new Error(`Unhandled effect type: ${(_exhaustive as any)._tag}`);
     }
-  }
-
-  /** Drop the debounce timer and throttle timer registered under an id. */
-  private _clearTimers(id: string): void {
-    const timer = this._debounceTimers.get(id);
-    if (timer !== undefined) {
-      this._disarm(timer);
-      this._debounceTimers.delete(id);
-    }
-    const throttle = this._throttleState.get(id);
-    if (throttle?.timer) this._disarm(throttle.timer);
-    this._throttleState.delete(id);
   }
 
   /**

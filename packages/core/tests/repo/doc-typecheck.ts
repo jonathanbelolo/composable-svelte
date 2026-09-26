@@ -1,3 +1,4 @@
+import { packageCapabilities } from './package-capabilities.js';
 /**
  * Typecheck every documented example that names this library.
  *
@@ -200,6 +201,7 @@ function builtTypePaths(): { paths: Record<string, string[]>; missing: string[] 
 
 	for (const pkg of listDirs(packagesDir)) {
 		if (!existsSync(join(packagesDir, pkg, 'package.json'))) continue;
+		if (packageCapabilities(join(packagesDir, pkg)).sourceCli) continue;
 		const entry = join(packagesDir, pkg, 'dist', 'index.d.ts');
 		if (!existsSync(entry)) {
 			missing.push(pkg);

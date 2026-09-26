@@ -70,6 +70,7 @@ export function nodeCanvasReducer<
           ...state,
           nodes: remainingNodes,
           edges: remainingEdges,
+          selectedEdges: new Set([...state.selectedEdges].filter((id) => id in remainingEdges)),
           selectedNodes
         },
         Effect.none()

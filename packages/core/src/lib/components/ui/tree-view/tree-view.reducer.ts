@@ -384,8 +384,8 @@ export const treeViewReducer: Reducer<
 				return [state, Effect.none<TreeViewAction>()];
 			}
 
-			// If node has children and is collapsed, expand it
-			if (node.children && node.children.length > 0 && !state.expandedIds.has(node.id)) {
+			// Lazy nodes expand through the same loading path as pointer activation.
+			if ((node.lazy || (node.children && node.children.length > 0)) && !state.expandedIds.has(node.id)) {
 				return treeViewReducer(state, { type: 'nodeExpanded', nodeId: node.id }, deps);
 			}
 

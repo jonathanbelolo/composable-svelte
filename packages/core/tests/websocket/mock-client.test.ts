@@ -2,7 +2,7 @@
  * Tests for Mock WebSocket Client
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { onTestFinished, describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMockWebSocket } from '../../src/lib/websocket/testing/mock-client.js';
 import type { WebSocketMessage, WebSocketEvent } from '../../src/lib/websocket/types.js';
 import { WebSocketError, WS_ERROR_CODES } from '../../src/lib/websocket/types.js';
@@ -11,6 +11,7 @@ describe('Mock WebSocket Client', () => {
   describe('Connection Management', () => {
     it('should start in disconnected state', () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
 
       expect(client.state.status).toBe('disconnected');
       expect(client.state.url).toBeNull();
@@ -19,6 +20,7 @@ describe('Mock WebSocket Client', () => {
 
     it('should transition to connected state on connect', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
 
       await client.connect('wss://example.com');
 
@@ -29,6 +31,7 @@ describe('Mock WebSocket Client', () => {
 
     it('should support protocols on connect', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
 
       await client.connect('wss://example.com', ['protocol1', 'protocol2']);
 
@@ -37,6 +40,7 @@ describe('Mock WebSocket Client', () => {
 
     it('should transition to disconnected state on disconnect', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       await client.connect('wss://example.com');
 
       await client.disconnect();
@@ -48,6 +52,7 @@ describe('Mock WebSocket Client', () => {
 
     it('should reject connect when already connected', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       await client.connect('wss://example.com');
 
       await expect(client.connect('wss://other.com')).rejects.toThrow('Already connected');
@@ -55,6 +60,7 @@ describe('Mock WebSocket Client', () => {
 
     it('should handle disconnect when not connected', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
 
       await expect(client.disconnect()).resolves.not.toThrow();
     });
@@ -63,6 +69,7 @@ describe('Mock WebSocket Client', () => {
   describe('Message Sending', () => {
     it('should send messages when connected', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       await client.connect('wss://example.com');
 
       const message = { type: 'ping', data: 'test' };
@@ -87,12 +94,14 @@ describe('Mock WebSocket Client', () => {
 
     it('should reject send when not connected', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
 
       await expect(client.send({ type: 'test' })).rejects.toThrow('Not connected');
     });
 
     it('should update stats when sending', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       await client.connect('wss://example.com');
 
       await client.send({ type: 'test', data: 'hello' });
@@ -105,6 +114,7 @@ describe('Mock WebSocket Client', () => {
   describe('Message Reception', () => {
     it('should notify message listeners', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       await client.connect('wss://example.com');
 
       const messages: WebSocketMessage<any>[] = [];
@@ -119,6 +129,7 @@ describe('Mock WebSocket Client', () => {
 
     it('should notify multiple message listeners', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       await client.connect('wss://example.com');
 
       const listener1 = vi.fn();
@@ -134,6 +145,7 @@ describe('Mock WebSocket Client', () => {
 
     it('should update stats when receiving', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       await client.connect('wss://example.com');
 
       client.simulateMessage({ type: 'test', data: 'hello' });
@@ -144,6 +156,7 @@ describe('Mock WebSocket Client', () => {
 
     it('should allow unsubscribing from messages', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       await client.connect('wss://example.com');
 
       const listener = vi.fn();
@@ -160,6 +173,7 @@ describe('Mock WebSocket Client', () => {
   describe('Event Handling', () => {
     it('should emit connected event on connect', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
 
       const events: WebSocketEvent[] = [];
       client.subscribeToEvents((event) => events.push(event));
@@ -173,6 +187,7 @@ describe('Mock WebSocket Client', () => {
 
     it('should emit disconnected event on disconnect', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       await client.connect('wss://example.com');
 
       const events: WebSocketEvent[] = [];
@@ -188,6 +203,7 @@ describe('Mock WebSocket Client', () => {
 
     it('should support simulating custom events', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       await client.connect('wss://example.com');
 
       const events: WebSocketEvent[] = [];
@@ -210,6 +226,7 @@ describe('Mock WebSocket Client', () => {
 
     it('should allow unsubscribing from events', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
 
       const listener = vi.fn();
       const unsubscribe = client.subscribeToEvents(listener);
@@ -225,6 +242,7 @@ describe('Mock WebSocket Client', () => {
   describe('Error Simulation', () => {
     it('should simulate errors', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       await client.connect('wss://example.com');
 
       const events: WebSocketEvent[] = [];
@@ -245,6 +263,7 @@ describe('Mock WebSocket Client', () => {
 
     it('should update error stats', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       await client.connect('wss://example.com');
 
       const error = new WebSocketError('Test error', null, true);
@@ -257,6 +276,7 @@ describe('Mock WebSocket Client', () => {
   describe('Disconnect Simulation', () => {
     it('should simulate disconnection', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       await client.connect('wss://example.com');
 
       const events: WebSocketEvent[] = [];
@@ -272,6 +292,7 @@ describe('Mock WebSocket Client', () => {
   describe('Reset Functionality', () => {
     it('should clear all sent messages', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       await client.connect('wss://example.com');
 
       await client.send({ type: 'msg1' });
@@ -284,6 +305,7 @@ describe('Mock WebSocket Client', () => {
 
     it('should reset connection state', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       await client.connect('wss://example.com');
 
       client.reset();
@@ -294,6 +316,7 @@ describe('Mock WebSocket Client', () => {
 
     it('should reset statistics', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       await client.connect('wss://example.com');
       await client.send({ type: 'test' });
       client.simulateMessage({ type: 'response' });
@@ -311,6 +334,7 @@ describe('Mock WebSocket Client', () => {
   describe('Statistics Tracking', () => {
     it('should track connection statistics', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
 
       await client.connect('wss://example.com');
       await client.send({ type: 'msg1' });
@@ -327,6 +351,7 @@ describe('Mock WebSocket Client', () => {
 
     it('should track uptime when connected', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
 
       await client.connect('wss://example.com');
       await new Promise(resolve => setTimeout(resolve, 50));
@@ -336,6 +361,7 @@ describe('Mock WebSocket Client', () => {
 
     it('should reset uptime on disconnect', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
 
       await client.connect('wss://example.com');
       await new Promise(resolve => setTimeout(resolve, 50));
@@ -369,6 +395,7 @@ describe('Mock WebSocket Client', () => {
   describe('reconnect() matches the live client (R1-REVIEW 1.9)', () => {
     it('with reconnection disabled it disconnects instead, forgetting the URL', async () => {
       const client = createMockWebSocket({ reconnect: { enabled: false } });
+      onTestFinished(() => client.disconnect());
       const events: string[] = [];
       client.subscribeToEvents((e) => events.push(e.type));
       await client.connect('wss://x.example');
@@ -380,6 +407,7 @@ describe('Mock WebSocket Client', () => {
 
     it('while reconnecting it restarts the ladder at the first attempt without a second disconnected', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       const events: string[] = [];
       client.subscribeToEvents((e) => events.push(e.type));
       await client.connect('wss://x.example');
@@ -391,6 +419,7 @@ describe('Mock WebSocket Client', () => {
 
     it('a cause is reported as an error event first', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       const events: string[] = [];
       client.subscribeToEvents((e) => events.push(e.type));
       await client.connect('wss://x.example');
@@ -400,13 +429,23 @@ describe('Mock WebSocket Client', () => {
     });
 
     it('disconnect() while connecting reports the loss, as the live client does', async () => {
-      const client = createMockWebSocket();
-      const events: string[] = [];
-      client.subscribeToEvents((e) => events.push(e.type));
-      const connecting = client.connect('wss://x.example');
-      await client.disconnect();
-      await connecting.catch(() => {});
-      expect(events).toContain('disconnected');
+      vi.useFakeTimers();
+      try {
+        const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
+        const events: string[] = [];
+        client.subscribeToEvents((e) => events.push(e.type));
+        const connecting = client.connect('wss://x.example');
+        const rejected = expect(connecting).rejects.toThrow('Disconnected before the connection opened');
+        await client.disconnect();
+        await rejected;
+        vi.advanceTimersByTime(20);
+        expect(events).toEqual(['disconnected']);
+        expect(client.state.status).toBe('disconnected');
+        expect(client.state.url).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });

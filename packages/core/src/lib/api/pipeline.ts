@@ -2,10 +2,10 @@
 // The request pipeline shared by createAPIClient and createMockAPI
 // ============================================================================
 //
-// Internal: not in any barrel. Both clients run the same steps in the same
-// order — resolve, request interceptors, finalize, key, cache, run, response
-// interceptors — so a reducer test against the mock sees production's
-// coalescing, identity and interceptor semantics (R1-REVIEW 1.7, 1.9).
+// Internal: not in any barrel. Both clients share request interceptors,
+// finalization, identity, cache and response-interceptor primitives. The real
+// client additionally resolves paths against its configured base URL; the mock
+// accepts caller-supplied route URLs without a base URL (R1-REVIEW 1.7, 1.9).
 
 import { CancelledError, NetworkError } from './errors.js';
 import { isPlainData, type RequestIdentity } from './deduplication.js';
@@ -44,15 +44,21 @@ export function mergeHeaders(...sets: (Record<string, string> | undefined)[]): R
 // ============================================================================
 
 /**
- * The base URL joined to a path: one slash between them, duplicate slashes
- * collapsed outside the scheme. Without a base URL the path is returned as
- * given.
+ * Join a base URL and path, collapsing duplicate slashes in the joined path
+ * while preserving the request query and fragment verbatim. An absolute request
+ * URL with an explicit scheme://, or any request without a base URL, is returned
+ * as given. Leading // retains the existing redundant-path-slash behavior;
+ * network-path references are not resolved as a separate host.
  */
 export function normalizeURL(baseURL: string | undefined, path: string): string {
-	if (!baseURL) return path;
+	if (!baseURL || /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(path)) return path;
+	const splitIndex = path.search(/[?#]/);
+	const pathname = splitIndex === -1 ? path : path.slice(0, splitIndex);
+	const suffix = splitIndex === -1 ? '' : path.slice(splitIndex);
 	const normalizedBase = baseURL.replace(/\/$/, '');
-	const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-	return `${normalizedBase}${normalizedPath}`.replace(/([^:]\/)\/+/g, '$1');
+	const normalizedPath = pathname.startsWith('/') ? pathname : `/${pathname}`;
+	const joinedPath = `${normalizedBase}${normalizedPath}`.replace(/([^:]\/)\/+/g, '$1');
+	return `${joinedPath}${suffix}`;
 }
 
 /** The query string for `params`, `null` and `undefined` values omitted; empty when there is nothing. */
@@ -119,13 +125,48 @@ export function validateTimeout(value: unknown, site: 'createAPIClient' | 'reque
 /** What will be sent, and the identity it is keyed by. */
 export interface PreparedRequest {
 	readonly method: HTTPMethod;
-	/** Base URL joined, query string appended. */
+	/** Resolved request URL (base joined for relative paths), with configured params merged over same-named inline query keys. */
 	readonly url: string;
 	/** Names lower-cased; `content-type: application/json` added for a plain body when absent. */
 	readonly headers: Record<string, string>;
 	/** A `BodyInit` as given, JSON text for plain data, `undefined` for none. */
 	readonly body: BodyInit | undefined;
 	readonly identity: RequestIdentity;
+}
+
+export function mergeURL(
+	url: string,
+	params?: Record<string, string | number | boolean | null | undefined>
+): { wireURL: string; identityURL: string } {
+	const hashIndex = url.indexOf('#');
+	const hash = hashIndex !== -1 ? url.slice(hashIndex) : '';
+	const beforeHash = hashIndex !== -1 ? url.slice(0, hashIndex) : url;
+	const qIndex = beforeHash.indexOf('?');
+	const base = qIndex !== -1 ? beforeHash.slice(0, qIndex) : beforeHash;
+	const rawQuery = qIndex !== -1 ? beforeHash.slice(qIndex + 1) : '';
+
+	const overrides = new Set(
+		params ? Object.entries(params).filter(([, v]) => v != null).map(([k]) => k) : []
+	);
+	if (overrides.size === 0) return { wireURL: url, identityURL: beforeHash };
+	const pairs = rawQuery
+		? rawQuery.split('&').filter((pair) => {
+				if (!pair) return false;
+				const rawKey = pair.split('=')[0]!;
+				try {
+					return !overrides.has(decodeURIComponent(rawKey.replace(/\+/g, ' ')));
+				} catch {
+					return !overrides.has(rawKey);
+				}
+		  })
+		: [];
+	if (params) {
+		for (const [key, value] of Object.entries(params)) {
+			if (value != null) pairs.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
+		}
+	}
+	const query = pairs.length > 0 ? `?${pairs.join('&')}` : '';
+	return { wireURL: `${base}${query}${hash}`, identityURL: `${base}${query}` };
 }
 
 /**
@@ -151,12 +192,16 @@ export function finalizeRequest(
 		if (!headers['content-type']) headers['content-type'] = 'application/json';
 		sent = JSON.stringify(body);
 	}
+	const { wireURL } = mergeURL(resolvedURL, params);
+	// Match the prior stable params-object identity without reordering inline query pairs.
+	const canonicalParams = params ? Object.fromEntries(Object.entries(params).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)) : undefined;
+	const { identityURL } = mergeURL(resolvedURL, canonicalParams);
 	return {
 		method,
-		url: `${resolvedURL}${buildQueryString(params)}`,
+		url: wireURL,
 		headers,
 		body: sent,
-		identity: { method, url: resolvedURL, params, headers, body, retry }
+		identity: { method, url: identityURL, params: undefined, headers, body, retry }
 	};
 }
 

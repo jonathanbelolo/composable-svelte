@@ -1,0 +1,279 @@
+{
+  "generatedAt": "2026-09-26T14:24:57.901545+00:00",
+  "releaseCandidate": "candidate-r6-2026-09-26",
+  "packTool": {
+    "name": "pnpm",
+    "version": "9.15.9",
+    "invocation": "npx -y pnpm@9.15.9 --dir candidate/packages/<core|auth> pack --config.ignore-scripts=true --pack-destination archives-r6; final Chat retained from archives-r5-chat; five other packages retained from archives-r4"
+  },
+  "scriptsDisabled": true,
+  "workspaceProtocolTransformed": true,
+  "supersedes": [
+    "archives",
+    "archives-r2",
+    "archives-r3"
+  ],
+  "releaseFinal": false,
+  "packages": [
+    {
+      "name": "@composable-svelte/core",
+      "version": "0.13.1",
+      "filename": "composable-svelte-core-0.13.1.tgz",
+      "path": "/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz",
+      "bytes": 995838,
+      "sha256": "729ca89f1850e56bde5db23c9f8560090eed07a0dc4126374dd5e33fd11a8e0d",
+      "sha512": "9eff094feac11bf4413ca0820d0c244eee8fca4076eccedd014c35b203deffb86b99495215b33b352156b41c70585866f9708061e8f05a7154e5aa91c67257c7",
+      "integrity": "sha512-nv8JT+rBG/RBPKCCDQwkTu6PykB27M7dAUw1sgPe/7hrmUlSFbM7NSFWtBxwWFhm+XCAYejwWnFU5aqRxnJXxw==",
+      "fileCount": 1258,
+      "devDependencySiblings": {},
+      "peerDependencies": {
+        "isomorphic-dompurify": "^2.16.0",
+        "svelte": "^5.20.0",
+        "tailwindcss": "^3.4.0 || ^4.0.0",
+        "vitest": "^3.0.0 || ^4.0.0"
+      },
+      "peerDependenciesMeta": {
+        "isomorphic-dompurify": {
+          "optional": true
+        },
+        "tailwindcss": {
+          "optional": true
+        },
+        "vitest": {
+          "optional": true
+        }
+      },
+      "changedFromR3": [],
+      "addedFromR3": [],
+      "removedFromR3": [],
+      "candidateSourceDriftSinceR3Pack": [
+        "consumer/package.json"
+      ],
+      "status": "independently reviewed source; exact packed contents verified; installed qualification pending",
+      "changedFromR4": [
+        "package/CHANGELOG.md",
+        "package/dist/navigation/managed-integration.d.ts",
+        "package/dist/navigation/managed-integration.d.ts.map",
+        "package/dist/types.d.ts",
+        "package/dist/types.d.ts.map",
+        "package/docs/consumer.md"
+      ]
+    },
+    {
+      "name": "@composable-svelte/auth",
+      "version": "0.3.0",
+      "filename": "composable-svelte-auth-0.3.0.tgz",
+      "path": "/private/tmp/companion-runtime-release/archives-r6/composable-svelte-auth-0.3.0.tgz",
+      "bytes": 327285,
+      "sha256": "dbb2611bb01616e4e9ef86a54016724cf6271e0ec337b759b5cbcb21dae27112",
+      "sha512": "2a996164269823dc83093aff25a2956f90c4bf6eb8334750fab3f7b8b935b29eafe915b1bf154dba2b650193a1ae3666ac1d80c981e286400dbca9e3e600ed05",
+      "integrity": "sha512-KplhZCaYI9yDCTr/JaKVb5DEv264M0dQ+rP3uLk1sp6v6RWxvxVNuitlAZOhrjZmrB2AyYHihkANvKnj5gDtBQ==",
+      "fileCount": 404,
+      "devDependencySiblings": {
+        "@composable-svelte/core": "0.13.1"
+      },
+      "peerDependencies": {
+        "@composable-svelte/core": "^0.13.1",
+        "svelte": "^5.20.0"
+      },
+      "peerDependenciesMeta": {},
+      "changedFromR3": [],
+      "addedFromR3": [],
+      "removedFromR3": [],
+      "candidateSourceDriftSinceR3Pack": null,
+      "status": "independently reviewed source; exact packed contents verified; installed qualification pending",
+      "changedFromR4": [
+        "package/README.md"
+      ]
+    },
+    {
+      "name": "@composable-svelte/maps",
+      "version": "0.3.0",
+      "filename": "composable-svelte-maps-0.3.0.tgz",
+      "path": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-maps-0.3.0.tgz",
+      "bytes": 43389,
+      "sha256": "3730a67a93be13a631729d0538328b92bf6b85c5fc1f603ea0a8e4395aee7116",
+      "sha512": "07f32ebc971012dae4687b6f782eed5da459b8d99fff72f0d7950cb7e6cddc320b49c8a00b13c199ec4c2805473919022efa0a93ea6791a79d64c79088fc440e",
+      "integrity": "sha512-B/MuvJcQEtrkaHtveC7tXaRZuNmf/3Lw15UMt+bN3DILScigCxPBmexMKAVHORkCLvoKk+pnkaedZMeQiPxEDg==",
+      "fileCount": 64,
+      "devDependencySiblings": {
+        "@composable-svelte/core": "0.13.1"
+      },
+      "peerDependencies": {
+        "@composable-svelte/core": "^0.13.1",
+        "svelte": "^5.20.0",
+        "mapbox-gl": "^3.0.0"
+      },
+      "peerDependenciesMeta": {
+        "mapbox-gl": {
+          "optional": true
+        }
+      },
+      "changedFromR3": [
+        "fixtures/installed-consumer/verify.mjs"
+      ],
+      "addedFromR3": [],
+      "removedFromR3": [],
+      "candidateSourceDriftSinceR3Pack": null,
+      "status": "pending installed qualification/review"
+    },
+    {
+      "name": "@composable-svelte/graphics",
+      "version": "0.3.0",
+      "filename": "composable-svelte-graphics-0.3.0.tgz",
+      "path": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-graphics-0.3.0.tgz",
+      "bytes": 140481,
+      "sha256": "366f918ae042bd510c263f124e247d3a4e3ac4a7a57e91a72d93131cf8c7857b",
+      "sha512": "c3047464b60047c68e39a1b82ff902d8b7e1c5cb7675013f59c79e55133f3f78cceaeb29bfe85808e4cb319da3a633ac67643bf7425dbb3a847521983a6a2815",
+      "integrity": "sha512-wwR0ZLYAR8aOOaG4L/kC2Lfhxct2dQE/WceeVRM/P3jM6uspv+hYCOTLMZ2jpjOsZ2Q790JduzqEdSGYOmooFQ==",
+      "fileCount": 133,
+      "devDependencySiblings": {
+        "@composable-svelte/core": "0.13.1"
+      },
+      "peerDependencies": {
+        "@composable-svelte/core": "^0.13.1",
+        "svelte": "^5.20.0"
+      },
+      "peerDependenciesMeta": {},
+      "changedFromR3": [
+        "fixtures/installed-consumer/verify.mjs"
+      ],
+      "addedFromR3": [],
+      "removedFromR3": [],
+      "candidateSourceDriftSinceR3Pack": null,
+      "status": "pending installed qualification/review"
+    },
+    {
+      "name": "@composable-svelte/charts",
+      "version": "0.3.0",
+      "filename": "composable-svelte-charts-0.3.0.tgz",
+      "path": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-charts-0.3.0.tgz",
+      "bytes": 58892,
+      "sha256": "c36b7a06e5a293259cdbebd599a1698cd448c000eac343c66411c1282a73c21d",
+      "sha512": "d448ce9247565ffb448c6f3d0fefce82d701caaada58562a5bec4bb3ee96bc5577872eca7126e22c607170df38b59711de91dc0e07a86562937664bc07d62e77",
+      "integrity": "sha512-1EjOkkdWX/tEjG89D+/OgtcByqraWFYqW+xLs+6WvFV3hy7KcSbiLGBxcN84tZcR3pHcDgeoZWKTdmS8B9Yudw==",
+      "fileCount": 53,
+      "devDependencySiblings": {
+        "@composable-svelte/core": "0.13.1"
+      },
+      "peerDependencies": {
+        "@composable-svelte/core": "^0.13.1",
+        "svelte": "^5.20.0"
+      },
+      "peerDependenciesMeta": {},
+      "changedFromR3": [
+        "fixtures/installed-consumer/verify.mjs"
+      ],
+      "addedFromR3": [],
+      "removedFromR3": [],
+      "candidateSourceDriftSinceR3Pack": null,
+      "status": "pending installed qualification/review"
+    },
+    {
+      "name": "@composable-svelte/code",
+      "version": "0.5.0",
+      "filename": "composable-svelte-code-0.5.0.tgz",
+      "path": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-code-0.5.0.tgz",
+      "bytes": 66774,
+      "sha256": "f85b945232c460edc45c0051dc69c4580f4a502b39a2988af38c62a2e3a37026",
+      "sha512": "3f92b04c203173ab8fa1ffe5ce3428388ca347e447be1d88524d58c29e659f63ab315d3bded33bf9b700eb735eed43c8746a6dfbddeaf47324a12811ac1243ee",
+      "integrity": "sha512-P5KwTCAxc6uPof/lzjQoOIyjR+RHvh2IUk1Ywp5ln2OrMV073tM7+bcA63Ne7UPIdGpt+93q9HMkoSgRrBJD7g==",
+      "fileCount": 69,
+      "devDependencySiblings": {
+        "@composable-svelte/core": "0.13.1"
+      },
+      "peerDependencies": {
+        "@composable-svelte/core": "^0.13.1",
+        "svelte": "^5.30.0"
+      },
+      "peerDependenciesMeta": {},
+      "changedFromR3": [],
+      "addedFromR3": [],
+      "removedFromR3": [],
+      "candidateSourceDriftSinceR3Pack": null,
+      "status": "pending installed qualification/review"
+    },
+    {
+      "name": "@composable-svelte/media",
+      "version": "0.5.0",
+      "filename": "composable-svelte-media-0.5.0.tgz",
+      "path": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-media-0.5.0.tgz",
+      "bytes": 80479,
+      "sha256": "c0bfa6528fb6cd3dc68f2769237d3053514f76f79bc5197316b230eb07b78298",
+      "sha512": "a75c582fff619027e2b4f6246f94ace6761beb420e79b2d3cf2170c38dfef9a9525bdc997347d4309aa84f1f2276ec0422f14c7da1d06d2fbd9e4c05e142de1e",
+      "integrity": "sha512-p1xYL/9hkCfitPYkb5Ss5nYb60IOebLTzyFww43++alSW9yZc0fUMJqoTx8iduwEIvFMfaHQbS+9nkwF4ULeHg==",
+      "fileCount": 101,
+      "devDependencySiblings": {
+        "@composable-svelte/core": "0.13.1"
+      },
+      "peerDependencies": {
+        "@composable-svelte/core": "^0.13.1",
+        "svelte": "^5.20.0"
+      },
+      "peerDependenciesMeta": {},
+      "changedFromR3": [],
+      "addedFromR3": [],
+      "removedFromR3": [],
+      "candidateSourceDriftSinceR3Pack": null,
+      "status": "pending installed qualification/review"
+    },
+    {
+      "name": "@composable-svelte/chat",
+      "version": "0.5.0",
+      "filename": "composable-svelte-chat-0.5.0.tgz",
+      "path": "/private/tmp/companion-runtime-release/archives-r5-chat/composable-svelte-chat-0.5.0.tgz",
+      "bytes": 144162,
+      "sha256": "fe21f00f75385205073744bc45cba715e441914d38119d46fb7cf0bfdfe76aeb",
+      "sha512": "a6513806ba735cf1aff71189034186074ccfb43ef3e02c6cd43feb7a0f41828629c06eaa2376b5d9b9cb1721c9cfd7355ccd6afa81148b241e1e40aa1c8706f1",
+      "integrity": "sha512-plE4BrpzXPGv9xGJA0GGB0zPtD7z4Cxs1D/reg9BgoYpwG6qI3a12bnLFyHJz9c1XM1q+oEUiyQeHkCqHIcG8Q==",
+      "fileCount": 157,
+      "devDependencySiblings": {
+        "@composable-svelte/core": "0.13.1",
+        "@composable-svelte/media": "0.5.0",
+        "@composable-svelte/code": "0.5.0"
+      },
+      "peerDependencies": {
+        "@composable-svelte/core": "^0.13.1",
+        "svelte": "^5.20.0",
+        "@composable-svelte/code": "^0.5.0",
+        "@composable-svelte/media": "^0.5.0",
+        "prismjs": "^1.29.0",
+        "pdfjs-dist": "^5.0.0"
+      },
+      "peerDependenciesMeta": {
+        "@composable-svelte/code": {
+          "optional": true
+        },
+        "@composable-svelte/media": {
+          "optional": true
+        },
+        "prismjs": {
+          "optional": true
+        },
+        "pdfjs-dist": {
+          "optional": true
+        }
+      },
+      "addedFromR3": [],
+      "removedFromR3": [],
+      "status": "independently reviewed source; pending affected installed qualification",
+      "changedFromR4": [
+        "package/README.md",
+        "package/package.json",
+        "package/recipes/managed/ManagedChat.svelte",
+        "package/recipes/managed/README.md"
+      ]
+    },
+    {
+      "name": "@composable-svelte/architecture",
+      "version": "0.13.1",
+      "path": "/private/tmp/composable-final-checker/opus-final-review/final-archive/composable-svelte-architecture-0.13.1.tgz",
+      "filename": "composable-svelte-architecture-0.13.1.tgz",
+      "sha256": "cd12784eb9288aa510b2f980eb3d0ef57efce8c3d8d8318ab72cee32ce67e51a",
+      "integrity": "sha512-LAm/0jRDaTNRUs+DIaRjp6J1RdUF/BPU/3qN+87tT5DifvxlAeWmtRj2Am91YsvAbkW1qs6IzwSRtcN/aeNpvw==",
+      "bytes": 99447,
+      "fileCount": 40
+    }
+  ],
+  "status": "Candidate only: checker release acceptance blocked pending template-binding scope closure; runtime R6 qualification remains complete"
+}

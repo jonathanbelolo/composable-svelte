@@ -1,0 +1,97 @@
+{
+  "qualification": "Media M12 PASS",
+  "evidenceSha256": "7e9981b346b66b96f201f2f0a73a09284d90903d8a1936991beeeb34b8e70969",
+  "executedAt": "2026-09-26T13:06:07.439Z",
+  "browser": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+  "assertionsPassed": 39,
+  "cases": [
+    {
+      "name": "standalone-push-to-talk",
+      "status": "PASS",
+      "assertions": 13,
+      "micOpenMs": 1251,
+      "blobSizeBytes": 19616,
+      "decisiveEventSequence": {
+        "accepted_stop.dispatch_begin": 13,
+        "recorder.stop": 15,
+        "accepted_stop.dispatch_end": 16,
+        "unmount.begin": 17,
+        "action._releaseDevice": 18,
+        "track.stop": 19,
+        "unmount.returned": 20,
+        "recorder.dataavailable": 21,
+        "recorder.onstop": 22,
+        "stub.transcribeAudio": 24,
+        "action.transcriptionCompleted": 26,
+        "quiet.begin": 27,
+        "quiet.end": 28
+      }
+    },
+    {
+      "name": "standalone-conversation",
+      "status": "PASS",
+      "assertions": 13,
+      "micOpenMs": 1210,
+      "blobSizeBytes": 18650,
+      "decisiveEventSequence": {
+        "accepted_stop.dispatch_begin": 12,
+        "recorder.stop": 14,
+        "accepted_stop.dispatch_end": 15,
+        "unmount.begin": 16,
+        "action._releaseDevice": 17,
+        "track.stop": 18,
+        "unmount.returned": 19,
+        "recorder.dataavailable": 20,
+        "recorder.onstop": 21,
+        "stub.transcribeAudio": 23,
+        "action.transcriptionCompleted": 25,
+        "quiet.begin": 26,
+        "quiet.end": 27
+      }
+    },
+    {
+      "name": "managed-parent-conversation",
+      "status": "PASS",
+      "assertions": 13,
+      "micOpenMs": 1243,
+      "blobSizeBytes": 19616,
+      "decisiveEventSequence": {
+        "accepted_stop.dispatch_begin": 12,
+        "recorder.stop": 14,
+        "accepted_stop.dispatch_end": 15,
+        "unmount.begin": 16,
+        "action._releaseDevice": 17,
+        "track.stop": 18,
+        "unmount.returned": 19,
+        "recorder.dataavailable": 20,
+        "recorder.onstop": 21,
+        "stub.transcribeAudio": 23,
+        "action.transcriptionCompleted": 25,
+        "quiet.begin": 26,
+        "quiet.end": 27
+      }
+    }
+  ],
+  "archives": [
+    {
+      "name": "@composable-svelte/core",
+      "version": "0.13.1",
+      "sha256": "30e044e139e831033e06fdf626db979875efa2f7c29d72dece33a21db112d18b",
+      "r4Path": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-core-0.13.1.tgz",
+      "installedDistFilesVerified": 1163,
+      "identicalToExecutedR3Archive": true
+    },
+    {
+      "name": "@composable-svelte/media",
+      "version": "0.5.0",
+      "sha256": "c0bfa6528fb6cd3dc68f2769237d3053514f76f79bc5197316b230eb07b78298",
+      "r4Path": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-media-0.5.0.tgz",
+      "installedDistFilesVerified": 92,
+      "identicalToExecutedR3Archive": true
+    }
+  ],
+  "suiteSafetyAllZero": true,
+  "audioRetained": false,
+  "networkAttempts": 0,
+  "limitations": "Physical qualification is for this normal Chrome152/macOS device run; standalone push-to-talk and conversation, plus managed-parent conversation. It is not a cross-browser/hardware guarantee."
+}

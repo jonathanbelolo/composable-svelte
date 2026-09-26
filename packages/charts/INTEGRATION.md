@@ -81,11 +81,12 @@ Added new "Data Visualization" category with 3 interactive demos:
 #### Basic Example
 
 ```svelte
-<script>
+<script lang="ts">
   import { createStore } from '@composable-svelte/core';
   import { Chart, chartReducer, createInitialChartState } from '@composable-svelte/charts';
 
-  const data = [
+  type Row = { x: number; y: number };
+  const data: Row[] = [
     { x: 1, y: 10 },
     { x: 2, y: 20 },
     { x: 3, y: 30 }
@@ -93,7 +94,7 @@ Added new "Data Visualization" category with 3 interactive demos:
 
   const store = createStore({
     initialState: createInitialChartState({ data }),
-    reducer: chartReducer,
+    reducer: chartReducer<Row>,
     dependencies: {}
   });
 </script>
@@ -229,12 +230,13 @@ onMount(() => {
 
 **Runtime:**
 - `@observablehq/plot` ^0.6.0
-- `d3-*` utilities (zoom, brush, selection, scales)
-- `motion` ^12.23.24
+- `d3-array`, `d3-brush`, `d3-selection`, `d3-zoom` utilities
 
 **Peer:**
-- `@composable-svelte/core` ^0.3.0
-- `svelte` ^5.0.0
+- `@composable-svelte/core` ^0.13.1
+- `svelte` ^5.20.0
+
+`package.json` is authoritative; `motion` is not a dependency of this package.
 
 ### Next Steps (Phase 11B)
 
@@ -289,5 +291,5 @@ pnpm dev
 ## Resources
 
 - [Observable Plot Docs](https://observablehq.com/plot/)
-- [Phase 11 Plan](../../plans/phase-11/PHASE-11-PLAN.md)
+- [Managed integration](./MANAGED.md)
 - [Package README](./README.md)

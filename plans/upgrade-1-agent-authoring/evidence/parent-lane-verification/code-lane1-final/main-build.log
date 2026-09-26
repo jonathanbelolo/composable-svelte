@@ -1,0 +1,6 @@
+
+> @composable-svelte/code@0.4.1 build /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code
+> svelte-package -o dist && node ../../scripts/emit-svelte-declaration-bridges.mjs dist
+
+src/lib -> dist
+Emitted 4 NodeNext Svelte declaration bridges

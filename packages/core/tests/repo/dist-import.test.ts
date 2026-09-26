@@ -12,7 +12,7 @@
  * through Vite and prove nothing about Node. The child resolves
  * `@composable-svelte/core/<sub>` by self-reference through the real `exports`
  * map, imports each subpath, makes one representative call per Node-safe
- * module, and prints JSON. Nine subpaths reach a `.svelte` file and fail under
+ * module, and prints JSON. Component-bearing subpaths reach a `.svelte` file and fail under
  * Node by design; that set is asserted exactly, so a `.svelte` leaking into a
  * Node-safe entry is caught too.
  */
@@ -35,6 +35,8 @@ const subpaths = Object.keys(pkg.exports).filter((k) => k !== './package.json' &
 /** The entries whose module graph reaches a `.svelte` file. Node cannot load these, and that is by design. */
 const REACHES_SVELTE = [
 	'.',
+	'./application',
+	'./application/motion',
 	'./components',
 	'./components/command',
 	'./components/data-table',

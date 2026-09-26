@@ -3,71 +3,53 @@
  */
 
 import type { Reducer } from '@composable-svelte/core';
-import { Effect } from '@composable-svelte/core';
 import { scope } from '@composable-svelte/core/composition';
-import { createFormReducer } from '@composable-svelte/core/components/form';
+import { createFormReducer, type FormAction, type FormState } from '@composable-svelte/core/components/form';
 import { registrationFormConfig } from '../features/registration/registration.config.js';
+import type { RegistrationFormData } from '../features/registration/registration.types.js';
 import type { AppState, AppAction } from './app.types.js';
 
 // Create form reducer
 const formReducer = createFormReducer(registrationFormConfig);
 
 /**
- * Core app reducer - handles parent-specific logic
+ * Scoped form reducer constructed once with actual child types.
+ * Maps 'registrationReset' to 'formReset' so one semantic reset action resets both
+ * parent state and child form state via composition.
  */
-const coreReducer: Reducer<AppState, AppAction, {}> = (state, action, deps) => {
-  switch (action.type) {
-    case 'registrationForm': {
-      // Parent observes form submission success
-      if (action.action.type === 'submissionSucceeded') {
-        const formData = state.registrationForm.data;
-        return [
-          {
-            ...state,
-            registrationSuccess: true,
-            registeredUser: {
-              username: formData.username,
-              email: formData.email
-            }
-          },
-          Effect.none()
-        ];
-      }
-      return [state, Effect.none()];
-    }
+const scopedFormReducer = scope<
+  AppState,
+  AppAction,
+  FormState<RegistrationFormData>,
+  FormAction<RegistrationFormData>,
+  {}
+>(
+  (s) => s.registrationForm,
+  (s, child) => ({ ...s, registrationForm: child }),
+  (a) => {
+    if (a.type === 'registrationForm') return a.action;
+    if (a.type === 'registrationReset') return { type: 'formReset' };
+    return null;
+  },
+  (childAction) => ({ type: 'registrationForm', action: childAction }),
+  formReducer
+);
 
-    case 'registrationReset': {
-      return [
-        {
-          ...state,
-          registrationSuccess: false,
-          registeredUser: null
-        },
-        Effect.none()
-      ];
-    }
-
-    default:
-      return [state, Effect.none()];
-  }
-};
-
-/**
- * Main app reducer - composes core reducer with form reducer
- */
+/** The form decides whether completion is current before the parent records success. */
 export const appReducer: Reducer<AppState, AppAction, {}> = (state, action, deps) => {
-  // Run core reducer first
-  const [s1, e1] = coreReducer(state, action, deps);
-
-  // Then run scoped form reducer
-  const scopedFormReducer = scope<AppState, AppAction, any, any, {}>(
-    (s) => s.registrationForm, // Extract child state
-    (s, child) => ({ ...s, registrationForm: child }), // Update parent with child
-    (a) => (a.type === 'registrationForm' ? a.action : null), // Extract child action
-    (childAction) => ({ type: 'registrationForm', action: childAction }), // Wrap child action
-    formReducer
-  );
-
-  const [s2, e2] = scopedFormReducer(s1, action, deps);
-  return [s2, Effect.batch(e1, e2)];
+  const [next, effect] = scopedFormReducer(state, action, deps);
+  if (action.type === 'registrationReset')
+    return [{ ...next, registrationSuccess: false, registeredUser: null, submittedUser: null }, effect];
+  const previous = state.registrationForm, current = next.registrationForm;
+  if (action.action.type === 'submissionStarted' && current.isSubmitting && current.submissionId !== previous.submissionId) {
+    const { username, email } = previous.data;
+    return [{ ...next, submittedUser: { username, email } }, effect];
+  }
+  if (action.action.type === 'submissionSucceeded' && previous.isSubmitting && current.submitOutcome === 'succeeded' && current.submitCount > previous.submitCount) {
+    const { username, email } = state.submittedUser ?? previous.data;
+    return [{ ...next, registrationSuccess: true, registeredUser: { username, email }, submittedUser: null }, effect];
+  }
+  if ((action.action.type === 'submissionFailed' && current.submitCount > previous.submitCount) || action.action.type === 'formReset')
+    return [{ ...next, submittedUser: null }, effect];
+  return [next, effect];
 };

@@ -1,3 +1,5 @@
+import { rehomeAdoptedLayers } from './dismissalCoordinator.js';
+
 /**
  * Portal (teleport) an element to a different location in the DOM.
  *
@@ -27,7 +29,7 @@ export function portal(
   const mount = () => {
     // Resolve target
     if (typeof target === 'string') {
-      targetEl = document.querySelector(target);
+      targetEl = node.ownerDocument.querySelector(target);
       if (!targetEl) {
         console.error(`[portal] Target not found: ${target}`);
         return;
@@ -36,8 +38,10 @@ export function portal(
       targetEl = target;
     }
 
-    // Move node to target
+    // Move node to target. An explicit Element target may belong to another document; enrolled layers inside follow the node.
+    const from = node.ownerDocument;
     targetEl.appendChild(node);
+    if (node.ownerDocument !== from) rehomeAdoptedLayers(from);
   };
 
   const unmount = () => {

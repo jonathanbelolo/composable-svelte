@@ -15,8 +15,9 @@ export default defineConfig({
 			headless: true
 		},
 
-		// Test file patterns
+		// Test file patterns. `tests/ssr` runs in Node: vitest.ssr.config.ts.
 		include: ['tests/**/*.{test,spec}.{js,ts}'],
+		exclude: ['tests/ssr/**', 'node_modules/**'],
 
 		// Suppress console output during tests (for CI/prepublish)
 		silent: process.env.CI === 'true' || process.env.SILENT_TESTS === 'true',
@@ -30,8 +31,12 @@ export default defineConfig({
 	},
 
 	resolve: {
-		alias: {
-			'$lib': resolve(__dirname, 'src/lib')
-		}
+		alias: [
+			{ find: '$lib', replacement: resolve(__dirname, 'src/lib') },
+			// The README recipes import the package by name, as a consumer does.
+			// Mount them against source, so a test never runs a stale `dist`.
+			// svelte-check still resolves the name to the built declarations.
+			{ find: /^@composable-svelte\/media$/, replacement: resolve(__dirname, 'src/lib/index.ts') }
+		]
 	}
 });

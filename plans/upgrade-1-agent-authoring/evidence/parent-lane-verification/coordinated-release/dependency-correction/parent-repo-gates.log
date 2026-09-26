@@ -1,0 +1,20 @@
+
+ RUN  v4.0.7 /private/tmp/composable-release-git/packages/core
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+ ✓ tests/repo/published-files.test.ts (11 tests) 3ms
+ ✓ tests/repo/export-surface.test.ts (16 tests) 4ms
+ ✓ tests/repo/changelog-shape.test.ts (47 tests) 12ms
+ ✓ tests/repo/dist-freshness.test.ts (10 tests) 59ms
+ ✓ tests/repo/front-door.test.ts (19 tests) 159ms
+ ✓ tests/repo/doc-examples.test.ts (21 tests) 254ms
+ ✓ tests/repo/doc-typecheck.test.ts (10 tests) 507ms
+     ✓ still reports a documented option that the type does not have  316ms
+ ✓ tests/repo/typecheck-coverage.test.ts (23 tests) 5083ms
+     ✓ packages/auth resolves all of its test files  456ms
+
+ Test Files  8 passed (8)
+      Tests  157 passed (157)
+   Start at  16:24:53
+   Duration  5.50s (transform 587ms, setup 224ms, collect 3.27s, tests 6.08s, environment 0ms, prepare 47ms)
+

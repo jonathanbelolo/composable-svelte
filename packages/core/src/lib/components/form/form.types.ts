@@ -77,6 +77,14 @@ export interface FormState<T extends Record<string, any>> {
 	 * Is entire form currently validating?
 	 */
 	isValidating: boolean;
+	/** Framework submit-validation generation; omitted legacy state starts at zero. */
+	validationId?: number | undefined;
+	/** Monotonic field operation allocator, retained across reset. */
+	fieldValidationSequence?: number | undefined;
+	/** Framework-owned submit lifetime; retained monotonically through reset. */
+	submissionId?: number | undefined;
+	/** Latest submit attempt; edits invalidate approval without automatic resubmission. */
+	submitOutcome?: 'validating' | 'ready' | 'submitting' | 'invalidated' | 'succeeded' | 'failed' | undefined;
 
 	/**
 	 * Is form currently submitting?
@@ -96,6 +104,7 @@ export interface FormState<T extends Record<string, any>> {
 	/**
 	 * Last successful submit timestamp.
 	 */
+	/** Completion event time; null when a manual completion omitted submittedAt. */
 	lastSubmitted: Date | null;
 }
 
@@ -115,6 +124,10 @@ export interface FormState<T extends Record<string, any>> {
  * ```
  */
 export interface FieldState {
+	/** Latest custom-validator rejection, separate from schema-only sibling checks. */
+	asyncError?: string | null | undefined;
+	/** Correlation for framework-owned validation completion. */
+	validationId?: number | undefined;
 	/**
 	 * Has user interacted with this field (focused/blurred)?
 	 */
@@ -236,6 +249,10 @@ export interface FormConfig<T extends Record<string, any>> {
 	 * }
 	 * ```
 	 */
+	// Custom validators consume schema output plus an optional cancellation signal.
+	// When full parsing fails, a successfully parsed addressable subtree supplies output.
+	// Unparseable opaque parents (including root transforms) defer custom validation;
+	// wrappers are never blindly stripped to manufacture a normalized value.
 	asyncValidators?: AsyncValidators<T>;
 
 	/**
@@ -245,6 +262,14 @@ export interface FormConfig<T extends Record<string, any>> {
 	 * @throws Error if submission fails
 	 */
 	onSubmit: (data: T) => Promise<void>;
+
+	/**
+	 * Clock provider for submission timestamping.
+	 * Invoked inside the submission effect after onSubmit resolves.
+	 *
+	 * @default () => new Date()
+	 */
+	now?: (() => Date) | undefined;
 
 	/**
 	 * Success callback - called after successful submission.
@@ -315,6 +340,12 @@ export type FormAction<T extends Record<string, any>> =
 	  }
 	| {
 			type: 'fieldValidationCompleted';
+			/** Exact normalized input consumed by a framework custom validator. */
+			validatedValue?: unknown;
+			asyncError?: string | null | undefined;
+			schemaOnly?: boolean;
+			validationId?: number | undefined;
+			snapshot?: T;
 			field: FieldPath<T>;
 			error: string | null;
 			warnings?: string[];
@@ -325,9 +356,13 @@ export type FormAction<T extends Record<string, any>> =
 	// ================================================================
 	| {
 			type: 'formValidationStarted';
+			validationId?: number | undefined;
 	  }
 	| {
 			type: 'formValidationCompleted';
+			/** Framework-internal provenance: presence asserts a complete schema-valid pass over all available normalized custom-validator fields. */
+			asyncFieldErrors?: Partial<Record<FieldPath<T>, string>>;
+			validationId?: number | undefined;
 			fieldErrors: Partial<Record<FieldPath<T>, string>>;
 			formErrors: string[];
 			/**
@@ -342,6 +377,11 @@ export type FormAction<T extends Record<string, any>> =
 			 * validate must keep exactly what the user typed.
 			 */
 			data?: T;
+			/**
+			 * The snapshot of form data that was validated.
+			 * Used to detect and discard stale validation completions caused by concurrent edits.
+			 */
+			snapshot?: T;
 	  }
 
 	// ================================================================
@@ -352,13 +392,18 @@ export type FormAction<T extends Record<string, any>> =
 	  }
 	| {
 			type: 'submissionStarted';
+			snapshot?: T;
+			validationId?: number | undefined;
 	  }
 	| {
 			type: 'submissionSucceeded';
+			submissionId?: number | undefined;
+			submittedAt?: Date | undefined;
 			response?: unknown;
 	  }
 	| {
 			type: 'submissionFailed';
+			submissionId?: number | undefined;
 			error: string;
 	  }
 

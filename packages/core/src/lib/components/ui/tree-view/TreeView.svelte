@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { onDestroy, untrack, type Snippet } from 'svelte';
 	import { createStore } from '../../../store.svelte.js';
 	import { treeViewReducer } from './tree-view.reducer.js';
 	import { createInitialTreeViewState } from './tree-view.types.js';
@@ -139,9 +139,12 @@
 		}
 	});
 
-	// Sync external nodes changes to store
+	onDestroy(() => store.destroy());
+
+	// Track the input prop, not state reads performed while dispatching.
 	$effect(() => {
-		store.dispatch({ type: 'nodesUpdated', nodes });
+		const currentNodes = nodes;
+		untrack(() => store.dispatch({ type: 'nodesUpdated', nodes: currentNodes }));
 	});
 
 	function handleKeyDown(event: KeyboardEvent) {

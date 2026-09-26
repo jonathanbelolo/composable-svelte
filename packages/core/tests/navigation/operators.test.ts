@@ -897,14 +897,14 @@ describe('extractDestinationOnAction()', () => {
       type: 'destination',
       action: {
         type: 'presented',
-        action: { type: 'save' }
+        action: { type: 'addItem', action: { type: 'save' } }
       }
     };
 
     const destState = extractDestinationOnAction(
       action,
       state,
-      'destination.save',
+      'destination.addItem.save',
       (s) => s.destination
     );
 
@@ -926,14 +926,14 @@ describe('extractDestinationOnAction()', () => {
       type: 'destination',
       action: {
         type: 'presented',
-        action: { type: 'cancel' }
+        action: { type: 'addItem', action: { type: 'cancel' } }
       }
     };
 
     const destState = extractDestinationOnAction(
       action,
       state,
-      'destination.save',
+      'destination.addItem.save',
       (s) => s.destination
     );
 
@@ -949,14 +949,14 @@ describe('extractDestinationOnAction()', () => {
       type: 'destination',
       action: {
         type: 'presented',
-        action: { type: 'save' }
+        action: { type: 'addItem', action: { type: 'save' } }
       }
     };
 
     const destState = extractDestinationOnAction(
       action,
       state,
-      'destination.save',
+      'destination.addItem.save',
       (s) => s.destination
     );
 
@@ -998,4 +998,20 @@ describe('ifLetPresentation() owns the presentation group (N8, C6)', () => {
     expect(effect.effects.map((e) => e._tag)).toEqual(['Run', 'CancelGroup']);
     expect(effect.effects[1]).toEqual({ _tag: 'CancelGroup', group: 'child' });
   });
+});
+
+it('matches tagged destination cases through the public matcher family', () => {
+  const child = { type: 'save' as const, value: 'draft' };
+  const action = {
+    type: 'destination',
+    action: { type: 'presented', action: { type: 'addItem', action: child } }
+  };
+  expect(matchPresentationAction(action, 'destination.addItem.save')).toBe(child);
+  expect(matchPresentationAction(action, 'destination.editItem.save')).toBeNull();
+  expect(isActionAtPath<typeof child>(action, 'destination.addItem.save', a => a.value === 'draft')).toBe(true);
+  expect(isActionAtPath<typeof child>(action, 'destination.addItem.save', a => a.value === 'other')).toBe(false);
+  expect(matchPaths(action, {
+    'destination.editItem.save': () => 'wrong case',
+    'destination.addItem.save': (a: typeof child) => a.value
+  })).toBe('draft');
 });

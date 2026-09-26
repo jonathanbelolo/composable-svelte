@@ -2,13 +2,20 @@
 	/**
 	 * A sign-in form.
 	 *
-	 * Takes both stores, deliberately. The flow store owns the fields and the
+	 * In standalone mode, takes both stores deliberately. The flow store owns the fields and the
 	 * request; the session store owns "who am I". A completed sign-in has to
 	 * cross between them, and passing both makes that crossing a required prop —
 	 * omit it and the compiler objects. The alternatives (composing the flow into
 	 * a parent reducer, or injecting an `onSessionEstablished` callback) both fail
 	 * *silently* when forgotten: the sign-in succeeds and the session never
 	 * updates, with nothing to typecheck against.
+	 *
+	 * `mode="managed"` is the other answer: the flow *is* composed into a parent
+	 * reducer, `createAuthFeature`, which has the handoff as a reduction and
+	 * cannot forget it. There the form takes the feature's presentation view and
+	 * nothing else. A view's state becomes `undefined` when its owner retires, so
+	 * the form renders nothing then, and its `Form` subtree is keyed by the view
+	 * so a replacement flow never inherits the old one's field subscription.
 	 *
 	 * Core's `Form` and `FormField` are used because they are unstyled state
 	 * plumbing — `<form novalidate>` and `<div data-field>`. `FormItem`,
@@ -24,6 +31,7 @@
 	 */
 	import { Form, FormField } from '@composable-svelte/core/components/form';
 	import type { FormAction, FormState } from '@composable-svelte/core/components/form';
+	import type { PresentationView } from '@composable-svelte/core/application';
 	import type { Snippet } from 'svelte';
 
 	import PasswordInput from './PasswordInput.svelte';
@@ -33,7 +41,16 @@
 	import type { LoginFields } from '../flows/login/schema.js';
 	import type { SessionAction } from '../session/types.js';
 
-	interface Props {
+	/** A store the form holds for its whole life; its state is always there. */
+	interface StandaloneLoginStore {
+		readonly state: LoginState;
+		dispatch(action: LoginAction): void;
+		subscribe(listener: (state: LoginState) => void): () => void;
+	}
+
+	/** The form performs the handoff: it needs the session store. */
+	interface StandaloneBinding {
+		mode?: 'standalone' | undefined;
 		/**
 		 * The sign-in flow: fields, request, structured failure.
 		 *
@@ -41,11 +58,7 @@
 		 * the auto-subscription form — and this component projects the form slice
 		 * out of the flow state for it.
 		 */
-		flowStore: {
-			readonly state: LoginState;
-			dispatch(action: LoginAction): void;
-			subscribe(listener: (state: LoginState) => void): () => void;
-		};
+		flowStore: StandaloneLoginStore;
 		/**
 		 * Where a completed sign-in is handed over.
 		 *
@@ -74,6 +87,26 @@
 		onMfaRequired?:
 			| ((challenge: { challengeId: string; methods: readonly MfaMethod[] }) => void)
 			| undefined;
+	}
+
+	/**
+	 * `createAuthFeature` performs the handoff and the MFA branch as reductions,
+	 * so the form gets neither the session store nor a result callback: a
+	 * managed form that could also establish a session would do it twice.
+	 */
+	interface ManagedBinding {
+		mode: 'managed';
+		/**
+		 * The feature's login view, as `defineViews` hands it to a content
+		 * snippet. Its `state` is `undefined` once the flow's owner retires.
+		 */
+		flowStore: PresentationView<LoginState, LoginAction>;
+		sessionStore?: never;
+		onSuccess?: never;
+		onMfaRequired?: never;
+	}
+
+	interface PresentationProps {
 		/** Replaces the heading. */
 		header?: Snippet | undefined;
 		/** Rendered below the form — "forgot password?", a link to signup. */
@@ -93,11 +126,11 @@
 		class?: string | undefined;
 	}
 
+	type Props = PresentationProps & (StandaloneBinding | ManagedBinding);
+
+	// `binding` keeps `mode`, `flowStore`, `sessionStore` and the callbacks in
+	// one object, so narrowing on `binding.mode` narrows the rest with it.
 	let {
-		flowStore,
-		sessionStore,
-		onSuccess,
-		onMfaRequired,
 		header,
 		footer,
 		submitLabel = 'Sign in',
@@ -105,7 +138,8 @@
 		emailLabel = 'Email',
 		passwordLabel = 'Password',
 		rememberLabel = 'Keep me signed in',
-		class: className = ''
+		class: className = '',
+		...binding
 	}: Props = $props();
 
 	/**
@@ -143,12 +177,39 @@
 	 */
 	const listeners = new Set<(state: FormState<LoginFields>) => void>();
 
+	/**
+	 * The flow's state. `undefined` only for a managed view whose owner has
+	 * retired — dismissed, replaced, or finished by the feature. The markup is
+	 * behind `{#if flow}`, so nothing reads a field through a retired view.
+	 */
+	const flow: LoginState | undefined = $derived(binding.flowStore.state);
+	const live = $derived(flow !== undefined);
+
+	/**
+	 * The last form slice seen, for `formStore.state` while a retiring subtree is
+	 * still being torn down. Nothing is dispatched on the strength of it.
+	 */
+	let lastForm: FormState<LoginFields> | undefined;
+
+	function currentForm(): FormState<LoginFields> {
+		const state = binding.flowStore.state;
+		if (state !== undefined) lastForm = state.form;
+		// Unreachable: the form first subscribes while rendering under `{#if flow}`.
+		if (lastForm === undefined) throw new Error('LoginForm: the form rendered without a flow');
+		return lastForm;
+	}
+
 	// Re-subscribes when `flowStore` changes, which is what keeps the fan-out
-	// pointed at the live store. `FormField` subscribes during the first render,
-	// before effects flush; `subscribe` below covers that window by calling the
-	// listener immediately, as the Svelte store contract requires anyway.
+	// pointed at the live store, and unsubscribes when a managed view retires —
+	// a retired view never comes back. `FormField` subscribes during the first
+	// render, before effects flush; `subscribe` below covers that window by
+	// calling the listener immediately, as the Svelte store contract requires.
 	$effect(() => {
-		return flowStore.subscribe((state) => {
+		const store = binding.flowStore;
+		if (!live) return;
+		return store.subscribe((state: LoginState | undefined) => {
+			if (state === undefined) return;
+			lastForm = state.form;
 			for (const listener of listeners) listener(state.form);
 		});
 	});
@@ -163,22 +224,58 @@
 	 */
 	const formStore = {
 		get state(): FormState<LoginFields> {
-			return flowStore.state.form;
+			return currentForm();
 		},
 		dispatch(action: FormAction<LoginFields>) {
-			flowStore.dispatch({ type: 'form', action });
+			binding.flowStore.dispatch({ type: 'form', action });
 		},
 		subscribe(listener: (state: FormState<LoginFields>) => void) {
 			// The form slice, not the flow state: `FormField` reads
 			// `$store.data[name]` and `LoginState` has no `data`.
 			listeners.add(listener);
-			listener(flowStore.state.form);
+			listener(currentForm());
 			return () => listeners.delete(listener);
 		}
 	};
 
-	const error = $derived(flowStore.state.error);
-	const isSubmitting = $derived(flowStore.state.status === 'submitting');
+	/** A keyed managed subtree keeps its dispatch and subscription on its own view. */
+	function managedFormStore(view: PresentationView<LoginState, LoginAction>) {
+		let last: FormState<LoginFields> | undefined;
+		function current(): FormState<LoginFields> {
+			const state = view.state;
+			if (state !== undefined) last = state.form;
+			if (last === undefined) throw new Error('LoginForm: the form rendered without a flow');
+			return last;
+		}
+		return {
+			get state() { return current(); },
+			dispatch(action: FormAction<LoginFields>) { view.dispatch({ type: 'form', action }); },
+			subscribe(listener: (state: FormState<LoginFields>) => void) {
+				const unsubscribe = view.subscribe((state) => {
+					if (state !== undefined) {
+						last = state.form;
+						listener(state.form);
+					}
+				});
+				listener(current());
+				return unsubscribe;
+			}
+		};
+	}
+
+	/**
+	 * Managed: one `Form` subtree per captured view. `Form` puts its store in
+	 * context once, so a replacement flow gets a fresh subtree rather than
+	 * sharing field subscriptions and DOM with its predecessor. Standalone keeps
+	 * one subtree across a store swap, as it always has; the fan-out follows it.
+	 */
+	const formOwner = $derived(binding.mode === 'managed' ? binding.flowStore : null);
+	const activeFormStore = $derived(
+		binding.mode === 'managed' ? managedFormStore(binding.flowStore) : formStore
+	);
+
+	const error = $derived(flow?.error ?? null);
+	const isSubmitting = $derived(flow?.status === 'submitting');
 
 	/**
 	 * Whether the session has already been handed *this* result.
@@ -213,7 +310,7 @@
 	let reportedChallenge = false;
 
 	$effect(() => {
-		const error = flowStore.state.error;
+		const onMfaRequired = binding.mode === 'managed' ? undefined : binding.onMfaRequired;
 		if (onMfaRequired === undefined || !isMfaRequired(error)) {
 			reportedChallenge = false;
 			return;
@@ -228,11 +325,11 @@
 	 *
 	 * `mfa_required` handled by a consumer is not one: they are navigating to the
 	 * challenge, and a red "something went wrong" alert on the way out is both
-	 * wrong and alarming.
+	 * wrong and alarming. Managed, the feature opens the challenge and retires
+	 * this flow in the same reduction.
 	 */
-	const showsError = $derived(
-		error !== null && !(onMfaRequired !== undefined && isMfaRequired(error))
-	);
+	const routesMfa = $derived(binding.mode === 'managed' || binding.onMfaRequired !== undefined);
+	const showsError = $derived(error !== null && !(routesMfa && isMfaRequired(error)));
 
 	/*
 	 * `loginStarted` is deliberately not dispatched.
@@ -248,145 +345,152 @@
 	 * behaviour, and can have it without a prop here:
 	 * `$effect(() => { if (login.state.status === 'submitting')
 	 * session.dispatch({ type: 'loginStarted' }); })`.
+	 *
+	 * Standalone only. Managed, `createAuthFeature` hands the result over.
 	 */
 	$effect(() => {
-		const { status, session } = flowStore.state;
+		if (binding.mode === 'managed') return;
+		const { status, session } = binding.flowStore.state;
 		if (status !== 'succeeded') {
 			handedOver = false;
 			return;
 		}
 		if (session === null || handedOver) return;
 		handedOver = true;
-		sessionStore.dispatch({ type: 'sessionEstablished', session });
-		onSuccess?.();
+		binding.sessionStore.dispatch({ type: 'sessionEstablished', session });
+		binding.onSuccess?.();
 	});
 </script>
 
-<div class="login-form {className}">
-	{#if header}
-		{@render header()}
-	{:else}
-		<svelte:element this={`h${headingLevel}`} class="login-form__title">Sign in</svelte:element>
-	{/if}
+{#if flow}
+	<div class="login-form {className}">
+		{#if header}
+			{@render header()}
+		{:else}
+			<svelte:element this={`h${headingLevel}`} class="login-form__title">Sign in</svelte:element>
+		{/if}
 
-	{#if showsError && error}
-		<!--
-			The form-level failure. `role="alert"` plus `aria-live="polite"` is the
-			pairing `FormMessage` uses for field errors; core has no component for a
-			form-level one, so it is spelled out. `data-error-code` is what lets a
-			consumer style or test the branch — it is the whole point of `AuthError`
-			being a union rather than a string.
-		-->
-		<div class="login-form__error" role="alert" aria-live="polite" data-error-code={error.code}>
-			{error.message}
-		</div>
-	{/if}
+		{#if showsError && error}
+			<!--
+				The form-level failure. `role="alert"` plus `aria-live="polite"` is the
+				pairing `FormMessage` uses for field errors; core has no component for a
+				form-level one, so it is spelled out. `data-error-code` is what lets a
+				consumer style or test the branch — it is the whole point of `AuthError`
+				being a union rather than a string.
+			-->
+			<div class="login-form__error" role="alert" aria-live="polite" data-error-code={error.code}>
+				{error.message}
+			</div>
+		{/if}
 
-	<Form store={formStore} class="login-form__form">
-		<FormField name="email">
-			{#snippet children({ field, send })}
-				<div class="login-form__field">
-					<label class="login-form__label" for={emailId}>{emailLabel}</label>
-					<input
-						id={emailId}
-						name="email"
-						type="email"
-						autocomplete="username"
-						class="login-form__input"
-						class:login-form__input--invalid={!!field.error}
-						value={field.value}
-						aria-invalid={field.error ? 'true' : undefined}
-						aria-describedby={field.error ? emailErrorId : undefined}
-						oninput={(event) =>
-							send({ type: 'fieldChanged', field: 'email', value: event.currentTarget.value })}
-						onblur={() => send({ type: 'fieldBlurred', field: 'email' })}
-					/>
-					{#if field.error}
-						<p class="login-form__field-error" id={emailErrorId} role="alert" aria-live="polite">
-							{field.error}
-						</p>
-					{/if}
-				</div>
-			{/snippet}
-		</FormField>
+		{#key formOwner}
+			<Form store={activeFormStore} class="login-form__form">
+				<FormField name="email">
+					{#snippet children({ field, send })}
+						<div class="login-form__field">
+							<label class="login-form__label" for={emailId}>{emailLabel}</label>
+							<input
+								id={emailId}
+								name="email"
+								type="email"
+								autocomplete="username"
+								class="login-form__input"
+								class:login-form__input--invalid={!!field.error}
+								value={field.value}
+								aria-invalid={field.error ? 'true' : undefined}
+								aria-describedby={field.error ? emailErrorId : undefined}
+								oninput={(event) =>
+									send({ type: 'fieldChanged', field: 'email', value: event.currentTarget.value })}
+								onblur={() => send({ type: 'fieldBlurred', field: 'email' })}
+							/>
+							{#if field.error}
+								<p class="login-form__field-error" id={emailErrorId} role="alert" aria-live="polite">
+									{field.error}
+								</p>
+							{/if}
+						</div>
+					{/snippet}
+				</FormField>
 
-		<FormField name="password">
-			{#snippet children({ field, send })}
-				<div class="login-form__field">
-					<label class="login-form__label" for={passwordId}>{passwordLabel}</label>
-					<PasswordInput
-						id={passwordId}
-						name="password"
-						value={field.value}
-						invalid={!!field.error}
-						errorId={passwordErrorId}
-						autocomplete="current-password"
-						oninput={(event) =>
-							send({ type: 'fieldChanged', field: 'password', value: event.currentTarget.value })}
-						onblur={() => send({ type: 'fieldBlurred', field: 'password' })}
-					/>
-					{#if field.error}
-						<p class="login-form__field-error" id={passwordErrorId} role="alert" aria-live="polite">
-							{field.error}
-						</p>
-					{/if}
-				</div>
-			{/snippet}
-		</FormField>
+				<FormField name="password">
+					{#snippet children({ field, send })}
+						<div class="login-form__field">
+							<label class="login-form__label" for={passwordId}>{passwordLabel}</label>
+							<PasswordInput
+								id={passwordId}
+								name="password"
+								value={field.value}
+								invalid={!!field.error}
+								errorId={passwordErrorId}
+								autocomplete="current-password"
+								oninput={(event) =>
+									send({ type: 'fieldChanged', field: 'password', value: event.currentTarget.value })}
+								onblur={() => send({ type: 'fieldBlurred', field: 'password' })}
+							/>
+							{#if field.error}
+								<p class="login-form__field-error" id={passwordErrorId} role="alert" aria-live="polite">
+									{field.error}
+								</p>
+							{/if}
+						</div>
+					{/snippet}
+				</FormField>
 
-		<FormField name="rememberMe">
-			{#snippet children({ field, send })}
-				<div class="login-form__remember">
-					<input
-						id={rememberId}
-						name="rememberMe"
-						type="checkbox"
-						class="login-form__checkbox"
-						checked={field.value === true}
-						onchange={(event) =>
-							send({
-								type: 'fieldChanged',
-								field: 'rememberMe',
-								value: event.currentTarget.checked
-							})}
-					/>
-					<label class="login-form__label" for={rememberId}>{rememberLabel}</label>
-				</div>
-			{/snippet}
-		</FormField>
+				<FormField name="rememberMe">
+					{#snippet children({ field, send })}
+						<div class="login-form__remember">
+							<input
+								id={rememberId}
+								name="rememberMe"
+								type="checkbox"
+								class="login-form__checkbox"
+								checked={field.value === true}
+								onchange={(event) =>
+									send({
+										type: 'fieldChanged',
+										field: 'rememberMe',
+										value: event.currentTarget.checked
+									})}
+							/>
+							<label class="login-form__label" for={rememberId}>{rememberLabel}</label>
+						</div>
+					{/snippet}
+				</FormField>
 
-		<!--
-			Genuinely disabled while in flight, not merely relabelled. Core's form
-			reducer has no re-entrancy guard, and two of the three form examples only
-			swap the label — so they do not prevent a double submit. Here that is a
-			duplicate authentication attempt, which is how a user trips a rate limiter
-			by double-clicking. Disabling the *default* button also suppresses
-			implicit submission, so Enter in a field cannot get around it either.
+				<!--
+					Genuinely disabled while in flight, not merely relabelled. Core's form
+					reducer has no re-entrancy guard, and two of the three form examples only
+					swap the label — so they do not prevent a double submit. Here that is a
+					duplicate authentication attempt, which is how a user trips a rate limiter
+					by double-clicking. Disabling the *default* button also suppresses
+					implicit submission, so Enter in a field cannot get around it either.
 
-			The fields deliberately stay live. Disabling them buys nothing — the
-			credentials were captured when the request was dispatched — and costs
-			something real: submitting with Enter leaves focus in the password field,
-			and disabling the focused element drops focus to `<body>`.
-		-->
-		<!--
-			The in-flight state, for anyone not looking at the button. A *disabled*
-			button's label change is not announced — assistive technology skips it —
-			so submitting would otherwise produce silence until the result arrives.
-			The failure has `role="alert"` already; this covers the wait.
-		-->
-		<p class="login-form__status" role="status" aria-live="polite">
-			{isSubmitting ? 'Signing in…' : ''}
-		</p>
+					The fields deliberately stay live. Disabling them buys nothing — the
+					credentials were captured when the request was dispatched — and costs
+					something real: submitting with Enter leaves focus in the password field,
+					and disabling the focused element drops focus to `<body>`.
+				-->
+				<!--
+					The in-flight state, for anyone not looking at the button. A *disabled*
+					button's label change is not announced — assistive technology skips it —
+					so submitting would otherwise produce silence until the result arrives.
+					The failure has `role="alert"` already; this covers the wait.
+				-->
+				<p class="login-form__status" role="status" aria-live="polite">
+					{isSubmitting ? 'Signing in…' : ''}
+				</p>
 
-		<button type="submit" class="login-form__submit" disabled={isSubmitting}>
-			{isSubmitting ? 'Signing in…' : submitLabel}
-		</button>
-	</Form>
+				<button type="submit" class="login-form__submit" disabled={isSubmitting}>
+					{isSubmitting ? 'Signing in…' : submitLabel}
+				</button>
+			</Form>
+		{/key}
 
-	{#if footer}
-		<div class="login-form__footer">{@render footer()}</div>
-	{/if}
-</div>
+		{#if footer}
+			<div class="login-form__footer">{@render footer()}</div>
+		{/if}
+	</div>
+{/if}
 
 <style>
 	/*

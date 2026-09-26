@@ -1,0 +1,47 @@
+{
+  "status": "passed",
+  "note": "all packed files except pnpm-transformed top-level package.json compared to integrated source/build; runtime qualification remains separate",
+  "packages": [
+    {
+      "name": "@composable-svelte/core",
+      "sha256": "30e044e139e831033e06fdf626db979875efa2f7c29d72dece33a21db112d18b",
+      "comparedFiles": 1257
+    },
+    {
+      "name": "@composable-svelte/auth",
+      "sha256": "ac13e9a8874012ed53a87249baed555aeeb34a79654e18d6aaf1921507226e62",
+      "comparedFiles": 403
+    },
+    {
+      "name": "@composable-svelte/maps",
+      "sha256": "3730a67a93be13a631729d0538328b92bf6b85c5fc1f603ea0a8e4395aee7116",
+      "comparedFiles": 63
+    },
+    {
+      "name": "@composable-svelte/graphics",
+      "sha256": "366f918ae042bd510c263f124e247d3a4e3ac4a7a57e91a72d93131cf8c7857b",
+      "comparedFiles": 132
+    },
+    {
+      "name": "@composable-svelte/charts",
+      "sha256": "c36b7a06e5a293259cdbebd599a1698cd448c000eac343c66411c1282a73c21d",
+      "comparedFiles": 52
+    },
+    {
+      "name": "@composable-svelte/code",
+      "sha256": "f85b945232c460edc45c0051dc69c4580f4a502b39a2988af38c62a2e3a37026",
+      "comparedFiles": 68
+    },
+    {
+      "name": "@composable-svelte/media",
+      "sha256": "c0bfa6528fb6cd3dc68f2769237d3053514f76f79bc5197316b230eb07b78298",
+      "comparedFiles": 100
+    },
+    {
+      "name": "@composable-svelte/chat",
+      "sha256": "cfbfe99d8dff4a5328b581794192f32e6e97b9867e551befc2150f4b8ad07090",
+      "comparedFiles": 156
+    }
+  ],
+  "mismatches": []
+}

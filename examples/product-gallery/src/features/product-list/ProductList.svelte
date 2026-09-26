@@ -20,6 +20,8 @@
     selectedCategories: ProductCategory[];
     onViewModeChange: (mode: ViewMode) => void;
     onProductClick: (productId: string) => void;
+    onFavoriteToggle?: ((productId: string) => void) | undefined;
+    onClearFilters?: (() => void) | undefined;
   }
 
   let {
@@ -28,7 +30,9 @@
     viewMode,
     selectedCategories,
     onViewModeChange,
-    onProductClick
+    onProductClick,
+    onFavoriteToggle,
+    onClearFilters
   }: ProductListProps = $props();
 
   // ============================================================================
@@ -134,13 +138,13 @@
             </div>
           {/snippet}
 
-          {#if selectedCategories.length > 0}
-            {#snippet actions()}
-              <Button variant="outline" onclick={() => onViewModeChange('grid')}>
+          {#snippet children()}
+            {#if selectedCategories.length > 0}
+              <Button variant="outline" onclick={() => onClearFilters?.()}>
                 Clear Filters
               </Button>
-            {/snippet}
-          {/if}
+            {/if}
+          {/snippet}
         </Empty>
       </div>
     {:else if viewMode === 'grid'}
@@ -151,6 +155,7 @@
             {product}
             viewMode="grid"
             onclick={() => onProductClick(product.id)}
+            {onFavoriteToggle}
           />
         {/each}
       </div>
@@ -162,6 +167,7 @@
             {product}
             viewMode="list"
             onclick={() => onProductClick(product.id)}
+            {onFavoriteToggle}
           />
         {/each}
       </div>

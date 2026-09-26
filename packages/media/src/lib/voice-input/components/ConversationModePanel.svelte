@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { animateFadeIn } from '@composable-svelte/core/animation';
-	import type { Store } from '@composable-svelte/core';
+	import type { ViewStore } from '../../internal/view-store.js';
 	import type { VoiceInputState, VoiceInputAction } from '../types.js';
 	import AudioVisualizer from './AudioVisualizer.svelte';
 
@@ -11,7 +11,8 @@
 	 * and controls for manual send/stop.
 	 */
 	interface Props {
-		store: Store<VoiceInputState, VoiceInputAction>;
+		/** A standalone store or a managed feature view; its state is `undefined` once retired. */
+		store: ViewStore<VoiceInputState, VoiceInputAction>;
 		transcripts?: string[] | undefined; // History of transcripts in this conversation
 	/**
 	 * Which heading element to render.
@@ -42,13 +43,16 @@
 	});
 
 	// Derived states
-	const isSpeaking = $derived($store.vadState?.isSpeaking ?? false);
-	const silenceDuration = $derived($store.vadState?.silenceDuration ?? 0);
-	const threshold = $derived($store.vadState?.autoSendThreshold ?? 1500);
+	const isSpeaking = $derived($store?.vadState?.isSpeaking ?? false);
+	const silenceDuration = $derived($store?.vadState?.silenceDuration ?? 0);
+	const threshold = $derived($store?.vadState?.autoSendThreshold ?? 1500);
 	const silenceProgress = $derived(silenceDuration / threshold);
-	const isProcessing = $derived($store.status === 'processing');
+	const isRecording = $derived($store?.status === 'recording');
+	const isProcessing = $derived($store?.status === 'processing');
+	const canSend = $derived(isRecording && !isProcessing && (isSpeaking || silenceDuration > 0));
 
 	function handleManualSend() {
+		if (!canSend) return;
 		store.dispatch({ type: 'manualSendRequested' });
 	}
 
@@ -76,7 +80,7 @@
 
 		<!-- Audio Visualizer -->
 		<div class="visualizer-container">
-			<AudioVisualizer audioLevel={$store.audioLevel} variant="bars" />
+			<AudioVisualizer audioLevel={$store?.audioLevel ?? 0} variant="bars" />
 		</div>
 
 		<!-- VAD Indicator -->
@@ -120,7 +124,7 @@
 
 		<!-- Actions -->
 		<div class="panel-actions">
-			<button class="send-button" onclick={handleManualSend} disabled={isProcessing || !isSpeaking}>
+			<button class="send-button" onclick={handleManualSend} disabled={!canSend}>
 				Send Now
 			</button>
 			<span class="hint-text">ESC to stop</span>

@@ -44,7 +44,7 @@ const rows = [
 	{ x: 3, y: 30 }
 ];
 
-function mountChart() {
+function mountChart(options: { enableZoom?: boolean } = {}) {
 	const store = createStore({
 		initialState: createInitialChartState({ data: rows }),
 		reducer: chartReducer,
@@ -54,7 +54,7 @@ function mountChart() {
 	document.body.appendChild(target);
 	const component = mount(Chart, {
 		target,
-		props: { store, type: 'scatter' as const, x: 'x', y: 'y' }
+		props: { store, type: 'scatter' as const, x: 'x', y: 'y', enableZoom: options.enableZoom ?? false }
 	});
 	cleanup.push(() => {
 		unmount(component);
@@ -123,7 +123,7 @@ describe('SC 2.1.4 — Character Key Shortcuts', () => {
 		// component has focus**. This takes the third exemption: the handler is
 		// bound to the chart, not to the document, so a `0` typed into a search
 		// box elsewhere on the page cannot reach it.
-		const { store, press, target } = mountChart();
+		const { store, press, target } = mountChart({ enableZoom: true });
 		await settle();
 
 		expect(press('0')).toBe(true);
@@ -163,7 +163,17 @@ describe('SC 1.4.1 — Use of Color', () => {
 
 		expect(surface.getAttribute('aria-label')).toContain('1 selected');
 		expect(surface.querySelector('[role="status"]')!.textContent).toContain('Selected');
-		// Shape, not hue: an unfilled ring around the focused point.
+		// The selected overlay must persist independently of the cursor.
+		store.dispatch({ type: 'focusPoint', index: 2 });
+		flushSync();
+		const selected = surface.querySelector('g[stroke-width="1.5"] circle');
+		const cursor = surface.querySelector('g[fill="none"] circle');
+		expect(selected).not.toBeNull();
+		expect(cursor).not.toBeNull();
+		expect(selected!.getAttribute('cx')).not.toBe(cursor!.getAttribute('cx'));
+		store.dispatch({ type: 'clearSelection' });
+		flushSync();
+		expect(surface.querySelector('g[stroke-width="1.5"] circle')).toBeNull();
 		expect(surface.querySelector('g[fill="none"] circle')).not.toBeNull();
 	});
 

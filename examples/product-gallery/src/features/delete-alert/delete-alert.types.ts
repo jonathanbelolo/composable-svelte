@@ -8,7 +8,10 @@ export interface DeleteAlertState {
 
 export type DeleteAlertAction =
   | { type: 'confirmButtonTapped' }
-  | { type: 'cancelButtonTapped' };
+  | { type: 'cancelButtonTapped' }
+  | { type: 'presentationCompleted' }
+  | { type: 'dismissalCompleted' }
+  | { type: 'deleteConfirmed'; productId: string };
 
 // ============================================================================
 // Factory Functions

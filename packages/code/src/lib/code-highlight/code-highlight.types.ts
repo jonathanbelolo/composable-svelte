@@ -82,8 +82,11 @@ export type CodeHighlightAction =
 	| { type: 'resetCopyStatus' }
 	| { type: 'toggleLineNumbers' }
 	| { type: 'highlightLinesChanged'; lines: number[] }
-	| { type: 'highlighted'; html: string }
-	| { type: 'highlightFailed'; error: string };
+	// Built-in effects name the code and language they highlighted; such a
+	// result is applied only while both are still current, so a slow earlier
+	// highlight cannot overwrite a newer one. Untagged results always apply.
+	| { type: 'highlighted'; html: string; code?: string; language?: SupportedLanguage }
+	| { type: 'highlightFailed'; error: string; code?: string; language?: SupportedLanguage };
 
 /**
  * Dependencies for the CodeHighlight reducer

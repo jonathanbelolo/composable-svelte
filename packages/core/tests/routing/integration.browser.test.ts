@@ -393,58 +393,30 @@ describe('Routing Integration', () => {
 			cleanup();
 		});
 
-		it('ignores the popstate that follows its own pushState', async () => {
-			// The guard under test is the popstate handler in browser-history.ts: a
-			// popstate carrying our own metadata within 50 ms of our pushState is
-			// ours, and dispatching for it would loop. A pushState never fires
-			// popstate by itself, so the earlier form of this test — dispatch, wait,
-			// count history writes — never reached that branch and passed with the
-			// guard deleted. The popstate is now fired by hand: once inside the
-			// window, once outside it.
+		it('handles immediate marked popstate and real Back without echoing history entries', async () => {
 			const seen: InventoryAction[] = [];
-			const recording: Reducer<InventoryState, InventoryAction, {}> = (state, action, deps) => {
-				seen.push(action);
-				return inventoryReducer(state, action, deps);
-			};
 			const store = createStore({
 				initialState: { destination: null, items: [], searchQuery: '' } as InventoryState,
-				reducer: recording,
+				reducer: (state: InventoryState, action: InventoryAction) => { seen.push(action); return inventoryReducer(state, action, {}); },
 				dependencies: {}
 			});
-
-			// Installed before syncBrowserHistory, which wraps history.pushState and
-			// calls through to whatever was there — this spy, which calls through to
-			// the real method, so the URL still changes.
 			const pushes = vi.spyOn(history, 'pushState');
-
-			const cleanup = syncBrowserHistory(store, {
-				parse: (path) => parseDestination(path, parserConfig),
-				serialize: serializeState,
-				destinationToAction
-			});
-
-			store.dispatch({ type: 'itemSelected', itemId: '123' });
-			await new Promise((resolve) => setTimeout(resolve, 10));
-
-			expect(window.location.pathname).toBe('/inventory/item-123');
-			expect(pushes).toHaveBeenCalledTimes(1);
-			expect(seen).toHaveLength(1);
-
-			// Inside the window: ours, so ignored.
-			window.dispatchEvent(new PopStateEvent('popstate', { state: { composableSvelteSync: true } }));
-			await new Promise((resolve) => setTimeout(resolve, 10));
-			expect(seen, 'the popstate after our own pushState was dispatched for').toHaveLength(1);
-
-			// Outside the window: a real navigation to the same URL, handled. Without
-			// this the arm above passes against a handler that never dispatches.
-			await new Promise((resolve) => setTimeout(resolve, 60));
-			window.dispatchEvent(new PopStateEvent('popstate', { state: { composableSvelteSync: true } }));
-			await new Promise((resolve) => setTimeout(resolve, 10));
-			expect(seen).toHaveLength(2);
-			expect(seen[1]).toEqual({ type: 'itemSelected', itemId: '123' });
-
-			cleanup();
-			pushes.mockRestore();
+			const cleanup = syncBrowserHistory(store, { parse: path => parseDestination(path, parserConfig), serialize: serializeState, destinationToAction });
+			try {
+				store.dispatch({ type: 'itemSelected', itemId: '123' });
+				expect(seen).toHaveLength(1);
+				expect(pushes).toHaveBeenCalledTimes(1);
+				// A legacy marker has no authority to suppress a genuine delivered event.
+				window.dispatchEvent(new PopStateEvent('popstate', { state: { composableSvelteSync: true } }));
+				expect(seen).toHaveLength(2);
+				expect(seen[1]).toEqual({ type: 'itemSelected', itemId: '123' });
+				expect(pushes).toHaveBeenCalledTimes(1);
+				await new Promise<void>(resolve => { window.addEventListener('popstate', () => resolve(), { once: true }); history.back(); });
+				expect(store.state.destination).toBeNull();
+				expect(location.pathname).toBe('/inventory');
+				expect(seen.at(-1)).toEqual({ type: 'closeDestination' });
+				expect(pushes).toHaveBeenCalledTimes(1);
+			} finally { cleanup(); store.destroy(); pushes.mockRestore(); }
 		});
 	});
 

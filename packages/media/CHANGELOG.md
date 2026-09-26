@@ -5,7 +5,78 @@ All notable changes to `@composable-svelte/media` will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.5.0] - 2026-09-26
+
+Requires `@composable-svelte/core` `^0.13.1` (exports `isManagedChildView` and
+`observeChildActions` from `@composable-svelte/core/application`) and Svelte
+`^5.20.0` as peers.
+
+### Added
+
+- **Managed feature views.** `MinimalAudioPlayer`, `FullAudioPlayer`,
+  `PlaylistView` and `VoiceInput` (and its internal panels) accept the managed
+  `ChildView` a feature view receives, as well as a standalone `Store`. When the
+  view's owner retires its state is `undefined`: the component renders nothing
+  and releases its native resource instead of throwing.
+- **README: managed recipes.** A voice input whose transcripts become parent
+  state through the parent reducer, and a player in an optional slot. Both are
+  test fixtures: typechecked, mounted, rendered on the server, and quoted
+  verbatim.
+- `AudioPlayerManager.disposed` (`AudioManager` on `./audio-player`), read-only.
+- Server-render tests for every public component (`vitest.ssr.config.ts`, run
+  by `pnpm test`).
+
+### Changed
+
+- Requires `@composable-svelte/core` `^0.13.1` and Svelte `^5.20.0` as peers.
+- **`VoiceInput`'s `onTranscript` is optional.** It still fires once per
+  accepted transcript, on the standalone and managed paths. A store that can
+  report neither way (a copy or wrapper of a view, an `ApplicationStore`, a
+  second copy of core, a custom `Store` without `subscribeToActions`) still
+  renders and dispatches, and `VoiceInput` warns once that the callback cannot
+  fire.
+- **Unmounting `VoiceInput` releases the microphone through the store**
+  (the internal `_releaseDevice` action) instead of deleting the device from
+  the built-in registry. An injected `deleteAudioManager` is now honoured, a
+  pending permission prompt is cancelled and its late grant disposed, and a
+  recording nobody stopped is discarded, leaving the store idle rather than
+  "recording" against a released device. An utterance the user had already
+  finished is still transcribed, and `transcriptionCompleted` reaches a store
+  that outlives the component exactly once; `onTranscript` does not fire after
+  unmount. Destroying the store or retiring a managed owner cancels it.
+- **Unmount store-taking components before destroying a standalone store.** A
+  player still mounted on a destroyed store keeps its element playing (it now
+  drives the element; see Fixed), and each event logs `dispatch after destroy
+  ignored`.
+- **A player id no longer shares an element.** Each mounted player owns its own
+  `HTMLAudioElement`. Two players given the same explicit `id` used to share
+  one: the second redirected the first's events to itself, and whichever
+  unmounted first silenced the other. Now each keeps its own element, the
+  registry name moves to the later player with a console warning, and a player
+  removes the name on unmount only while it is still its own. An automatic
+  (omitted) `id` is no longer registered at all; nothing could look it up.
+- **A player's manager belongs to the player.** `deleteAudioPlayerManager(id)`
+  on a mounted player's name removes the name and warns; it no longer disposes
+  the element and silently stops the player. `getAudioPlayerManager(id, config)`
+  on that name returns the manager without applying `config`, and warns once;
+  it no longer redirects the player's events away from its store. Managers you
+  register yourself keep their get-or-create, reconfigure and dispose behaviour.
+- **A manager registered under a player's `id` is no longer adopted by the
+  player**, and its `createAudioElement` is not used: the player creates its
+  own element. The registered manager keeps the name and is neither
+  reconfigured nor orphaned, and the player warns that it is not registered
+  under that id.
+
+### Fixed
+
+- **Mounted players never drove their audio element.** The state→element
+  effect returned before reading any state on its first run, so it never ran
+  again: Play, Pause, volume, speed and seek changed the store and nothing
+  else. The element is now driven from state, and rebinds when the `store` prop
+  changes to another store.
+- README: `FullAudioPlayer` has no `showPlaylist` prop (`showPlaylistInfo`,
+  `showExpandButton`); the player manager wraps an `HTMLAudioElement`, not an
+  `AudioContext`; `currentTrackIndex` defaults to `-1`.
 
 ## [0.4.1] - 2026-09-18
 

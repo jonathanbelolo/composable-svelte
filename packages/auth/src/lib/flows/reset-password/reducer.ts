@@ -16,6 +16,7 @@ import {
 import type { Reducer, Store } from '@composable-svelte/core';
 
 import { toAuthError } from '../../errors/helpers.js';
+import { completesSubmissionInFlight } from '../submission-feedback.js';
 import {
 	emptyResetPasswordFields,
 	resetPasswordSchema,
@@ -92,7 +93,10 @@ export const resetPasswordReducer: Reducer<
 					? { ...withForm, error: null }
 					: withForm;
 
-			if (action.action.type !== 'submissionSucceeded') {
+			// Only the result of a submission in flight; see `submission-feedback.ts`.
+			// Checked before the token, so a stale result neither spends the token
+			// nor reports the link as broken.
+			if (!completesSubmissionInFlight(state.form, withForm.form, action.action)) {
 				return [cleared, formEffect];
 			}
 
@@ -132,7 +136,8 @@ export const resetPasswordReducer: Reducer<
 		}
 
 		case 'tokenProvided': {
-			return [{ ...state, token: action.token }, Effect.none()];
+			if (action.token === state.token) return [state, Effect.none()];
+			return [{ ...state, token: action.token, error: null }, Effect.none()];
 		}
 
 		case 'resetSucceeded': {
@@ -151,6 +156,11 @@ export const resetPasswordReducer: Reducer<
 
 		case 'errorDismissed': {
 			return [state.error === null ? state : { ...state, error: null }, Effect.none()];
+		}
+
+		case 'requestNewLinkRequested':
+		case 'signInRequested': {
+			return [state, Effect.none()];
 		}
 
 		default: {

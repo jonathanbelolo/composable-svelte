@@ -61,7 +61,11 @@ export type ResetPasswordAction =
 	| { type: 'tokenProvided'; token: string }
 	| { type: 'resetSucceeded'; session: SessionSnapshot | null }
 	| { type: 'resetFailed'; error: AuthError }
-	| { type: 'errorDismissed' };
+	| { type: 'errorDismissed' }
+	/** Managed navigation from a missing or expired link. */
+	| { type: 'requestNewLinkRequested' }
+	/** Managed navigation after a successful reset that issued no session. */
+	| { type: 'signInRequested' };
 
 export interface ResetPasswordDependencies {
 	resetPassword: AuthDependencies['resetPassword'];

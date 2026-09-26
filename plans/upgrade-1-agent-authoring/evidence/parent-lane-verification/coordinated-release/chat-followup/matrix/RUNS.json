@@ -1,0 +1,44 @@
+[
+  {
+    "checkpoint": "minimum",
+    "exitCode": 0,
+    "command": [
+      "node",
+      "/private/tmp/composable-final-qualification/repo/scripts/verify-release-archives.mjs",
+      "--manifest",
+      "/private/tmp/companion-runtime-release/archives-r5-chat/MANIFEST.json",
+      "--mode",
+      "recipes",
+      "--recipe",
+      "chat-managed,chat-code-media",
+      "--svelte-checkpoint",
+      "minimum",
+      "--evidence-dir",
+      "/private/tmp/companion-runtime-release/matrix-r5-chat/minimum",
+      "--keep-scratch"
+    ],
+    "harnessSHA256": "01e71e02ca3205096e35902d9eebbba788ee4c169c9a7cf8f64e7ab4359552c9",
+    "finishedAt": "2026-09-26T13:46:00.365675+00:00"
+  },
+  {
+    "checkpoint": "newer",
+    "exitCode": 0,
+    "command": [
+      "node",
+      "/private/tmp/composable-final-qualification/repo/scripts/verify-release-archives.mjs",
+      "--manifest",
+      "/private/tmp/companion-runtime-release/archives-r5-chat/MANIFEST.json",
+      "--mode",
+      "recipes",
+      "--recipe",
+      "chat-managed,chat-code-media",
+      "--svelte-checkpoint",
+      "newer",
+      "--evidence-dir",
+      "/private/tmp/companion-runtime-release/matrix-r5-chat/newer",
+      "--keep-scratch"
+    ],
+    "harnessSHA256": "01e71e02ca3205096e35902d9eebbba788ee4c169c9a7cf8f64e7ab4359552c9",
+    "finishedAt": "2026-09-26T13:47:34.052752+00:00"
+  }
+]

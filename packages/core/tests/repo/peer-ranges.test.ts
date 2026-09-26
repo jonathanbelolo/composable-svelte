@@ -39,13 +39,13 @@ const coreVersion: string = read('core').version;
 /**
  * The range a package should declare for a workspace sibling at `version`.
  *
- * Minor granularity: `^0.11.0` already admits `0.11.4`, so a patch release must
- * not force an edit in seven package.json files. A *minor* bump still must,
- * which is the point — pre-1.0, `^0.11.0` refuses `0.12.0`.
+ * Coordinated release train requires '^' plus the full actual qualified sibling version,
+ * including any prerelease suffix. A pre-1.0 patch floor like core ^0.13.1 cannot normalize
+ * to ^0.13.0 because consumers need the exact floor containing all required owner-action
+ * seams and companion interfaces.
  */
 function expectedRange(version: string): string {
-	const [major, minor] = version.split('.');
-	return `^${major}.${minor}.0`;
+	return `^${version}`;
 }
 
 /** Package directories that carry a manifest. */
@@ -78,6 +78,14 @@ const siblings = workspacePackages()
 const WORKSPACE_PEERS = workspacePackages().filter((name) => name !== 'core');
 
 describe('sibling peer ranges', () => {
+	it('expectedRange preserves full version floor and rejects normalized major.minor.0', () => {
+		expect(expectedRange('0.13.1')).toBe('^0.13.1');
+		expect(expectedRange('0.13.1')).not.toBe('^0.13.0');
+		expect(expectedRange('0.5.0')).toBe('^0.5.0');
+		expect(expectedRange('0.3.0')).toBe('^0.3.0');
+		expect(expectedRange('0.13.0-next.1')).toBe('^0.13.0-next.1');
+	});
+
 	it('there are siblings to check', () => {
 		// A rename of `packages/` would otherwise make every assertion below
 		// vacuous by iterating an empty list.

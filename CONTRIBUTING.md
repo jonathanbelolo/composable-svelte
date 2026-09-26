@@ -72,6 +72,17 @@ This gate runs in CI. When adding a runnable documentation block, use a
 `consumer-file` marker and update the explicit inventory in the script; fragments
 that depend on surrounding application code should say so in the prose.
 
+## Documentation and example applications
+
+Keep library documentation product-neutral. Do not include consumer-specific
+product names, source paths, screenshots, or project histories. Describe problems
+through library evidence and generic, standalone reproductions.
+
+Examples may be complete, sophisticated applications, but use fictional, generic
+domains and identify them explicitly as demos in their README and UI. Document
+simulated services and data. Show how to assemble the library through public APIs;
+do not make an example depend on a particular consumer project.
+
 ## Before you believe a change
 
 Read `guides/VERIFICATION-PROTOCOL.md`. Its first rule is the one that matters
@@ -106,11 +117,11 @@ pnpm publish -r
 ### The bump is one commit, not eight
 
 `packages/core/tests/repo/peer-ranges.test.ts` requires every satellite's
-`@composable-svelte/core` peer to equal `^<major>.<minor>.0` of core's **local**
-version. The moment core's version moves, all seven satellite manifests are red
-until they move with it. That is by design — it is what stopped a satellite
-advertising `^0.4.1` while importing an API added in 0.11.0 — but it means core
-and its seven peers change in a single commit.
+`@composable-svelte/core` peer to equal `^<version>` of core's **local**
+version (including pre-1.0 patch floors like `^0.13.1`). The moment core's version moves,
+all seven satellite manifests are red until they move with it. That is by design — it is what
+stopped a satellite advertising `^0.4.1` while importing an API added in 0.11.0 — but it
+means core and its seven peers change in a single coordinated commit.
 
 ### chat, code and media go together
 

@@ -15,10 +15,11 @@
     BackgroundVariant,
     OnConnectStartParams
   } from '@xyflow/svelte';
-  import type { Store } from '@composable-svelte/core';
+  import { untrack } from 'svelte';
   import type { NodeCanvasState, NodeCanvasAction } from './types.js';
   import { nodesToArray, edgesToArray } from './types.js';
   import FlowCommands from './FlowCommands.svelte';
+  import { warnStoreReplaced, type ViewSource } from '../internal/view-source.js';
 
   import '@xyflow/svelte/dist/style.css';
 
@@ -28,22 +29,23 @@
 
   interface NodeCanvasProps<NodeData extends Record<string, unknown>, EdgeData extends Record<string, unknown>, Action> {
     /**
-     * Composable Architecture store managing canvas state.
+     * The store managing canvas state: a standalone `Store`, or a managed
+     * view (a `FeatureViewProps` store, or the result of `scopeTo` /
+     * `composition.bind`). Bound once, at mount.
      */
-    store: Store<NodeCanvasState<NodeData, EdgeData>, Action>;
+    store: ViewSource<NodeCanvasState<NodeData, EdgeData>, Action>;
 
     /**
-     * Lift canvas actions to parent action type.
-     * Required to dispatch canvas actions through the store.
-     */
-    liftAction: (action: NodeCanvasAction<NodeData, EdgeData>) => Action;
-
-    /**
-     * Inverse of `liftAction`, used to recognise this canvas's viewport
-     * commands in the store's action stream. Optional: the default handles the
-     * common case where `liftAction` is the identity. Supply it when the parent
-     * wraps canvas actions, or `setViewport` / `zoomIn` / `zoomOut` / `fitView`
-     * / `centerView` will not reach the canvas.
+     * Standalone stores only: the inverse of `liftAction`, used to recognise
+     * this canvas's viewport commands in the store's action stream.
+     *
+     * Ignored for a managed view: it observes its own owner's actions,
+     * already unwrapped to the canvas's type, however the parent wraps them
+     * and whatever `liftAction` is passed.
+     * Not needed either when `liftAction` is the identity. Supply it when a
+     * standalone parent store wraps canvas actions, or `setViewport` /
+     * `zoomIn` / `zoomOut` / `fitView` / `centerView` will not reach the
+     * canvas.
      */
     unliftAction?: ((action: Action) => NodeCanvasAction<NodeData, EdgeData> | null) | undefined;
 
@@ -116,7 +118,20 @@
 
   }
 
-  const props: NodeCanvasProps<NodeData, EdgeData, Action> = $props();
+  /**
+   * Lift canvas actions to the store's action type.
+   *
+   * Optional exactly when the store's action type already is the canvas's
+   * action — a managed view of the canvas, or a standalone store of
+   * `NodeCanvasAction` — and then it defaults to the identity. Required when a
+   * standalone parent store wraps canvas actions.
+   */
+  type LiftProps<NodeData extends Record<string, unknown>, EdgeData extends Record<string, unknown>, Action> =
+    [NodeCanvasAction<NodeData, EdgeData>] extends [Action]
+      ? { liftAction?: ((action: NodeCanvasAction<NodeData, EdgeData>) => Action) | undefined }
+      : { liftAction: (action: NodeCanvasAction<NodeData, EdgeData>) => Action };
+
+  const props: NodeCanvasProps<NodeData, EdgeData, Action> & LiftProps<NodeData, EdgeData, Action> = $props();
 
   // `$derived` accessors, NOT a second destructure.
   //
@@ -126,7 +141,30 @@
   // `nodeTypes`, `panOnDrag` or any of the others after mount did nothing.
   // Only `store` and `liftAction` stay plain — they are identity-stable by
   // contract, and `liftAction` is called, not rendered.
-  const { store, liftAction } = props;
+  const store = untrack(() => props.store);
+  // The conditional prop type above is unresolved inside this generic body.
+  // When it is absent, the type admitted that only because the store's action
+  // IS the canvas action, so the identity is the correct lift.
+  const liftAction: (action: NodeCanvasAction<NodeData, EdgeData>) => Action =
+    untrack(() => (props as { liftAction?: (action: NodeCanvasAction<NodeData, EdgeData>) => Action }).liftAction) ??
+    ((action) => action as unknown as Action);
+  let warnedReplaced = false;
+  $effect(() => {
+    if (props.store !== store && !warnedReplaced) {
+      warnedReplaced = true;
+      warnStoreReplaced('NodeCanvas');
+    }
+  });
+
+  // A managed view reads `undefined` once its owner retires, which can land
+  // before the outlet unmounts this component. Keep rendering the last
+  // committed state. Not $state: written only here.
+  let retained: NodeCanvasState<NodeData, EdgeData> | undefined = untrack(() => store.state);
+  const current = $derived.by(() => {
+    const next = $store;
+    if (next !== undefined) retained = next;
+    return retained;
+  });
 
   /** The commands `FlowCommands` acts on; everything else is ignored. */
   const VIEWPORT_COMMANDS = new Set(['setViewport', 'zoomIn', 'zoomOut', 'fitView', 'centerView']);
@@ -234,27 +272,30 @@
   }
 
   const nodes = $derived(
-    nodesToArray($store.nodes).map((n) =>
-      project(n, $store.selectedNodes.has(n.id), selectedNodeProjection)
-    )
+    current
+      ? nodesToArray(current.nodes).map((n) =>
+          project(n, current.selectedNodes.has(n.id), selectedNodeProjection)
+        )
+      : []
   );
   const edges = $derived(
-    edgesToArray($store.edges).map((e) =>
-      project(e, $store.selectedEdges.has(e.id), selectedEdgeProjection)
-    )
+    current
+      ? edgesToArray(current.edges).map((e) =>
+          project(e, current.selectedEdges.has(e.id), selectedEdgeProjection)
+        )
+      : []
   );
-  // Seeds SvelteFlow's initial viewport only — it is read once at construction.
-  // That is exactly why every viewport ACTION used to do nothing; live changes
-  // now go through `FlowCommands`. Kept because restoring a saved viewport at
-  // mount is a real use, but note it loses to the `fitView` prop, which queues
-  // an auto-fit after nodes initialise.
-  const storeViewport = $derived($store.viewport);
+  // `initialViewport` below seeds SvelteFlow's viewport only — it is read once
+  // at construction. That is exactly why every viewport ACTION used to do
+  // nothing; live changes now go through `FlowCommands`. Kept because restoring
+  // a saved viewport at mount is a real use, but note it loses to the `fitView`
+  // prop, which queues an auto-fit after nodes initialise.
   // SvelteFlow has no snapToGrid boolean — snapping is on when snapGrid is
   // present and off when it is absent, so it is spread in conditionally below
   // rather than passed as an explicit undefined.
   const snapGrid = $derived(
-    $store.snapToGrid
-      ? ([$store.gridSize, $store.gridSize] as [number, number])
+    current?.snapToGrid
+      ? ([current.gridSize, current.gridSize] as [number, number])
       : undefined
   );
 
@@ -278,16 +319,11 @@
   /**
    * Handle node drag events - update node positions.
    */
-  function handleNodeDrag({ targetNode }: { targetNode: Node<NodeData> | null; nodes: Node<NodeData>[]; event: MouseEvent | TouchEvent }) {
-    if (!targetNode) return;
-
-    store.dispatch(
-      liftAction({
-        type: 'moveNode',
-        nodeId: targetNode.id,
-        position: targetNode.position
-      })
-    );
+  function handleNodeDrag({ targetNode, nodes }: { targetNode: Node<NodeData> | null; nodes: Node<NodeData>[]; event: MouseEvent | TouchEvent }) {
+    const movedNodes = nodes.length > 0 ? nodes : targetNode ? [targetNode] : [];
+    for (const node of movedNodes) {
+      store.dispatch(liftAction({ type: 'moveNode', nodeId: node.id, position: node.position }));
+    }
   }
 
   /**
@@ -335,11 +371,13 @@
   function handleMoveEnd(_event: unknown, newViewport: { x: number; y: number; zoom: number }) {
     // Value guard, read non-reactively. Dispatching `setViewport` moves the
     // canvas, which fires `onmoveend` again — this is what terminates that.
-    const current = store.state.viewport;
+    const viewport = store.state?.viewport;
+    // A retired managed owner: there is nothing to report the move to.
+    if (!viewport) return;
     if (
-      current.x === newViewport.x &&
-      current.y === newViewport.y &&
-      current.zoom === newViewport.zoom
+      viewport.x === newViewport.x &&
+      viewport.y === newViewport.y &&
+      viewport.zoom === newViewport.zoom
     ) {
       return;
     }
@@ -395,23 +433,24 @@
   always maintained and nothing ever read. Consumers can style the canvas
   while a connection is being dragged.
 -->
+{#if current}
 <div
   class="node-canvas {className}"
   style="width: 100%; height: 100%;"
-  data-connecting={$store.connectionInProgress ? '' : undefined}
+  data-connecting={current.connectionInProgress ? '' : undefined}
 >
   <SvelteFlow
     {nodes}
     {edges}
     {nodeTypes}
     {edgeTypes}
-    initialViewport={storeViewport}
+    initialViewport={current.viewport}
     {connectionLineType}
     {panOnDrag}
     {zoomOnScroll}
-    elementsSelectable={selectable && !$store.readonly}
-    nodesDraggable={!$store.readonly}
-    nodesConnectable={!$store.readonly}
+    elementsSelectable={selectable && !current.readonly}
+    nodesDraggable={!current.readonly}
+    nodesConnectable={!current.readonly}
     {minZoom}
     {maxZoom}
     {...(snapGrid ? { snapGrid } : {})}
@@ -433,20 +472,21 @@
     <!-- Turns store viewport actions into useSvelteFlow() calls. -->
     <FlowCommands {store} {unliftAction} {minZoom} {maxZoom} />
 
-    {#if $store.showControls}
+    {#if current.showControls}
       <Controls />
     {/if}
 
-    {#if $store.showMiniMap}
+    {#if current.showMiniMap}
       <MiniMap />
     {/if}
 
     <Background
-      variant={($store.snapToGrid ? 'dots' : 'lines') as BackgroundVariant}
-      gap={$store.gridSize}
+      variant={(current.snapToGrid ? 'dots' : 'lines') as BackgroundVariant}
+      gap={current.gridSize}
     />
   </SvelteFlow>
 </div>
+{/if}
 
 <style>
   .node-canvas {

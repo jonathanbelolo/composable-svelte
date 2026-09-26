@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	/**
 	 * Recording Timer Component
 	 *
@@ -11,24 +12,43 @@
 		onMaxDurationReached?: (() => void) | undefined;
 	}
 
-	const { startTime, maxDuration, onMaxDurationReached }: Props = $props();
+	let { startTime, maxDuration, onMaxDurationReached }: Props = $props();
 
 	// Live elapsed time (updated every 100ms)
 	let elapsed = $state(0);
 
 	$effect(() => {
-		const interval = setInterval(() => {
-			const ms = Date.now() - startTime;
+		const currentStart = startTime;
+		const currentMax = maxDuration;
+
+		const initialMs = Math.max(0, Date.now() - currentStart);
+		elapsed = initialMs;
+
+		if (currentMax !== undefined && currentMax > 0 && initialMs >= currentMax * 1000) {
+			untrack(() => onMaxDurationReached?.());
+			return;
+		}
+
+		let intervalId: ReturnType<typeof setInterval> | null = setInterval(() => {
+			const ms = Math.max(0, Date.now() - currentStart);
 			elapsed = ms;
 
 			// Check max duration
-			if (maxDuration && ms >= maxDuration * 1000) {
-				clearInterval(interval);
-				onMaxDurationReached?.();
+			if (currentMax !== undefined && currentMax > 0 && ms >= currentMax * 1000) {
+				if (intervalId !== null) {
+					clearInterval(intervalId);
+					intervalId = null;
+				}
+				untrack(() => onMaxDurationReached?.());
 			}
 		}, 100);
 
-		return () => clearInterval(interval);
+		return () => {
+			if (intervalId !== null) {
+				clearInterval(intervalId);
+				intervalId = null;
+			}
+		};
 	});
 
 	// Format milliseconds to "MM:SS"

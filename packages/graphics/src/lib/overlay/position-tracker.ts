@@ -24,6 +24,7 @@ export class PositionTracker {
 	private updateCallback: PositionUpdateCallback | null = null;
 	private root: HTMLElement | null;
 	private scrollListener: (() => void) | null = null;
+	private resizeListener: (() => void) | null = null;
 	private rafId: number | null = null;
 
 	/**
@@ -113,12 +114,16 @@ export class PositionTracker {
 			});
 		};
 
-		// Listen to scroll events on window (for viewport scrolling)
-		window.addEventListener('scroll', this.scrollListener, { passive: true });
+		// Listen to scroll events on window (capture: true catches non-bubbling scroll from subcontainers)
+		window.addEventListener('scroll', this.scrollListener, { passive: true, capture: true });
+
+		// Listen to window resize events for layout-dependent position changes
+		this.resizeListener = this.scrollListener;
+		window.addEventListener('resize', this.resizeListener, { passive: true });
 
 		// If we have a custom root, also listen to its scroll events
 		if (this.root) {
-			this.root.addEventListener('scroll', this.scrollListener, { passive: true });
+			this.root.addEventListener('scroll', this.scrollListener, { passive: true, capture: true });
 		}
 	}
 
@@ -248,11 +253,16 @@ export class PositionTracker {
 			this.resizeObserver = null;
 		}
 
-		// Clean up scroll listener
+		// Clean up scroll and resize listeners
+		if (this.resizeListener) {
+			window.removeEventListener('resize', this.resizeListener);
+			this.resizeListener = null;
+		}
+
 		if (this.scrollListener) {
-			window.removeEventListener('scroll', this.scrollListener);
+			window.removeEventListener('scroll', this.scrollListener, { capture: true });
 			if (this.root) {
-				this.root.removeEventListener('scroll', this.scrollListener);
+				this.root.removeEventListener('scroll', this.scrollListener, { capture: true });
 			}
 			this.scrollListener = null;
 		}

@@ -9,6 +9,7 @@
 
 import { describe, it, expect, beforeEach, vi, afterEach, type Mock } from 'vitest';
 import { createTestStore } from '../src/lib/test/test-store.js';
+import { Effect } from '../src/lib/effect.js';
 import { toastReducer } from '../src/lib/components/toast/toast.reducer.js';
 import {
 	createInitialToastState,
@@ -449,6 +450,47 @@ describe('Configuration Changes', () => {
 		);
 	});
 
+	it('normalizes negative, fractional, and non-finite maxToasts without infinite loops', async () => {
+		await store.send({ type: 'toastAdded', toast: createToast('Toast 1') });
+		await store.send({ type: 'toastAdded', toast: createToast('Toast 2') });
+
+		// Negative normalizes to 0 and clears queue finitely
+		await store.send(
+			{ type: 'maxToastsChanged', maxToasts: -2 },
+			(state) => {
+				expect(state.maxToasts).toBe(0);
+				expect(state.toasts).toHaveLength(0);
+			}
+		);
+
+		// Adding toast when cap is 0 immediately evicts it without infinite loop
+		await store.send(
+			{ type: 'toastAdded', toast: createToast('Toast 3') },
+			(state) => {
+				expect(state.toasts).toHaveLength(0);
+			}
+		);
+
+		// Fractional cap floors to integer
+		await store.send(
+			{ type: 'maxToastsChanged', maxToasts: 2.7 },
+			(state) => {
+				expect(state.maxToasts).toBe(2);
+			}
+		);
+
+		await store.send({ type: 'toastAdded', toast: createToast('Toast 4') });
+
+		// Non-finite preserves current state
+		await store.send(
+			{ type: 'maxToastsChanged', maxToasts: NaN },
+			(state) => {
+				expect(state.maxToasts).toBe(2);
+				expect(state.toasts).toHaveLength(1);
+			}
+		);
+	});
+
 	it('changes defaultDuration', async () => {
 		await store.send(
 			{ type: 'defaultDurationChanged', duration: 3000 },
@@ -603,7 +645,7 @@ describe('Dismissal edge cases', () => {
 		).toHaveBeenCalledTimes(1);
 	});
 
-	it('the cap evicts a live toast before a dismissing one', async () => {
+	it('the cap evicts a dismissing toast before a live one', async () => {
 		// A toast already animating away should give up its slot first. It used
 		// to be kept while a fully live toast was evicted in its place.
 		await store.send({ type: 'toastAdded', toast: createToast('A') });
@@ -613,7 +655,72 @@ describe('Dismissal edge cases', () => {
 		await store.send({ type: 'toastAdded', toast: createToast('C') });
 
 		const descriptions = store.state.toasts.map((t) => t.description);
-		expect(descriptions, 'the live toast was evicted, not the dismissing one').toContain('A');
+		expect(descriptions).toEqual(['A', 'C']);
+	});
+
+	it('maxToastsChanged evicts a dismissing toast before a live one and reports onToastDismissed', async () => {
+		await store.send({ type: 'toastAdded', toast: createToast('A') });
+		await store.send({ type: 'toastAdded', toast: createToast('B') });
+		const bId = store.state.toasts[1]!.id;
+		await store.send({ type: 'toastDismissed', id: bId });
+
+		expect(store.state.toasts).toHaveLength(2);
+		expect(onToastDismissed).not.toHaveBeenCalled();
+
+		// Reducing maxToasts to 1 should evict B (dismissing) rather than A (live)
+		await store.send({ type: 'maxToastsChanged', maxToasts: 1 }, (state) => {
+			expect(state.toasts).toHaveLength(1);
+			expect(state.toasts[0]!.description).toBe('A');
+		});
+
+		expect(onToastDismissed).toHaveBeenCalledOnce();
+		expect(onToastDismissed).toHaveBeenCalledWith(expect.objectContaining({ id: bId, dismissing: true }));
+
+		// Stale toastRemoved timer settling later must not cause duplicate callback
+		await store.receive({ type: 'toastRemoved', id: bId }, (state) => {
+			expect(state.toasts).toHaveLength(1);
+			expect(state.toasts[0]!.description).toBe('A');
+		});
+		expect(onToastDismissed).toHaveBeenCalledTimes(1);
+	});
+
+	it('maxToastsChanged to 0 evicts all toasts and reports dismissing toast without duplicate', async () => {
+		await store.send({ type: 'toastAdded', toast: createToast('Live') });
+		await store.send({ type: 'toastAdded', toast: createToast('Dismissing') });
+		const dismissingId = store.state.toasts[1]!.id;
+		await store.send({ type: 'toastDismissed', id: dismissingId });
+
+		await store.send({ type: 'maxToastsChanged', maxToasts: 0 }, (state) => {
+			expect(state.maxToasts).toBe(0);
+			expect(state.toasts).toHaveLength(0);
+		});
+
+		expect(onToastDismissed).toHaveBeenCalledTimes(1);
+		expect(onToastDismissed).toHaveBeenCalledWith(expect.objectContaining({ id: dismissingId }));
+
+		await store.receive({ type: 'toastRemoved', id: dismissingId });
+		expect(onToastDismissed).toHaveBeenCalledTimes(1);
+	});
+
+	it('handles rapid config changes and stale removal actions cleanly', async () => {
+		await store.send({ type: 'toastAdded', toast: createToast('Old') });
+		const oldId = store.state.toasts[0]!.id;
+		await store.send({ type: 'toastDismissed', id: oldId });
+
+		// Rapidly drop cap to 0 then expand to 3
+		await store.send({ type: 'maxToastsChanged', maxToasts: 0 });
+		expect(onToastDismissed).toHaveBeenCalledOnce();
+
+		await store.send({ type: 'maxToastsChanged', maxToasts: 3 });
+		await store.send({ type: 'toastAdded', toast: createToast('New') });
+
+		// When stale toastRemoved for Old arrives, it must not disrupt New or re-notify
+		await store.receive({ type: 'toastRemoved', id: oldId }, (state) => {
+			expect(state.toasts).toHaveLength(1);
+			expect(state.toasts[0]!.description).toBe('New');
+		});
+
+		expect(onToastDismissed).toHaveBeenCalledTimes(1);
 	});
 
 	it('an action can only be triggered once', async () => {
@@ -645,4 +752,28 @@ describe('Dismissal edge cases', () => {
 			expect(state.toasts.every((t) => t.dismissing)).toBe(true);
 		});
 	});
+});
+
+
+describe('Capacity boundaries', () => {
+ it.each([[-2, 0], [0, 0], [2.7, 2], [NaN, 3], [Infinity, 3], [-Infinity, 3]])('normalizes initial cap %s to %s', (input, expected) => {
+  expect(createInitialToastState({ maxToasts: input }).maxToasts).toBe(expected);
+ });
+ it.each([-2, NaN, Infinity, -Infinity])('recovers invalid stored capacity %s on invalid configuration', (maxToasts) => {
+  const initial = { ...createInitialToastState(), maxToasts };
+  const [state, effect] = toastReducer(initial, { type: 'maxToastsChanged', maxToasts: NaN }, {});
+  expect(state.maxToasts).toBe(0);
+  expect(state.toasts).toEqual([]);
+  expect(effect).toEqual(Effect.none());
+ });
+ it.each([NaN, Infinity, -Infinity])('preserves a valid capacity on nonfinite input %s', (maxToasts) => {
+  const [state] = toastReducer(createInitialToastState({ maxToasts: 2 }), { type: 'maxToastsChanged', maxToasts }, {});
+  expect(state.maxToasts).toBe(2);
+ });
+ it('does not schedule auto-dismiss for an immediately evicted insertion', async () => {
+  const store = createTestStore({ initialState: createInitialToastState({ maxToasts: 0 }), reducer: toastReducer, dependencies: {} });
+  await store.send({ type: 'toastAdded', toast: createToast('No available slot', { duration: 60000 }) });
+  expect(store.state.toasts).toEqual([]);
+  await store.finish();
+ });
 });

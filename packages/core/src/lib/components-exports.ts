@@ -86,6 +86,7 @@ export { default as CollapsibleContent } from './components/ui/collapsible/Colla
 // Advanced Components
 export { default as Calendar } from './components/ui/calendar/Calendar.svelte';
 export { default as Carousel } from './components/ui/carousel/Carousel.svelte';
+export * from './components/command/index.js';
 
 // Media Components
 export { default as ImageGallery } from './components/image-gallery/ImageGallery.svelte';
@@ -123,7 +124,6 @@ export { default as Tabs } from './navigation-components/Tabs.svelte';
 
 export { default as NavigationStack } from './navigation-components/NavigationStack.svelte';
 export { default as AnimatedNavigationStack } from './navigation-components/AnimatedNavigationStack.svelte';
-export { default as DestinationRouter } from './navigation-components/DestinationRouter.svelte';
 
 // Primitive components (for advanced users)
 export { default as ModalPrimitive } from './navigation-components/primitives/ModalPrimitive.svelte';
@@ -147,5 +147,5 @@ export { default as NavigationStackPrimitive } from './navigation-components/pri
 // level down and it was never propagated up.
 //
 // A star export is safe here: an explicit local export shadows it for the names
-// above, and this is the only star in the file.
+// above. The command barrel exports a separate set of names.
 export * from './components/ui/index.js';

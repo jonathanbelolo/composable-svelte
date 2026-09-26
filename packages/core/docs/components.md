@@ -8,6 +8,7 @@ Core's `components/ui` includes buttons, inputs, labels, cards, badges, menus,
 selects, dialogs and other UI primitives. Reducer-driven forms, command palettes,
 data tables, image galleries and toasts have dedicated entry points. Navigation
 components use scoped stores; see [navigation](./navigation/components.md).
+Forms expose an injectable completion clock; see [submission timestamps](./components/form-submission-clock.md) for deterministic testing and manual-action migration.
 The [package overview](../README.md#packages) distinguishes implemented features
 from deferred integrations.
 

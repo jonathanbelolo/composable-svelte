@@ -1,0 +1,1 @@
+SUPERSEDED: app gate on checker f3c91ee6 (before template-binding-default closure).

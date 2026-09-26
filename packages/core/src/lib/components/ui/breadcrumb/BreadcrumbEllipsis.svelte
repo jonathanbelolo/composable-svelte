@@ -3,20 +3,18 @@
 	import { cn } from '../../../utils.js';
 
 	interface BreadcrumbEllipsisProps extends HTMLAttributes<HTMLSpanElement> {
-		class?: string | undefined;
+		class?: HTMLAttributes<HTMLSpanElement>['class'] | undefined;
 	}
 
 	let { class: className, ...restProps }: BreadcrumbEllipsisProps = $props();
 </script>
 
 <span
-	role="presentation"
-	aria-hidden="true"
-	aria-label="More"
 	class={cn('flex h-9 w-9 items-center justify-center', className)}
 	{...restProps}
 >
 	<svg
+		aria-hidden="true"
 		xmlns="http://www.w3.org/2000/svg"
 		width="15"
 		height="15"

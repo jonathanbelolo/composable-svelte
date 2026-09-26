@@ -81,7 +81,9 @@ export function parseQueryParams(search: string): RawQueryParams {
 		const decodedValue = safeDecodeURIComponent(value);
 
 		// Handle array values (multiple params with same key)
-		const existing = params[decodedKey];
+		const existing = Object.prototype.hasOwnProperty.call(params, decodedKey)
+			? params[decodedKey]
+			: undefined;
 		if (existing !== undefined) {
 			if (Array.isArray(existing)) {
 				existing.push(decodedValue);
@@ -89,7 +91,7 @@ export function parseQueryParams(search: string): RawQueryParams {
 				params[decodedKey] = [existing, decodedValue];
 			}
 		} else {
-			params[decodedKey] = decodedValue;
+			Object.defineProperty(params, decodedKey, { value: decodedValue, writable: true, enumerable: true, configurable: true });
 		}
 	}
 
@@ -245,7 +247,7 @@ export function mergeQueryParams(
 		if (value === undefined) {
 			delete result[key];
 		} else {
-			result[key] = value;
+			Object.defineProperty(result, key, { value, writable: true, enumerable: true, configurable: true });
 		}
 	}
 
@@ -281,6 +283,9 @@ export function getQueryParam(
 	key: string,
 	defaultValue?: string
 ): string | undefined {
+	if (!Object.prototype.hasOwnProperty.call(params, key)) {
+		return defaultValue;
+	}
 	const value = params[key];
 	if (value === undefined) {
 		return defaultValue;
@@ -312,6 +317,9 @@ export function getQueryParam(
  * ```
  */
 export function getQueryParamAll(params: RawQueryParams, key: string): string[] {
+	if (!Object.prototype.hasOwnProperty.call(params, key)) {
+		return [];
+	}
 	const value = params[key];
 	if (value === undefined) {
 		return [];
@@ -341,5 +349,5 @@ export function getQueryParamAll(params: RawQueryParams, key: string): string[] 
  * ```
  */
 export function hasQueryParam(params: RawQueryParams, key: string): boolean {
-	return key in params;
+	return Object.prototype.hasOwnProperty.call(params, key);
 }

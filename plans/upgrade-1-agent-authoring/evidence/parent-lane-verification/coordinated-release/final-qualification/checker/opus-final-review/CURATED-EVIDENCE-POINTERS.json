@@ -1,0 +1,48 @@
+{
+  "schema": "opus-final-review/curated-evidence-pointers/v1",
+  "candidate": {
+    "sha256": "cd12784eb9288aa510b2f980eb3d0ef57efce8c3d8d8318ab72cee32ce67e51a",
+    "acceptedFinal": false,
+    "blockedOn": "parent scope decision B1/B2 (OPUS-FINAL-PROFILE-REVIEW.md section 3a)",
+    "archive": "opus-final-review/final-archive/composable-svelte-architecture-0.13.1.tgz",
+    "contentAddressed": "opus-final-review/final-archive/by-sha/cd12784eb9288aa510b2f980eb3d0ef57efce8c3d8d8318ab72cee32ce67e51a/composable-svelte-architecture-0.13.1.tgz"
+  },
+  "current": [
+    "OPUS-FINAL-PROFILE-REVIEW.md",
+    "opus-final-review/OPUS-FINAL-SCOPED-CHECKER-DELTA.json",
+    "opus-final-review/SOURCE-AT-PACK-v2.sha256",
+    "opus-final-review/final-archive",
+    "opus-final-review/evidence-v2",
+    "opus-final-review/app-gate/FINAL-APP-GATE-RECEIPT-cd12784e.json",
+    "opus-final-review/app-gate/app-gate.mjs",
+    "opus-final-review/final-gates-v2.sh",
+    "opus-final-review/final-gates-v2.log",
+    "opus-final-review/FOCUSED-CORRECTION-REREVIEW.md",
+    "opus-final-review/FOCUSED-BINDING-DEFAULT-REREVIEW.md",
+    "opus-final-review/rereview",
+    "opus-final-review/rereview-binding-default",
+    "opus-final-review/probes",
+    "opus-final-review/mutants",
+    "opus-final-review/CORRECTIONS-src.diff",
+    "opus-final-review/CORRECTIONS-symbols.diff",
+    "opus-final-review/CORRECTIONS-tests.diff",
+    "opus-final-review/CORRECTIONS-binding-default.diff",
+    "/private/tmp/composable-final-authoring/FINAL-APP-QUALIFICATION.md",
+    "/private/tmp/composable-final-authoring/final-app-qualification"
+  ],
+  "superseded": {
+    "f3c91ee6ae078312cc1f289034d3245266ff74f5ba116c12641001611933808f": [
+      "opus-final-review/final-archive-f3c91ee6-SUPERSEDED",
+      "opus-final-review/evidence-f3c91ee6-SUPERSEDED",
+      "opus-final-review/app-gate/f3c91ee6-SUPERSEDED",
+      "opus-final-review/final-gates.sh",
+      "opus-final-review/final-gates-resume.sh",
+      "/private/tmp/composable-final-authoring/final-app-qualification/f3c91ee6-SUPERSEDED"
+    ],
+    "b62cf88f15d8dd42ed7202c482c27d34e73b0194cf47f4ee16226c3da579529b": [
+      "profile-phase/P9-final-archive",
+      "profile-phase/P9-final"
+    ]
+  },
+  "note": "curate-release-evidence.py currently lists opus-final-review/evidence and opus-final-review/final-archive; evidence now lives in evidence-v2 (current) and evidence-f3c91ee6-SUPERSEDED. The coordinator owns that script; it was not edited."
+}

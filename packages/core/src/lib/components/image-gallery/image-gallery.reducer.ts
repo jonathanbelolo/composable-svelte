@@ -85,6 +85,19 @@ function sameImages(a: GalleryImage[], b: GalleryImage[]): boolean {
 	});
 }
 
+const presentationGroup = 'image-gallery/presentation';
+function delayedCompletion(
+	type: 'presentationCompleted' | 'dismissalCompleted'
+): Effect<ImageGalleryAction> {
+	return EffectBuilder.batch(
+		EffectBuilder.cancelGroup(presentationGroup),
+		EffectBuilder.inGroup(
+			EffectBuilder.afterDelay(300, dispatch => dispatch({ type: 'presentation', event: { type } })),
+			presentationGroup
+		)
+	);
+}
+
 /**
  * Image Gallery reducer
  */
@@ -102,11 +115,6 @@ export const imageGalleryReducer: Reducer<
 			}
 
 			const clickedImage = state.images[action.index]!; // Safe: validated above
-
-			// Call callback if provided
-			if (deps.onImageClick) {
-				deps.onImageClick(clickedImage, action.index);
-			}
 
 			// Open lightbox at clicked image index
 			return [
@@ -127,36 +135,26 @@ export const imageGalleryReducer: Reducer<
 								}
 					}
 				},
-				state.prefersReducedMotion
-					? EffectBuilder.none()
-					: EffectBuilder.afterDelay(300, (dispatch) =>
-							dispatch({
-								type: 'presentation',
-								event: { type: 'presentationCompleted' }
-							})
-						)
+				EffectBuilder.batch(
+					state.prefersReducedMotion
+						? EffectBuilder.cancelGroup(presentationGroup)
+						: delayedCompletion('presentationCompleted'),
+					EffectBuilder.run(() => deps.onImageClick?.(clickedImage, action.index))
+				)
 			];
 		}
 
 		case 'imageLoaded': {
-			if (deps.onImageLoad) {
-				deps.onImageLoad(action.imageId);
-			}
-
 			return [
 				{
 					...state,
 					loadedImages: new Set([...state.loadedImages, action.imageId])
 				},
-				EffectBuilder.none()
+				EffectBuilder.run(() => deps.onImageLoad?.(action.imageId))
 			];
 		}
 
 		case 'imageError': {
-			if (deps.onImageError) {
-				deps.onImageError(action.imageId, action.error);
-			}
-
 			return [
 				{
 					...state,
@@ -165,7 +163,7 @@ export const imageGalleryReducer: Reducer<
 						[action.imageId]: action.error
 					}
 				},
-				EffectBuilder.none()
+				EffectBuilder.run(() => deps.onImageError?.(action.imageId, action.error))
 			];
 		}
 
@@ -195,13 +193,8 @@ export const imageGalleryReducer: Reducer<
 					}
 				},
 				state.prefersReducedMotion
-					? EffectBuilder.none()
-					: EffectBuilder.afterDelay(300, (dispatch) =>
-							dispatch({
-								type: 'presentation',
-								event: { type: 'presentationCompleted' }
-							})
-						)
+					? EffectBuilder.cancelGroup(presentationGroup)
+					: delayedCompletion('presentationCompleted')
 			];
 		}
 
@@ -216,28 +209,21 @@ export const imageGalleryReducer: Reducer<
 					...state,
 					lightbox: {
 						...state.lightbox,
-						presentation: state.prefersReducedMotion
-							? { status: 'idle' }
-							: {
-									status: 'dismissing',
-									content: state.lightbox.currentIndex,
-									duration: 0.3
-								}
+						presentation: {
+							status: 'dismissing',
+							content: state.lightbox.currentIndex,
+							duration: state.prefersReducedMotion ? 0 : 0.3
+						}
 					}
 				},
 				state.prefersReducedMotion
-					? EffectBuilder.run((dispatch) =>
-							dispatch({
-								type: 'presentation',
-								event: { type: 'dismissalCompleted' }
-							})
+					? EffectBuilder.batch(
+							EffectBuilder.cancelGroup(presentationGroup),
+							EffectBuilder.run(dispatch => dispatch({
+								type: 'presentation', event: { type: 'dismissalCompleted' }
+							}))
 						)
-					: EffectBuilder.afterDelay(300, (dispatch) =>
-							dispatch({
-								type: 'presentation',
-								event: { type: 'dismissalCompleted' }
-							})
-						)
+					: delayedCompletion('dismissalCompleted')
 			];
 		}
 
@@ -451,6 +437,10 @@ export const imageGalleryReducer: Reducer<
 		case 'presentation':
 			switch (action.event.type) {
 				case 'presentationCompleted': {
+					if (state.lightbox.presentation.status !== 'presenting') {
+						return [state, EffectBuilder.none()];
+					}
+
 					// Lightbox is now fully open, preload adjacent images
 					const effects: Array<Effect<ImageGalleryAction>> = [];
 
@@ -498,6 +488,10 @@ export const imageGalleryReducer: Reducer<
 				}
 
 				case 'dismissalCompleted':
+					if (state.lightbox.presentation.status !== 'dismissing') {
+						return [state, EffectBuilder.none()];
+					}
+
 					return [
 						{
 							...state,

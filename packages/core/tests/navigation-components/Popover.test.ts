@@ -1,9 +1,11 @@
-import { render } from 'vitest-browser-svelte';
+import { flushSync, mount, unmount, type Component } from 'svelte';
 import { page, userEvent } from 'vitest/browser';
-import { describe, it, expect } from 'vitest';
+import { onTestFinished, describe, it, expect } from 'vitest';
 import Popover from '../../src/lib/navigation-components/Popover.svelte';
 import { createStore } from '../../src/lib/store.svelte.js';
-import { scopeToDestination } from '../../src/lib/navigation/scope-to-destination.js';
+import { ManagedIntegrationBuilder, optionalSlot, type PresentationView } from '../../src/lib/navigation/managed-integration.js';
+import type { Reducer, Store } from '../../src/lib/types.js';
+import type { PresentationAction } from '../../src/lib/navigation/types.js';
 import { Effect } from '../../src/lib/effect.js';
 
 // ============================================================================
@@ -22,7 +24,46 @@ interface ParentState {
 
 type ParentAction =
   | { type: 'show' }
-  | { type: 'destination'; action: any };
+  | { type: 'destination'; action: PresentationAction<TestAction> };
+
+const destinationSlot = optionalSlot<ParentState, ParentAction>()('destination');
+const childReducer: Reducer<NonNullable<ParentState['destination']>, TestAction> = (state) => [state, Effect.none()];
+const presentationBinders = new WeakMap<object, () => PresentationView<NonNullable<ParentState['destination']>, TestAction> | undefined>();
+
+function createManagedStore(config: {
+  initialState: ParentState;
+  reducer: Reducer<ParentState, ParentAction>;
+}): Store<ParentState, ParentAction> {
+  const composition = new ManagedIntegrationBuilder<ParentState, ParentAction, undefined>(config.reducer)
+    .with(destinationSlot, childReducer)
+    .build();
+  const store = createStore({ initialState: config.initialState, ...composition });
+  presentationBinders.set(store, () => composition.bind(store, destinationSlot));
+  onTestFinished(() => store.destroy());
+  return store;
+}
+
+function bindPresentation(store: Store<ParentState, ParentAction>): PresentationView<NonNullable<ParentState['destination']>, TestAction> | undefined {
+  const bind = presentationBinders.get(store);
+  if (!bind) throw new Error('Expected a managed test store');
+  return bind();
+}
+
+function renderManaged<const Props extends Record<string, unknown>>(component: Component<Props>, props: Props) {
+  const target = document.createElement('div');
+  document.body.append(target);
+  const instance = mount(component, { target, props });
+  flushSync();
+  let disposed = false;
+  const cleanup = async () => {
+    if (disposed) return;
+    disposed = true;
+    await unmount(instance);
+    target.remove();
+  };
+  onTestFinished(cleanup);
+  return { unmount: cleanup };
+}
 
 // ============================================================================
 // Popover Component Tests
@@ -30,28 +71,23 @@ type ParentAction =
 
 describe('Popover Component', () => {
   it('shows when store is non-null', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
       reducer: (state) => [state, Effect.none()]
     });
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Popover, { store: scopedStore });
+    renderManaged(Popover, { store: scopedStore });
 
     const popover = page.getByRole('dialog');
     await expect.element(popover).toBeInTheDocument();
   });
 
-  it('hides when store is null', async () => {
-    render(Popover, { store: null });
+  it('hides when store is undefined', async () => {
+    renderManaged(Popover, { store: undefined });
 
     // Check that no dialog exists
     const popovers = page.getByRole('dialog').elements();
@@ -61,7 +97,7 @@ describe('Popover Component', () => {
   it('dismisses popover when Escape pressed', async () => {
     let dismissCalled = false;
 
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
@@ -77,14 +113,9 @@ describe('Popover Component', () => {
       }
     });
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Popover, { store: scopedStore });
+    renderManaged(Popover, { store: scopedStore });
 
     // Popover should be visible
     const popover = page.getByRole('dialog');
@@ -103,7 +134,7 @@ describe('Popover Component', () => {
   it('dismisses popover when clicking outside', async () => {
     let dismissCalled = false;
 
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
@@ -119,14 +150,9 @@ describe('Popover Component', () => {
       }
     });
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Popover, { store: scopedStore });
+    renderManaged(Popover, { store: scopedStore });
 
     // Popover should be visible
     const popover = page.getByRole('dialog');
@@ -148,7 +174,7 @@ describe('Popover Component', () => {
   });
 
   it('respects disableEscapeKey prop', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
@@ -163,14 +189,9 @@ describe('Popover Component', () => {
       }
     });
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Popover, { store: scopedStore, disableEscapeKey: true });
+    renderManaged(Popover, { store: scopedStore, disableEscapeKey: true });
 
     // Press Escape
     await userEvent.keyboard('{Escape}');
@@ -183,7 +204,7 @@ describe('Popover Component', () => {
   it('respects disableClickOutside prop', async () => {
     let dismissCalled = false;
 
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
@@ -199,14 +220,9 @@ describe('Popover Component', () => {
       }
     });
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Popover, { store: scopedStore, disableClickOutside: true });
+    renderManaged(Popover, { store: scopedStore, disableClickOutside: true });
 
     // Trigger pointerdown event on document
     const pointerEvent = new PointerEvent('pointerdown', {
@@ -226,21 +242,16 @@ describe('Popover Component', () => {
   });
 
   it('applies custom positioning style', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
       reducer: (state) => [state, Effect.none()]
     });
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Popover, { store: scopedStore, style: 'top: 100px; left: 200px;' });
+    renderManaged(Popover, { store: scopedStore, style: 'top: 100px; left: 200px;' });
 
     const popover = page.getByRole('dialog');
     const style = popover.element().getAttribute('style');
@@ -249,21 +260,16 @@ describe('Popover Component', () => {
   });
 
   it('applies custom classes', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
       reducer: (state) => [state, Effect.none()]
     });
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Popover, {
+    renderManaged(Popover, {
         store: scopedStore,
         class: 'custom-popover-content'
       });
@@ -273,21 +279,16 @@ describe('Popover Component', () => {
   });
 
   it('respects unstyled prop', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
       reducer: (state) => [state, Effect.none()]
     });
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Popover, { store: scopedStore, unstyled: true });
+    renderManaged(Popover, { store: scopedStore, unstyled: true });
 
     const popover = page.getByRole('dialog');
     const className = popover.element().className;
@@ -298,21 +299,16 @@ describe('Popover Component', () => {
     // Store initial body overflow value
     const initialOverflow = document.body.style.overflow;
 
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
       reducer: (state) => [state, Effect.none()]
     });
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Popover, { store: scopedStore });
+    renderManaged(Popover, { store: scopedStore });
 
     // Check body overflow is NOT set to hidden (popovers don't lock scroll)
     const bodyStyle = document.body.style.overflow;
@@ -320,21 +316,16 @@ describe('Popover Component', () => {
   });
 
   it('uses aria-modal="false" (not a modal dialog)', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
       reducer: (state) => [state, Effect.none()]
     });
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Popover, { store: scopedStore });
+    renderManaged(Popover, { store: scopedStore });
 
     const popover = page.getByRole('dialog');
     const ariaModal = popover.element().getAttribute('aria-modal');

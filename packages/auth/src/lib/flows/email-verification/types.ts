@@ -74,7 +74,9 @@ export type EmailVerificationAction =
 	 */
 	| { type: 'emailProvided'; email: string }
 	/** Clear both failures — the surface shows them together. */
-	| { type: 'errorDismissed' };
+	| { type: 'errorDismissed' }
+	/** Managed navigation after verification issued no session. */
+	| { type: 'signInRequested' };
 
 export interface EmailVerificationDependencies {
 	verifyEmail: AuthDependencies['verifyEmail'];

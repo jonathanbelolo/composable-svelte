@@ -2,7 +2,7 @@
  * Tests for scopeToDestination and scopeToOptional
  */
 
-import { describe, it, expect, expectTypeOf } from 'vitest';
+import { onTestFinished, describe, it, expect, expectTypeOf } from 'vitest';
 import { createStore } from '../../src/lib/store.svelte.js';
 import { Effect } from '../../src/lib/effect.js';
 import {
@@ -113,6 +113,7 @@ describe('scopeToDestination()', () => {
       reducer: parentReducer,
       dependencies: null
     });
+    onTestFinished(() => store.destroy());
 
     const scopedStore = scopeToDestination<AddItemState, ChildAction>(
       store,
@@ -138,6 +139,7 @@ describe('scopeToDestination()', () => {
       reducer: parentReducer,
       dependencies: null
     });
+    onTestFinished(() => store.destroy());
 
     // Scope to 'addItem' but destination is 'editItem'
     const scopedStore = scopeToDestination<AddItemState, ChildAction>(
@@ -164,6 +166,7 @@ describe('scopeToDestination()', () => {
       reducer: parentReducer,
       dependencies: null
     });
+    onTestFinished(() => store.destroy());
 
     const scopedStore = scopeToDestination<AddItemState, ChildAction>(
       store,
@@ -197,6 +200,7 @@ describe('scopeToDestination()', () => {
       reducer: testReducer,
       dependencies: null
     });
+    onTestFinished(() => store.destroy());
 
     const scopedStore = scopeToDestination<AddItemState, ChildAction>(
       store,
@@ -244,6 +248,7 @@ describe('scopeToDestination()', () => {
       reducer: testReducer,
       dependencies: null
     });
+    onTestFinished(() => store.destroy());
 
     // Create scoped stores for BOTH destination types
     const addItemStore = scopeToDestination<AddItemState, ChildAction>(
@@ -332,6 +337,7 @@ describe('scopeToDestination()', () => {
       reducer: customReducer,
       dependencies: null
     });
+    onTestFinished(() => store.destroy());
 
     const scopedStore = scopeToDestination<
       AddItemState,
@@ -359,27 +365,13 @@ describe('scopeToDestination()', () => {
     });
   });
 
-  it('dismiss() dispatches PresentationAction.dismiss', () => {
-    const initialState: ParentState = {
-      destination: {
-        type: 'addItem',
-        state: { item: 'apple', quantity: 5 }
-      },
-      items: []
-    };
-
-    const dispatched: ParentAction[] = [];
-
-    const testReducer: Reducer<ParentState, ParentAction, null> = (state, action) => {
-      dispatched.push(action);
-      return parentReducer(state, action, null);
-    };
-
+  it('does not expose dismissal on a destination scoped store', () => {
     const store = createStore({
-      initialState,
-      reducer: testReducer,
+      initialState: { destination: { type: 'addItem', state: { item: 'apple', quantity: 5 } }, items: [] },
+      reducer: parentReducer,
       dependencies: null
     });
+    onTestFinished(() => store.destroy());
 
     const scopedStore = scopeToDestination<AddItemState, ChildAction>(
       store,
@@ -388,14 +380,7 @@ describe('scopeToDestination()', () => {
       'destination'
     );
 
-    // Call dismiss
-    scopedStore.dismiss();
-
-    expect(dispatched).toHaveLength(1);
-    expect(dispatched[0]).toEqual({
-      type: 'destination',
-      action: { type: 'dismiss' }
-    });
+    expect(scopedStore).not.toHaveProperty('dismiss');
   });
 
   it('works with nested destination paths', () => {
@@ -407,9 +392,12 @@ describe('scopeToDestination()', () => {
 
     type NestedAction =
       | { type: 'show' }
-      | { type: 'destination'; action: PresentationAction<ChildAction> };
+      | { type: 'destination'; action: PresentationAction<DestinationAction> };
 
-    const nestedReducer: Reducer<NestedState, NestedAction, null> = (state) => {
+    const dispatched: NestedAction[] = [];
+
+    const nestedReducer: Reducer<NestedState, NestedAction, null> = (state, action) => {
+      dispatched.push(action);
       return [state, Effect.none()];
     };
 
@@ -427,6 +415,7 @@ describe('scopeToDestination()', () => {
       reducer: nestedReducer,
       dependencies: null
     });
+    onTestFinished(() => store.destroy());
 
     const scopedStore = scopeToDestination<
       AddItemState,
@@ -442,9 +431,23 @@ describe('scopeToDestination()', () => {
 
     expect(scopedStore.state).not.toBeNull();
     expect(scopedStore.state).toEqual({ item: 'apple', quantity: 5 });
+
+    scopedStore.dispatch({ type: 'updateItem', value: 'banana' });
+
+    expect(dispatched).toHaveLength(1);
+    expect(dispatched[0]).toEqual({
+      type: 'destination',
+      action: {
+        type: 'presented',
+        action: {
+          type: 'addItem',
+          action: { type: 'updateItem', value: 'banana' }
+        }
+      }
+    });
   });
 
-  it('scoped store updates reactively when parent state changes', () => {
+  it('re-derived scoped store reflects updated parent state', () => {
     const initialState: ParentState = {
       destination: null,
       items: []
@@ -455,6 +458,7 @@ describe('scopeToDestination()', () => {
       reducer: parentReducer,
       dependencies: null
     });
+    onTestFinished(() => store.destroy());
 
     // Initially null
     let scopedStore = scopeToDestination<AddItemState, ChildAction>(
@@ -529,6 +533,7 @@ describe('scopeToOptional()', () => {
       reducer: simpleReducer,
       dependencies: null
     });
+    onTestFinished(() => store.destroy());
 
     const scopedStore = scopeToOptional<SimpleChildState, SimpleChildAction>(
       store,
@@ -549,6 +554,7 @@ describe('scopeToOptional()', () => {
       reducer: simpleReducer,
       dependencies: null
     });
+    onTestFinished(() => store.destroy());
 
     const scopedStore = scopeToOptional<SimpleChildState, SimpleChildAction>(
       store,
@@ -580,6 +586,7 @@ describe('scopeToOptional()', () => {
       reducer: testReducer,
       dependencies: null
     });
+    onTestFinished(() => store.destroy());
 
     const scopedStore = scopeToOptional<SimpleChildState, SimpleChildAction>(
       store,
@@ -599,26 +606,13 @@ describe('scopeToOptional()', () => {
     });
   });
 
-  it('dismiss() works correctly', () => {
-    const initialState: SimpleParentState = {
-      modal: { message: 'hello' }
-    };
-
-    const dispatched: SimpleParentAction[] = [];
-
-    const testReducer: Reducer<SimpleParentState, SimpleParentAction, null> = (
-      state,
-      action
-    ) => {
-      dispatched.push(action);
-      return simpleReducer(state, action, null);
-    };
-
+  it('does not expose dismissal on an optional scoped store', () => {
     const store = createStore({
-      initialState,
-      reducer: testReducer,
+      initialState: { modal: { message: 'hello' } },
+      reducer: simpleReducer,
       dependencies: null
     });
+    onTestFinished(() => store.destroy());
 
     const scopedStore = scopeToOptional<SimpleChildState, SimpleChildAction>(
       store,
@@ -626,13 +620,7 @@ describe('scopeToOptional()', () => {
       'modal'
     );
 
-    scopedStore.dismiss();
-
-    expect(dispatched).toHaveLength(1);
-    expect(dispatched[0]).toEqual({
-      type: 'modal',
-      action: { type: 'dismiss' }
-    });
+    expect(scopedStore).not.toHaveProperty('dismiss');
   });
 
   it('simpler API for non-enum cases', () => {
@@ -646,6 +634,7 @@ describe('scopeToOptional()', () => {
       reducer: simpleReducer,
       dependencies: null
     });
+    onTestFinished(() => store.destroy());
 
     // scopeToOptional: 3 parameters
     const scopedStore1 = scopeToOptional<SimpleChildState, SimpleChildAction>(
@@ -678,6 +667,7 @@ describe('Scoped Store Integration', () => {
       reducer: parentReducer,
       dependencies: null
     });
+    onTestFinished(() => store.destroy());
 
     // Component would use $derived to create scoped store
     const getScopedStore = () =>
@@ -702,12 +692,8 @@ describe('Scoped Store Integration', () => {
     // Component dispatches child actions
     scopedStore.dispatch({ type: 'updateItem', value: 'banana' });
 
-    // Component dismisses
-    scopedStore.dismiss();
-
-    // Re-derive
-    scopedStore = getScopedStore();
-    expect(scopedStore.state).toBeNull();
+    expect(scopedStore.state).toEqual({ item: '', quantity: 1 });
+    expect(scopedStore).not.toHaveProperty('dismiss');
   });
 
   it('supports multiple scoped stores for different destinations', () => {
@@ -724,6 +710,7 @@ describe('Scoped Store Integration', () => {
       reducer: parentReducer,
       dependencies: null
     });
+    onTestFinished(() => store.destroy());
 
     // Create scoped stores for both destination types
     const addItemStore = scopeToDestination<AddItemState, ChildAction>(
@@ -783,6 +770,7 @@ describe('Scoped Store Integration', () => {
       return parentReducer(state, action, null);
     };
     const store = createStore({ initialState, reducer: recording, dependencies: null });
+    onTestFinished(() => store.destroy());
 
     const scopedStore = scopeToDestination<AddItemState, ChildAction>(
       store,

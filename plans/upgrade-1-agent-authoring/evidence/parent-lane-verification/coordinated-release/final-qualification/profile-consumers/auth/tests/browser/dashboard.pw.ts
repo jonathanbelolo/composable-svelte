@@ -1,0 +1,94 @@
+import { test, expect, type Page } from '@playwright/test';
+
+async function signIn(page: Page, email: string, password = 'ValidPassword123!') {
+  const form = page.locator('form.login-form, [data-testid="login-view-wrapper"]').first();
+  await expect(form.locator('input[name="email"]')).toBeVisible();
+  await form.locator('input[name="email"]').fill(email);
+  await form.locator('input[name="password"]').fill(password);
+  await form.getByRole('button', { name: 'Sign in' }).click();
+}
+
+test('accepted sign-in changes the route; rejected sign-in does not', async ({ page }) => {
+  await page.goto('/login');
+  await signIn(page, 'ada@example.com', 'WrongPassword123!');
+  await expect(page.getByRole('alert').first()).toBeVisible();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByTestId('account-card')).toHaveCount(0);
+
+  await page.locator('input[name="password"]').fill('ValidPassword123!');
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByTestId('account-subject-id')).toHaveText('sub-ada-1');
+});
+
+test('unauthenticated /dashboard request is vetoed to /login', async ({ page }) => {
+  await page.goto('/dashboard');
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.locator('input[name="email"]')).toBeVisible();
+  await expect(page.getByTestId('dashboard-container')).toBeHidden();
+  await expect(page.getByTestId('account-card')).toHaveCount(0);
+});
+
+test('MFA challenge then dashboard for the MFA subject', async ({ page }) => {
+  await page.goto('/login');
+  await signIn(page, 'mfa@example.com');
+  const code = page.locator('input[name="code"]');
+  await expect(code).toBeVisible();
+  await expect(page).toHaveURL(/\/login$/);
+  await code.fill('123456');
+  await page.getByRole('button', { name: 'Verify' }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByTestId('account-subject-id')).toHaveText('sub-mfa-1');
+});
+
+
+test('password change keeps the account view and reports documented outcome', async ({ page }) => {
+  await page.goto('/login');
+  await signIn(page, 'ada@example.com');
+  await expect(page.getByTestId('account-card')).toBeVisible();
+  await page.getByTestId('open-change-password-button').click();
+  const wrapper = page.getByTestId('change-password-wrapper');
+  await wrapper.locator('input[name="password"]').fill('BrandNewPassword123!');
+  await wrapper.locator('input[name="confirmPassword"]').fill('BrandNewPassword123!');
+  await wrapper.locator('button[type="submit"]').click();
+  await expect(page.getByTestId('password-message')).toHaveText('Password successfully changed.');
+  await expect(page.getByTestId('account-subject-id')).toHaveText('sub-ada-1');
+});
+
+test('logout removes the former account and lets a different subject sign in', async ({ page }) => {
+  await page.goto('/login');
+  await signIn(page, 'ada@example.com');
+  await expect(page.getByTestId('account-subject-id')).toHaveText('sub-ada-1');
+  await page.getByTestId('logout-button').click();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByTestId('account-card')).toHaveCount(0);
+  await expect(page.getByText('Ada Lovelace')).toHaveCount(0);
+  // The login route must offer a usable sign-in form again.
+  await signIn(page, 'mfa@example.com');
+  await page.locator('input[name="code"]').fill('123456');
+  await page.getByRole('button', { name: 'Verify' }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByTestId('account-subject-id')).toHaveText('sub-mfa-1');
+});
+
+test('browser Back after sign-in does not strand the signed-in account on an empty sign-in page', async ({ page }) => {
+  await page.goto('/login');
+  await signIn(page, 'ada@example.com');
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByTestId('account-card')).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByTestId('account-card')).toBeVisible();
+});
+
+test('no uncaught page errors or framework layout errors across the main journey', async ({ page }) => {
+  const problems: string[] = [];
+  page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
+  page.on('console', (m) => { if (m.type() === 'error') problems.push(`console: ${m.text()}`); });
+  await page.goto('/login');
+  await signIn(page, 'ada@example.com');
+  await expect(page.getByTestId('account-card')).toBeVisible();
+  await page.getByTestId('logout-button').click();
+  await expect(page.locator('input[name="email"]')).toBeVisible();
+  expect(problems).toEqual([]);
+});

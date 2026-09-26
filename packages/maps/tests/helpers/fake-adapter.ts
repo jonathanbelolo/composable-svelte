@@ -35,6 +35,8 @@ export class FakeMapAdapter implements MapAdapter {
 	/** Event name -> handlers the component registered. */
 	readonly handlers = new Map<string, Function[]>();
 
+	currentFlightId = 0;
+
 	private center: LngLat = [0, 0];
 	private zoom = 0;
 	private bearing = 0;
@@ -55,6 +57,15 @@ export class FakeMapAdapter implements MapAdapter {
 	/** Drive an event the way the map would, so handler wiring can be observed. */
 	emit(event: string, payload?: unknown): void {
 		for (const handler of this.handlers.get(event) ?? []) handler(payload);
+	}
+
+	/** Total count of currently registered event listeners across all events. */
+	get totalListenerCount(): number {
+		let count = 0;
+		for (const list of this.handlers.values()) {
+			count += list.length;
+		}
+		return count;
 	}
 
 	initialize(container: HTMLElement, options: MapInitOptions): void {
@@ -83,6 +94,7 @@ export class FakeMapAdapter implements MapAdapter {
 		this.pitch = pitch;
 	}
 	flyTo(options: FlyToOptions): void {
+		this.currentFlightId++;
 		this.record('flyTo', options);
 	}
 	fitBounds(bounds: BBox, padding?: number): void {
@@ -150,5 +162,6 @@ export class FakeMapAdapter implements MapAdapter {
 	destroy(): void {
 		this.record('destroy');
 		this.initialized = false;
+		this.currentFlightId = 0;
 	}
 }

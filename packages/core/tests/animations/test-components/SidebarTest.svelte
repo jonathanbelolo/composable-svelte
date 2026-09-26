@@ -14,10 +14,12 @@
 		// even when it has nothing to pass.
 	}: { springConfig?: Partial<SpringConfig> | undefined; startOpen?: boolean } = $props();
 
+	import { onDestroy } from 'svelte';
 	import { createStore } from '../../../src/lib/store.svelte.js';
 	import type { SpringConfig } from '../../../src/lib/animation/spring-config.js';
 	import Sidebar from '../../../src/lib/navigation-components/Sidebar.svelte';
-	import type { PresentationState } from '../../../src/lib/navigation/types.js';
+	import { optionalSlot, ManagedIntegrationBuilder } from '../../../src/lib/navigation/managed-integration.js';
+	import type { PresentationState, PresentationAction } from '../../../src/lib/navigation/types.js';
 	import { Effect } from '../../../src/lib/effect.js';
 	// The value `Effect` shadows the type of the same name, which lives in
 	// `types.ts`. Aliased so the reducer's return type resolves.
@@ -35,11 +37,14 @@
 	type TestAction =
 		| { type: 'openSidebar' }
 		| { type: 'dismissSidebar' }
+		| { type: 'sidebarContent'; action: PresentationAction<{ type: 'inert' }> }
 		| { type: 'presentation'; event: { type: 'presentationCompleted' | 'dismissalCompleted' } };
 
 	// ============================================================================
 	// Reducer
 	// ============================================================================
+
+	const childReducer = (s: string): [string, EffectType<{ type: 'inert' }>] => [s, Effect.none()];
 
 	function testReducer(state: TestState, action: TestAction): [TestState, EffectType<TestAction>] {
 		switch (action.type) {
@@ -64,6 +69,15 @@
 					},
 					Effect.none()
 				];
+
+			case 'sidebarContent':
+				if (action.action.type === 'dismiss') {
+					if (state.presentation.status !== 'presented') {
+						return [{ ...state, sidebarContent: state.presentation.status === 'idle' ? null : state.presentation.content }, Effect.none()];
+					}
+					return [{ ...state, sidebarContent: state.presentation.content, presentation: { ...state.presentation, status: 'dismissing' } }, Effect.none()];
+				}
+				return [state, Effect.none()];
 
 			case 'presentation':
 				if (action.event.type === 'presentationCompleted') {
@@ -99,8 +113,11 @@
 	}
 
 	// ============================================================================
-	// Store
+	// Store & Managed Composition
 	// ============================================================================
+
+	const sidebarSlot = optionalSlot<TestState, TestAction>()('sidebarContent');
+	const composition = new ManagedIntegrationBuilder<TestState, TestAction, undefined>(testReducer).with(sidebarSlot, childReducer).build();
 
 	const store = createStore({
 		// `startOpen` mounts the sidebar already `presented`. That is the *normal*
@@ -116,19 +133,11 @@
 					sidebarContent: null,
 					presentation: { status: 'idle' as const }
 				}) satisfies TestState,
-		reducer: testReducer
+		...composition
 	});
 
-	// Scoped store for sheet
-	const sidebarStore = $derived(
-		store.state.sidebarContent
-			? {
-					state: store.state.sidebarContent,
-					dispatch: store.dispatch,
-					dismiss: () => store.dispatch({ type: 'dismissSidebar' })
-				}
-			: null
-	);
+	onDestroy(() => store.destroy());
+	const sidebarStore = $derived(store.state.sidebarContent != null ? composition.bind(store, sidebarSlot) : undefined);
 
 	// Expose store for testing (attach to window)
 	if (typeof window !== 'undefined') {

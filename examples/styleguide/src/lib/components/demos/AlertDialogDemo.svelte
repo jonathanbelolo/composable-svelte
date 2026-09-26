@@ -1,126 +1,68 @@
 <script lang="ts">
-  /**
-   * `AlertDialog` — a titled, described confirmation over `Alert`.
-   *
-   * `Alert` is the shell: backdrop, container, spring lifecycle, click-outside
-   * and Escape. It has a bare `children` snippet and nothing to say, so every
-   * app that needed a confirmation wrote its own heading, paragraph and two
-   * buttons — and the one in this repository announced itself to a screen
-   * reader as "Alert dialog".
-   *
-   * The parts register themselves, so the root emits `aria-labelledby` and
-   * `aria-describedby` only once something has claimed the id they would point
-   * at. There is nothing for a consumer to keep in sync by hand.
-   */
-  import { createStore, Effect } from '@composable-svelte/core';
-  import type { Effect as EffectType } from '@composable-svelte/core';
-  import type { PresentationState } from '@composable-svelte/core/navigation';
-  import {
-    AlertDialog,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogAction,
-    AlertDialogCancel
-  } from '@composable-svelte/core/navigation-components';
+  import { Effect } from '@composable-svelte/core';
+  import type { Effect as EffectType, Reducer } from '@composable-svelte/core';
+  import { ApplicationHost, ApplicationRoot, defineApplication, ManagedIntegrationBuilder, optionalSlot, scopeTo } from '@composable-svelte/core/application';
+  import type { PresentationAction, PresentationState } from '@composable-svelte/core/navigation';
+  import { AlertDialog, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from '@composable-svelte/core/navigation-components';
   import { Button } from '@composable-svelte/core/components/ui';
 
   interface DemoState {
     open: boolean;
+    dialogContent: boolean | null;
     presentation: PresentationState<boolean>;
     outcome: string | null;
   }
-
-  type PresentationEvent = { type: 'presentationCompleted' } | { type: 'dismissalCompleted' };
-
+  type DialogContentAction = { type: 'presentationCompleted' } | { type: 'dismissalCompleted' };
   type DemoAction =
     | { type: 'open' }
     | { type: 'confirmed' }
     | { type: 'cancelled' }
-    | { type: 'presentation'; event: PresentationEvent };
+    | { type: 'dialogContent'; action: PresentationAction<DialogContentAction> };
 
   const dismissing = (state: DemoState, outcome: string): [DemoState, EffectType<DemoAction>] => [
-    {
-      ...state,
-      outcome,
-      presentation: {
-        status: 'dismissing' as const,
-        content: state.presentation.status === 'presented' ? state.presentation.content : true,
-        duration: 200
-      }
-    },
-    Effect.afterDelay<DemoAction>(200, (d) =>
-      d({ type: 'presentation', event: { type: 'dismissalCompleted' } })
-    )
+    { ...state, outcome, presentation: { status: 'dismissing', content: true, duration: 200 } },
+    Effect.none()
   ];
-
-  const demoStore = createStore<DemoState, DemoAction>({
-    initialState: { open: false, presentation: { status: 'idle' }, outcome: null },
-    reducer: (state, action) => {
-      switch (action.type) {
-        case 'open':
-          return [
-            {
-              ...state,
-              open: true,
-              outcome: null,
-              presentation: { status: 'presenting' as const, content: true, duration: 300 }
-            },
-            Effect.afterDelay(300, (d) =>
-              d({ type: 'presentation', event: { type: 'presentationCompleted' } })
-            )
-          ];
-
-        // Both guarded on `presented`: dismissing something still animating in
-        // is the invalid transition `PresentationState` exists to prevent.
-        case 'confirmed':
-          if (state.presentation.status !== 'presented') return [state, Effect.none()];
-          return dismissing(state, 'Deleted.');
-
-        case 'cancelled':
-          if (state.presentation.status !== 'presented') return [state, Effect.none()];
-          return dismissing(state, 'Kept.');
-
-        case 'presentation':
-          if (action.event.type === 'presentationCompleted') {
-            return [
-              {
-                ...state,
-                presentation: {
-                  status: 'presented' as const,
-                  content:
-                    state.presentation.status === 'presenting' ? state.presentation.content : true
-                }
-              },
-              Effect.none()
-            ];
-          }
-          return [
-            { ...state, open: false, presentation: { status: 'idle' as const } },
-            Effect.none()
-          ];
-
-        default:
-          return [state, Effect.none()];
+  const reducer: Reducer<DemoState, DemoAction, undefined> = (state, action) => {
+    if (action.type === 'dialogContent') {
+      if (action.action.type === 'dismiss') {
+        return state.presentation.status === 'presented' ? dismissing(state, 'Kept.') : [state, Effect.none()];
       }
-    },
-    dependencies: {}
-  });
-
-  const state = $derived($demoStore);
-
-  // The adapter `Alert` expects. The spread carries `scope`/`subscribe`
-  // through; the explicit `state` overrides the store's non-reactive getter
-  // with the `$`-subscribed snapshot.
-  const storeWithDismiss = $derived({
-    ...demoStore,
-    state: $demoStore,
-    dispatch: demoStore.dispatch,
-    dismiss: () => demoStore.dispatch({ type: 'cancelled' })
+      if (action.action.action.type === 'presentationCompleted') {
+        if (state.presentation.status !== 'presenting') return [state, Effect.none()];
+        return [{ ...state, presentation: { status: 'presented', content: state.presentation.content } }, Effect.none()];
+      }
+      if (state.presentation.status !== 'dismissing') return [state, Effect.none()];
+      return [{ ...state, open: false, dialogContent: null, presentation: { status: 'idle' } }, Effect.none()];
+    }
+    switch (action.type) {
+      case 'open':
+        return [{ ...state, open: true, dialogContent: true, outcome: null, presentation: { status: 'presenting', content: true, duration: 300 } }, Effect.none()];
+      case 'confirmed':
+        return state.presentation.status === 'presented' ? dismissing(state, 'Deleted.') : [state, Effect.none()];
+      case 'cancelled':
+        return state.presentation.status === 'presented' ? dismissing(state, 'Kept.') : [state, Effect.none()];
+      default:
+        return [state, Effect.none()];
+    }
+  };
+  const dialogSlot = optionalSlot<DemoState, DemoAction>()('dialogContent');
+  const childReducer: Reducer<boolean, DialogContentAction, undefined> = state => [state, Effect.none()];
+  const composition = new ManagedIntegrationBuilder(reducer).with(dialogSlot, childReducer, {
+    dismissal: 'deferred',
+    replaceOn: action => action.type === 'open'
+  }).build();
+  const application = defineApplication(composition, {
+    initialState: (): DemoState => ({ open: false, dialogContent: null, presentation: { status: 'idle' }, outcome: null })
   });
 </script>
 
+<ApplicationRoot definition={application} options={{ dependencies: undefined, initial: { input: undefined } }}>
+{#snippet children(app)}
+<ApplicationHost {app}>
+{@const demoStore = app.store}
+{@const state = app.store.state}
+{@const dialogView = scopeTo(app.store, dialogSlot)}
 <div class="space-y-8">
   <section class="space-y-3">
     <h2 class="text-2xl font-bold">Alert Dialog</h2>
@@ -152,13 +94,12 @@
 </div>
 
 {#if state.open}
+  <!-- Interim legacy PresentationState bridge; the managed view owns lifetime and dismissal authority. -->
   <AlertDialog
-    store={storeWithDismiss}
+    store={dialogView}
     presentation={state.presentation}
-    onPresentationComplete={() =>
-      demoStore.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } })}
-    onDismissalComplete={() =>
-      demoStore.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })}
+    onPresentationComplete={() => dialogView?.dispatch({ type: 'presentationCompleted' })}
+    onDismissalComplete={() => dialogView?.dispatch({ type: 'dismissalCompleted' })}
   >
     {#snippet children()}
       <AlertDialogHeader>
@@ -186,3 +127,6 @@
     {/snippet}
   </AlertDialog>
 {/if}
+</ApplicationHost>
+{/snippet}
+</ApplicationRoot>

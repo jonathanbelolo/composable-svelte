@@ -1,139 +1,84 @@
 <script lang="ts">
-  import { createStore, Effect } from '@composable-svelte/core';
-  import type { PresentationState } from '@composable-svelte/core/navigation';
+  import { Effect } from '@composable-svelte/core';
+  import type { Reducer } from '@composable-svelte/core';
+  import { ApplicationHost, ApplicationRoot, defineApplication, ManagedIntegrationBuilder, optionalSlot, scopeTo } from '@composable-svelte/core/application';
+  import type { PresentationAction, PresentationState } from '@composable-svelte/core/navigation';
   import { Popover } from '@composable-svelte/core/navigation-components';
   import { Button } from '@composable-svelte/core/components/ui';
 
   interface DemoState {
     showPopover: boolean;
+    popoverContent: boolean | null;
     presentation: PresentationState<boolean>;
     popoverType: 'top' | 'bottom' | 'left' | 'right';
     triggerRect: DOMRect | null;
   }
-
-  type PresentationEvent =
-    | { type: 'presentationCompleted' }
-    | { type: 'dismissalCompleted' };
-
+  type PopoverContentAction = { type: 'presentationCompleted' } | { type: 'dismissalCompleted' };
   type DemoAction =
     | { type: 'openPopover'; popoverType: 'top' | 'bottom' | 'left' | 'right'; rect: DOMRect }
     | { type: 'closePopover' }
-    | { type: 'presentation'; event: PresentationEvent };
+    | { type: 'popoverContent'; action: PresentationAction<PopoverContentAction> };
 
-  const demoStore = createStore<DemoState, DemoAction>({
-    initialState: {
-      showPopover: false,
-      presentation: { status: 'idle' },
-      popoverType: 'bottom',
-      triggerRect: null
-    },
-    reducer: (state, action) => {
-      switch (action.type) {
-        case 'openPopover':
-          return [
-            {
-              ...state,
-              showPopover: true,
-              popoverType: action.popoverType,
-              triggerRect: action.rect,
-              presentation: {
-                status: 'presenting' as const,
-                content: true,
-                duration: 200
-              }
-            },
-            Effect.afterDelay(200, (d) => d({ type: 'presentation', event: { type: 'presentationCompleted' } }))
-          ];
-
-        case 'closePopover':
-          // Only allow dismissal if we're in presented state
-          if (state.presentation.status !== 'presented') {
-            return [state, Effect.none()];
-          }
-          return [
-            {
-              ...state,
-              presentation: {
-                status: 'dismissing' as const,
-                content: state.presentation.content,
-                duration: 150
-              }
-            },
-            Effect.afterDelay(150, (d) => d({ type: 'presentation', event: { type: 'dismissalCompleted' } }))
-          ];
-
-        case 'presentation':
-          if (action.event.type === 'presentationCompleted') {
-            return [
-              {
-                ...state,
-                presentation: {
-                  status: 'presented' as const,
-                  content: state.presentation.status === 'presenting' ? state.presentation.content : true
-                }
-              },
-              Effect.none()
-            ];
-          }
-          if (action.event.type === 'dismissalCompleted') {
-            return [
-              {
-                ...state,
-                showPopover: false,
-                presentation: { status: 'idle' as const },
-                triggerRect: null
-              },
-              Effect.none()
-            ];
-          }
-          return [state, Effect.none()];
-
-        default:
-          return [state, Effect.none()];
+  const reducer: Reducer<DemoState, DemoAction, undefined> = (state, action) => {
+    if (action.type === 'popoverContent') {
+      if (action.action.type === 'dismiss') {
+        if (state.presentation.status !== 'presented') return [state, Effect.none()];
+        return [{ ...state, presentation: { status: 'dismissing', content: state.presentation.content } }, Effect.none()];
       }
-    },
-    dependencies: {}
-  });
-
-  // Create a store wrapper with dismiss() method for Popover component
-  const storeWithDismiss = $derived($demoStore.showPopover ? {
-    ...demoStore,
-    state: $demoStore,
-    dispatch: demoStore.dispatch,
-    dismiss: () => demoStore.dispatch({ type: 'closePopover' })
-  } : null);
-
-  const state = $derived($demoStore);
-
-  // Calculate popover position based on trigger button and direction
-  const popoverStyle = $derived(() => {
-    if (!state.triggerRect) return '';
-
-    const rect = state.triggerRect;
-    const gap = 8; // gap between trigger and popover
-
-    switch (state.popoverType) {
-      case 'top':
-        return `left: ${rect.left + rect.width / 2}px; bottom: ${window.innerHeight - rect.top + gap}px; transform: translateX(-50%);`;
-      case 'bottom':
-        return `left: ${rect.left + rect.width / 2}px; top: ${rect.bottom + gap}px; transform: translateX(-50%);`;
-      case 'left':
-        return `right: ${window.innerWidth - rect.left + gap}px; top: ${rect.top + rect.height / 2}px; transform: translateY(-50%);`;
-      case 'right':
-        return `left: ${rect.right + gap}px; top: ${rect.top + rect.height / 2}px; transform: translateY(-50%);`;
+      if (action.action.action.type === 'presentationCompleted') {
+        if (state.presentation.status !== 'presenting') return [state, Effect.none()];
+        return [{ ...state, presentation: { status: 'presented', content: state.presentation.content } }, Effect.none()];
+      }
+      if (state.presentation.status !== 'dismissing') return [state, Effect.none()];
+      return [{ ...state, showPopover: false, popoverContent: null, presentation: { status: 'idle' }, triggerRect: null }, Effect.none()];
     }
+    switch (action.type) {
+      case 'openPopover':
+        if (state.presentation.status === 'presenting' || state.presentation.status === 'presented') return [state, Effect.none()];
+        return [{ ...state, showPopover: true, popoverContent: true, popoverType: action.popoverType, triggerRect: action.rect, presentation: { status: 'presenting', content: true } }, Effect.none()];
+      case 'closePopover':
+        if (state.presentation.status !== 'presented') return [state, Effect.none()];
+        return [{ ...state, presentation: { status: 'dismissing', content: state.presentation.content } }, Effect.none()];
+      default:
+        return [state, Effect.none()];
+    }
+  };
+  const popoverSlot = optionalSlot<DemoState, DemoAction>()('popoverContent');
+  const childReducer: Reducer<boolean, PopoverContentAction, undefined> = state => [state, Effect.none()];
+  const composition = new ManagedIntegrationBuilder(reducer).with(popoverSlot, childReducer, {
+    dismissal: 'deferred',
+    replaceOn: action => action.type === 'openPopover'
+  }).build();
+  const application = defineApplication(composition, {
+    initialState: (): DemoState => ({ showPopover: false, popoverContent: null, presentation: { status: 'idle' }, popoverType: 'bottom', triggerRect: null })
   });
 
-  function handleTriggerClick(
-    event: MouseEvent,
-    type: 'top' | 'bottom' | 'left' | 'right'
-  ) {
+
+  function getPopoverStyle(state: DemoState) {
+    if (!state.triggerRect) return '';
+    const rect = state.triggerRect;
+    const gap = 8;
+    switch (state.popoverType) {
+      case 'top': return `left: ${rect.left + rect.width / 2}px; bottom: ${window.innerHeight - rect.top + gap}px; transform: translateX(-50%);`;
+      case 'bottom': return `left: ${rect.left + rect.width / 2}px; top: ${rect.bottom + gap}px; transform: translateX(-50%);`;
+      case 'left': return `right: ${window.innerWidth - rect.left + gap}px; top: ${rect.top + rect.height / 2}px; transform: translateY(-50%);`;
+      case 'right': return `left: ${rect.right + gap}px; top: ${rect.top + rect.height / 2}px; transform: translateY(-50%);`;
+    }
+  }
+
+  function handleTriggerClick(event: MouseEvent, type: DemoState['popoverType'], dispatch: (action: DemoAction) => void) {
     const button = event.currentTarget as HTMLButtonElement;
-    const rect = button.getBoundingClientRect();
-    demoStore.dispatch({ type: 'openPopover', popoverType: type, rect });
+    dispatch({ type: 'openPopover', popoverType: type, rect: button.getBoundingClientRect() });
   }
 </script>
 
+
+<ApplicationRoot definition={application} options={{ dependencies: undefined, initial: { input: undefined } }}>
+{#snippet children(app)}
+<ApplicationHost {app}>
+{@const demoStore = app.store}
+{@const state = app.store.state}
+{@const popoverView = scopeTo(app.store, popoverSlot)}
 <div class="space-y-12">
   <!-- Live Demo Section -->
   <section class="space-y-6">
@@ -147,7 +92,7 @@
     <div class="flex flex-col items-center justify-center gap-12 p-24 rounded-lg border-2 bg-card">
       <!-- Top Button -->
       <Button
-        onclick={(e) => handleTriggerClick(e, 'top')}
+        onclick={(e) => handleTriggerClick(e, 'top', demoStore.dispatch)}
         class="bg-primary text-primary-foreground hover:bg-primary/90"
       >
         Show Top Popover
@@ -156,7 +101,7 @@
       <!-- Middle Row: Left, Center Text, Right -->
       <div class="flex items-center gap-12">
         <Button
-          onclick={(e) => handleTriggerClick(e, 'left')}
+          onclick={(e) => handleTriggerClick(e, 'left', demoStore.dispatch)}
           class="bg-primary text-primary-foreground hover:bg-primary/90"
         >
           Show Left Popover
@@ -168,7 +113,7 @@
           </p>
         </div>
         <Button
-          onclick={(e) => handleTriggerClick(e, 'right')}
+          onclick={(e) => handleTriggerClick(e, 'right', demoStore.dispatch)}
           class="bg-primary text-primary-foreground hover:bg-primary/90"
         >
           Show Right Popover
@@ -177,7 +122,7 @@
 
       <!-- Bottom Button -->
       <Button
-        onclick={(e) => handleTriggerClick(e, 'bottom')}
+        onclick={(e) => handleTriggerClick(e, 'bottom', demoStore.dispatch)}
         class="bg-primary text-primary-foreground hover:bg-primary/90"
       >
         Show Bottom Popover
@@ -307,13 +252,13 @@
 <!-- Popover Implementation -->
 {#if state.showPopover}
   <Popover
-    store={storeWithDismiss}
+    store={popoverView}
     presentation={state.presentation}
-    style={popoverStyle()}
+    style={getPopoverStyle(state)}
     onPresentationComplete={() =>
-      demoStore.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } })}
+      popoverView?.dispatch({ type: 'presentationCompleted' })}
     onDismissalComplete={() =>
-      demoStore.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })}
+      popoverView?.dispatch({ type: 'dismissalCompleted' })}
   >
     {#snippet children()}
       <div class="space-y-4">
@@ -339,3 +284,6 @@
     {/snippet}
   </Popover>
 {/if}
+</ApplicationHost>
+{/snippet}
+</ApplicationRoot>

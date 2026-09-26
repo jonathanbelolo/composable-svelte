@@ -23,8 +23,8 @@ export * from './ui/index.js';
 // Form components
 export * from './form/index.js';
 
-// Command components (already re-exported from ui, but explicit for clarity)
-// export * from './command/index.js';
+// Command palette assembly lives outside the primitive UI barrel.
+export * from './command/index.js';
 
 // Data table - explicit exports to rename Pagination type and avoid conflict
 export {
@@ -46,8 +46,8 @@ export type {
 	SortDirection
 } from './data-table/index.js';
 
-// Toast components (already re-exported from ui, but explicit for clarity)
-// export * from './toast/index.js';
+// Toast assembly lives outside the primitive UI barrel.
+export * from './toast/index.js';
 
 // Image gallery components
 export * from './image-gallery/index.js';

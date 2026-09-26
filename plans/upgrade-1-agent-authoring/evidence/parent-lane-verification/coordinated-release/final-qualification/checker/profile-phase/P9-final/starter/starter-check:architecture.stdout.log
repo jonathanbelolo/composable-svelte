@@ -1,0 +1,607 @@
+
+> check:architecture
+> composable-svelte-architecture --mode analysis-only --project . --policy bundled:starter --expected-core-version 0.13.1
+
+{
+  "schema": "composable-svelte/consumer-architecture-result",
+  "schemaVersion": 2,
+  "kind": "architecture",
+  "mode": "analysis-only",
+  "outcome": "analysis-complete",
+  "qualification": "not-evaluated",
+  "exitCode": 0,
+  "qualificationScope": "bounded-five-family-detectors",
+  "manualReviewRequired": true,
+  "checker": {
+    "name": "composable-svelte-consumer-architecture",
+    "version": "0.13.1",
+    "status": "stable",
+    "typescript": "5.9.3",
+    "svelte": "5.57.0"
+  },
+  "policy": {
+    "id": "bundled-starter",
+    "version": "0.13.1",
+    "schemaVersion": 2,
+    "sha256": "f2821ebf0fa5cd34b346361089edd56bb4ec01a40c59eb969c60f90c7e77d190",
+    "source": "bundled",
+    "bundledProfile": "starter",
+    "capabilityGrantCount": 0,
+    "exceptionCount": 0
+  },
+  "core": {
+    "installed": "0.13.1",
+    "expected": "0.13.1",
+    "supported": {
+      "min": "0.13.1",
+      "maxExclusive": "0.14.0-0"
+    },
+    "paired": true
+  },
+  "evaluation": {
+    "today": "2026-09-26",
+    "passes": 2,
+    "converged": true,
+    "zoneCounts": {
+      "decision": 2,
+      "effect": 1,
+      "view": 0,
+      "module": 0,
+      "wiring": 1,
+      "service": 3
+    }
+  },
+  "catalog": {
+    "version": 2,
+    "rules": [
+      {
+        "id": "routing/no-manual-browser-authority",
+        "stage": "active",
+        "detectors": [
+          "authority-escape",
+          "history-write",
+          "location-write",
+          "traversal-listener"
+        ]
+      },
+      {
+        "id": "presentation/no-subscription-orchestration",
+        "stage": "active",
+        "detectors": [
+          "lifecycle-dispatch",
+          "lifecycle-mirror",
+          "state-mirror",
+          "view-subscribe"
+        ]
+      },
+      {
+        "id": "reducers/pure-decisions",
+        "stage": "active",
+        "detectors": [
+          "effect-body-primitive",
+          "impure-primitive",
+          "state-mutation",
+          "store-authority-in-reducer"
+        ]
+      },
+      {
+        "id": "resources/no-unowned-infrastructure",
+        "stage": "active",
+        "detectors": [
+          "module-load-io",
+          "view-io"
+        ]
+      },
+      {
+        "id": "motion/no-competing-playback",
+        "stage": "active",
+        "detectors": [
+          "frame-scheduler",
+          "svelte-motion-import",
+          "transition-directive",
+          "web-animations"
+        ]
+      },
+      {
+        "id": "presentation/no-fabricated-view",
+        "stage": "staged",
+        "detectors": []
+      },
+      {
+        "id": "adapters/least-authority",
+        "stage": "staged",
+        "detectors": []
+      }
+    ]
+  },
+  "project": {
+    "tsconfig": "tsconfig.json",
+    "roots": [
+      "src/main.ts"
+    ]
+  },
+  "graph": {
+    "roots": [
+      "src/main.ts"
+    ],
+    "moduleCount": 4,
+    "byKind": {
+      "js": 0,
+      "svelte": 1,
+      "ts": 3
+    },
+    "edgeCount": 10,
+    "literalDynamicImports": 0,
+    "assets": [
+      "src/app.css"
+    ],
+    "builtins": [],
+    "packageSpecifiers": [
+      "@composable-svelte/core",
+      "@composable-svelte/core/application",
+      "@composable-svelte/core/components/ui",
+      "svelte"
+    ],
+    "complete": true,
+    "modules": [
+      {
+        "path": "src/App.svelte",
+        "kind": "svelte",
+        "segments": [
+          {
+            "kind": "instance-script",
+            "start": {
+              "offset": 18,
+              "line": 1,
+              "column": 19
+            },
+            "end": {
+              "offset": 462,
+              "line": 14,
+              "column": 1
+            }
+          },
+          {
+            "kind": "template-expression",
+            "start": {
+              "offset": 504,
+              "line": 17,
+              "column": 15
+            },
+            "end": {
+              "offset": 515,
+              "line": 17,
+              "column": 26
+            }
+          },
+          {
+            "kind": "template-expression",
+            "start": {
+              "offset": 528,
+              "line": 18,
+              "column": 12
+            },
+            "end": {
+              "offset": 588,
+              "line": 21,
+              "column": 4
+            }
+          },
+          {
+            "kind": "template-expression",
+            "start": {
+              "offset": 604,
+              "line": 23,
+              "column": 13
+            },
+            "end": {
+              "offset": 612,
+              "line": 23,
+              "column": 21
+            }
+          },
+          {
+            "kind": "template-expression",
+            "start": {
+              "offset": 613,
+              "line": 23,
+              "column": 22
+            },
+            "end": {
+              "offset": 616,
+              "line": 23,
+              "column": 25
+            }
+          },
+          {
+            "kind": "template-expression",
+            "start": {
+              "offset": 641,
+              "line": 24,
+              "column": 23
+            },
+            "end": {
+              "offset": 644,
+              "line": 24,
+              "column": 26
+            }
+          },
+          {
+            "kind": "template-expression",
+            "start": {
+              "offset": 769,
+              "line": 27,
+              "column": 33
+            },
+            "end": {
+              "offset": 790,
+              "line": 27,
+              "column": 54
+            }
+          },
+          {
+            "kind": "template-expression",
+            "start": {
+              "offset": 821,
+              "line": 28,
+              "column": 26
+            },
+            "end": {
+              "offset": 868,
+              "line": 28,
+              "column": 73
+            }
+          },
+          {
+            "kind": "template-expression",
+            "start": {
+              "offset": 914,
+              "line": 29,
+              "column": 26
+            },
+            "end": {
+              "offset": 956,
+              "line": 29,
+              "column": 68
+            }
+          },
+          {
+            "kind": "template-expression",
+            "start": {
+              "offset": 968,
+              "line": 29,
+              "column": 80
+            },
+            "end": {
+              "offset": 991,
+              "line": 29,
+              "column": 103
+            }
+          },
+          {
+            "kind": "template-expression",
+            "start": {
+              "offset": 1032,
+              "line": 30,
+              "column": 26
+            },
+            "end": {
+              "offset": 1087,
+              "line": 30,
+              "column": 81
+            }
+          }
+        ],
+        "edges": [
+          {
+            "kind": "import",
+            "specifier": "@composable-svelte/core/application",
+            "typeOnly": false,
+            "span": {
+              "start": {
+                "offset": 70,
+                "line": 2,
+                "column": 52
+              },
+              "end": {
+                "offset": 107,
+                "line": 2,
+                "column": 89
+              }
+            },
+            "target": {
+              "type": "package",
+              "specifier": "@composable-svelte/core/application",
+              "typeOnly": false
+            }
+          },
+          {
+            "kind": "import",
+            "specifier": "@composable-svelte/core/components/ui",
+            "typeOnly": false,
+            "span": {
+              "start": {
+                "offset": 134,
+                "line": 3,
+                "column": 26
+              },
+              "end": {
+                "offset": 173,
+                "line": 3,
+                "column": 65
+              }
+            },
+            "target": {
+              "type": "package",
+              "specifier": "@composable-svelte/core/components/ui",
+              "typeOnly": false
+            }
+          },
+          {
+            "kind": "import",
+            "specifier": "./application",
+            "typeOnly": false,
+            "span": {
+              "start": {
+                "offset": 205,
+                "line": 4,
+                "column": 31
+              },
+              "end": {
+                "offset": 220,
+                "line": 4,
+                "column": 46
+              }
+            },
+            "target": {
+              "type": "module",
+              "path": "src/application.ts"
+            }
+          },
+          {
+            "kind": "import",
+            "specifier": "./counter",
+            "typeOnly": true,
+            "span": {
+              "start": {
+                "offset": 265,
+                "line": 5,
+                "column": 44
+              },
+              "end": {
+                "offset": 276,
+                "line": 5,
+                "column": 55
+              }
+            },
+            "target": {
+              "type": "module",
+              "path": "src/counter.ts"
+            }
+          }
+        ]
+      },
+      {
+        "path": "src/application.ts",
+        "kind": "ts",
+        "segments": [],
+        "edges": [
+          {
+            "kind": "import",
+            "specifier": "@composable-svelte/core/application",
+            "typeOnly": false,
+            "span": {
+              "start": {
+                "offset": 34,
+                "line": 1,
+                "column": 35
+              },
+              "end": {
+                "offset": 71,
+                "line": 1,
+                "column": 72
+              }
+            },
+            "target": {
+              "type": "package",
+              "specifier": "@composable-svelte/core/application",
+              "typeOnly": false
+            }
+          },
+          {
+            "kind": "import",
+            "specifier": "./counter",
+            "typeOnly": false,
+            "span": {
+              "start": {
+                "offset": 109,
+                "line": 2,
+                "column": 37
+              },
+              "end": {
+                "offset": 120,
+                "line": 2,
+                "column": 48
+              }
+            },
+            "target": {
+              "type": "module",
+              "path": "src/counter.ts"
+            }
+          }
+        ]
+      },
+      {
+        "path": "src/counter.ts",
+        "kind": "ts",
+        "segments": [],
+        "edges": [
+          {
+            "kind": "import",
+            "specifier": "@composable-svelte/core",
+            "typeOnly": false,
+            "span": {
+              "start": {
+                "offset": 37,
+                "line": 1,
+                "column": 38
+              },
+              "end": {
+                "offset": 62,
+                "line": 1,
+                "column": 63
+              }
+            },
+            "target": {
+              "type": "package",
+              "specifier": "@composable-svelte/core",
+              "typeOnly": false
+            }
+          }
+        ]
+      },
+      {
+        "path": "src/main.ts",
+        "kind": "ts",
+        "segments": [],
+        "edges": [
+          {
+            "kind": "import",
+            "specifier": "svelte",
+            "typeOnly": false,
+            "span": {
+              "start": {
+                "offset": 22,
+                "line": 1,
+                "column": 23
+              },
+              "end": {
+                "offset": 30,
+                "line": 1,
+                "column": 31
+              }
+            },
+            "target": {
+              "type": "package",
+              "specifier": "svelte",
+              "typeOnly": false
+            }
+          },
+          {
+            "kind": "import",
+            "specifier": "./App.svelte",
+            "typeOnly": false,
+            "span": {
+              "start": {
+                "offset": 48,
+                "line": 2,
+                "column": 17
+              },
+              "end": {
+                "offset": 62,
+                "line": 2,
+                "column": 31
+              }
+            },
+            "target": {
+              "type": "module",
+              "path": "src/App.svelte"
+            }
+          },
+          {
+            "kind": "import",
+            "specifier": "./app.css",
+            "typeOnly": false,
+            "span": {
+              "start": {
+                "offset": 71,
+                "line": 3,
+                "column": 8
+              },
+              "end": {
+                "offset": 82,
+                "line": 3,
+                "column": 19
+              }
+            },
+            "target": {
+              "type": "asset",
+              "path": "src/app.css",
+              "query": null
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "rules": {
+    "active": [
+      {
+        "id": "routing/no-manual-browser-authority",
+        "severity": "error"
+      },
+      {
+        "id": "presentation/no-subscription-orchestration",
+        "severity": "error"
+      },
+      {
+        "id": "reducers/pure-decisions",
+        "severity": "error"
+      },
+      {
+        "id": "resources/no-unowned-infrastructure",
+        "severity": "error"
+      },
+      {
+        "id": "motion/no-competing-playback",
+        "severity": "error"
+      }
+    ],
+    "inactive": [
+      {
+        "id": "presentation/no-fabricated-view",
+        "status": "not-active",
+        "reason": "supported-replacement-pending",
+        "detail": "Not enforced by this checker; requires independent architectural review."
+      },
+      {
+        "id": "adapters/least-authority",
+        "status": "not-active",
+        "reason": "supported-replacement-pending",
+        "detail": "Not enforced by this checker; requires independent architectural review."
+      }
+    ],
+    "enforcedCount": 5,
+    "unavailableEvaluators": []
+  },
+  "violations": [],
+  "excepted": [],
+  "limitations": [],
+  "analysisErrors": [],
+  "violationsComplete": true,
+  "zoneCounts": {
+    "decision": 2,
+    "effect": 1,
+    "view": 0,
+    "module": 0,
+    "wiring": 1,
+    "service": 3
+  },
+  "limits": [
+    "staged-rules-catalog-only",
+    "capability-grants-unsupported",
+    "qualification-record-content-not-validated",
+    "opaque-package-code-not-inspected",
+    "opaque-package-contents-and-install-provenance-delegated-to-outer-materialization",
+    "opaque-package-workspace-lockfile-and-install-configuration-not-inspected",
+    "pinned-tarball-sha256-covers-the-policy-artifact-not-installed-package-contents",
+    "package-resolution-limited-to-project-node-modules",
+    "type-only-package-imports-not-verified",
+    "unreachable-files-not-scanned",
+    "vite-resolve-alias-not-modelled",
+    "worker-query-targets-not-scanned",
+    "root-and-lifetime-ownership-not-proved",
+    "capability-authenticity-not-verified",
+    "dynamic-component-reachability-not-scanned"
+  ]
+}

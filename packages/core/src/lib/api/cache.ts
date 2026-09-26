@@ -11,6 +11,7 @@ export const DEFAULT_MAX_CACHE_ENTRIES = 100;
 export interface ResponseCacheOptions {
 	/** @default DEFAULT_MAX_CACHE_ENTRIES */
 	readonly maxEntries?: number | undefined;
+	readonly baseURL?: string | undefined;
 }
 
 interface CacheEntry {
@@ -138,6 +139,22 @@ export function createResponseCache(options: ResponseCacheOptions = {}): Respons
 	const entries = new Map<string, CacheEntry>();
 	const maxEntries = options.maxEntries ?? DEFAULT_MAX_CACHE_ENTRIES;
 	const warnings = createWarnOnce(maxEntries);
+	const baseURL = options.baseURL;
+
+	const aliasesFor = (p: string): string[] => {
+		const norm = normalizePath(p);
+		const list = [norm];
+		if (baseURL && SCHEME.test(baseURL)) {
+			const base = normalizePath(baseURL).replace(/\/+$/, '');
+			if (SCHEME.test(norm)) {
+				if (norm === base || norm === `${base}/`) list.push('/');
+				else if (norm.startsWith(base + '/')) list.push(norm.slice(base.length));
+			} else {
+				list.push(`${base}${norm.startsWith('/') ? norm : `/${norm}`}`);
+			}
+		}
+		return list;
+	};
 
 	const isValid = (entry: CacheEntry) => Date.now() - entry.timestamp < entry.ttl;
 
@@ -156,9 +173,14 @@ export function createResponseCache(options: ResponseCacheOptions = {}): Respons
 
 	const invalidate = (pattern: string): void => {
 		const isPrefix = pattern.endsWith('*');
-		const prefix = normalizePath(isPrefix ? pattern.slice(0, -1) : pattern);
+		const raw = isPrefix ? pattern.slice(0, -1) : pattern;
+		const targets = aliasesFor(raw);
 		for (const [key, entry] of entries) {
-			if (isPrefix ? entry.path.startsWith(prefix) : entry.path === prefix) entries.delete(key);
+			const entryAliases = aliasesFor(entry.path);
+			const matches = isPrefix
+				? entryAliases.some((e) => targets.some((t) => e.startsWith(t)))
+				: entryAliases.some((e) => targets.includes(e));
+			if (matches) entries.delete(key);
 		}
 	};
 

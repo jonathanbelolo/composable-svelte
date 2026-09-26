@@ -1,0 +1,46 @@
+{
+  "name": "@composable-svelte/architecture",
+  "version": "0.13.1",
+  "description": "Development-only architecture checks for Composable Svelte applications",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "bin": {
+    "composable-svelte-architecture": "bin/composable-svelte-architecture.mjs"
+  },
+  "exports": {},
+  "files": [
+    "bin/",
+    "src/",
+    "!src/**/*.test.mjs",
+    "!src/**/*.md",
+    "policies/",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "test": "node test/run.mjs",
+    "check:archive": "node test/inspect-archive.mjs",
+    "test:installed": "node test/installed-bin-smoke.mjs"
+  },
+  "dependencies": {
+    "typescript": "5.9.3",
+    "svelte": "5.57.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": "Jonathan Belolo",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jonathanbelolo/composable-svelte.git",
+    "directory": "packages/architecture"
+  },
+  "homepage": "https://github.com/jonathanbelolo/composable-svelte/tree/main/packages/architecture#readme",
+  "bugs": {
+    "url": "https://github.com/jonathanbelolo/composable-svelte/issues"
+  }
+}

@@ -43,6 +43,8 @@
         <!-- Step Circle -->
         <button
           type="button"
+          aria-label="{step.title}, Step {step.stepNumber}"
+          aria-current={isStepCurrent(step.step) ? 'step' : undefined}
           class="flex items-center justify-center w-10 h-10 rounded-full border-2 {isStepCurrent(step.step)
             ? 'border-blue-600 bg-blue-600 text-white'
             : isStepCompleted(step.step)
@@ -56,7 +58,7 @@
         >
           {#if isStepCompleted(step.step)}
             <!-- Checkmark -->
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg aria-hidden="true" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
             </svg>
           {:else}

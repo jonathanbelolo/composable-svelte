@@ -1,0 +1,16 @@
+
+> test
+> vitest run
+
+
+ RUN  v4.0.7 /private/tmp/composable-final-authoring/app-a
+
+ ✓ tests/workspace.test.ts (7 tests) 10ms
+ ✓ tests/component.test.ts (7 tests) 1074ms
+     ✓ a transcription finishing after replacement never reaches the successor conversation  326ms
+
+ Test Files  2 passed (2)
+      Tests  14 passed (14)
+   Start at  15:12:44
+   Duration  4.13s (transform 4.00s, setup 0ms, collect 5.01s, tests 1.08s, environment 873ms, prepare 6ms)
+

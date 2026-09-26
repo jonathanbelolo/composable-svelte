@@ -221,7 +221,7 @@ describe('selection is visible', () => {
 		).toContain('selected');
 	});
 
-	it('keeps a selected node identical across unrelated dispatches', async () => {
+	it('keeps the source node identical and its selection visible across unrelated dispatches', async () => {
 		// The identity-preserving branch compares `n.selected ?? false` against the
 		// store's set — but stored nodes carry no `selected` key, so every node in
 		// `selectedNodes` failed the comparison and re-cloned on EVERY dispatch.
@@ -242,7 +242,8 @@ describe('selection is visible', () => {
 		}
 		expect(seen.size, 'the store node itself should not churn').toBe(1);
 
-		// And the projected node handed to SvelteFlow must be stable too.
+		// Projected object identity is qualified separately through useSvelteFlow's
+		// public getNode in code-graph-boundaries.browser.test.ts. Here assert selection.
 		expect(
 			target.querySelector('[data-id="a"]')!.className,
 			'the node lost its selection'

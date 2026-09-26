@@ -1,0 +1,23 @@
+{
+  "/private/tmp/composable-final-authoring/final-app-qualification": "author-apps/final-app-qualification",
+  "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/maps-fixture-production-consumer": "profile-consumers/maps",
+  "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/graphics-fixture-production-consumer": "profile-consumers/graphics",
+  "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/charts-fixture-production-consumer": "profile-consumers/charts",
+  "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/chat-managed-default-root-consumer": "profile-consumers/chat",
+  "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/code-managed-default-root-consumer": "profile-consumers/code",
+  "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/media-managed-default-root-consumer": "profile-consumers/media",
+  "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-profile-p9-final-0qlaAN/inputs/chat-code-media-default-root-consumer": "profile-consumers/chat-code-media",
+  "/private/tmp/composable-final-checker/profile-phase/auth-derivative/final/app-b-auth-only-production-derivative": "profile-consumers/auth",
+  "/private/tmp/composable-final-checker/profile-phase/P9-final": "checker/profile-phase/P9-final",
+  "/private/tmp/composable-final-checker/profile-phase/P9-final-archive": "checker/profile-phase/P9-final-archive",
+  "/private/tmp/composable-final-checker/profile-phase/auth-derivative/final/pre-registration": "checker/profile-phase/auth-derivative/final/pre-registration",
+  "/private/tmp/composable-final-checker/profile-phase/auth-derivative/final/post-registration": "checker/profile-phase/auth-derivative/final/post-registration",
+  "/private/tmp/composable-final-checker/profile-phase/P1-policies/external-appb": "checker/profile-phase/P1-policies/external-appb",
+  "/private/tmp/composable-final-checker/opus-final-review/probes": "checker/opus-final-review/probes",
+  "/private/tmp/composable-final-checker/opus-final-review/rereview": "checker/opus-final-review/rereview",
+  "/private/tmp/composable-final-checker/opus-final-review/app-gate": "checker/opus-final-review/app-gate",
+  "/private/tmp/composable-final-checker/opus-final-review/evidence-v2": "checker/opus-final-review/evidence-v2",
+  "/private/tmp/composable-final-checker/opus-final-review/rereview-binding-default": "checker/opus-final-review/rereview-binding-default",
+  "/private/tmp/composable-final-checker/opus-final-review/final-archive": "checker/opus-final-review/final-archive",
+  "/private/tmp/composable-final-checker/packages/architecture/policies": "checker/policies"
+}

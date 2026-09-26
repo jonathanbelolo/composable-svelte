@@ -200,7 +200,10 @@ export function compose<T>(...transforms: DataTransform<T>[]): DataTransform<T> 
  * - `binStart`: Lower bound of the bin
  * - `binEnd`: Upper bound of the bin
  *
- * Uses D3's bin() under the hood for optimal bin calculation.
+ * Uses D3's bin() assignments, preserving input order and duplicate values.
+ * NaN and infinite values are omitted before deriving the domain.
+ * An explicit threshold equal to the maximum can produce a zero-width final
+ * bin; its maximum values are retained, matching D3's contract.
  *
  * @example
  * ```typescript
@@ -225,40 +228,43 @@ export function binData<T>(
   return (data: T[]) => {
     const getValue = (d: T) => typeof field === 'function' ? field(d) : Number(d[field]);
     const values = data.map(getValue);
-    const [min, max] = extent(values) as [number, number];
+    const finiteValues = values.filter(Number.isFinite);
+    const [min, max] = extent(finiteValues);
+
+    if (min === undefined || max === undefined) {
+      return [];
+    }
 
     // Create bins using D3
-    const binner = d3Bin()
-      .value((d: any) => d)
+    const binner = d3Bin<number, number>()
       .domain([min, max]);
 
+    // Preserve the branches to select D3's distinct threshold overloads.
     if (typeof thresholds === 'number') {
       binner.thresholds(thresholds);
     } else {
       binner.thresholds(thresholds);
     }
 
-    const bins = binner(values);
+    const bins = binner(finiteValues);
+    // Use D3's actual assignments, including its floating-point quantization,
+    // rather than reconstructing membership from separately rounded bounds.
+    const membership = new Map<number, number>();
+    bins.forEach((bin, index) => {
+      for (const value of bin) membership.set(value, index);
+    });
 
     // Map original data to bins
     const binned: Array<T & { binIndex: number; binStart: number; binEnd: number }> = [];
 
     data.forEach((d, i) => {
       const value = values[i];
-      if (value === undefined || value === null) return;
-
-      const binIndex = bins.findIndex(bin => {
-        return value >= (bin.x0 ?? -Infinity) && value < (bin.x1 ?? Infinity);
-      });
-
-      if (binIndex !== -1 && bins[binIndex]) {
-        binned.push({
-          ...d,
-          binIndex,
-          binStart: bins[binIndex].x0 ?? 0,
-          binEnd: bins[binIndex].x1 ?? 0
-        });
-      }
+      if (value === undefined || !Number.isFinite(value)) return;
+      const binIndex = membership.get(value);
+      if (binIndex === undefined) return;
+      const bin = bins[binIndex];
+      if (!bin || bin.x0 === undefined || bin.x1 === undefined) return;
+      binned.push({ ...d, binIndex, binStart: bin.x0, binEnd: bin.x1 });
     });
 
     return binned;

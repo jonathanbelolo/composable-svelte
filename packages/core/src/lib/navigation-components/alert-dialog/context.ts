@@ -22,7 +22,7 @@ export interface AlertDialogContext {
 	readonly titleId: string;
 	readonly descriptionId: string;
 	/** Called by `AlertDialogTitle` as it initialises. */
-	registerTitle(): void;
+	registerTitle(): (() => void) | void;
 	/** Called by `AlertDialogDescription` as it initialises. */
-	registerDescription(): void;
+	registerDescription(): (() => void) | void;
 }

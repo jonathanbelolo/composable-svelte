@@ -1,0 +1,11 @@
+{
+  "logPath": "/private/tmp/auth-recovery-parent-opus-review.jsonl",
+  "logSha256": "6b9ddba0efa86bc0f479c61adc3c5f5806bf7ad63c13a0c8940fb45f1c952413",
+  "result": "success",
+  "isError": false,
+  "durationMs": 79280,
+  "reviewedWorktree": "/Users/jonathanbelolo/.codex/worktrees/fe42/composable-svelte",
+  "base": "26abc6e2",
+  "sourceScope": "Uncommitted auth recovery delta",
+  "testRunsByReviewer": false
+}

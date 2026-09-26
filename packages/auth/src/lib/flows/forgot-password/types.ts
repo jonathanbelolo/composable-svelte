@@ -38,7 +38,9 @@ export type ForgotPasswordAction =
 	/** Effect feedback: the backend accepted the request. Says nothing about whether an account exists. */
 	| { type: 'requestSent'; email: string }
 	| { type: 'requestFailed'; error: AuthError }
-	| { type: 'errorDismissed' };
+	| { type: 'errorDismissed' }
+	/** Managed navigation: leave recovery for a fresh sign-in flow. */
+	| { type: 'signInRequested' };
 
 export interface ForgotPasswordDependencies {
 	requestPasswordReset: AuthDependencies['requestPasswordReset'];

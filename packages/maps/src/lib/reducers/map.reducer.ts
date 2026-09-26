@@ -221,6 +221,10 @@ export const mapReducer: Reducer<MapState, MapAction, {}> = (
       ];
     }
 
+    case 'mapClicked': {
+      return [state, Effect.none()];
+    }
+
     // ========================================================================
     // Marker Actions
     // ========================================================================
@@ -364,6 +368,68 @@ export const mapReducer: Reducer<MapState, MapAction, {}> = (
       ];
     }
 
+    case 'setLayerVisibility': {
+      const existing = state.layers.find((layer) => layer.id === action.id);
+      if (!existing || existing.visible === action.visible) {
+        return [state, Effect.none()];
+      }
+      return [
+        {
+          ...state,
+          layers: state.layers.map((layer) =>
+            layer.id === action.id ? { ...layer, visible: action.visible } : layer
+          )
+        },
+        Effect.none()
+      ];
+    }
+
+    case 'setLayerData': {
+      const existing = state.layers.find((layer) => layer.id === action.id);
+      if (!existing || existing.data === action.data) {
+        return [state, Effect.none()];
+      }
+      return [
+        {
+          ...state,
+          layers: state.layers.map((layer) =>
+            layer.id === action.id ? { ...layer, data: action.data } : layer
+          )
+        },
+        Effect.none()
+      ];
+    }
+
+    case 'updateLayer': {
+      const existing = state.layers.find((layer) => layer.id === action.id);
+      if (!existing) {
+        return [state, Effect.none()];
+      }
+      const updated = {
+        ...existing,
+        ...action.updates,
+        ...(action.updates.style ? { style: { ...existing.style, ...action.updates.style } } : {})
+      };
+      if (
+        existing.type === updated.type &&
+        existing.visible === updated.visible &&
+        existing.interactive === updated.interactive &&
+        existing.data === updated.data &&
+        (!action.updates.style || sameStyle(existing.style, updated.style))
+      ) {
+        return [state, Effect.none()];
+      }
+      return [
+        {
+          ...state,
+          layers: state.layers.map((layer) =>
+            layer.id === action.id ? updated : layer
+          )
+        },
+        Effect.none()
+      ];
+    }
+
     case 'updateLayerStyle': {
       const existing = state.layers.find((layer) => layer.id === action.id);
       if (!existing) {
@@ -405,6 +471,7 @@ export const mapReducer: Reducer<MapState, MapAction, {}> = (
     case 'openPopup': {
       // Update existing popup or add new one
       const existingIndex = state.popups.findIndex((p) => p.id === action.popup.id);
+      const isOpen = action.popup.isOpen ?? true;
 
       return [
         {
@@ -412,9 +479,9 @@ export const mapReducer: Reducer<MapState, MapAction, {}> = (
           popups:
             existingIndex >= 0
               ? state.popups.map((p) =>
-                  p.id === action.popup.id ? { ...action.popup, isOpen: true } : p
+                  p.id === action.popup.id ? { ...action.popup, isOpen } : p
                 )
-              : [...state.popups, { ...action.popup, isOpen: true }]
+              : [...state.popups, { ...action.popup, isOpen }]
         },
         Effect.none()
       ];

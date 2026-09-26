@@ -160,7 +160,8 @@ print(quicksort([3, 6, 8, 10, 1, 2, 1]))`,
 		</div>
 	</section>
 
-	<!-- Description -->\n\t<section class="space-y-4">
+	<!-- Description -->
+	<section class="space-y-4">
 		<h2 class="text-xl font-semibold">Usage</h2>
 		<div class="prose prose-sm dark:prose-invert">
 			<p>
@@ -269,7 +270,8 @@ print(quicksort([3, 6, 8, 10, 1, 2, 1]))`,
 		</div>
 	</section>
 
-	<!-- Best Practices -->\n\t<section class="space-y-6">
+	<!-- Best Practices -->
+	<section class="space-y-6">
 		<div>
 			<h2 class="text-xl font-semibold mb-2">Best Practices</h2>
 		</div>

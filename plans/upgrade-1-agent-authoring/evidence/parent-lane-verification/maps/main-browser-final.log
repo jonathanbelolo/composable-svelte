@@ -1,0 +1,19 @@
+
+> @composable-svelte/maps@0.2.1 test:browser /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/maps
+> vitest run --config maps.browser.config.ts
+
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/maps
+
+ ✓ |chromium| tests/maplibre-native.browser.ts (2 tests) 280ms
+ ✓ |chromium| tests/maplibre-managed.browser.ts (11 tests) 2379ms
+   ✓ restores managed layers after a public changeStyle and flushes an immediate addition  696ms
+   ✓ restores changed pending GeoJSON data after a public style reload  349ms
+   ✓ restores changed pending visibility after a public style reload  350ms
+   ✓ flushes layers queued while another GeoJSON source loads and survives a reactive data update  680ms
+
+ Test Files  2 passed (2)
+      Tests  13 passed (13)
+   Start at  05:40:52
+   Duration  4.14s (transform 0ms, setup 0ms, collect 952ms, tests 2.66s, environment 0ms, prepare 150ms)
+

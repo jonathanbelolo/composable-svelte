@@ -27,6 +27,14 @@
 
 export type CleanupFunction = () => void;
 
+interface TrackedListener {
+ target: EventTarget;
+ type: string;
+ listener: EventListenerOrEventListenerObject;
+ capture: boolean;
+ release: CleanupFunction;
+}
+
 /**
  * CleanupTracker manages resource cleanup.
  */
@@ -35,6 +43,7 @@ export class CleanupTracker {
 	private timers: Set<ReturnType<typeof setTimeout>> = new Set();
 	private intervals: Set<ReturnType<typeof setInterval>> = new Set();
 	private isDisposed = false;
+	private listeners = new Set<TrackedListener>();
 
 	/**
 	 * Add a cleanup function to be called on dispose.
@@ -42,7 +51,11 @@ export class CleanupTracker {
 	add(cleanup: CleanupFunction): void {
 		if (this.isDisposed) {
 			console.warn('[CleanupTracker] Adding cleanup after dispose');
-			cleanup(); // Call immediately
+			try {
+				cleanup(); // Call immediately
+			} catch (error) {
+				console.error('[CleanupTracker] Error during post-dispose cleanup:', error);
+			}
 			return;
 		}
 
@@ -55,7 +68,9 @@ export class CleanupTracker {
 	setTimeout(callback: () => void, delay: number): ReturnType<typeof setTimeout> {
 		if (this.isDisposed) {
 			console.warn('[CleanupTracker] Setting timeout after dispose');
-			return setTimeout(() => {}, 0);
+			const timer = setTimeout(() => {}, 0);
+			clearTimeout(timer);
+			return timer;
 		}
 
 		const timer = setTimeout(() => {
@@ -82,7 +97,9 @@ export class CleanupTracker {
 	setInterval(callback: () => void, interval: number): ReturnType<typeof setInterval> {
 		if (this.isDisposed) {
 			console.warn('[CleanupTracker] Setting interval after dispose');
-			return setInterval(() => {}, interval);
+			const timer = setInterval(() => {}, interval);
+			clearInterval(timer);
+			return timer;
 		}
 
 		const timer = setInterval(callback, interval);
@@ -93,42 +110,78 @@ export class CleanupTracker {
 	}
 
 	/**
-	 * Add event listener and track it for cleanup.
+	 * Add a tracked listener. The returned disposer removes it early; once and
+	 * aborted listeners automatically leave the tracker. Duplicate registrations
+	 * follow native identity rules (target, type, callback and capture).
+	 * Remove tracked listeners through this disposer or dispose(), not by passing
+	 * the original callback to the target's native removeEventListener.
 	 */
 	addEventListener<K extends keyof WindowEventMap>(
 		target: Window,
 		type: K,
 		listener: (ev: WindowEventMap[K]) => void,
 		options?: boolean | AddEventListenerOptions
-	): void;
+	): CleanupFunction;
 	addEventListener<K extends keyof DocumentEventMap>(
 		target: Document,
 		type: K,
 		listener: (ev: DocumentEventMap[K]) => void,
 		options?: boolean | AddEventListenerOptions
-	): void;
+	): CleanupFunction;
 	addEventListener<K extends keyof HTMLElementEventMap>(
 		target: HTMLElement,
 		type: K,
 		listener: (ev: HTMLElementEventMap[K]) => void,
 		options?: boolean | AddEventListenerOptions
-	): void;
+	): CleanupFunction;
 	addEventListener(
 		target: EventTarget,
 		type: string,
 		listener: EventListenerOrEventListenerObject,
 		options?: boolean | AddEventListenerOptions
-	): void {
+	): CleanupFunction;
+	addEventListener(
+		target: EventTarget,
+		type: string,
+		listener: EventListenerOrEventListenerObject,
+		options?: boolean | AddEventListenerOptions
+	): CleanupFunction {
 		if (this.isDisposed) {
 			console.warn('[CleanupTracker] Adding event listener after dispose');
-			return;
+			return () => {};
 		}
-
-		target.addEventListener(type, listener, options);
-
-		this.add(() => {
-			target.removeEventListener(type, listener, options);
-		});
+		const capture = typeof options === 'boolean' ? options : options?.capture ?? false;
+		const signal = typeof options === 'object' ? options.signal : undefined;
+		if (signal?.aborted) return () => {};
+		for (const existing of this.listeners) {
+			if (existing.target === target && existing.type === type && existing.listener === listener && existing.capture === capture) return existing.release;
+		}
+		const once = typeof options === 'object' && options.once === true;
+		let active = true;
+		const release = (): void => {
+			if (!active) return;
+			active = false;
+			this.listeners.delete(record);
+			try { target.removeEventListener(type, wrapped, { capture }); }
+			finally { signal?.removeEventListener('abort', release); }
+		};
+		const wrapped: EventListener = event => {
+			if (!active) return;
+			if (once) release();
+			if (typeof listener === 'function') listener.call(target, event);
+			else listener.handleEvent(event);
+		};
+		const record: TrackedListener = { target, type, listener, capture, release };
+		this.listeners.add(record);
+		try {
+			target.addEventListener(type, wrapped, options);
+			signal?.addEventListener('abort', release, { once: true });
+			if (signal?.aborted) release();
+		} catch (error) {
+			release();
+			throw error;
+		}
+		return release;
 	}
 
 	/**
@@ -141,6 +194,11 @@ export class CleanupTracker {
 		}
 	}
 
+	/** Clear an interval through its owning tracker, updating resource accounting. */
+	clearInterval(timer: ReturnType<typeof setInterval>): void {
+		if (this.intervals.delete(timer)) clearInterval(timer);
+	}
+
 	/**
 	 * Check if tracker has been disposed.
 	 */
@@ -151,14 +209,14 @@ export class CleanupTracker {
 	/**
 	 * Get number of tracked resources.
 	 *
-	 * All three kinds. Timers and intervals stopped pushing closures into
+	 * All tracked kinds, including independently retired event listeners. Timers and intervals stopped pushing closures into
 	 * `cleanups[]` when that was found to grow by one per keystroke — which fixed
 	 * the leak and left this reporting `0` for a tracker holding twenty live
 	 * intervals, so a consumer using it to check for leaks got the wrong answer
 	 * in the reassuring direction.
 	 */
 	get resourceCount(): number {
-		return this.cleanups.length + this.timers.size + this.intervals.size;
+		return this.cleanups.length + this.timers.size + this.intervals.size + this.listeners.size;
 	}
 
 	/**
@@ -183,6 +241,12 @@ export class CleanupTracker {
 			clearInterval(interval);
 		}
 		this.intervals.clear();
+
+		// Snapshot because each release unregisters itself before calling native APIs.
+		for (const listener of [...this.listeners]) {
+			try { listener.release(); }
+			catch (error) { console.error('[CleanupTracker] Error during cleanup:', error); }
+		}
 
 		// Run all cleanup functions
 		for (const cleanup of this.cleanups) {

@@ -51,16 +51,19 @@
 
 	let inputRef: HTMLInputElement;
 
-	// Update indeterminate property on the DOM element
+	// The browser clears indeterminate on click. Reapply the controlled prop
+	// after a checked transition as well as after a prop change.
 	$effect(() => {
+		const presentation = { checked, indeterminate };
 		if (inputRef) {
-			inputRef.indeterminate = indeterminate;
+			inputRef.indeterminate = presentation.indeterminate;
 		}
 	});
 </script>
 
 <div class="relative inline-flex items-center">
 	<input
+		{...restProps}
 		bind:this={inputRef}
 		bind:checked
 		type="checkbox"
@@ -70,11 +73,11 @@
 			'ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
 			'disabled:cursor-not-allowed disabled:opacity-50',
 			'data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground',
+			'data-[state=indeterminate]:bg-primary data-[state=indeterminate]:text-primary-foreground',
 			className
 		)}
-		data-state={checked ? 'checked' : indeterminate ? 'indeterminate' : 'unchecked'}
+		data-state={indeterminate ? 'indeterminate' : checked ? 'checked' : 'unchecked'}
 		aria-checked={indeterminate ? 'mixed' : checked}
-		{...restProps}
 	/>
 
 	<!-- Checkmark icon -->

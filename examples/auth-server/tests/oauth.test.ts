@@ -94,8 +94,15 @@ describe('the OAuth round trip', () => {
 		const code = back.get('code')!;
 
 		await h.deps.completeOAuth('github', code, start.state);
+		expect(h.store.oauthCodes.peek(code)).toBeNull();
+
 		await expect(h.deps.completeOAuth('github', code, start.state)).rejects.toMatchObject({
 			code: 'oauth_state_mismatch'
+		});
+
+		const fresh = await h.deps.beginOAuth('github');
+		await expect(h.deps.completeOAuth('github', code, fresh.state)).rejects.toMatchObject({
+			code: 'token_expired'
 		});
 	});
 

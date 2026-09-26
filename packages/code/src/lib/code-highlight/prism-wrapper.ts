@@ -41,7 +41,25 @@ export async function loadLanguage(lang: SupportedLanguage): Promise<void> {
 				await import('prismjs/components/prism-javascript');
 				// @ts-expect-error - prismjs components don't have TypeScript declarations
 				await import('prismjs/components/prism-typescript');
-				// Note: Svelte doesn't have official Prism support, treat as TypeScript for now
+				// Extend a cloned markup grammar so ordinary HTML remains unaffected.
+				Prism.languages.svelte = Prism.languages.extend('markup', {});
+				const script = (Prism.languages.svelte as Record<string, Prism.GrammarValue>)['script'];
+				if (script && !Array.isArray(script) && !(script instanceof RegExp) && script.inside) {
+					const content = (script.inside as Record<string, Prism.GrammarValue>)['language-javascript'];
+					if (content && !Array.isArray(content) && !(content instanceof RegExp)) {
+						content.inside = Prism.languages.typescript;
+					}
+				}
+				Prism.languages.insertBefore('svelte', 'tag', {
+					'svelte-expression': {
+						pattern: /\{(?:[^{}]|\{[^{}]*\})*\}/,
+						inside: {
+							punctuation: /^\{[#/:@]?|\}$/,
+							keyword: /^(?:if|else|each|await|then|catch|key|html|const|debug|render)\b/,
+							expression: { pattern: /[\s\S]+/, inside: Prism.languages.typescript }
+						}
+					}
+				});
 				break;
 
 			case 'html':

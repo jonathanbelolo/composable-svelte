@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { createDismissalBoundary } from '../../actions/dismissalBoundary.js';
+  const registerDismissalLayer = createDismissalBoundary();
   import type { Snippet } from 'svelte';
-  import type { ScopedDestinationStore } from '../../navigation/scope-to-destination.js';
+  import type { ChildView } from '../../navigation/managed-integration.js';
 
   // ============================================================================
   // Props
@@ -9,9 +11,9 @@
   interface NavigationStackPrimitiveProps<State, Action> {
     /**
      * Scoped store for the stack content.
-     * When null, stack is hidden. When non-null, stack is visible.
+     * Missing or retired views hide the stack.
      */
-    store: ScopedDestinationStore<State, Action> | null;
+    store: ChildView<State, Action> | undefined;
 
     /**
      * Stack of screen states.
@@ -30,7 +32,7 @@
       [
         {
           visible: boolean;
-          store: ScopedDestinationStore<State, Action> | null;
+          store: ChildView<State, Action> | undefined;
           stack: readonly State[];
           currentScreen: State | undefined;
           previousScreen: State | undefined;
@@ -52,7 +54,9 @@
   // Derived State
   // ============================================================================
 
-  const visible = $derived(store !== null && stack.length > 0);
+  const visible = $derived(
+    store !== undefined && store.state !== undefined && stack.length > 0
+  );
   const currentScreen = $derived(stack[stack.length - 1]);
   // The screen a pop returns to — the animated stack renders it as the outgoing layer.
   const previousScreen = $derived(stack[stack.length - 2]);
@@ -63,7 +67,7 @@
   // ============================================================================
 
   function handleEscape(event: KeyboardEvent) {
-    if (event.key === 'Escape' && canGoBack && onBack) {
+    if (event.key === 'Escape' && visible && canGoBack && onBack) {
       event.preventDefault();
       try {
         onBack();
@@ -73,6 +77,10 @@
     }
   }
 
+  function dismissal(node: HTMLElement) {
+    return { destroy: registerDismissalLayer({ node, priority: 0,
+      escapeEnabled: () => visible && canGoBack && !!onBack, onEscape: handleEscape }) };
+  }
   // Note: NavigationStack is an inline navigation component
   // - No portal (rendered inline)
   // - Manages screen hierarchy (push/pop pattern)
@@ -84,12 +92,13 @@
 <!-- Keyboard Listeners -->
 <!-- ============================================================================ -->
 
-<svelte:window on:keydown={handleEscape} />
+
 
 <!-- ============================================================================ -->
 <!-- Inline Content (no portal) -->
 <!-- ============================================================================ -->
 
 {#if visible}
+  <template use:dismissal></template>
   {@render children?.({ visible, store, stack, currentScreen, previousScreen, canGoBack, onBack })}
 {/if}

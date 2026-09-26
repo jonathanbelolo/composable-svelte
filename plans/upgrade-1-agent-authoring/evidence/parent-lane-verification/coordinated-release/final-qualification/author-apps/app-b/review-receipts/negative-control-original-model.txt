@@ -1,0 +1,16 @@
+     ✓ initial state starts on login route with anonymous session and open login flow 3ms
+     ✓ accepted sign-in changes the app route to dashboard and loads account data with chart 4ms
+     ✓ rejected sign-in does not change the app route 1ms
+     ✓ handles MFA challenge when requested, and accepted MFA changes app route 2ms
+     ✓ typed chart interactions route through the owning feature 1ms
+     ✓ password change follows documented acceptance rather than inferred object identity 2ms
+     ✓ logout removes former accounts views and pending work 0ms
+     ✓ includes at least one delayed response after retirement in an application-level test 1ms
+     × logout offers a fresh sign-in so a different subject can sign in 3ms
+     × a same-subject rotated password session keeps the account view; the outcome is read from changePasswordOutcome 2ms
+     × delayed account load resolved after logout is dropped (logout=true negative control) 1ms
+     ✓ delayed account load resolved after logout is dropped (logout=false negative control) 1ms
+     × an account result from before logout is rejected after the same subject signs in again 1ms
+     × typed multi-row and keyboard selections route through the owning chart feature 9ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  5 failed | 9 passed (14)

@@ -251,7 +251,18 @@ export const accordionReducer: Reducer<
 			// Check if item already exists
 			const existingItem = state.items.find((i) => i.id === action.id);
 			if (existingItem) {
-				return [state, Effect.none<AccordionAction>()];
+				const currentDisabled = Boolean(existingItem.disabled);
+				const newDisabled = Boolean(action.disabled);
+				if (currentDisabled === newDisabled) {
+					return [state, Effect.none<AccordionAction>()];
+				}
+				return [
+					{
+						...state,
+						items: state.items.map((i) => (i.id === action.id ? { ...i, disabled: newDisabled } : i))
+					},
+					Effect.none<AccordionAction>()
+				];
 			}
 
 			// Add item to items array
@@ -273,6 +284,11 @@ export const accordionReducer: Reducer<
 
 		case 'itemUnregistered': {
 			// Unregister item when component unmounts
+			const hasItem = state.items.some((i) => i.id === action.id);
+			const hasExpanded = state.expandedIds.includes(action.id);
+			if (!hasItem && !hasExpanded) {
+				return [state, Effect.none<AccordionAction>()];
+			}
 			const newItems = state.items.filter((i) => i.id !== action.id);
 			const newExpandedIds = state.expandedIds.filter((id) => id !== action.id);
 

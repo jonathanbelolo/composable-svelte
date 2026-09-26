@@ -1,0 +1,122 @@
+{
+  "scope": "Runtime recipes only; no full release qualification claimed",
+  "harnessSHA256": "01e71e02ca3205096e35902d9eebbba788ee4c169c9a7cf8f64e7ab4359552c9",
+  "manifest": "/private/tmp/companion-runtime-release/archives-r4/MANIFEST.json",
+  "receipts": [
+    {
+      "checkpoint": "minimum",
+      "path": "/private/tmp/companion-runtime-release/matrix-r4/minimum/qualification-receipt.json",
+      "sha256": "d4336b4b6a47d98a1a6e04b8f33f22a1e3e7b37d221f9fcdb2b4b84b003c4762",
+      "recipes": [
+        {
+          "name": "auth-consumer",
+          "svelte": "5.20.0",
+          "status": "passed",
+          "realProjectDir": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-archive-qual-sJd6ND/auth-consumer"
+        },
+        {
+          "name": "charts-fixture",
+          "svelte": "5.20.0",
+          "status": "passed",
+          "realProjectDir": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-archive-qual-sJd6ND/charts-fixture"
+        },
+        {
+          "name": "graphics-fixture",
+          "svelte": "5.20.0",
+          "status": "passed",
+          "realProjectDir": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-archive-qual-sJd6ND/graphics-fixture"
+        },
+        {
+          "name": "maps-fixture",
+          "svelte": "5.20.0",
+          "status": "passed",
+          "realProjectDir": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-archive-qual-sJd6ND/maps-fixture"
+        },
+        {
+          "name": "chat-managed",
+          "svelte": "5.20.0",
+          "status": "passed",
+          "realProjectDir": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-archive-qual-sJd6ND/chat-recipe"
+        },
+        {
+          "name": "code-managed",
+          "svelte": "5.30.0",
+          "status": "passed",
+          "realProjectDir": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-archive-qual-sJd6ND/code-recipe"
+        },
+        {
+          "name": "media-managed",
+          "svelte": "5.20.0",
+          "status": "passed",
+          "realProjectDir": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-archive-qual-sJd6ND/media-recipe"
+        },
+        {
+          "name": "chat-code-media",
+          "svelte": "5.30.0",
+          "status": "passed",
+          "realProjectDir": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-archive-qual-sJd6ND/chat-code-media-recipe"
+        }
+      ]
+    },
+    {
+      "checkpoint": "newer",
+      "path": "/private/tmp/companion-runtime-release/matrix-r4/newer/qualification-receipt.json",
+      "sha256": "9eedd66437c92efd2f6b14ede7bd40588185672d6a945f5cedfd0e77e9159911",
+      "recipes": [
+        {
+          "name": "auth-consumer",
+          "svelte": "5.55.3",
+          "status": "passed",
+          "realProjectDir": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-archive-qual-xMdwjw/auth-consumer"
+        },
+        {
+          "name": "charts-fixture",
+          "svelte": "5.55.3",
+          "status": "passed",
+          "realProjectDir": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-archive-qual-xMdwjw/charts-fixture"
+        },
+        {
+          "name": "graphics-fixture",
+          "svelte": "5.55.3",
+          "status": "passed",
+          "realProjectDir": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-archive-qual-xMdwjw/graphics-fixture"
+        },
+        {
+          "name": "maps-fixture",
+          "svelte": "5.55.3",
+          "status": "passed",
+          "realProjectDir": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-archive-qual-xMdwjw/maps-fixture"
+        },
+        {
+          "name": "chat-managed",
+          "svelte": "5.55.3",
+          "status": "passed",
+          "realProjectDir": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-archive-qual-xMdwjw/chat-recipe"
+        },
+        {
+          "name": "code-managed",
+          "svelte": "5.55.3",
+          "status": "passed",
+          "realProjectDir": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-archive-qual-xMdwjw/code-recipe"
+        },
+        {
+          "name": "media-managed",
+          "svelte": "5.55.3",
+          "status": "passed",
+          "realProjectDir": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-archive-qual-xMdwjw/media-recipe"
+        },
+        {
+          "name": "chat-code-media",
+          "svelte": "5.55.3",
+          "status": "passed",
+          "realProjectDir": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-archive-qual-xMdwjw/chat-code-media-recipe"
+        }
+      ]
+    }
+  ],
+  "environmentAudit": {
+    "NODE_PATH": null,
+    "recipeAncestorsExcludePrivateTmp": true,
+    "strayPrivateTmpNodeModulesHandledByQualificationCoordinator": true
+  }
+}

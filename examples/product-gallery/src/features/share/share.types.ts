@@ -12,7 +12,9 @@ export interface ShareState {
 export type ShareAction =
   | { type: 'methodSelected'; method: ShareMethod }
   | { type: 'shareButtonTapped' }
-  | { type: 'cancelButtonTapped' };
+  | { type: 'cancelButtonTapped' }
+  | { type: 'presentationCompleted' }
+  | { type: 'dismissalCompleted' };
 
 // ============================================================================
 // Factory Functions

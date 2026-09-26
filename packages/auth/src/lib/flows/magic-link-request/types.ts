@@ -28,13 +28,19 @@ export interface MagicLinkRequestState {
 	 * the wrong inbox.
 	 */
 	requestedFor: string | null;
+	/**
+	 * One-reduction marker: the terminal verdict admitted in this reduction,
+	 * cleared before every other action.
+	 */
+	settled: 'sent' | null;
 }
 
 export type MagicLinkRequestAction =
 	| { type: 'form'; action: FormAction<MagicLinkFields> }
 	| { type: 'requestSent'; email: string }
 	| { type: 'requestFailed'; error: AuthError }
-	| { type: 'errorDismissed' };
+	| { type: 'errorDismissed' }
+	| { type: 'signInRequested' };
 
 export interface MagicLinkRequestDependencies {
 	requestMagicLink: AuthDependencies['requestMagicLink'];

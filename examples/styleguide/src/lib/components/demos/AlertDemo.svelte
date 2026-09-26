@@ -1,152 +1,77 @@
 <script lang="ts">
-  import { createStore, Effect } from '@composable-svelte/core';
-  import type { PresentationState } from '@composable-svelte/core/navigation';
+  import { Effect } from '@composable-svelte/core';
+  import type { Effect as EffectType, Reducer } from '@composable-svelte/core';
+  import { ApplicationHost, ApplicationRoot, defineApplication, ManagedIntegrationBuilder, optionalSlot, scopeTo } from '@composable-svelte/core/application';
+  import type { PresentationAction, PresentationState } from '@composable-svelte/core/navigation';
   import { Alert } from '@composable-svelte/core/navigation-components';
   import { Button } from '@composable-svelte/core/components/ui';
 
   interface DemoState {
     showAlert: boolean;
+    alertContent: boolean | null;
     presentation: PresentationState<boolean>;
     alertType: 'delete' | 'confirm' | 'warning';
   }
-
-  type PresentationEvent =
-    | { type: 'presentationCompleted' }
-    | { type: 'dismissalCompleted' };
-
+  type AlertContentAction = { type: 'presentationCompleted' } | { type: 'dismissalCompleted' };
   type DemoAction =
-    | { type: 'openAlert'; alertType: 'delete' | 'confirm' | 'warning' }
+    | { type: 'openAlert'; alertType: DemoState['alertType'] }
     | { type: 'closeAlert' }
     | { type: 'confirmAction' }
-    | { type: 'presentation'; event: PresentationEvent };
+    | { type: 'alertContent'; action: PresentationAction<AlertContentAction> };
 
-  const demoStore = createStore<DemoState, DemoAction>({
-    initialState: {
-      showAlert: false,
-      presentation: { status: 'idle' },
-      alertType: 'confirm'
-    },
-    reducer: (state, action) => {
-      switch (action.type) {
-        case 'openAlert':
-          return [
-            {
-              ...state,
-              showAlert: true,
-              alertType: action.alertType,
-              presentation: {
-                status: 'presenting' as const,
-                content: true,
-                duration: 300
-              }
-            },
-            Effect.afterDelay(300, (d) => d({ type: 'presentation', event: { type: 'presentationCompleted' } }))
-          ];
-
-        case 'closeAlert':
-          // Only allow dismissal if we're in presented state
-          if (state.presentation.status !== 'presented') {
-            return [state, Effect.none()];
-          }
-          return [
-            {
-              ...state,
-              presentation: {
-                status: 'dismissing' as const,
-                content: state.presentation.content,
-                duration: 200
-              }
-            },
-            Effect.afterDelay(200, (d) => d({ type: 'presentation', event: { type: 'dismissalCompleted' } }))
-          ];
-
-        case 'confirmAction':
-          // Same as closeAlert but could have different logic
-          if (state.presentation.status !== 'presented') {
-            return [state, Effect.none()];
-          }
-          return [
-            {
-              ...state,
-              presentation: {
-                status: 'dismissing' as const,
-                content: state.presentation.content,
-                duration: 200
-              }
-            },
-            Effect.afterDelay(200, (d) => d({ type: 'presentation', event: { type: 'dismissalCompleted' } }))
-          ];
-
-        case 'presentation':
-          if (action.event.type === 'presentationCompleted') {
-            return [
-              {
-                ...state,
-                presentation: {
-                  status: 'presented' as const,
-                  content: state.presentation.status === 'presenting' ? state.presentation.content : true
-                }
-              },
-              Effect.none()
-            ];
-          }
-          if (action.event.type === 'dismissalCompleted') {
-            return [
-              {
-                ...state,
-                showAlert: false,
-                presentation: { status: 'idle' as const }
-              },
-              Effect.none()
-            ];
-          }
-          return [state, Effect.none()];
-
-        default:
-          return [state, Effect.none()];
+  const beginDismissal = (state: DemoState): [DemoState, EffectType<DemoAction>] => [
+    { ...state, presentation: { status: 'dismissing', content: state.presentation.status === 'presented' ? state.presentation.content : true, duration: 200 } },
+    Effect.none()
+  ];
+  const reducer: Reducer<DemoState, DemoAction, undefined> = (state, action) => {
+    if (action.type === 'alertContent') {
+      if (action.action.type === 'dismiss') {
+        return state.presentation.status === 'presented' ? beginDismissal(state) : [state, Effect.none()];
       }
-    },
-    dependencies: {}
-  });
-
-  // Create a store wrapper with dismiss() method for Alert component
-  const storeWithDismiss = $derived({
-    ...demoStore,
-    state: $demoStore,
-    dispatch: demoStore.dispatch,
-    dismiss: () => demoStore.dispatch({ type: 'closeAlert' })
-  });
-
-  const state = $derived($demoStore);
-
-  // Alert content based on type
-  const alertContent = $derived(() => {
-    switch (state.alertType) {
-      case 'delete':
-        return {
-          title: 'Delete Item',
-          description: 'Are you sure you want to delete this item? This action cannot be undone.',
-          confirmText: 'Delete',
-          confirmClass: 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
-        };
-      case 'warning':
-        return {
-          title: 'Warning',
-          description: 'This action may have unintended consequences. Do you want to proceed?',
-          confirmText: 'Proceed',
-          confirmClass: 'bg-orange-600 text-white hover:bg-orange-700'
-        };
-      case 'confirm':
-      default:
-        return {
-          title: 'Confirm Action',
-          description: 'Are you sure you want to perform this action?',
-          confirmText: 'Confirm',
-          confirmClass: 'bg-primary text-primary-foreground hover:bg-primary/90'
-        };
+      if (action.action.action.type === 'presentationCompleted') {
+        if (state.presentation.status !== 'presenting') return [state, Effect.none()];
+        return [{ ...state, presentation: { status: 'presented', content: state.presentation.content } }, Effect.none()];
+      }
+      if (state.presentation.status !== 'dismissing') return [state, Effect.none()];
+      return [{ ...state, showAlert: false, alertContent: null, presentation: { status: 'idle' } }, Effect.none()];
     }
+    switch (action.type) {
+      case 'openAlert':
+        return [{ ...state, showAlert: true, alertContent: true, alertType: action.alertType, presentation: { status: 'presenting', content: true, duration: 300 } }, Effect.none()];
+      case 'closeAlert':
+      case 'confirmAction':
+        return state.presentation.status === 'presented' ? beginDismissal(state) : [state, Effect.none()];
+      default:
+        return [state, Effect.none()];
+    }
+  };
+  const alertSlot = optionalSlot<DemoState, DemoAction>()('alertContent');
+  const childReducer: Reducer<boolean, AlertContentAction, undefined> = state => [state, Effect.none()];
+  const composition = new ManagedIntegrationBuilder(reducer).with(alertSlot, childReducer, {
+    dismissal: 'deferred',
+    replaceOn: action => action.type === 'openAlert'
+  }).build();
+  const application = defineApplication(composition, {
+    initialState: (): DemoState => ({ showAlert: false, alertContent: null, presentation: { status: 'idle' }, alertType: 'confirm' })
   });
+
+  function getAlertContent(alertType: DemoState['alertType']) {
+    switch (alertType) {
+      case 'delete': return { title: 'Delete Item', description: 'Are you sure you want to delete this item? This action cannot be undone.', confirmText: 'Delete', confirmClass: 'bg-destructive text-destructive-foreground hover:bg-destructive/90' };
+      case 'warning': return { title: 'Warning', description: 'This action may have unintended consequences. Do you want to proceed?', confirmText: 'Proceed', confirmClass: 'bg-orange-600 text-white hover:bg-orange-700' };
+      default: return { title: 'Confirm Action', description: 'Are you sure you want to perform this action?', confirmText: 'Confirm', confirmClass: 'bg-primary text-primary-foreground hover:bg-primary/90' };
+    }
+  }
 </script>
+
+
+<ApplicationRoot definition={application} options={{ dependencies: undefined, initial: { input: undefined } }}>
+{#snippet children(app)}
+<ApplicationHost {app}>
+{@const demoStore = app.store}
+{@const state = app.store.state}
+{@const alertView = scopeTo(app.store, alertSlot)}
+{@const alertContent = () => getAlertContent(state.alertType)}
 
 <div class="space-y-12">
   <!-- Live Demo Section -->
@@ -305,15 +230,21 @@
   </section>
 </div>
 
+
 <!-- Alert Implementation -->
 {#if state.showAlert}
+  <!--
+    Interim legacy bridge: this demo keeps explicit PresentationState so the existing
+    animation callbacks remain visible. The framework-owned view supplies lifetime and
+    dismissal authority; it does not synthesize these presentation states.
+  -->
   <Alert
-    store={storeWithDismiss}
+    store={alertView}
     presentation={state.presentation}
     onPresentationComplete={() =>
-      demoStore.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } })}
+      alertView?.dispatch({ type: 'presentationCompleted' })}
     onDismissalComplete={() =>
-      demoStore.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })}
+      alertView?.dispatch({ type: 'dismissalCompleted' })}
   >
     {#snippet children()}
       <div class="space-y-6">
@@ -344,3 +275,7 @@
     {/snippet}
   </Alert>
 {/if}
+
+</ApplicationHost>
+{/snippet}
+</ApplicationRoot>

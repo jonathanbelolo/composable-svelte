@@ -10,6 +10,7 @@ export default defineConfig({
 	},
 	test: {
 		globals: true,
+        include: ['tests/**/*.test.ts', 'tests/**/*.test.svelte.ts'],
 		environment: 'jsdom',
 		coverage: {
 			provider: 'v8',

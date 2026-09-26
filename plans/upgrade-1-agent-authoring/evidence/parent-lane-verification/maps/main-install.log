@@ -1,0 +1,10 @@
+packages/architecture                    |  WARN  Moving typescript that was installed by a different package manager to "node_modules/.ignored"
+packages/architecture                    |  WARN  Moving svelte that was installed by a different package manager to "node_modules/.ignored"
+Progress: resolved 1, reused 0, downloaded 0, added 0
+packages/chat                            |  WARN  deprecated @types/marked@6.0.0
+examples/styleguide                      |  WARN  deprecated lucide-svelte@0.553.0
+Progress: resolved 635, reused 580, downloaded 0, added 0
+ WARN  4 deprecated subdependencies found: glob@10.4.5, glob@11.1.0, source-map@0.8.0-beta.0, whatwg-encoding@3.1.1
+.                                        |   +5 +
+Progress: resolved 677, reused 622, downloaded 0, added 5, done
+Done in 2.2s

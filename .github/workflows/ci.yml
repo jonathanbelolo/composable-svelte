@@ -69,6 +69,25 @@ jobs:
       - name: Run tests
         run: TZ=UTC pnpm -r --workspace-concurrency=1 test
 
+      # Root scripts are not a workspace, so `pnpm -r test` never finds this suite.
+      # Synthetic fixtures only; the release archive matrix runs outside CI.
+      - name: Release archive harness self-tests
+        run: TZ=UTC node --test scripts/verify-release-archives.test.mjs
+
+      # MapLibre lifecycle and style reload behavior require the native engine.
+      - name: Maps integration (browser)
+        run: TZ=UTC pnpm --filter @composable-svelte/maps test:browser
+
+      - name: Graphics integration and shaders (browser)
+        run: TZ=UTC pnpm --filter @composable-svelte/graphics test:browser
+
+      - name: Charts integration (installed browser)
+        run: TZ=UTC CHARTS_INSTALL_BROWSER=1 node packages/charts/fixtures/installed-consumer/verify.mjs
+
+      # Authoring examples must consume packed public exports, not source aliases.
+      - name: Verify packaged agent patterns
+        run: TZ=UTC pnpm --filter @composable-svelte/core test:agent-patterns
+
       # `tsc` never reads .svelte, which is how a broken `spring.js` import, 21
       # components with an undeclared `children` prop, and a <button> nested in a
       # <button> all stayed invisible. Warnings gate too: the nested button was

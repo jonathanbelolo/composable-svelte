@@ -808,3 +808,7 @@ See [examples/ssr-server/src/build/ssg.ts](https://github.com/jonathanbelolo/com
 - [Svelte SSR Guide](https://svelte.dev/docs/server-side-component-api)
 - [Fastify Documentation](https://www.fastify.io/)
 - [Vite SSR Guide](https://vitejs.dev/guide/ssr.html)
+
+## HTML sanitization
+
+See [HTML sanitization and return modes](./sanitization.md) for the optional sanitizer peer, data-URL policy, DOM output and Trusted Types requirements.

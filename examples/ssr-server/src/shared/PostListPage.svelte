@@ -3,6 +3,7 @@
   import { createTranslator, createFormatters } from '@composable-svelte/core/i18n';
   import type { AppState, AppAction, Post } from './types';
   import { postURL } from './routing';
+  import { stripHtml } from './meta';
 
   interface Props {
     store: Store<AppState, AppAction>;
@@ -13,17 +14,13 @@
   const state = $derived($store);
   const t = $derived(createTranslator($store.i18n, 'common'));
   const formatters = $derived(createFormatters($store.i18n));
+  const locale = $derived($store.i18n.currentLocale);
 
   function navigateToPost(postId: number) {
     store.dispatch({
       type: 'navigate',
       destination: { type: 'post', state: { postId } }
     });
-  }
-
-  // Strip HTML tags for plain text excerpt
-  function stripHtml(html: string): string {
-    return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   }
 </script>
 
@@ -34,7 +31,7 @@
   <div class="posts-grid">
     {#each state.posts as post (post.id)}
       <article class="post-card">
-        <a href={postURL(post.id)} onclick={(e) => { e.preventDefault(); navigateToPost(post.id); }}>
+        <a href={postURL(post.id, locale)} onclick={(e) => { e.preventDefault(); navigateToPost(post.id); }}>
           <h2>{post.title}</h2>
           <p class="excerpt">{stripHtml(post.content).slice(0, 150)}...</p>
           <div class="meta">

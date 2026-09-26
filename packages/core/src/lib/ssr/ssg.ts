@@ -181,9 +181,12 @@ export interface SSGGenerateOptions<State, Action, Dependencies> {
   dependencies?: Dependencies;
 
   /**
-   * Rendering options (title, scripts, etc.).
+   * Rendering options, or a pure per-page resolver called with merged state
+   * and the route path. Also called for /404 with the not-found state.
+   * Choose one canonical owner: baseURL adds a generator-owned link; omit it
+   * when the component provides its own canonical through <svelte:head>.
    */
-  renderOptions?: RenderOptions;
+  renderOptions?: RenderOptions | ((state: State, path: string) => RenderOptions);
 
   /**
    * Function to compute initial state for a given path.
@@ -290,18 +293,22 @@ export async function generateStaticSite<State, Action, Dependencies>(
           ...serverProps
         } as State;
 
+        const renderOptions = typeof options.renderOptions === 'function'
+          ? options.renderOptions(mergedState, path)
+          : options.renderOptions;
+
         // Generate the page
         const outPath = await generateStaticPage(Component, path, {
           initialState: mergedState,
           reducer: options.reducer,
           ...(options.dependencies !== undefined && { dependencies: options.dependencies }),
           renderOptions: {
-            ...options.renderOptions,
+            ...renderOptions,
             // Override canonical URL if baseURL is provided
             // Attribute-escaped: a path with `"` closed the attribute and the
             // rest was markup — stored XSS from a route (SS2).
             ...(config.baseURL && {
-              head: `${options.renderOptions?.head || ''}\n<link rel="canonical" href="${escapeAttribute(`${config.baseURL}${encodePath(path)}`)}">`
+              head: `${renderOptions?.head || ''}\n<link rel="canonical" href="${escapeAttribute(`${config.baseURL.replace(/\/+$/, '')}${encodePath(target === 'index.html' ? '/' : `/${target.replace(/\/index\.html$/, '')}`)}`)}">`
             })
           },
           outDir
@@ -327,11 +334,14 @@ export async function generateStaticSite<State, Action, Dependencies>(
   if (generate404) {
     try {
       const notFoundState = config.notFoundState ?? (await options.getInitialState?.('/404')) ?? {};
+      const renderOptions = typeof options.renderOptions === 'function'
+        ? options.renderOptions(notFoundState as State, '/404')
+        : options.renderOptions;
       const outPath = await generateStaticPage(Component, '/404', {
         initialState: notFoundState as State,
         reducer: options.reducer,
         ...(options.dependencies !== undefined && { dependencies: options.dependencies }),
-        ...(options.renderOptions !== undefined && { renderOptions: options.renderOptions }),
+        ...(renderOptions !== undefined && { renderOptions }),
         outDir
       });
       generatedFiles.push(outPath);

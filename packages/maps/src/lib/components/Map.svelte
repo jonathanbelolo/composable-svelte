@@ -5,8 +5,7 @@
  */
 
 import MapPrimitive from './MapPrimitive.svelte';
-import type { Store } from '@composable-svelte/core';
-import type { MapState, MapAction, MapAdapter } from '../types/map.types.js';
+import type { MapAdapter, MapStore } from '../types/map.types.js';
 import type { Snippet } from 'svelte';
 
 // Props
@@ -18,7 +17,7 @@ let {
   onMapClick,
   children
 }: {
-  store: Store<MapState, MapAction>;
+  store: MapStore;
   width?: string | number | undefined;
   height?: string | number | undefined;
   /** The map engine to drive; defaults to MapLibre. See `MapPrimitive`. */
@@ -30,15 +29,16 @@ let {
 // Computed styles
 const widthStyle = typeof width === 'number' ? `${width}px` : width;
 const heightStyle = typeof height === 'number' ? `${height}px` : height;
+const markerCount = $derived($store?.markers?.length ?? 0);
 </script>
 
 <div
   class="map-container"
   style="width: {widthStyle}; height: {heightStyle};"
   role="application"
-  aria-label="Interactive map with {$store.markers.length} markers"
+  aria-label="Interactive map with {markerCount} markers"
 >
-  <MapPrimitive {store} {adapter} />
+  <MapPrimitive {store} {adapter} {onMapClick} />
   {@render children?.()}
 </div>
 

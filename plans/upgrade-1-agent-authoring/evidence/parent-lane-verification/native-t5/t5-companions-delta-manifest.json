@@ -1,0 +1,221 @@
+{
+  "baseline_archives_sha256": [
+    {
+      "path": "/private/tmp/companion-lanes-baseline.tar.gz",
+      "sha256": "151f59810049025170023d42627b3f34f804d7be827bd2da0adc2b1783ec496b"
+    },
+    {
+      "path": "/private/tmp/companion-maps-lane-baseline/lane-delta-files.tar.gz",
+      "sha256": "5766c44fb747c123eebe1ed5cac646db0e0a5dc4671861224f491339d4b2213c"
+    },
+    {
+      "path": "/private/tmp/companion-maps-lane-baseline/d2-maps-delta-files.tar.gz",
+      "sha256": "e7cf2fc52f5a9ca9d57f901c5dc5fc8b04454ef2839cc21bd2b87dd1a6468d68"
+    },
+    {
+      "path": "/private/tmp/companion-maps-lane-baseline/d3-graphics-delta-files.tar.gz",
+      "sha256": "373a6617430df9be9df7c44481c624f7204f4a428e41c9dd99c938a080df4531"
+    },
+    {
+      "path": "/private/tmp/companion-maps-lane-baseline/d3-charts-delta-files.tar.gz",
+      "sha256": "b201cdb7696d2fae29760c50b471e3edc2e31522c4bb4c7ca5a4850ce11d21e3"
+    }
+  ],
+  "scope": [
+    "packages/maps/",
+    "packages/graphics/",
+    "packages/charts/",
+    "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/EVIDENCE-T5-PACKAGING.md",
+    "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/OPUS-REVIEW-CHARTS-T5.md",
+    "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/OPUS-REVIEW-GRAPHICS-T5-B.md",
+    "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/OPUS-REVIEW-GRAPHICS-T5.md"
+  ],
+  "changes": [
+    {
+      "path": "packages/charts/CHANGELOG.md",
+      "status": "modified",
+      "before_sha256": "c57935ab128f21b0fd211b90597e2a23e2aa9e2af934dfca40c8e6aeb9f65ec3",
+      "after_sha256": "ea6a08b43626452f976beb4fe38095e8e55fb566213b63650a1b1a5eec90bbe4"
+    },
+    {
+      "path": "packages/charts/MANAGED.md",
+      "status": "new",
+      "before_sha256": null,
+      "after_sha256": "022f6ef85656e2db2af8bac921d24829df58542849f5ac091150a05a8e9522e5"
+    },
+    {
+      "path": "packages/charts/README.md",
+      "status": "modified",
+      "before_sha256": "383af38852d7fe531e794ac9afc53454979777eb9bf5dc8babccf8135078ad31",
+      "after_sha256": "5e96bc42e9275c5ee9ec8456ec9dd4b3f3211feb42e3f44fbfe6f827626693ac"
+    },
+    {
+      "path": "packages/charts/fixtures/installed-consumer/README.md",
+      "status": "modified",
+      "before_sha256": "64815db6a8f479daf4c1b2100c299224fe57bfe6d8d8def965ff237d2cc1c7d1",
+      "after_sha256": "b43c1cae2527f7d18346313c072c0a4f121cf26932fe8c772fa863f11e67c83d"
+    },
+    {
+      "path": "packages/charts/fixtures/installed-consumer/package.json",
+      "status": "new",
+      "before_sha256": null,
+      "after_sha256": "10a3d3c0baa028dd003134320d60ce7138c319549ded4559e3aaef2206dc9618"
+    },
+    {
+      "path": "packages/charts/package.json",
+      "status": "modified",
+      "before_sha256": "cd1f164f62f5a1fc15584c3cb257341bc49dcb8d97d8edea459b521f156b050d",
+      "after_sha256": "2439a98334d2ea15753378a27fc4e9cc44938dabfcf40ed52586e015ee2ef200"
+    },
+    {
+      "path": "packages/charts/src/lib/components/ChartPrimitive.svelte",
+      "status": "modified",
+      "before_sha256": "da3cfc773b58cb77b7eed0ab6717eab33e00474a2e145f2809ec0b56336359f1",
+      "after_sha256": "6829d4f5f74af7f09dee82a4afa69eb18532fd07c43e282a3a8209d19a17622c"
+    },
+    {
+      "path": "packages/charts/tests/chart-managed-proof.test.svelte.ts",
+      "status": "modified",
+      "before_sha256": "8de3c3beb823cf39b656921b6007992f5181ffa5407d25ad36cc313e5310f2e4",
+      "after_sha256": "85547bf1293602896c11930b238565d3ec9756ab215cb10599f272d518d71293"
+    },
+    {
+      "path": "packages/graphics/CHANGELOG.md",
+      "status": "modified",
+      "before_sha256": "f5bae1f509f14d753a5b9f0d711719c3573dc867f9b50103795e8c0378748439",
+      "after_sha256": "828fbc34058e42eec4b100030dfd4229cae98242ff1e18f9066e83da11335db2"
+    },
+    {
+      "path": "packages/graphics/MANAGED.md",
+      "status": "new",
+      "before_sha256": null,
+      "after_sha256": "e1d5941b6d9843274841bb6d353b27c704bb9d7c7589ed9a5b20c772ef1681e8"
+    },
+    {
+      "path": "packages/graphics/README.md",
+      "status": "modified",
+      "before_sha256": "a25037c984909085d796fb348d5cdf2c086c50d520227705da82969d7de79e4c",
+      "after_sha256": "aef2cdf441a8eaf0a428c25ef89a22b1da3f424798827a802c17bea5be95d737"
+    },
+    {
+      "path": "packages/graphics/fixtures/installed-consumer/README.md",
+      "status": "modified",
+      "before_sha256": "681920734434eb8f0c5979b4068aa47d5b0049aadc40f0434bbeffc5e08619a3",
+      "after_sha256": "03f574775bdbdf4b79303fb301d807f9a0bc26f30044480c59c2c561d7575114"
+    },
+    {
+      "path": "packages/graphics/fixtures/installed-consumer/package.json",
+      "status": "new",
+      "before_sha256": null,
+      "after_sha256": "1fba75ad3efdac1a234a804e035ce3c346b9ec5b7681020a61142341719ba540"
+    },
+    {
+      "path": "packages/graphics/fixtures/installed-consumer/src/GraphicsFeature.svelte",
+      "status": "modified",
+      "before_sha256": "a3cb19292a8931ab5f302b1a3228500668f9b51b1993bb07600bdfc429bc2a34",
+      "after_sha256": "f28000221691c3fb7c05c5fb1a52205f0eceb37a808da96041070d2e7b4dbc7e"
+    },
+    {
+      "path": "packages/graphics/package.json",
+      "status": "modified",
+      "before_sha256": "8dace915fca5744205a7836c294691e6f1a33625e1916a452a47a75a231d2b79",
+      "after_sha256": "f08fe21a8869e9250723a0e4be856954b9832ddc74e937ef805a23991d0e157c"
+    },
+    {
+      "path": "packages/graphics/src/core/initial-state.ts",
+      "status": "modified",
+      "before_sha256": "0a93fe5c6be2e0ee107eeb5ccd5d3c97bba27118aacc3a177af53409ace7a3d5",
+      "after_sha256": "8a7068614a25676d6f5b66f095cec2753eb6f9992eaa3a8876c9d280db6e6457"
+    },
+    {
+      "path": "packages/graphics/src/core/reducer.ts",
+      "status": "modified",
+      "before_sha256": "4eb2b51c17f047f5fb2eef53cbcfe300db15df3b4a1521372442f6487ff25942",
+      "after_sha256": "9102053eacf79a3049361f6ecd1deda8f5b190f2f2e11a114708069ffd2c5900"
+    },
+    {
+      "path": "packages/graphics/src/core/types.ts",
+      "status": "modified",
+      "before_sha256": "4f7358b781a4786b15cdd5e6b5e2c4fc6a17ae671e5cc448a813a8f5bc16379c",
+      "after_sha256": "d68a868498297fe322698d9d555ba1d6fe7ba147bc231f8745c8557935501e3a"
+    },
+    {
+      "path": "packages/graphics/src/lib/overlay/WebGLOverlay.svelte",
+      "status": "modified",
+      "before_sha256": "4e8f6a80251cc7f72de2e3a0402a29cf6522fb28e6530881b369385a52588d80",
+      "after_sha256": "79a1d61f96db39e4fae724a2aaafd39df9093799f501a3542584e9ea1dc44b0a"
+    },
+    {
+      "path": "packages/graphics/tests/composition.test.ts",
+      "status": "modified",
+      "before_sha256": "5ce536e695644d9bdcbb965ae40b627ab1fcfeb103b6693f86c612f9f1df069e",
+      "after_sha256": "5ae4adf3861679789e6992aca2d0989f6e99d428dddd95b7c7109f03ea8085e5"
+    },
+    {
+      "path": "packages/graphics/tests/fixtures/ManagedGraphicsFeatureHost.svelte",
+      "status": "modified",
+      "before_sha256": "e641bc486bf9dfb681ec93996b10456c38dcf4b8b901596f8900e35e3ae9afc1",
+      "after_sha256": "77697f100d228ec8a1b5ee466783e4fddb32476b523cdaef2655e313c24e2f0c"
+    },
+    {
+      "path": "packages/graphics/tests/graphics-managed-proof.test.svelte.ts",
+      "status": "modified",
+      "before_sha256": "b6dd7a8315f2dffacaaaeaabdac92f52b61f8b514897d4f1fc713e1aed98cf3b",
+      "after_sha256": "5a1518aad1843e2cf817a9e42fed087465054497b71eb00e17f0ae6157c8c5ba"
+    },
+    {
+      "path": "packages/maps/MANAGED.md",
+      "status": "new",
+      "before_sha256": null,
+      "after_sha256": "618e36344090276c09192a01a9792729153b8e07efcd55c96de123e8418ede29"
+    },
+    {
+      "path": "packages/maps/README.md",
+      "status": "modified",
+      "before_sha256": "e55d0ee0ea4c2e51a162414f02c601bbe4092061eff2551323e7c9834f5592b2",
+      "after_sha256": "804848060531387671c511d341afe0589b16d39fb9b1138b0fe4e01499b1c7ca"
+    },
+    {
+      "path": "packages/maps/fixtures/installed-consumer/README.md",
+      "status": "modified",
+      "before_sha256": "2a0ad3faefed361a5c2bdc3fed87537ae786110147b30e2892a4329457bbb1d8",
+      "after_sha256": "b86afe37ef56bf5961cb6bb9a3d188e921cfde257337783a7db1d33fc53c6292"
+    },
+    {
+      "path": "packages/maps/fixtures/installed-consumer/package.json",
+      "status": "new",
+      "before_sha256": null,
+      "after_sha256": "49b5a46567797c3edbac88ddd605dbe14494fdfbe1bd9b8410a50a840991040b"
+    },
+    {
+      "path": "packages/maps/package.json",
+      "status": "modified",
+      "before_sha256": "502658095107d5c22fb77514c9c4d334d8b7d87f929bf87e9fb5a537a3ceeed5",
+      "after_sha256": "52eaf6d9012db04c2d41baf680fdd6750d7717630619c73d050f5ea3ef798e88"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/EVIDENCE-T5-PACKAGING.md",
+      "status": "new",
+      "before_sha256": null,
+      "after_sha256": "16e10d9701e0140bd5ff6b5e1be0eea1703a81a219fb4330d4fc0c495a6b7801"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/OPUS-REVIEW-CHARTS-T5.md",
+      "status": "new",
+      "before_sha256": null,
+      "after_sha256": "848682b42e67d99ce308147ff4344db330a9ac05335dac2a5af62be1769e11ec"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/OPUS-REVIEW-GRAPHICS-T5-B.md",
+      "status": "new",
+      "before_sha256": null,
+      "after_sha256": "b48a14ca9a2f14a607d67295abad15bfa8e16b3ae021c2500821fa1fee579f4e"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/OPUS-REVIEW-GRAPHICS-T5.md",
+      "status": "new",
+      "before_sha256": null,
+      "after_sha256": "1a5e5782a0ae7717bb5e57fadfa14481059b77299438083a48aafc5fb1c95759"
+    }
+  ]
+}

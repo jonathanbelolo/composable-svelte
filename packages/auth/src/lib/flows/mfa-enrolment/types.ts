@@ -43,6 +43,14 @@ export interface MfaEnrolmentState {
 	/** Shown once. `null` until enrolled, and never refetchable after. */
 	recoveryCodes: readonly string[] | null;
 	error: AuthError | null;
+	/**
+	 * Whether a managed parent has accepted the user's acknowledgement of the
+	 * codes. Set once, by `createAuthFeature`, and never by `mfaEnrolmentReducer`:
+	 * the feature admits `recoveryCodesAcknowledged` against the value before
+	 * the action, which is what makes it once-only. Standalone it stays `false`
+	 * and `MfaEnrolment` calls `onDone` instead. The codes stay on state.
+	 */
+	acknowledged: boolean;
 }
 
 export type MfaEnrolmentAction =
@@ -53,6 +61,14 @@ export type MfaEnrolmentAction =
 	| { type: 'enrolmentStartFailed'; error: AuthError }
 	| { type: 'enrolmentConfirmed'; recoveryCodes: readonly string[] }
 	| { type: 'enrolmentConfirmFailed'; error: AuthError }
+	/**
+	 * The user has saved the codes. Changes nothing here — the codes stay on
+	 * state — and exists so a managed parent can route on it: `createAuthFeature`
+	 * accepts it once, while the flow is `enrolled` and not yet `acknowledged`,
+	 * and reports it as `mfaOutcome`. Standalone, `MfaEnrolment` calls `onDone`
+	 * instead.
+	 */
+	| { type: 'recoveryCodesAcknowledged' }
 	| { type: 'errorDismissed' };
 
 export interface MfaEnrolmentDependencies {

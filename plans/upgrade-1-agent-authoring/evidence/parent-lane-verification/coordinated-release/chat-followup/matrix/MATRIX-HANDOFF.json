@@ -1,0 +1,41 @@
+{
+  "scope": "Affected Chat and combined recipes only; reuse unchanged R4 recipe receipts; not full release qualification",
+  "harnessSHA256": "01e71e02ca3205096e35902d9eebbba788ee4c169c9a7cf8f64e7ab4359552c9",
+  "manifest": "/private/tmp/companion-runtime-release/archives-r5-chat/MANIFEST.json",
+  "receipts": [
+    {
+      "checkpoint": "minimum",
+      "path": "/private/tmp/companion-runtime-release/matrix-r5-chat/minimum/qualification-receipt.json",
+      "sha256": "005a03ad8b9035d9f9f7c657cee5adc157ae36542922976bfd83b908b23427ba",
+      "recipes": [
+        {
+          "name": "chat-managed",
+          "svelte": "5.20.0",
+          "status": "passed"
+        },
+        {
+          "name": "chat-code-media",
+          "svelte": "5.30.0",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "checkpoint": "newer",
+      "path": "/private/tmp/companion-runtime-release/matrix-r5-chat/newer/qualification-receipt.json",
+      "sha256": "1ed1b104524bcf2e4daf34c8536f83f0e0e50846978be35521f80ab21eef43fa",
+      "recipes": [
+        {
+          "name": "chat-managed",
+          "svelte": "5.55.3",
+          "status": "passed"
+        },
+        {
+          "name": "chat-code-media",
+          "svelte": "5.55.3",
+          "status": "passed"
+        }
+      ]
+    }
+  ]
+}

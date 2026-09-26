@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { Store } from '@composable-svelte/core';
+	import { onDestroy, untrack } from 'svelte';
+	import type { ViewStore } from '../../internal/view-store.js';
 	import type { VoiceInputState, VoiceInputAction } from '../types.js';
 
 	/**
@@ -8,7 +9,8 @@
 	 * Trigger button for voice input. Supports push-to-talk and conversation modes.
 	 */
 	interface Props {
-		store: Store<VoiceInputState, VoiceInputAction>;
+		/** A standalone store or a managed feature view; its state is `undefined` once retired. */
+		store: ViewStore<VoiceInputState, VoiceInputAction>;
 		variant?: 'icon' | 'button' | 'fab' | undefined;
 		label?: string | undefined;
 		disabled?: boolean | undefined;
@@ -40,24 +42,40 @@
 	// during a live conversation fell through to `handlePointerDown` and
 	// corrupted the session into push-to-talk instead of stopping it.
 	const interactionMode = $derived(
-		mode ?? ($store.mode === 'conversation' ? 'conversation' : 'push-to-talk')
+		mode ?? ($store?.mode === 'conversation' ? 'conversation' : 'push-to-talk')
 	);
+
+	let activeKey = $state<string | null>(null);
+
+	function cancelKeyHold() {
+		if (activeKey === null) return;
+		activeKey = null;
+		if (interactionMode === 'push-to-talk' &&
+			($store?.status === 'recording' || $store?.status === 'requesting-permission')) {
+			store.dispatch({ type: 'cancelPushToTalkRecording' });
+		}
+	}
+
+	$effect(() => {
+		if (disabled || interactionMode !== 'push-to-talk') untrack(cancelKeyHold);
+	});
+	onDestroy(cancelKeyHold);
 
 	// Handle click for conversation mode (toggle)
 	function handleClick(e: MouseEvent) {
-		if (disabled || $store.status === 'processing') return;
+		if (disabled || $store?.status === 'processing') return;
 		if (interactionMode !== 'conversation') return;
 
 		e.preventDefault();
 
 		// Toggle conversation mode on/off
-		const isActive = $store.mode === 'conversation';
+		const isActive = $store?.mode === 'conversation';
 		store.dispatch({ type: 'conversationModeToggled', enabled: !isActive });
 	}
 
 	// Handle pointer down (start recording for push-to-talk)
 	function handlePointerDown(e: PointerEvent) {
-		if (disabled || $store.status === 'processing') return;
+		if (disabled || $store?.status === 'processing') return;
 		if (interactionMode !== 'push-to-talk') return;
 
 		e.preventDefault();
@@ -71,7 +89,7 @@
 
 	// Handle pointer up (stop recording for push-to-talk)
 	function handlePointerUp(e: PointerEvent) {
-		if (disabled || $store.status !== 'recording') return;
+		if (disabled || $store?.status !== 'recording') return;
 		if (interactionMode !== 'push-to-talk') return;
 
 		e.preventDefault();
@@ -87,7 +105,7 @@
 
 	// Handle pointer cancel (cancel recording for push-to-talk)
 	function handlePointerCancel(e: PointerEvent) {
-		if (disabled || $store.status !== 'recording') return;
+		if (disabled || $store?.status !== 'recording') return;
 		if (interactionMode !== 'push-to-talk') return;
 
 		e.preventDefault();
@@ -101,14 +119,58 @@
 		store.dispatch({ type: 'cancelPushToTalkRecording' });
 	}
 
+	// Handle key down (start recording for push-to-talk hold)
+	function handleKeyDown(e: KeyboardEvent) {
+		if (disabled || $store?.status === 'processing') return;
+		if (interactionMode !== 'push-to-talk') return;
+		if (e.key !== ' ' && e.key !== 'Enter') return;
+
+		e.preventDefault();
+		if (e.repeat) return;
+		if (activeKey !== null) return;
+
+		activeKey = e.key;
+		store.dispatch({ type: 'startPushToTalkRecording' });
+	}
+
+	// Handle key up (release to stop recording)
+	function handleKeyUp(e: KeyboardEvent) {
+		if (interactionMode !== 'push-to-talk') return;
+		if (e.key !== ' ' && e.key !== 'Enter') return;
+
+		if (activeKey === e.key) {
+			activeKey = null;
+			e.preventDefault();
+
+			if (disabled || $store?.status === 'processing') {
+				if ($store?.status === 'recording' || $store?.status === 'requesting-permission') {
+					store.dispatch({ type: 'cancelPushToTalkRecording' });
+				}
+				return;
+			}
+
+			if ($store?.status === 'recording') {
+				store.dispatch({ type: 'stopPushToTalkRecording' });
+			} else if ($store?.status === 'requesting-permission') {
+				store.dispatch({ type: 'cancelPushToTalkRecording' });
+			}
+		}
+	}
+
+	// Handle blur (cancel push-to-talk if focus lost during key hold)
+	function handleBlur() {
+		cancelKeyHold();
+	}
+
 	// Determine button state classes
-	const isRecording = $derived($store.status === 'recording');
-	const isProcessing = $derived($store.status === 'processing');
-	const hasError = $derived($store.status === 'error');
-	const isConversationActive = $derived($store.mode === 'conversation');
+	const isRecording = $derived($store?.status === 'recording');
+	const isProcessing = $derived($store?.status === 'processing');
+	const hasError = $derived($store?.status === 'error');
+	const isConversationActive = $derived($store?.mode === 'conversation');
 </script>
 
 <button
+	type="button"
 	class="voice-input-button voice-input-button--{variant} {className}"
 	class:voice-input-button--recording={isRecording}
 	class:voice-input-button--processing={isProcessing}
@@ -118,6 +180,9 @@
 	onpointerdown={handlePointerDown}
 	onpointerup={handlePointerUp}
 	onpointercancel={handlePointerCancel}
+	onkeydown={handleKeyDown}
+	onkeyup={handleKeyUp}
+	onblur={handleBlur}
 	{disabled}
 	aria-label={isConversationActive ? 'Conversation active, click to stop' : isRecording ? 'Recording, release to send' : label}
 	aria-pressed={isRecording || isConversationActive}

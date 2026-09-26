@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/maps",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Interactive map components for Composable Svelte - Built with Maplibre GL, with an optional Mapbox GL adapter",
   "type": "module",
   "main": "./dist/index.js",
@@ -22,14 +22,18 @@
   "files": [
     "dist",
     "README.md",
+    "API.md",
+    "MANAGED.md",
+    "fixtures/installed-consumer",
     "LICENSE",
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "svelte-package -o dist",
+    "build": "svelte-package -o dist && node ../../scripts/emit-svelte-declaration-bridges.mjs dist",
     "typecheck": "tsc --noEmit",
     "check": "svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings",
     "test": "vitest run",
+    "test:browser": "vitest run --config maps.browser.config.ts",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
@@ -60,8 +64,8 @@
     "url": "https://github.com/jonathanbelolo/composable-svelte/issues"
   },
   "peerDependencies": {
-    "@composable-svelte/core": "^0.12.0",
-    "svelte": "^5.0.0",
+    "@composable-svelte/core": "^0.13.1",
+    "svelte": "^5.20.0",
     "mapbox-gl": "^3.0.0"
   },
   "devDependencies": {
@@ -69,6 +73,8 @@
     "@sveltejs/package": "^2.5.4",
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
     "@types/node": "^20.0.0",
+    "@vitest/browser": "^4.0.7",
+    "@vitest/browser-playwright": "^4.0.7",
     "@vitest/coverage-v8": "^4.0.7",
     "@vitest/ui": "^4.0.7",
     "jsdom": "^25.0.1",

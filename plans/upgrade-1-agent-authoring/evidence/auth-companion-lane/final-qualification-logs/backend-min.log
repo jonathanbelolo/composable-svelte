@@ -1,0 +1,1 @@
+PASS installed HTTP adapter with live reference backend: /private/tmp/auth-oauth-min login, structured failure, cookies, isolated session, expiry refresh, abort, credentials, logout

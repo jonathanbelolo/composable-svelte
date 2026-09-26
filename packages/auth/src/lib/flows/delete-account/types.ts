@@ -34,6 +34,14 @@ export type DeleteAccountStatus =
 export interface DeleteAccountState {
 	status: DeleteAccountStatus;
 	error: AuthError | null;
+	/**
+	 * Which outcome the last reduction accepted, or `null`.
+	 *
+	 * A one-reduction output: set by the arm that accepts a deletion result
+	 * while `deleting`, and cleared by every other action. `createAuthFeature`
+	 * reports `deleteAccountOutcome` from it.
+	 */
+	settled: 'deleted' | 'failed' | null;
 }
 
 export type DeleteAccountAction =

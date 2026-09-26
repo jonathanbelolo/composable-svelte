@@ -36,7 +36,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync, existsSync, statSync } from 'node:fs';
+import { readFileSync, existsSync, statSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import ts from 'typescript';
+import { parse as parseSvelte } from 'svelte/compiler';
 import { walkFiles, listDirs } from './walk.js';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative, resolve } from 'node:path';
@@ -279,6 +282,27 @@ export function acceptsUndefined(type: string): boolean {
 }
 
 /**
+ * Whether the type is a genuine bare `never` keyword type.
+ *
+ * Auth intentionally declares `onDone?: never` to forbid capabilities on
+ * managed components. A bare `never` cannot accept `undefined` (or any value),
+ * by design.
+ *
+ * Must be a genuine bare never:
+ * - `never` -> true
+ * - `() => never` -> false (function returning never, not exempt)
+ * - `never[]` -> false
+ * - `string` -> false
+ */
+export function isBareNever(type: string): boolean {
+	const sourceFile = ts.createSourceFile('type.ts', `type T = ${type};`, ts.ScriptTarget.Latest, true);
+	if (!sourceFile.statements.length) return false;
+	const stmt = sourceFile.statements[0];
+	if (!stmt || !ts.isTypeAliasDeclaration(stmt)) return false;
+	return stmt.type.kind === ts.SyntaxKind.NeverKeyword;
+}
+
+/**
  * The props type block(s) annotated on this file's `$props()` call.
  *
  * Six declaration styles are in use: `}: XProps = $props()` with an `interface`
@@ -312,6 +336,33 @@ function blankComments(source: string): string {
 	return source
 		.replace(/\/\*[\s\S]*?\*\//g, blank)
 		.replace(/\/\/[^\n]*/g, blank);
+}
+
+/** Parse actual script bodies so inline type imports are not mistaken for aliases. */
+function scriptSources(text:string,origin:string):ts.SourceFile[] {
+  const sources:string[]=[];
+  if(origin.endsWith('.svelte')) {
+    const raw=readFileSync(origin,'utf8');
+    const parsed=parseSvelte(raw,{modern:true});
+    for(const script of [parsed.instance,parsed.module]) {
+      if(!script) continue;
+      const start:unknown=Reflect.get(script.content,'start');
+      const end:unknown=Reflect.get(script.content,'end');
+      if(typeof start!=='number'||typeof end!=='number') throw new Error('Missing Svelte script source range: '+origin);
+      sources.push(raw.slice(start,end));
+    }
+  }else sources.push(text);
+  return sources.map(source=>ts.createSourceFile(origin+'.ts',source,ts.ScriptTarget.Latest,true));
+}
+function findImportedType(sources:ts.SourceFile[],bare:string):{originalName:string;modulePath:string}|undefined {
+  for(const source of sources) for(const statement of source.statements) {
+    if(!ts.isImportDeclaration(statement)||!ts.isStringLiteral(statement.moduleSpecifier)) continue;
+    const bindings=statement.importClause?.namedBindings;
+    if(!bindings||!ts.isNamedImports(bindings)) continue;
+    const found=bindings.elements.find(item=>item.name.text===bare);
+    if(found)return{originalName:found.propertyName?.text??found.name.text,modulePath:statement.moduleSpecifier.text};
+  }
+  return undefined;
 }
 
 function propsTypeBlocks(path: string): string[] {
@@ -356,7 +407,7 @@ function propsTypeBlocks(path: string): string[] {
 			.replace(/<.*/, '')
 			.replace(/^[\s(]+|[\s)]+$/g, '')
 			.trim();
-		if (!bare || seen.has(bare)) return;
+		if (!bare || seen.has(origin + ':' + bare)) return;
 
 		// An inline member — `{ url: string; video?: undefined }` in a union arm —
 		// is a block already, not a name to look up.
@@ -376,39 +427,26 @@ function propsTypeBlocks(path: string): string[] {
 		// prop in the package left unchecked. The vacuity arm is what reported it.
 		if (!/^[A-Za-z_$][\w$]*$/.test(bare)) return;
 
-		seen.add(bare);
+		seen.add(origin + ':' + bare);
 
-		const iface = new RegExp(`interface\\s+${bare}\\b[^{]*\\{`).exec(text);
-		if (iface) {
-			blocks.push(blockBody(text, iface.index + iface[0].length - 1));
-			return;
-		}
-
-		const alias = new RegExp(`type\\s+${bare}\\b[^=]*=\\s*([^;]+);`).exec(text);
-		if (alias) {
-			if (alias[1]!.trim().startsWith('{')) {
-				blocks.push(blockBody(text, text.indexOf('{', alias.index)));
-			} else {
-				// Both separators: an intersection contributes every one of its
-				// members, and a union every one of its arms. Splitting on `|`
-				// alone silently dropped everything an intersection carried.
-				alias[1]!.split(/[|&]/).forEach((part) => resolveIn(text, part, origin));
+		const sources=scriptSources(text,origin);
+		for(const source of sources) for(const declaration of source.statements) {
+			if(ts.isInterfaceDeclaration(declaration)&&declaration.name.text===bare) {
+				blocks.push(source.text.slice(declaration.members.pos,declaration.members.end));
+				return;
 			}
-			return;
+			if(ts.isTypeAliasDeclaration(declaration)&&declaration.name.text===bare) {
+				if(ts.isTypeLiteralNode(declaration.type)) blocks.push(source.text.slice(declaration.type.members.pos,declaration.type.members.end));
+				else declaration.type.getText(source).split(/[|&]/).forEach(part=>resolveIn(text,part,origin));
+				return;
+			}
 		}
-
-		// Not declared here — follow the import that brought it in.
-		const imported = new RegExp(
-			`import\\s+type\\s*\\{[^}]*\\b${bare}\\b[^}]*\\}\\s*from\\s*['"]([^'"]+)['"]`
-		).exec(text);
-		if (!imported) return;
-
-		// `./foo.js` in source refers to `./foo.ts` on disk.
-		const target = resolve(dirname(origin), imported[1]!.replace(/\.js$/, '.ts'));
+		// Named imports may be ordinary, inline type-only, or top-level type-only.
+		const imported = findImportedType(sources, bare);
+		if (!imported || !imported.modulePath.startsWith('.')) return;
+		const target = resolve(dirname(origin), imported.modulePath.replace(/\.js$/, '.ts'));
 		if (!existsSync(target)) return;
-
-		seen.delete(bare);
-		resolveIn(readFileSync(target, 'utf8'), bare, target);
+		resolveIn(readFileSync(target, 'utf8'), imported.originalName, target);
 	};
 
 	resolveIn(source, source.slice(colon + 1, eq).trim(), path);
@@ -446,6 +484,7 @@ function scan(path: string, applyRegister = true): Offender[] {
 			}
 
 			if (acceptsUndefined(type)) continue;
+			if (isBareNever(type)) continue;
 			if (registered.includes(name)) continue;
 			// Member-level, not file-level: only a member of an interface that
 			// actually extends an `HTMLAttributes` base inherits the bare
@@ -745,7 +784,7 @@ describe('optional properties in .ts carry the same hazard', () => {
 		expect(
 			bare.length,
 			bare.length > ALLOWED_BARE_OPTIONALS
-				? `bare optional properties: ${bare.length}\n${bare.slice(0, 40).join('\n')}`
+				? `bare optional properties: ${bare.length}\n${bare.join('\n')}`
 				: `${ALLOWED_BARE_OPTIONALS - bare.length} have been fixed — lower ALLOWED_BARE_OPTIONALS to ${bare.length}`
 		).toBe(ALLOWED_BARE_OPTIONALS);
 	});
@@ -773,4 +812,60 @@ describe('the matchers themselves', () => {
 		expect(splitMembers('a?: string; /* x; y */ b?: number')).toHaveLength(2);
 		expect(splitMembers("a?: 'x;y'; b?: () => { c: 1; d: 2 }")).toHaveLength(2);
 	});
+
+	it('isBareNever recognizes only genuine bare never', () => {
+		expect(isBareNever('never')).toBe(true);
+		expect(isBareNever('  never  ')).toBe(true);
+		expect(isBareNever('() => never')).toBe(false);
+		expect(isBareNever('(() => never) | undefined')).toBe(false);
+		expect(isBareNever('never[]')).toBe(false);
+		expect(isBareNever('Record<string, never>')).toBe(false);
+		expect(isBareNever('string')).toBe(false);
+		expect(isBareNever('undefined')).toBe(false);
+	});
+
+	it('proves ordinary optional props still require undefined and function-return-never is not exempt', () => {
+		const dir = mkdtempSync(join(tmpdir(), 'composable-never-scan-'));
+		try {
+			const file = join(dir, 'NeverTest.svelte');
+			writeFileSync(
+				file,
+				`<script lang="ts">
+let {
+  forbidden,
+  callback,
+  ordinary,
+  validCallback,
+  validOrdinary
+}: {
+  forbidden?: never;
+  callback?: () => never;
+  ordinary?: string;
+  validCallback?: (() => never) | undefined;
+  validOrdinary?: string | undefined;
+} = $props();
+</script>`
+			);
+			const offenders = scan(file, false);
+			expect(offenders.map((o) => o.prop)).toEqual(['callback', 'ordinary']);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+});
+
+
+describe('imported props scanner regression',()=>{
+  it.each([
+    ['{ Props }','Props'], ['{ type Props }','Props'], ['type { Props }','Props'],
+    ['{ Props as Local }','Local'], ['{ type Props as Local }','Local'], ['type { Props as Local }','Local']
+  ])('follows %s to the actual props members', (clause,local)=>{
+    const dir=mkdtempSync(join(tmpdir(),'composable-props-scan-'));
+    try{
+      writeFileSync(join(dir,'types.ts'),'export interface Props { label?: string; safe?: number | undefined; }');
+      const file=join(dir,'Example.svelte');
+      writeFileSync(file,`<script lang="ts">import ${clause} from './types.js'; let { label }: ${local} = $props();</script>`);
+      expect(scan(file,false).map(item=>item.prop)).toEqual(['label']);
+    }finally{rmSync(dir,{recursive:true,force:true});}
+  });
 });

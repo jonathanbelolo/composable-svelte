@@ -148,9 +148,14 @@ export function createInitialToastState(config?: {
 	position?: ToastState['position'];
 	exitDurationMs?: number;
 }): ToastState {
+	const maxToasts =
+		typeof config?.maxToasts === 'number' && Number.isFinite(config.maxToasts)
+			? Math.max(0, Math.floor(config.maxToasts))
+			: 3;
+
 	return {
 		toasts: [],
-		maxToasts: config?.maxToasts ?? 3,
+		maxToasts,
 		defaultDuration: config?.defaultDuration ?? 5000,
 		position: config?.position ?? 'bottom-right',
 		exitDurationMs: config?.exitDurationMs ?? 200

@@ -1,0 +1,55 @@
+{
+  "generatedAt": "2026-09-26T14:35:41.500Z",
+  "note": "OPUS-APP-REVIEW.md hash reflects the file at this time; the review file does not embed these hashes.",
+  "artifactsAndInstalledBytesVerified": true,
+  "runtime": [
+    {
+      "name": "@composable-svelte/core",
+      "version": "0.13.1",
+      "spec": "file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz",
+      "archiveSHA256": "729ca89f1850e56bde5db23c9f8560090eed07a0dc4126374dd5e33fd11a8e0d",
+      "lockIntegrity": "sha512-nv8JT+rBG/RBPKCCDQwkTu6PykB27M7dAUw1sgPe/7hrmUlSFbM7NSFWtBxwWFhm+XCAYejwWnFU5aqRxnJXxw=="
+    },
+    {
+      "name": "@composable-svelte/auth",
+      "version": "0.3.0",
+      "spec": "file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-auth-0.3.0.tgz",
+      "archiveSHA256": "dbb2611bb01616e4e9ef86a54016724cf6271e0ec337b759b5cbcb21dae27112",
+      "lockIntegrity": "sha512-KplhZCaYI9yDCTr/JaKVb5DEv264M0dQ+rP3uLk1sp6v6RWxvxVNuitlAZOhrjZmrB2AyYHihkANvKnj5gDtBQ=="
+    },
+    {
+      "name": "@composable-svelte/charts",
+      "version": "0.3.0",
+      "spec": "file:/private/tmp/composable-final-authoring/artifacts-b/composable-svelte-charts-0.3.0.tgz",
+      "archiveSHA256": "c36b7a06e5a293259cdbebd599a1698cd448c000eac343c66411c1282a73c21d",
+      "lockIntegrity": "sha512-1EjOkkdWX/tEjG89D+/OgtcByqraWFYqW+xLs+6WvFV3hy7KcSbiLGBxcN84tZcR3pHcDgeoZWKTdmS8B9Yudw=="
+    }
+  ],
+  "files": {
+    "package.json": "79b418af04dfa6a8f2e322019fb17ece9af656f0e2b1c5101e904ab9cb2ec575",
+    "package-lock.json": "5e64835b656f38430e707f4ef9c881cda0f6afdd1475d454048d69a00a6dae9e",
+    "tsconfig.json": "03fbac2a3caae943a4a92a6f99ff2afd4cd715f92644ed7192374ea316ae22a5",
+    "vite.config.ts": "6c5d275e3d2c849e61cdbefc2dc4d5184b757ae54f437a57226633d2310706f7",
+    "vite.config.mjs": "6c5d275e3d2c849e61cdbefc2dc4d5184b757ae54f437a57226633d2310706f7",
+    "playwright.config.ts": "b8991efa69c239b900fbbbf57eba722c9d3005e968ca2af27092ab34d819c0f3",
+    "index.html": "3e502d29bb89cff5deb8dad0be1ee4438d2d5aeecf66b6c30cf37b2869804e28",
+    "HANDOFF.md": "c0879816b55165e44d249569f60203dab773dbc75c824a18246667f09d4651c0",
+    "ITERATION-LOG.md": "52badbcbdf6113a3abe00136c7d142a22042ad1e69ecf9b716ba87ddc6a3e641",
+    "PUBLIC-REFERENCE-GAPS.md": "99ae6a0d7ac91f9566063792b3bf32c3225c1bed650238ca7ae1389848b9ddf0",
+    "OPUS-APP-REVIEW.md": "3e7947f3f6f5ac44ec0adeb826151988d22b4e1a01db85a39e20362f3c222dcd",
+    "src/main.ts": "b302b5df854e4feac0b9dc7963c1b9d39fa444bc940608df2512ac5cb691d38e",
+    "src/App.svelte": "c72bc8d9d98bdd272d9c7172b074482d6955bde30694f2af64941599b2a57be2",
+    "src/lib/model.ts": "fc715c45617f292519f321e0fd6d2ce9298f03b969a98d2b83919c2a6e3240c6",
+    "src/lib/views.ts": "183a07560aad7b9d52fc5e323b8ca65bef5721c39ecd7ef54dd16643600919c1",
+    "src/lib/controlled-backend.ts": "74eb38c676d5d83d20b2e80919faf9ab1d6f85de724a0e9cd1743e3cdbd5d3d0",
+    "src/lib/components/AuthFeatureView.svelte": "e8586ea280fe0fbc30a320dc2ed7abadb218a844d8e0747c15a36b793ab28884",
+    "src/lib/components/ChangePasswordView.svelte": "4640cd9ee5f631d96335769f22fc6009f03f8101b3f5616be0c3fabb52504700",
+    "src/lib/components/ChartView.svelte": "35401230dd378f367f19cd4b55a1ff2ba94c2f69800241a7a993a11707b075d4",
+    "src/lib/components/LoginView.svelte": "25fc468e4da0adf232d6f866572f18bfa6af6ce6b872c9168a6e68ed37722881",
+    "src/lib/components/MfaView.svelte": "8f84d2cfc23ea49ec94d86c464612ef29d85322eeb746bb9647b5ed56b9e9714",
+    "tests/dashboard.test.ts": "3b509bd144e5da0f7f7b751f7dabff0fd15368f7af6a834475f3a733ea092999",
+    "tests/browser/dashboard.pw.ts": "068fada55d9671f7919237835239ab0b291c40cd54a54eb051d6eb3b6778c543",
+    "scripts/ssr.mjs": "a5101ed2efb6de918661b674c8ab21d0cde335158ed76bcfe19219ee577e8344",
+    "scripts/build.mjs": "34f17a348f3c10f428a6791ba1f02b7b90d74bb034836523c08f4141ac9b61b0"
+  }
+}

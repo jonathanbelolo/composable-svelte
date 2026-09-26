@@ -31,7 +31,7 @@ describe('every arm a server can send', () => {
 	let h: Harness;
 
 	beforeAll(async () => {
-		h = await startServer();
+		h = await startServer({ now: () => 1_700_000_000_000 });
 	});
 	afterAll(async () => {
 		await h.stop();
@@ -103,6 +103,8 @@ describe('every arm a server can send', () => {
 		const error = await rejection(() => h.deps.requestMagicLink(email));
 		expect(error['code']).toBe('rate_limited');
 		expect(error['retryAfterSeconds']).toEqual(expect.any(Number));
+		expect(error['retryAfterSeconds']).toBe(60);
+		expect(error['retryAfterSeconds']).toBeLessThan(900);
 	});
 
 	it('token_expired — a link that has already been spent', async () => {
@@ -182,7 +184,7 @@ describe('network', () => {
 		// `TypeError` escape, breaking `AuthDependencies`' promise that every
 		// member rejects with an `AuthError`, and leaving classification to a
 		// heuristic that only knew four engine strings.
-		const h = await startServer();
+		const h = await startServer({ now: () => 1_700_000_000_000 });
 		await h.deps.fetchLogin(SEED.ada.id);
 
 		await h.app.close();

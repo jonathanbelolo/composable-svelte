@@ -8,6 +8,7 @@ import {
 } from '@composable-svelte/core/components/form';
 
 import { toAuthError } from '../../errors/helpers.js';
+import { completesSubmissionInFlight } from '../submission-feedback.js';
 import {
 	changePasswordSchema,
 	emptyChangePasswordFields,
@@ -38,7 +39,9 @@ export function createInitialChangePasswordState(): ChangePasswordState {
 		form: createInitialFormState(changePasswordFormConfig, emptyChangePasswordFields),
 		status: 'idle',
 		error: null,
-		session: null
+		session: null,
+		settled: null,
+		completionCount: 0
 	};
 }
 
@@ -72,14 +75,17 @@ export function changePasswordReducer(
 					? { ...withForm, error: null }
 					: withForm;
 
-			if (action.action.type !== 'submissionSucceeded') {
-				return [cleared, formEffect];
+			// Only the result of a submission in flight; see `submission-feedback.ts`.
+			// A stale one would otherwise change the password to whatever the fields
+			// now hold — including the empty fields a success leaves behind.
+			if (!completesSubmissionInFlight(state.form, withForm.form, action.action)) {
+				return [{ ...cleared, settled: null }, formEffect];
 			}
 
 			const password = cleared.form.data.password;
 
 			return [
-				{ ...cleared, status: 'submitting', error: null, session: null },
+				{ ...cleared, status: 'submitting', error: null, session: null, settled: null },
 				Effect.batch(
 					formEffect,
 					Effect.cancellable<ChangePasswordAction>(
@@ -101,13 +107,16 @@ export function changePasswordReducer(
 			// The fields are cleared, unlike every other flow here. They hold a
 			// password that is now live, on a page the user stays on afterwards —
 			// a settings panel is not a sign-in form that unmounts on success.
+			const isSettling = state.status === 'submitting';
 			return [
 				{
 					...state,
 					form: createInitialFormState(changePasswordFormConfig, emptyChangePasswordFields),
 					status: 'changed',
 					error: null,
-					session: action.session
+					session: action.session,
+					settled: isSettling ? 'changed' : null,
+					completionCount: isSettling ? state.completionCount + 1 : state.completionCount
 				},
 				Effect.none()
 			];
@@ -119,17 +128,30 @@ export function changePasswordReducer(
 			// differently — it is the backend asking for proof, not a refusal, and
 			// the fields are deliberately left filled so the user does not retype
 			// them after confirming.
-			return [{ ...state, status: 'idle', error: action.error }, Effect.none()];
+			return [
+				{
+					...state,
+					status: 'idle',
+					error: action.error,
+					settled: state.status === 'submitting' ? 'failed' : null
+				},
+				Effect.none()
+			];
 		}
 
 		case 'errorDismissed': {
-			return [state.error === null ? state : { ...state, error: null }, Effect.none()];
+			return [
+				state.error === null && state.settled === null
+					? state
+					: { ...state, error: null, settled: null },
+				Effect.none()
+			];
 		}
 
 		default: {
 			const _exhaustive: never = action;
 			void _exhaustive;
-			return [state, Effect.none()];
+			return [{ ...state, settled: null }, Effect.none()];
 		}
 	}
 }

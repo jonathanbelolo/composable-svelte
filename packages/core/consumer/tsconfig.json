@@ -26,6 +26,7 @@
     "src/**/*.svelte",
     "tests/**/*.ts",
     "browser/**/*.ts",
+    "browser/**/*.svelte",
     "readme-examples/**/*"
   ]
 }

@@ -1,0 +1,307 @@
+{
+  "archives": [
+    {
+      "name": "/private/tmp/companion-maps-lane-baseline/lane-delta-files.tar.gz",
+      "sha256": "5766c44fb747c123eebe1ed5cac646db0e0a5dc4671861224f491339d4b2213c"
+    },
+    {
+      "name": "/private/tmp/companion-maps-lane-baseline/d2-maps-delta-files.tar.gz",
+      "sha256": "e7cf2fc52f5a9ca9d57f901c5dc5fc8b04454ef2839cc21bd2b87dd1a6468d68"
+    }
+  ],
+  "changes": [
+    {
+      "path": "packages/maps/CHANGELOG.md",
+      "before": "1cfbd4a0b5b1fd7f326b90c7e95f02e4c2ca32292347e5859931a75710f1c2f7",
+      "after": "73ecc01b0dfbfc25441229edf7d1e461749de3a450bfa9db2b137ab0da9f9e39"
+    },
+    {
+      "path": "packages/maps/README.md",
+      "before": "4cd7509dfe74756dfab75c4142a25eb6c84122a9203af5b13504f68ac443165b",
+      "after": "e55d0ee0ea4c2e51a162414f02c601bbe4092061eff2551323e7c9834f5592b2"
+    },
+    {
+      "path": "packages/maps/maps.browser.config.ts",
+      "before": null,
+      "after": "a1c2af701b9de09ad289be3b16f525bea044c26b73bd63462879d06790505393"
+    },
+    {
+      "path": "packages/maps/package.json",
+      "before": "bce7c6dae8116d8c60fa7814d4b2dc124c3182343628a30a78c2f916d5e91078",
+      "after": "502658095107d5c22fb77514c9c4d334d8b7d87f929bf87e9fb5a537a3ceeed5"
+    },
+    {
+      "path": "packages/maps/src/lib/components/Map.svelte",
+      "before": "579e467f087216422fe5b48b600afd44893feebd09236be942254d4976c54a03",
+      "after": "af94e980aa5d50c7f47349099b326704b59e2b7f55f0b54cc2c45b378cff9f45"
+    },
+    {
+      "path": "packages/maps/src/lib/components/MapPrimitive.svelte",
+      "before": "a8fb465086650f13670d38f80f9451e863207ebac86c8fb6bd21a36f04185d95",
+      "after": "43502a6eef551e1d8bb6a7b7b7216505df6bfc4f4b358d43f3a0b3335dc28679"
+    },
+    {
+      "path": "packages/maps/src/lib/reducers/map.reducer.ts",
+      "before": "b66172a007a8096c13dd21478922aedd7a67745a1c60bc83d7f8dc4770f2bed6",
+      "after": "0817474b7df5ffea9b99e222f76b39404284b63f54622255fb0a9f04c6e6309c"
+    },
+    {
+      "path": "packages/maps/src/lib/types/map.types.ts",
+      "before": "3a769803d6a930d51acf3a73ba10f9c41fb53723dd3e4583267989b81bd18a87",
+      "after": "f4422a7250df542680957a539f9f61036b38adbb589b02e12f8520026b9a3361"
+    },
+    {
+      "path": "packages/maps/tests/fixtures/ManagedMapFeatureHost.svelte",
+      "before": null,
+      "after": "256de78e35ab8ec1958b060e165a35e428a6f6d09645fe2c80eea0e74b3be2b5"
+    },
+    {
+      "path": "packages/maps/tests/fixtures/ManagedMapRecipeApp.svelte",
+      "before": null,
+      "after": "1f4c62b3dde7ee7544ebbc905ea1235c5d876c0a5a7ed51e22aa8141138fc88b"
+    },
+    {
+      "path": "packages/maps/tests/fixtures/SidebarMapFeatureHost.svelte",
+      "before": null,
+      "after": "2554a4bb64baf60927c11099ce2bba3fe7bc65e27e13a1e9ce43b872011a1972"
+    },
+    {
+      "path": "packages/maps/tests/fixtures/managed-map-recipe-model.ts",
+      "before": null,
+      "after": "269e8e9c608f740eb7f67a6af92b14b8e9a17699d9f79e60dd65c9299f3af3e3"
+    },
+    {
+      "path": "packages/maps/tests/fixtures/managed-map-recipe-views.ts",
+      "before": null,
+      "after": "cdeebc3d1d61fb17f9e88143d61a8bb88c83e99e3bc3cdea7612e25462616640"
+    },
+    {
+      "path": "packages/maps/tests/helpers/fake-adapter.ts",
+      "before": "97a8d1892c5b2d2e147566e5a1552dfe252791c81771d83f0d75f95411862351",
+      "after": "da2920cfe273c8766999b94b688a9af35cea99623b726bd25665e8f86302ed48"
+    },
+    {
+      "path": "packages/maps/tests/map-lifecycle-boundaries.test.ts",
+      "before": null,
+      "after": "6281efc81a39c60c47f4c617be5063994f96e2cac8afd1e6989ad1857d47bc69"
+    },
+    {
+      "path": "packages/maps/tests/map-managed-proof.test.svelte.ts",
+      "before": null,
+      "after": "82b86f105d96bac89a610d9bc9c1ced1b881c021df8ae5d6efcea921bdeac0c0"
+    },
+    {
+      "path": "packages/maps/tests/map-viewport-sync.test.svelte.ts",
+      "before": null,
+      "after": "07a525a508bde909c484cb43b3f85c5fd3c8ec7f3d2688fba588407247154804"
+    },
+    {
+      "path": "packages/maps/tests/maplibre-managed.browser.ts",
+      "before": null,
+      "after": "9e0843fc0e1ac3cae745210e1b17aa2c0762fbf0ab619090258d3107663ed17c"
+    },
+    {
+      "path": "packages/maps/tests/maplibre-native.browser.ts",
+      "before": null,
+      "after": "7149d9579395b1a8a53c8c9ac71b314196ac7c706a76f925ed9c075d1db2babc"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/D2-D3-NEXT.md",
+      "before": null,
+      "after": "c1c7e2acf5000ce8bac5187bde269199d4b3bc151bc130c659f101faa25b5d3f"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/EVIDENCE-BATCH-A.md",
+      "before": null,
+      "after": "4d67a5107cd375b1c05088593fc21a879288f49828317abbd536b67622fc6053"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/EVIDENCE-BATCH-B.md",
+      "before": null,
+      "after": "260ded777920d46b84f4e740850703fc457758baee1f101b29d23c33acf2549e"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/OPUS-REVIEW-A.md",
+      "before": null,
+      "after": "b81768ac323ff3c0dd2fa91ec495f526ef304125fc42ad6fd86378cbfe1719e7"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/OPUS-REVIEW-B.md",
+      "before": null,
+      "after": "73e3321888db97b5c433753159f62ff1eb3d2658c2ea7ff39a9e9d30b1030074"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/OPUS-REVIEW-B2.md",
+      "before": null,
+      "after": "40baab80943f2f56778561281799c25258156530718ad55fe7f5430e5e330f14"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/OPUS-REVIEW-B3.md",
+      "before": null,
+      "after": "f3843bb7d40979aefdc92d603ce43b6aaf0a82ad8717775e46207a37f36ce5f3"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/OPUS-REVIEW-B4.md",
+      "before": null,
+      "after": "d87b45eee82e5364c3b46a6baa338057deb194ab79fc9f6922fc00706fca05c2"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/README.md",
+      "before": null,
+      "after": "d96385870633a782544254590e1687eb5f87aec279bd97dcd5faa58014cccb4b"
+    },
+    {
+      "path": "packages/maps/API.md",
+      "before": "07cf8c647100816a5dbba77149533fbd90598f940ed7edc3648c03264f33c7f9",
+      "after": "8c2ce704dc6d6a7770be2ca1c84392e337f7555e35682667c1e4e9254483c58e"
+    },
+    {
+      "path": "packages/maps/fixtures/installed-consumer/README.md",
+      "before": null,
+      "after": "2a0ad3faefed361a5c2bdc3fed87537ae786110147b30e2892a4329457bbb1d8"
+    },
+    {
+      "path": "packages/maps/fixtures/installed-consumer/browser.config.mjs",
+      "before": null,
+      "after": "d6437d20fe00035daadccaa28c530af2c5de5b45b2f52f1b4fbaedec1ee79b26"
+    },
+    {
+      "path": "packages/maps/fixtures/installed-consumer/index.html",
+      "before": null,
+      "after": "03796f79bc5ca38a250a47ae9bd880d332ea771207baa82a477962fc000d2944"
+    },
+    {
+      "path": "packages/maps/fixtures/installed-consumer/src/App.svelte",
+      "before": null,
+      "after": "f2380418358815fe9bddfb30a158358eb564728c905e944514454e81de3c6a1c"
+    },
+    {
+      "path": "packages/maps/fixtures/installed-consumer/src/MapFeature.svelte",
+      "before": null,
+      "after": "48872e65db7c4a304befbbcd909953fe85f35f0765ad7fd22145a7923c7a335d"
+    },
+    {
+      "path": "packages/maps/fixtures/installed-consumer/src/installed.browser.test.ts",
+      "before": null,
+      "after": "385e92763bfa65ddf9b16e71bb5928b2b580d5791e8f7bb324975aa71cf10613"
+    },
+    {
+      "path": "packages/maps/fixtures/installed-consumer/src/main.ts",
+      "before": null,
+      "after": "c76543fe1c49182b7ec4353a30135d00e3c439dfdf2577e2435272ff9f35930b"
+    },
+    {
+      "path": "packages/maps/fixtures/installed-consumer/src/model.ts",
+      "before": null,
+      "after": "717420363aab102cb26aa7ea1f3a7552dc745af3d07dd27277dbf5337de2cefa"
+    },
+    {
+      "path": "packages/maps/fixtures/installed-consumer/ssr.mjs",
+      "before": null,
+      "after": "4129c15c7112dc9a32b99fd554b4069101dc8a8e88ac6403bc89692635e4812f"
+    },
+    {
+      "path": "packages/maps/fixtures/installed-consumer/tsconfig.json",
+      "before": null,
+      "after": "5301d82c91fb0f5f486cc50d0e8ef83d747665033150566fdb5f38e0eda9f1ab"
+    },
+    {
+      "path": "packages/maps/fixtures/installed-consumer/verify.mjs",
+      "before": null,
+      "after": "a9986f2176f54e119f2c333e0bedd2cc304be1dc88eb76045c1a0ed8f7d58aff"
+    },
+    {
+      "path": "packages/maps/fixtures/installed-consumer/vite.config.mjs",
+      "before": null,
+      "after": "ee012d79f58ca88e9b8e0b0eb2d931d8a2b9fff77af8e4ce9c1249bd7d6871e2"
+    },
+    {
+      "path": "packages/maps/src/lib/components/GeoJSONLayer.svelte",
+      "before": "cfde38e875bbe8105991b05556e3be7302d330696b60ca425c81b534f694d933",
+      "after": "6a7fa157f0916efdac966f510bff6dc95581626e396901617c13f6b33d8704c5"
+    },
+    {
+      "path": "packages/maps/src/lib/components/HeatmapLayer.svelte",
+      "before": "def50b235244ae3608a6f1ab695a46b8bbd8630815b33893e10328fbed554d80",
+      "after": "57e2aaa8986ca4d750e34eae51c50f98f4c214f535416403f2bc14c92df537fb"
+    },
+    {
+      "path": "packages/maps/src/lib/components/Popup.svelte",
+      "before": "f1518a23452d20652aff31226e80775d1968bee203724d5c4481dd69eadd26f0",
+      "after": "d111dcf26ab8684ee242ddc7ebd8e1be40a997ef797a73d4d66ea13aadcb0b16"
+    },
+    {
+      "path": "packages/maps/src/lib/components/TileProviderControl.svelte",
+      "before": "5531a7a337096a828dfa6eb7d8e888fde7ce34f1f3e9729c6d71ae4ebe74002b",
+      "after": "2a02232d4c960c9f9d80b06f54f7b7bf5fa524947e7ffdba32d72495948df22f"
+    },
+    {
+      "path": "packages/maps/src/lib/mapbox/index.ts",
+      "before": "89d055aad6cf5967b6e8e58bedf499ec096e8eb0dcec3f00117ace22581fea38",
+      "after": "67dfa8f443104bfa732feeb44fcac80d0f73a9e55e013e25c89f3832480aabc1"
+    },
+    {
+      "path": "packages/maps/src/lib/utils/maplibre-adapter.ts",
+      "before": "6ae60605dde62d850a5fbf567512614d5c5dfc6051f062dbf24ae88b947fe4e2",
+      "after": "2f1f571ec7febf18c08f2f12b91aa2edf663a632b24ee853e355eddbf12880f7"
+    },
+    {
+      "path": "packages/maps/tests/map-d2-regressions.test.svelte.ts",
+      "before": null,
+      "after": "77a70f2014fa8a5147d75b7fe73b53a449aad4ebe20fb928cb2be91de5781acd"
+    },
+    {
+      "path": "packages/maps/tests/mapbox-adapter.test.ts",
+      "before": "699be9fd0c08ca92c3e8349b863aa15f625ebf029aa71bd27f103ece93179764",
+      "after": "e319c00a7fd46f374500f2e985512c01343dd1a2c6acfc3b94a897b35d73e8a6"
+    },
+    {
+      "path": "packages/maps/tests/maps-boundaries-v1.test.svelte.ts",
+      "before": "45297592893827906ac2b9f346e1ffec702e454fea549ca0cd34c9bf7d6631da",
+      "after": "5c4aef0646504817e3cfaa4b24f41ab5298fe4fc7526bb49aeb8951fbb636a4d"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/EVIDENCE-D2-MAPS.md",
+      "before": null,
+      "after": "e1eccbb240037257f9aa82ef6859eb3d0bad0b51e4317f18b9664b3d9e8243f4"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/OPUS-REVIEW-D2-MAPS-B.md",
+      "before": null,
+      "after": "6cfeb63c2574b2a3f13607474818b0ce886bde5c65928dfcd457712c68d4ee56"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/OPUS-REVIEW-D2-MAPS-C.md",
+      "before": null,
+      "after": "e6484c5ce14e9023db8f3eaf5bd01e312bca9838fc2efa89c89e129c49e4b61b"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/OPUS-REVIEW-D2-MAPS-D.md",
+      "before": null,
+      "after": "6e3a6006e9d270f614041474f0e979447b1de3cd8f7b9c7cf615333dae373ee4"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/OPUS-REVIEW-D2-MAPS.md",
+      "before": null,
+      "after": "9ddac1a2830b11b636927a8073007ca08c6ef3d8b174f1db4d4ac71355f886dc"
+    }
+  ],
+  "mainVerification": {
+    "build": "pass",
+    "typecheck": "pass",
+    "svelteCheck": "0 errors, 0 warnings",
+    "jsdomTests": 173,
+    "nativeChromiumTests": 13
+  },
+  "rootFollowups": [
+    "version and peer floors",
+    "shared guidance/checker profiles",
+    "final package qualification",
+    "Ship a runnable installed-consumer recipe and API guidance: current package files excludes API.md and fixtures; fixture README still describes the superseded Svelte 5.20 core failure"
+  ],
+  "rootCompleted": [
+    "pnpm-lock.yaml Maps browser test dependency entries only",
+    "CI required Maps native browser step"
+  ],
+  "lockfileSha256": "c0c733192d73119991b3822ee47cdd24511d13fb55937da2f91172be7230b072"
+}

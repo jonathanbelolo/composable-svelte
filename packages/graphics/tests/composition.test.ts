@@ -127,9 +127,9 @@ describe('two graphics scenes in one store', () => {
 	});
 
 	it('warns when two scenes are given the same explicit id', () => {
-		// The escape hatch reopened the hole it was added beside: the JSDoc invites
-		// supplying an id without ever saying two must differ from each other, and
-		// two scenes sharing one cancel each other's frame loop in silence.
+		// Duplicate ids can collide when both scenes are composed under one
+		// effect owner. Separate managed owners have independent cancellation maps;
+		// the global allocator cannot tell which topology the caller will use.
 		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
 		createInitialGraphicsState({ sceneId: 'hero' });

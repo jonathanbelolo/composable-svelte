@@ -4,7 +4,7 @@
  * Comprehensive tests for tree view component with composable architecture.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TestStore } from '../src/lib/test/test-store.js';
 import { treeViewReducer } from '../src/lib/components/ui/tree-view/tree-view.reducer.js';
 import {
@@ -390,6 +390,7 @@ describe('TreeView', () => {
 	});
 
 	describe('Lazy Loading', () => {
+		afterEach(() => { vi.useRealTimers(); });
 		it('should trigger lazy loading when expanding lazy node', async () => {
 			vi.useFakeTimers();
 
@@ -437,7 +438,7 @@ describe('TreeView', () => {
 
 			expect(loadChildren).toHaveBeenCalledWith('1', lazyNodes[0]);
 
-			vi.useRealTimers();
+			await store.finish();
 		});
 
 		it('should handle lazy loading failure', async () => {
@@ -477,7 +478,7 @@ describe('TreeView', () => {
 				}
 			);
 
-			vi.useRealTimers();
+			await store.finish();
 		});
 	});
 

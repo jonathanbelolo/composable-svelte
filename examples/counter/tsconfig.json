@@ -3,7 +3,12 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "ES2022",
-    "types": ["svelte"]
+    "types": [
+      "svelte"
+    ]
   },
-  "include": ["src/**/*"]
+  "include": [
+    "src/**/*",
+    "tests/**/*.ts"
+  ]
 }

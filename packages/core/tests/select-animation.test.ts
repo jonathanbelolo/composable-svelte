@@ -138,10 +138,33 @@ describe('the select dropdown', () => {
 		// The click-outside path (`closed`). `select.test.ts` sends this action to a
 		// TestStore and asserts `isOpen` only, so the lifecycle half was untested.
 		const s = mount();
-		await open(s);
+		const el = await open(s);
 
-		document.body.click();
-		await expectAnimatedOut(s, 'an outside click');
+		// Control: pointerdown inside does not close
+		el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 }));
+		// The document coordinator deliberately defers outside dismissal to a timer.
+		// Wait beyond that boundary so this control detects a broken containment check.
+		await new Promise((resolve) => setTimeout(resolve, 5));
+		await nextFrame(2);
+		expect(s.trigger().getAttribute('aria-expanded'), 'pointerdown inside changed public open state').toBe('true');
+		expect(s.list(), 'pointerdown inside must not close the dropdown').not.toBeNull();
+		expect(
+			el.getAnimations({ subtree: true }).filter((animation) => animation.playState !== 'finished'),
+			'pointerdown inside must not begin an exit animation'
+		).toHaveLength(0);
+
+		// Real cancelable bubbling outside pointer gesture
+		document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 }));
+
+		await waitUntil(() => s.trigger().getAttribute('aria-expanded'), (value) => value === 'false', {
+			what: 'an outside pointerdown to close the Select'
+		});
+
+		// Public lifecycle: state closes first, the list remains for its exit, then unmounts.
+		expect(s.list(), 'an outside click: the dropdown vanished instead of animating out').not.toBeNull();
+		await waitForAnimations(el, { what: 'an outside click: the exit animation' });
+		await settleAnimations(el);
+		await waitUntil(() => s.list(), (l) => l === null, { what: 'an outside click: the dropdown to unmount' });
 	});
 
 	it('closes on Enter over a highlighted option', async () => {

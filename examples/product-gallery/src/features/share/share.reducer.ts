@@ -30,13 +30,14 @@ export const shareReducer: Reducer<ShareState, ShareAction, ShareDependencies> =
       ];
 
     case 'shareButtonTapped':
-      // In a real app, would trigger share action here
-      // For demo, just log and let parent observe to dismiss
-      if (state.selectedMethod) {
-        console.log(`[Share] Sharing via ${state.selectedMethod}`);
-      }
-      // Parent observes this action and dismisses
-      return [state, Effect.none()];
+      return [
+        state,
+        state.selectedMethod
+          ? Effect.run(() => {
+              console.log(`[Share] Sharing via ${state.selectedMethod}`);
+            })
+          : Effect.none()
+      ];
 
     case 'cancelButtonTapped':
       // Parent observes this action and dismisses

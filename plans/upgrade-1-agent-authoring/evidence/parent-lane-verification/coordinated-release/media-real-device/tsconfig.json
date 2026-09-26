@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler", "strict": true,
+    "exactOptionalPropertyTypes": true, "skipLibCheck": true, "noEmit": true, "types": ["svelte"],
+    "verbatimModuleSyntax": true, "lib": ["ES2022", "DOM", "DOM.Iterable"]
+  },
+  "include": ["tests/**/*", "src/**/*", "vite.config.ts"]
+}

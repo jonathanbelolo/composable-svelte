@@ -5,7 +5,31 @@ All notable changes to `@composable-svelte/charts` will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.0] - 2026-09-26
+
+The explicit row typing change and core peer bump are breaking for some 0.2.x consumers.
+
+### Added
+
+- **Managed Companion Support**: `Chart` and `ChartPrimitive` accept narrow structural `ChartStore<TRow>` (`Pick<ChildView<ChartState<TRow>, ChartAction<TRow>>, 'state' | 'dispatch' | 'subscribe'>`), enabling direct use with `@composable-svelte/core/application` managed views (`defineViews`, `FeatureViews`, `FeatureOutlet`) alongside standalone `Store`.
+- **Generic Row Typing**: `chartReducer<Row>`, `Chart`, `ChartPrimitive`, `ChartConfig`, and `ChartAccessor` preserve explicitly supplied row types in actions, known property keys, and selection callbacks. Unparameterized reducers use an `unknown` row compatibility mode.
+- **SSR Rendering**: Components safely render server-side in Svelte 5 SSR environments without calling browser DOM/animation APIs.
+
+### Changed
+
+- **BREAKING**: A store assembled with an unparameterized `chartReducer` now has `unknown` rows. Instantiate `chartReducer<Row>` for typed `Chart<Row>` callbacks and strict row actions; update existing stores that relied on the previous `any` base.
+- **Prompt Retirement Lifecycle**: `Chart` and `ChartPrimitive` guard against terminal `undefined` from retired child views. Promptly cancels active animation RAF, detaches d3 zoom and brush event listeners, disconnects `ResizeObserver`, and clears pending SVG attachment timers upon owner retirement before DOM unmount. Subsequent DOM unmount is idempotent.
+- `ChartPrimitive` rebinds when its `store` prop changes; callbacks from the predecessor cannot retire or redraw its successor.
+- `ChartPrimitive` builds one Plot at mount and one per later dispatch or prop change; the initial prop effect no longer repeats the first build.
+- Peer ranges now require `@composable-svelte/core` `^0.13.1` and Svelte `^5.20.0` for managed view binding.
+- A direct `zoom` action clears any active animation target before applying its transform.
+- Selection and focus marks use default `x`/`y` axes when the chart config leaves them out, matching the rendered plot.
+- `barCategoryOrder` can preserve input order or use Plot's automatic category order. `resolveAccessor` returns a primitive datum itself when no property lookup applies.
+- The package Vite configuration now delegates to its Vitest configuration; library output is produced by `svelte-package`.
+
+### Fixed
+
+- `binData` now retains maximum and constant values, skips non-finite input before deriving the domain, and uses D3's actual assignments for fractional boundaries. Corrected output can contain more rows than earlier releases that dropped maximum values.
 
 ## [0.2.1] - 2026-09-18
 

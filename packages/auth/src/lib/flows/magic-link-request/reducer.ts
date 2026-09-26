@@ -8,6 +8,7 @@ import {
 } from '@composable-svelte/core/components/form';
 
 import { toAuthError } from '../../errors/helpers.js';
+import { completesSubmissionInFlight } from '../submission-feedback.js';
 import { emptyMagicLinkFields, magicLinkSchema, type MagicLinkFields } from './schema.js';
 import type {
 	MagicLinkRequestAction,
@@ -48,7 +49,8 @@ export function createInitialMagicLinkRequestState(
 		}),
 		status: 'idle',
 		error: null,
-		requestedFor: null
+		requestedFor: null,
+		settled: null
 	};
 }
 
@@ -73,16 +75,20 @@ export function magicLinkRequestReducer(
 	action: MagicLinkRequestAction,
 	deps: MagicLinkRequestDependencies
 ): readonly [MagicLinkRequestState, Effect<MagicLinkRequestAction>] {
+	const base = state.settled === null ? state : { ...state, settled: null };
 	switch (action.type) {
 		case 'form': {
-			const [withForm, formEffect] = scopedFormReducer(state, action, deps);
+			const [withForm, formEffect] = scopedFormReducer(base, action, deps);
 
 			const cleared =
 				action.action.type === 'fieldChanged' && withForm.error !== null
 					? { ...withForm, error: null }
 					: withForm;
 
-			if (action.action.type !== 'submissionSucceeded') {
+			// Only the result of a submission in flight; see `submission-feedback.ts`.
+			// A stale one would otherwise mail a sign-in link to whatever address the
+			// field now holds. Asking again after `sent` stays allowed.
+			if (!completesSubmissionInFlight(base.form, withForm.form, action.action)) {
 				return [cleared, formEffect];
 			}
 
@@ -95,7 +101,7 @@ export function magicLinkRequestReducer(
 			return [
 				// `requestedFor` cleared on a new attempt, so the confirmation below
 				// can never name an address from a previous one.
-				{ ...cleared, status: 'submitting', error: null, requestedFor: null },
+				{ ...cleared, status: 'submitting', error: null, requestedFor: null, settled: null },
 				Effect.batch(
 					formEffect,
 					Effect.cancellable<MagicLinkRequestAction>(
@@ -114,26 +120,38 @@ export function magicLinkRequestReducer(
 		}
 
 		case 'requestSent': {
+			// Only an in-flight request can settle with sent.
+			if (base.status !== 'submitting') {
+				return [base, Effect.none()];
+			}
 			return [
-				{ ...state, status: 'sent', error: null, requestedFor: action.email },
+				{ ...base, status: 'sent', error: null, requestedFor: action.email, settled: 'sent' },
 				Effect.none()
 			];
 		}
 
 		case 'requestFailed': {
+			// Only an in-flight request can fail.
+			if (base.status !== 'submitting') {
+				return [base, Effect.none()];
+			}
 			// Back to `idle`, with `error` doing the talking — the field is still on
 			// screen and a retry is genuinely useful here, unlike the sign-in half.
-			return [{ ...state, status: 'idle', error: action.error }, Effect.none()];
+			return [{ ...base, status: 'idle', error: action.error }, Effect.none()];
 		}
 
 		case 'errorDismissed': {
-			return [state.error === null ? state : { ...state, error: null }, Effect.none()];
+			return [base.error === null ? base : { ...base, error: null }, Effect.none()];
+		}
+
+		case 'signInRequested': {
+			return [base, Effect.none()];
 		}
 
 		default: {
 			const _exhaustive: never = action;
 			void _exhaustive;
-			return [state, Effect.none()];
+			return [base, Effect.none()];
 		}
 	}
 }

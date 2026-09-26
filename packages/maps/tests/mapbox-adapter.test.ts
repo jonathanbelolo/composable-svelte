@@ -25,12 +25,16 @@ const record = (method: string) => (...args: unknown[]) => {
 
 const existingLayers = new Set<string>();
 const existingSources = new Set<string>();
+let fakeStyleReady = true;
+let lastMap: FakeMap | undefined;
 
 class FakeMap {
+	listeners = new Map<string, Set<Function>>();
 	constructor(public options: Record<string, unknown>) {
 		calls.push({ method: 'construct', args: [options] });
+		lastMap = this;
 	}
-	isStyleLoaded = () => true;
+	isStyleLoaded = () => fakeStyleReady;
 	getSource = (id: string) => (existingSources.has(id) ? {} : undefined);
 	getLayer = (id: string) => (existingLayers.has(id) ? {} : undefined);
 	addSource = (id: string, spec: unknown) => {
@@ -55,8 +59,17 @@ class FakeMap {
 	setCenter = record('setCenter');
 	setZoom = record('setZoom');
 	once = record('once');
-	on = record('on');
-	off = record('off');
+	on = (event: string, handler: Function) => {
+		calls.push({ method: 'on', args: [event, handler] });
+		const handlers = this.listeners.get(event) ?? new Set<Function>();
+		handlers.add(handler);
+		this.listeners.set(event, handlers);
+	};
+	off = (event: string, handler: Function) => {
+		calls.push({ method: 'off', args: [event, handler] });
+		this.listeners.get(event)?.delete(handler);
+	};
+	emit(event: string) { for (const handler of [...(this.listeners.get(event) ?? [])]) handler(); }
 	remove = record('remove');
 	getCenter = () => ({ lng: 1, lat: 2 });
 	getZoom = () => 7;
@@ -101,6 +114,58 @@ beforeEach(() => {
 	calls.length = 0;
 	existingLayers.clear();
 	existingSources.clear();
+	fakeStyleReady = true;
+	lastMap = undefined;
+});
+
+describe('style readiness and reload', () => {
+	const layer = {
+		id: 'pending', type: 'geojson' as const,
+		data: { type: 'FeatureCollection', features: [] } as never,
+		style: {}, visible: true, interactive: false
+	};
+
+	it('waits through style and source loading, then flushes on later styledata', () => {
+		const adapter = new MapboxAdapter();
+		adapter.initialize(container(), options());
+		fakeStyleReady = false;
+		adapter.addLayer(layer);
+		expect(callsTo('addSource')).toHaveLength(0);
+		lastMap!.emit('style.load');
+		expect(callsTo('addSource')).toHaveLength(0);
+		fakeStyleReady = true;
+		lastMap!.emit('styledata');
+		expect(callsTo('addSource')).toHaveLength(1);
+		expect(callsTo('off').map(call => call.args[0])).toEqual(['style.load', 'styledata', 'idle']);
+	});
+
+	it('forces a full reload and cancels removed pending layers', () => {
+		const adapter = new MapboxAdapter();
+		adapter.initialize(container(), options());
+		fakeStyleReady = false;
+		adapter.addLayer(layer);
+		adapter.removeLayer(layer.id);
+		fakeStyleReady = true;
+		lastMap!.emit('idle');
+		expect(callsTo('addSource')).toHaveLength(0);
+		adapter.changeStyle('mapbox://styles/mapbox/dark-v11');
+		const styleCall = callsTo('setStyle')[0]!;
+		expect(styleCall.args[1]).toStrictEqual({ diff: false });
+	});
+
+	it('cancels a removed pending layer during style replacement', () => {
+		const adapter = new MapboxAdapter();
+		adapter.initialize(container(), options());
+		fakeStyleReady = false;
+		adapter.addLayer(layer);
+		adapter.changeStyle('mapbox://styles/mapbox/dark-v11');
+		adapter.removeLayer(layer.id);
+		fakeStyleReady = true;
+		lastMap!.emit('style.load');
+		lastMap!.emit('styledata');
+		expect(callsTo('addSource')).toHaveLength(0);
+		expect(callsTo('setStyle')[0]!.args[1]).toStrictEqual({ diff: false });
+	});
 });
 
 describe('the access token', () => {

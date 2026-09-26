@@ -1,0 +1,4 @@
+suite exit=0
+opus-final-review/final-gates.sh:18: no matches found: /private/tmp/composable-final-checker/opus-final-review/final-archive/*.tgz
+inspect exit=0
+archive f3c91ee6ae078312cc1f289034d3245266ff74f5ba116c12641001611933808f sha512-B5sO64ldYfHR+yr1SPPcSXOHg5/hQxKdNYpI9gcr+dTLa2QzXd30l+fU1eftsUpPGl1uiacq25A0G1Nh3cqA1g==

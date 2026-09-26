@@ -1,0 +1,143 @@
+
+Running 6 tests using 1 worker
+
+  ✘  1 [chromium] › tests/browser/dashboard.pw.ts:11:1 › accepted sign-in changes the route; rejected sign-in does not (5.3s)
+  ✓  2 [chromium] › tests/browser/dashboard.pw.ts:25:1 › unauthenticated /dashboard request is vetoed to /login (154ms)
+  ✘  3 [chromium] › tests/browser/dashboard.pw.ts:32:1 › MFA challenge then dashboard for the MFA subject (5.3s)
+  ✘  4 [chromium] › tests/browser/dashboard.pw.ts:44:1 › keyboard chart selection reaches the owning feature as a typed row (5.3s)
+  ✘  5 [chromium] › tests/browser/dashboard.pw.ts:59:1 › password change keeps the account view and reports documented outcome (5.2s)
+  ✘  6 [chromium] › tests/browser/dashboard.pw.ts:72:1 › logout removes the former account and lets a different subject sign in (5.3s)
+
+
+  1) [chromium] › tests/browser/dashboard.pw.ts:11:1 › accepted sign-in changes the route; rejected sign-in does not 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveText[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: getByTestId('account-subject-id')
+    Expected: [32m"sub-ada-1"[39m
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toHaveText" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('account-subject-id')[22m
+
+
+      19 |   await page.getByRole('button', { name: 'Sign in' }).click();
+      20 |   await expect(page).toHaveURL(/\/dashboard$/);
+    > 21 |   await expect(page.getByTestId('account-subject-id')).toHaveText('sub-ada-1');
+         |                                                        ^
+      22 |   await expect(page.getByTestId('chart-feature-view').locator('svg').first()).toBeVisible();
+      23 | });
+      24 |
+        at /private/tmp/composable-final-authoring/app-b/tests/browser/dashboard.pw.ts:21:56
+
+    Error Context: test-results/dashboard.pw.ts-accepted-s-b6263-e-rejected-sign-in-does-not-chromium/error-context.md
+
+  2) [chromium] › tests/browser/dashboard.pw.ts:32:1 › MFA challenge then dashboard for the MFA subject 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveText[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: getByTestId('account-subject-id')
+    Expected: [32m"sub-mfa-1"[39m
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toHaveText" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('account-subject-id')[22m
+
+
+      39 |   await page.getByRole('button', { name: 'Verify' }).click();
+      40 |   await expect(page).toHaveURL(/\/dashboard$/);
+    > 41 |   await expect(page.getByTestId('account-subject-id')).toHaveText('sub-mfa-1');
+         |                                                        ^
+      42 | });
+      43 |
+      44 | test('keyboard chart selection reaches the owning feature as a typed row', async ({ page }) => {
+        at /private/tmp/composable-final-authoring/app-b/tests/browser/dashboard.pw.ts:41:56
+
+    Error Context: test-results/dashboard.pw.ts-MFA-challe-8a873-shboard-for-the-MFA-subject-chromium/error-context.md
+
+  3) [chromium] › tests/browser/dashboard.pw.ts:44:1 › keyboard chart selection reaches the owning feature as a typed row 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('chart-feature-view').locator('[role="application"]')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('chart-feature-view').locator('[role="application"]')[22m
+
+
+      47 |   await expect(page).toHaveURL(/\/dashboard$/);
+      48 |   const chart = page.getByTestId('chart-feature-view').locator('[role="application"]');
+    > 49 |   await expect(chart).toBeVisible();
+         |                       ^
+      50 |   await chart.focus();
+      51 |   await page.keyboard.press('Home');
+      52 |   await page.keyboard.press('Enter');
+        at /private/tmp/composable-final-authoring/app-b/tests/browser/dashboard.pw.ts:49:23
+
+    Error Context: test-results/dashboard.pw.ts-keyboard-c-9a114-ning-feature-as-a-typed-row-chromium/error-context.md
+
+  4) [chromium] › tests/browser/dashboard.pw.ts:59:1 › password change keeps the account view and reports documented outcome 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('account-card')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('account-card')[22m
+
+
+      60 |   await page.goto('/login');
+      61 |   await signIn(page, 'ada@example.com');
+    > 62 |   await expect(page.getByTestId('account-card')).toBeVisible();
+         |                                                  ^
+      63 |   await page.getByTestId('open-change-password-button').click();
+      64 |   const wrapper = page.getByTestId('change-password-wrapper');
+      65 |   await wrapper.locator('input[name="password"]').fill('BrandNewPassword123!');
+        at /private/tmp/composable-final-authoring/app-b/tests/browser/dashboard.pw.ts:62:50
+
+    Error Context: test-results/dashboard.pw.ts-password-c-31acf--reports-documented-outcome-chromium/error-context.md
+
+  5) [chromium] › tests/browser/dashboard.pw.ts:72:1 › logout removes the former account and lets a different subject sign in 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveText[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: getByTestId('account-subject-id')
+    Expected: [32m"sub-ada-1"[39m
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toHaveText" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('account-subject-id')[22m
+
+
+      73 |   await page.goto('/login');
+      74 |   await signIn(page, 'ada@example.com');
+    > 75 |   await expect(page.getByTestId('account-subject-id')).toHaveText('sub-ada-1');
+         |                                                        ^
+      76 |   await page.getByTestId('logout-button').click();
+      77 |   await expect(page).toHaveURL(/\/login$/);
+      78 |   await expect(page.getByTestId('account-card')).toHaveCount(0);
+        at /private/tmp/composable-final-authoring/app-b/tests/browser/dashboard.pw.ts:75:56
+
+    Error Context: test-results/dashboard.pw.ts-logout-rem-f0fda-a-different-subject-sign-in-chromium/error-context.md
+
+  5 failed
+    [chromium] › tests/browser/dashboard.pw.ts:11:1 › accepted sign-in changes the route; rejected sign-in does not 
+    [chromium] › tests/browser/dashboard.pw.ts:32:1 › MFA challenge then dashboard for the MFA subject 
+    [chromium] › tests/browser/dashboard.pw.ts:44:1 › keyboard chart selection reaches the owning feature as a typed row 
+    [chromium] › tests/browser/dashboard.pw.ts:59:1 › password change keeps the account view and reports documented outcome 
+    [chromium] › tests/browser/dashboard.pw.ts:72:1 › logout removes the former account and lets a different subject sign in 
+  1 passed (30.5s)

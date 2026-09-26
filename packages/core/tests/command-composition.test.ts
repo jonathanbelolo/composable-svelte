@@ -16,18 +16,13 @@
  * how they survived.
  */
 
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import CommandCompositionTest from './test-components/CommandCompositionTest.svelte';
 import type { CommandItem } from '../src/lib/components/command/command.types.js';
 
 const settle = (ms = 250) => new Promise((r) => setTimeout(r, ms));
 
-let cleanup: Array<() => void> = [];
-afterEach(() => {
-	cleanup.forEach((fn) => fn());
-	cleanup = [];
-});
 
 const five: CommandItem[] = [
 	{ id: 'a', label: 'Alpha' },
@@ -156,7 +151,8 @@ describe('groups', () => {
 				groups: [
 					{ id: 'file', label: 'Files' },
 					{ id: 'edit', label: 'Edit' }
-				]
+				],
+				onCommandExecute
 			});
 		await settle(400);
 
@@ -175,6 +171,9 @@ describe('groups', () => {
 			selected?.textContent?.trim(),
 			'the keyboard highlight disagrees with what the user sees'
 		).toBe(visible[2]);
+		dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+		await expect.poll(() => onCommandExecute.mock.calls).toEqual([[expect.objectContaining({ id: 'e1' })]]);
+
 	});
 });
 

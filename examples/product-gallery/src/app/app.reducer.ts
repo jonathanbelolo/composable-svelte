@@ -1,213 +1,141 @@
 import type { Reducer } from '@composable-svelte/core';
 import { Effect } from '@composable-svelte/core';
-import { integrate } from '@composable-svelte/core/navigation';
-import { createURLSyncEffect } from '@composable-svelte/core/routing';
-import type { AppState, AppAction } from './app.types.js';
+import {
+  defineApplication,
+  ManagedIntegrationBuilder,
+  optionalSlot
+} from '@composable-svelte/core/application';
+import type { AppAction, AppInitialInput, AppState } from './app.types.js';
+import { createInitialAppState } from './app.types.js';
 import { addToCart } from '../models/cart.js';
 import { createProductDetailState } from '../features/product-detail/product-detail.types.js';
-import { productDetailReducer } from '../features/product-detail/product-detail.reducer.js';
-import { serializeAppState } from './app.routing.js';
+import { productDetailComposition } from '../features/product-detail/product-detail.reducer.js';
+import { appRouting, parseAppURL } from './app.routing.js';
 
-// ============================================================================
-// Dependencies
-// ============================================================================
+export type AppDependencies = Record<never, never>;
 
-export interface AppDependencies {
-  // No external dependencies for this example
-}
-
-// ============================================================================
-// URL Sync Effect
-// ============================================================================
-
-// Create the URL sync effect function (called once at module level)
-const urlSyncEffect = createURLSyncEffect<AppState, AppAction>(
-  serializeAppState
-);
-
-// ============================================================================
-// Core Reducer (without child integration)
-// ============================================================================
-
-const coreReducer: Reducer<AppState, AppAction, AppDependencies> = (state, action, deps) => {
+const coreReducer: Reducer<AppState, AppAction, AppDependencies> = (state, action) => {
   switch (action.type) {
     case 'productClicked': {
-      // Show product detail using tree-based navigation WITH animation
-      const detailState = createProductDetailState(action.productId);
-      const newState: AppState = {
-        ...state,
-        productDetail: detailState,
-        presentation: {
-          status: 'presenting',
-          content: detailState,
-          duration: 300  // 300ms animation
-        }
-      };
-      return [
-        newState,
-        urlSyncEffect(newState)
-      ];
-    }
-
-    case 'presentation': {
-      switch (action.event.type) {
-        case 'presentationCompleted': {
-          // Animation finished - mark as presented
-          if (state.presentation.status === 'presenting' && state.presentation.content) {
-            return [
-              {
-                ...state,
-                presentation: {
-                  status: 'presented',
-                  content: state.presentation.content
-                }
-              },
-              Effect.none()
-            ];
-          }
-          return [state, Effect.none()];
-        }
-
-        case 'dismissalCompleted': {
-          // Dismissal animation finished - clear everything
-          const newState: AppState = {
-            ...state,
-            productDetail: null,
-            presentation: { status: 'idle' }
-          };
-          return [
-            newState,
-            urlSyncEffect(newState)
-          ];
-        }
-
-        default:
-          return [state, Effect.none()];
+      if (!state.products.some((product) => product.id === action.productId)) {
+        return [{ ...state, productDetail: null, presentation: { status: 'idle' } }, Effect.none()];
       }
+      const productDetail = createProductDetailState(action.productId);
+      return [{
+        ...state,
+        productDetail,
+        presentation: { status: 'presenting', content: productDetail, duration: 300 }
+      }, Effect.none()];
     }
-
-    case 'categoryToggled': {
-      const { selectedCategories } = state.filters;
-      const isSelected = selectedCategories.includes(action.category);
-
-      return [
-        {
+    case 'productDetail': {
+      if (action.action.type === 'dismiss') {
+        if (!state.productDetail || state.presentation.status !== 'presented') {
+          return [state, Effect.none()];
+        }
+        return [{
           ...state,
-          filters: {
-            selectedCategories: isSelected
-              ? selectedCategories.filter((c) => c !== action.category)
-              : [...selectedCategories, action.category]
+          presentation: {
+            status: 'dismissing',
+            content: state.productDetail,
+            duration: 200
           }
-        },
-        Effect.none()
-      ];
-    }
-
-    case 'viewModeChanged': {
-      return [
-        {
+        }, Effect.none()];
+      }
+      const child = action.action.action;
+      if (child.type === 'rootPresentationCompleted') {
+        if (!state.productDetail || state.presentation.status !== 'presenting') {
+          return [state, Effect.none()];
+        }
+        return [{
           ...state,
-          viewMode: action.mode
-        },
-        Effect.none()
-      ];
-    }
-
-    case 'sidebarToggled': {
-      return [
-        {
+          presentation: { status: 'presented', content: state.productDetail }
+        }, Effect.none()];
+      }
+      if (child.type === 'rootDismissalCompleted') {
+        if (state.presentation.status !== 'dismissing') return [state, Effect.none()];
+        return [{ ...state, productDetail: null, presentation: { status: 'idle' } }, Effect.none()];
+      }
+      if (child.type !== 'destination' || child.action.type !== 'presented') {
+        return [state, Effect.none()];
+      }
+      const output = child.action.action;
+      if (output.type === 'addToCart' && output.action.type === 'addConfirmed') {
+        return [{
           ...state,
-          sidebarExpanded: !state.sidebarExpanded
-        },
-        Effect.none()
-      ];
-    }
-
-    case 'cartItemAdded': {
-      return [
-        {
+          cart: addToCart(state.cart, output.action.productId, output.action.quantity)
+        }, Effect.none()];
+      }
+      if (output.type === 'deleteAlert' && output.action.type === 'deleteConfirmed') {
+        const productId = output.action.productId;
+        return [{
           ...state,
-          cart: addToCart(state.cart, action.productId, action.quantity)
-        },
-        Effect.none()
-      ];
+          products: state.products.filter((product) => product.id !== productId),
+          productDetail: null,
+          presentation: { status: 'idle' }
+        }, Effect.none()];
+      }
+      return [state, Effect.none()];
     }
-
-    case 'productDeleted': {
-      return [
-        {
+    case 'presentation': {
+      if (action.event.type === 'dismissalRequested') {
+        if (!state.productDetail) {
+          return [{ ...state, presentation: { status: 'idle' } }, Effect.none()];
+        }
+        if (state.presentation.status !== 'presented') return [state, Effect.none()];
+        return [{
           ...state,
-          products: state.products.filter((p) => p.id !== action.productId),
-          // Also dismiss the detail view since product is deleted
-          productDetail: null
-        },
-        Effect.none()
-      ];
+          presentation: {
+            status: 'dismissing',
+            content: state.productDetail,
+            duration: 200
+          }
+        }, Effect.none()];
+      }
+      return [state, Effect.none()];
     }
-
-    case 'favoriteToggled': {
-      return [
-        {
-          ...state,
-          products: state.products.map((p) =>
-            p.id === action.productId ? { ...p, isFavorite: !p.isFavorite } : p
-          )
-        },
-        Effect.none()
-      ];
+    case 'filtersCleared':
+      return [{ ...state, filters: { selectedCategories: [] } }, Effect.none()];
+    case 'categoryToggled': {
+      const selected = state.filters.selectedCategories;
+      return [{
+        ...state,
+        filters: {
+          selectedCategories: selected.includes(action.category)
+            ? selected.filter((category) => category !== action.category)
+            : [...selected, action.category]
+        }
+      }, Effect.none()];
     }
-
+    case 'viewModeChanged':
+      return [{ ...state, viewMode: action.mode }, Effect.none()];
+    case 'sidebarToggled':
+      return [{ ...state, sidebarExpanded: !state.sidebarExpanded }, Effect.none()];
+    case 'favoriteToggled':
+      return [{
+        ...state,
+        products: state.products.map((product) => product.id === action.productId
+          ? { ...product, isFavorite: !product.isFavorite }
+          : product)
+      }, Effect.none()];
     default:
       return [state, Effect.none()];
   }
 };
 
-// ============================================================================
-// App Reducer (Phase 3 DSL - with integrate())
-// ============================================================================
+export const productDetailSlot = optionalSlot<AppState, AppAction>()('productDetail');
 
-// Phase 2 manual pattern (before):
-// case 'productDetail': {
-//   const [newState, effect] = ifLetPresentation(
-//     (s: AppState) => s.productDetail,
-//     (s: AppState, detail) => ({ ...s, productDetail: detail }),
-//     'productDetail',
-//     (childAction): AppAction => ({ type: 'productDetail', action: { type: 'presented', action: childAction } }),
-//     productDetailReducer
-//   )(state, action, deps);
-//   return [newState, effect];
-// }
+const appBuilder = new ManagedIntegrationBuilder(coreReducer)
+  .with(productDetailSlot, productDetailComposition, {
+    replaceOn: (action) => action.type === 'productClicked',
+    dismissal: 'deferred'
+  });
 
-const integratedReducer = integrate(coreReducer)
-  .with('productDetail', productDetailReducer)
-  .build();
+export const appComposition = appBuilder.build();
 
-// Wrap integrated reducer to handle dismiss animations. `.with()`'s dismiss
-// nulls the field regardless of `presentation.status`, so the dismissing
-// animation has to start before the integrated reducer sees the action; this
-// is independent of the order children and core run in.
-export const appReducer: Reducer<AppState, AppAction, AppDependencies> = (state, action, deps) => {
-  // Check if this is a dismiss action
-  if (
-    action.type === 'productDetail' &&
-    action.action.type === 'dismiss' &&
-    state.presentation.status === 'presented' &&
-    state.presentation.content
-  ) {
-    // Start dismissing animation instead of immediately clearing productDetail
-    return [
-      {
-        ...state,
-        presentation: {
-          status: 'dismissing',
-          content: state.presentation.content,
-          duration: 200  // 200ms dismiss animation
-        }
-      },
-      Effect.none()
-    ];
-  }
+export const galleryApplication = defineApplication(appComposition, {
+  initialState: (input: AppInitialInput) =>
+    createInitialAppState(input.products, parseAppURL(input.url)),
+  routing: appRouting
+});
 
-  // Otherwise, let the integrated reducer handle it
-  return integratedReducer(state, action, deps);
-};
+export const appReducer = appComposition.reducer;

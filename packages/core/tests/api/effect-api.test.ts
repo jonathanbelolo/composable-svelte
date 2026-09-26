@@ -7,7 +7,7 @@ import { Effect } from '../../src/lib/effect.js';
 import { api, apiFireAndForget, apiAll } from '../../src/lib/api/effect-api.js';
 import { createMockAPI, type MockHandler } from '../../src/lib/api/testing/mock-client.js';
 import { APIError } from '../../src/lib/api/errors.js';
-import { Request } from '../../src/lib/api/types.js';
+import { Request, type APIClient } from '../../src/lib/api/types.js';
 
 describe('Effect.api()', () => {
   describe('Successful API Calls', () => {
@@ -395,50 +395,37 @@ describe('Effect.apiAll()', () => {
     expect(dispatched[0]).toEqual({ type: 'loaded', count: 0 });
   });
 
-  it('executes requests in parallel', async () => {
-    const startTimes: number[] = [];
-    const mockAPI = createMockAPI({
-      'GET /api/slow1': {
-        delay: 50,
-        data: () => {
-          startTimes.push(Date.now());
-          return { id: '1' };
-        }
-      },
-      'GET /api/slow2': {
-        delay: 50,
-        data: () => {
-          startTimes.push(Date.now());
-          return { id: '2' };
-        }
-      }
-    });
-
-    const effect = apiAll(
-      mockAPI,
-      [
-        { method: 'GET', url: '/api/slow1' },
-        { method: 'GET', url: '/api/slow2' }
-      ],
-      (responses) => ({ type: 'loaded' }),
-      (error) => ({ type: 'failed' })
-    );
-
-    const start = Date.now();
-    const dispatched: any[] = [];
-    if (effect._tag === 'Run') {
-      await effect.execute((a) => dispatched.push(a));
-    }
-    const duration = Date.now() - start;
-
-    // Should complete in ~50ms (parallel), not ~100ms (sequential)
-    expect(duration).toBeLessThan(100);
-    expect(duration).toBeGreaterThanOrEqual(40);
-
-    // Both requests should start at roughly the same time
-    if (startTimes.length === 2) {
-      const timeDiff = Math.abs(startTimes[1]! - startTimes[0]!);
-      expect(timeDiff).toBeLessThan(10); // Started within 10ms of each other
+  it('starts both requests before either settles', async () => {
+    type Response = { data: number; status: number; headers: Record<string, string> };
+    let resolveFirst!: (response: Response) => void;
+    let resolveSecond!: (response: Response) => void;
+    const first = new Promise<Response>(resolve => { resolveFirst = resolve; });
+    const second = new Promise<Response>(resolve => { resolveSecond = resolve; });
+    const request = vi.fn().mockReturnValueOnce(first).mockReturnValueOnce(second);
+    const client: APIClient = { ...createMockAPI({}), request };
+    const success = vi.fn(() => ({ type: 'loaded' }));
+    const failure = vi.fn(() => ({ type: 'failed' }));
+    const dispatch = vi.fn();
+    const effect = apiAll(client, [
+      { method: 'GET', url: '/first' }, { method: 'GET', url: '/second' }
+    ], success, failure);
+    if (effect._tag !== 'Run') throw new Error('expected Run');
+    const execution = effect.execute(dispatch);
+    try {
+      expect(request).toHaveBeenCalledTimes(2);
+      expect(dispatch).not.toHaveBeenCalled();
+      resolveSecond({ data: 2, status: 200, headers: {} });
+      resolveFirst({ data: 1, status: 200, headers: {} });
+      await execution;
+      expect(success).toHaveBeenCalledWith([
+        { data: 1, status: 200, headers: {} }, { data: 2, status: 200, headers: {} }
+      ]);
+      expect(failure).not.toHaveBeenCalled();
+      expect(dispatch).toHaveBeenCalledExactlyOnceWith({ type: 'loaded' });
+    } finally {
+      resolveFirst({ data: 1, status: 200, headers: {} });
+      resolveSecond({ data: 2, status: 200, headers: {} });
+      await execution;
     }
   });
 
@@ -619,5 +606,241 @@ describe('Real-world Usage Examples', () => {
     expect(dispatched[0].products).toHaveLength(1);
     expect(dispatched[0].categories).toHaveLength(1);
     expect(dispatched[0].stats.total).toBe(42);
+  });
+});
+
+describe('Error Boundary Regressions (B001-04)', () => {
+  describe('Effect.api()', () => {
+    it('propagates success mapper programming error without invoking onFailure', async () => {
+      const mockAPI = createMockAPI({
+        'GET /api/test': { ok: true }
+      });
+      const mapperError = new TypeError('Syntax/programming bug in success mapper');
+      const onFailure = vi.fn();
+
+      const effect = api(
+        mockAPI,
+        { method: 'GET', url: '/api/test' },
+        () => {
+          throw mapperError;
+        },
+        onFailure
+      );
+
+      const dispatch = vi.fn();
+      expect(effect._tag).toBe('Run');
+      if (effect._tag === 'Run') {
+        await expect(effect.execute(dispatch)).rejects.toBe(mapperError);
+      }
+      expect(onFailure).not.toHaveBeenCalled();
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
+    it('propagates dispatch/reducer error from successful request without invoking onFailure or double dispatch', async () => {
+      const mockAPI = createMockAPI({
+        'GET /api/test': { ok: true }
+      });
+      const dispatchError = new Error('Reducer state failure');
+      const onFailure = vi.fn();
+      const dispatch = vi.fn().mockImplementation(() => {
+        throw dispatchError;
+      });
+
+      const effect = api(
+        mockAPI,
+        { method: 'GET', url: '/api/test' },
+        (res) => ({ type: 'success', data: res.data }),
+        onFailure
+      );
+
+      expect(effect._tag).toBe('Run');
+      if (effect._tag === 'Run') {
+        await expect(effect.execute(dispatch)).rejects.toBe(dispatchError);
+      }
+      expect(onFailure).not.toHaveBeenCalled();
+      expect(dispatch).toHaveBeenCalledTimes(1);
+    });
+
+    it('normalizes synchronous client.request throw to APIError and dispatches failure once', async () => {
+      const syncError = new Error('Immediate sync network setup fault');
+      const mockClient = {
+        request: vi.fn().mockImplementation(() => {
+          throw syncError;
+        })
+      } as unknown as APIClient;
+
+      const onFailure = vi.fn((err: APIError) => ({ type: 'failed', error: err }));
+      const dispatch = vi.fn();
+
+      const effect = api(
+        mockClient,
+        { method: 'GET', url: '/api/sync' },
+        () => ({ type: 'success' }),
+        onFailure
+      );
+
+      if (effect._tag === 'Run') {
+        await effect.execute(dispatch);
+      }
+
+      expect(onFailure).toHaveBeenCalledTimes(1);
+      const passedError = onFailure.mock.calls[0]![0];
+      expect(passedError).toBeInstanceOf(APIError);
+      expect(passedError.message).toBe('Immediate sync network setup fault');
+      expect(dispatch).toHaveBeenCalledTimes(1);
+      expect(dispatch).toHaveBeenCalledWith({
+        type: 'failed',
+        error: passedError
+      });
+    });
+  });
+
+  describe('Effect.apiFireAndForget()', () => {
+    it('propagates success mapper programming error instead of swallowing it', async () => {
+      const mockAPI = createMockAPI({
+        'POST /api/track': { recorded: true }
+      });
+      const mapperError = new TypeError('Mapper fault in fire-and-forget');
+
+      const effect = apiFireAndForget(
+        mockAPI,
+        { method: 'POST', url: '/api/track' },
+        () => {
+          throw mapperError;
+        }
+      );
+
+      const dispatch = vi.fn();
+      expect(effect._tag).toBe('Run');
+      if (effect._tag === 'Run') {
+        await expect(effect.execute(dispatch)).rejects.toBe(mapperError);
+      }
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
+    it('propagates dispatch/reducer error instead of swallowing it', async () => {
+      const mockAPI = createMockAPI({
+        'POST /api/track': { recorded: true }
+      });
+      const dispatchError = new Error('Reducer fault in fire-and-forget');
+      const dispatch = vi.fn().mockImplementation(() => {
+        throw dispatchError;
+      });
+
+      const effect = apiFireAndForget(
+        mockAPI,
+        { method: 'POST', url: '/api/track' },
+        () => ({ type: 'tracked' })
+      );
+
+      expect(effect._tag).toBe('Run');
+      if (effect._tag === 'Run') {
+        await expect(effect.execute(dispatch)).rejects.toBe(dispatchError);
+      }
+      expect(dispatch).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores synchronous client.request throw and async rejection', async () => {
+      const syncMock = {
+        request: vi.fn().mockImplementation(() => {
+          throw new Error('Sync fail');
+        })
+      } as unknown as APIClient;
+      const dispatch = vi.fn();
+
+      const syncEffect = apiFireAndForget(
+        syncMock,
+        { method: 'POST', url: '/api/track' },
+        () => ({ type: 'tracked' })
+      );
+      if (syncEffect._tag === 'Run') {
+        await syncEffect.execute(dispatch);
+      }
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Effect.apiAll()', () => {
+    it('propagates success mapper programming error without invoking onFailure', async () => {
+      const mockAPI = createMockAPI({
+        'GET /api/a': { a: 1 },
+        'GET /api/b': { b: 2 }
+      });
+      const mapperError = new RangeError('Tuple index invalid in mapper');
+      const onFailure = vi.fn();
+
+      const effect = apiAll(
+        mockAPI,
+        [
+          { method: 'GET', url: '/api/a' },
+          { method: 'GET', url: '/api/b' }
+        ],
+        () => {
+          throw mapperError;
+        },
+        onFailure
+      );
+
+      const dispatch = vi.fn();
+      expect(effect._tag).toBe('Run');
+      if (effect._tag === 'Run') {
+        await expect(effect.execute(dispatch)).rejects.toBe(mapperError);
+      }
+      expect(onFailure).not.toHaveBeenCalled();
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
+    it('propagates dispatch/reducer error from successful requests without invoking onFailure or double dispatch', async () => {
+      const mockAPI = createMockAPI({
+        'GET /api/a': { a: 1 }
+      });
+      const dispatchError = new Error('Reducer crash in apiAll');
+      const onFailure = vi.fn();
+      const dispatch = vi.fn().mockImplementation(() => {
+        throw dispatchError;
+      });
+
+      const effect = apiAll(
+        mockAPI,
+        [{ method: 'GET', url: '/api/a' }],
+        ([res]) => ({ type: 'loaded', data: res!.data }),
+        onFailure
+      );
+
+      expect(effect._tag).toBe('Run');
+      if (effect._tag === 'Run') {
+        await expect(effect.execute(dispatch)).rejects.toBe(dispatchError);
+      }
+      expect(onFailure).not.toHaveBeenCalled();
+      expect(dispatch).toHaveBeenCalledTimes(1);
+    });
+
+    it('normalizes synchronous client.request throw in batch request', async () => {
+      const syncMock = {
+        request: vi.fn().mockImplementation(() => {
+          throw new Error('Batch sync throw');
+        })
+      } as unknown as APIClient;
+
+      const onFailure = vi.fn((err: APIError) => ({ type: 'failed', error: err }));
+      const dispatch = vi.fn();
+
+      const effect = apiAll(
+        syncMock,
+        [{ method: 'GET', url: '/api/a' }],
+        () => ({ type: 'loaded' }),
+        onFailure
+      );
+
+      if (effect._tag === 'Run') {
+        await effect.execute(dispatch);
+      }
+
+      expect(onFailure).toHaveBeenCalledTimes(1);
+      const passedError = onFailure.mock.calls[0]![0];
+      expect(passedError).toBeInstanceOf(APIError);
+      expect(passedError.message).toBe('Batch sync throw');
+      expect(dispatch).toHaveBeenCalledTimes(1);
+    });
   });
 });

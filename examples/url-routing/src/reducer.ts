@@ -1,112 +1,24 @@
-/**
- * Inventory App - Reducer
- *
- * Business logic with URL synchronization.
- * Phase 7: URL Synchronization (Browser History Integration)
- */
-
 import { Effect, type Reducer } from '@composable-svelte/core';
-import { createURLSyncEffect } from '@composable-svelte/core/routing';
-import type { InventoryState, InventoryAction } from './types';
-import { serializeInventoryState } from './routing';
+import type { InventoryState, InventoryAction, InventoryRoute } from './types';
 
-// ============================================================================
-// URL Sync Effect
-// ============================================================================
-
-const urlSyncEffect = createURLSyncEffect<InventoryState, InventoryAction>(
-	(state) => serializeInventoryState(state.destination)
-);
-
-// ============================================================================
-// Reducer
-// ============================================================================
-
-export const inventoryReducer: Reducer<InventoryState, InventoryAction, {}> = (state, action) => {
-	switch (action.type) {
-		// Navigation actions - update destination and sync URL
-		case 'itemSelected': {
-			const newState: InventoryState = {
-				...state,
-				destination: {
-					type: 'detail',
-					state: { itemId: action.itemId }
-				}
-			};
-			return [newState, urlSyncEffect(newState)];
-		}
-
-		case 'addTapped': {
-			const newState: InventoryState = {
-				...state,
-				destination: {
-					type: 'add',
-					state: {}
-				}
-			};
-			return [newState, urlSyncEffect(newState)];
-		}
-
-		case 'closeDestination': {
-			const newState: InventoryState = {
-				...state,
-				destination: null
-			};
-			return [newState, urlSyncEffect(newState)];
-		}
-
-		// Item management actions - no URL sync needed
-		case 'itemAdded': {
-			const newState: InventoryState = {
-				...state,
-				items: [...state.items, action.item],
-				destination: null // Close add modal
-			};
-			return [newState, urlSyncEffect(newState)];
-		}
-
-		case 'itemUpdated': {
-			const newState: InventoryState = {
-				...state,
-				items: state.items.map((item) =>
-					item.id === action.itemId ? { ...item, ...action.updates } : item
-				)
-			};
-			return [newState, Effect.none()];
-		}
-
-		case 'itemDeleted': {
-			const newState: InventoryState = {
-				...state,
-				items: state.items.filter((item) => item.id !== action.itemId),
-				// Close detail if we're viewing the deleted item
-				destination:
-					state.destination?.type === 'detail' &&
-					state.destination.state.itemId === action.itemId
-						? null
-						: state.destination
-			};
-			return [newState, urlSyncEffect(newState)];
-		}
-
-		// Filter actions - no URL sync needed (filters are local UI state)
-		case 'searchChanged':
-			return [{ ...state, searchQuery: action.query }, Effect.none()];
-
-		case 'categorySelected':
-			return [{ ...state, selectedCategory: action.category }, Effect.none()];
-
-		default:
-			return [state, Effect.none()];
-	}
+/** Business decisions only; accepted route state drives framework navigation. */
+export const inventoryReducer: Reducer<InventoryState, InventoryAction, undefined> = (state, action) => {
+  switch (action.type) {
+    case 'routeRequested': return [{...state,route:action.route},Effect.none()];
+    case 'itemSelected': return [{...state,route:{type:'detail',itemId:action.itemId}},Effect.none()];
+    case 'addTapped': return [{...state,route:{type:'add'}},Effect.none()];
+    case 'closeDestination': return [{...state,route:{type:'list',path:'/inventory'}},Effect.none()];
+    case 'itemAdded': return [{...state,items:[...state.items,action.item],route:{type:'list',path:'/inventory'}},Effect.none()];
+    case 'itemUpdated': return [{...state,items:state.items.map(item=>item.id===action.itemId?{...item,...action.updates}:item)},Effect.none()];
+    case 'itemDeleted': return [{...state,items:state.items.filter(item=>item.id!==action.itemId),
+      route:state.route.type==='detail'&&state.route.itemId===action.itemId?{type:'list',path:'/inventory'}:state.route},Effect.none()];
+    case 'searchChanged': return [{...state,searchQuery:action.query},Effect.none()];
+    case 'categorySelected': return [{...state,selectedCategory:action.category},Effect.none()];
+  }
 };
 
-// ============================================================================
-// Initial State
-// ============================================================================
-
-export const createInitialState = (): InventoryState => ({
-	destination: null,
+export const createInitialState = (route: InventoryRoute = {type:'list',path:'/inventory'}): InventoryState => ({
+	route,
 	items: [
 		{
 			id: '1',

@@ -1,0 +1,13 @@
+{
+ "res": {
+  "@composable-svelte/core": "/private/tmp/composable-final-authoring/app-b/node_modules/@composable-svelte/core/dist/index.js",
+  "@composable-svelte/auth": "/private/tmp/composable-final-authoring/app-b/node_modules/@composable-svelte/auth/dist/index.js",
+  "@composable-svelte/auth/application": "/private/tmp/composable-final-authoring/app-b/node_modules/@composable-svelte/auth/dist/application/index.js",
+  "@composable-svelte/charts": "/private/tmp/composable-final-authoring/app-b/node_modules/@composable-svelte/charts/dist/index.js",
+  "svelte": "/private/tmp/composable-final-authoring/app-b/node_modules/svelte/src/index-server.js",
+  "vitest": "/private/tmp/composable-final-authoring/app-b/node_modules/vitest/index.cjs",
+  "@playwright/test": "/private/tmp/composable-final-authoring/app-b/node_modules/@playwright/test/index.js",
+  "vite": "/private/tmp/composable-final-authoring/app-b/node_modules/vite/dist/node/index.js"
+ },
+ "allWithinAppNodeModules": true
+}

@@ -78,12 +78,16 @@ interface ParsedPattern {
  */
 function parsePattern(pattern: string): ParsedPattern {
   const paramNames: string[] = [];
-
-  // Replace :paramName with capture groups
-  const regexpStr = pattern.replace(/:(\w+)/g, (_, name) => {
-    paramNames.push(name);
-    return '([^/]+)'; // Match anything except /
-  });
+  const regexpStr = pattern
+    .split(/:(\w+)/g)
+    .map((part, i) => {
+      if (i % 2 === 1) {
+        paramNames.push(part);
+        return '([^/]+)';
+      }
+      return part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    })
+    .join('');
 
   return {
     regexp: new RegExp('^' + regexpStr + '$'),
@@ -233,8 +237,7 @@ export function createMockAPI(routes: MockRoutes = {}): APIClient {
   const interceptors: Interceptor[] = [];
 
   const findRoute = (method: string, url: string) => {
-    // Strip query string for matching
-    const urlPath = url.split('?')[0];
+    const urlPath = url.split(/[?#]/)[0]!;
     const routeKey = `${method} ${urlPath}`;
 
     // Try exact match first

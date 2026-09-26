@@ -16,8 +16,9 @@
 
 	import { createScrollFollower, prefersReducedMotion } from '@composable-svelte/core/animation';
 	import type { ScrollFollower } from '@composable-svelte/core/animation';
-	import { onDestroy } from 'svelte';
-	import type { Store } from '@composable-svelte/core';
+	import { onDestroy, untrack } from 'svelte';
+	import type { PresentationState } from '@composable-svelte/core';
+	import { followOwner, type ViewStore } from '../../internal/view-store.js';
 	import type { StreamingChatState, StreamingChatAction, MessageAttachment } from '../types.js';
 	import ChatMessageWithActions from '../primitives/ChatMessageWithActions.svelte';
 	import PendingAttachmentPreview from '../attachment-components/PendingAttachmentPreview.svelte';
@@ -32,9 +33,11 @@
 
 	interface Props {
 		/**
-		 * Store managing chat state.
+		 * Store managing chat state: a standalone `Store`, or the managed view a
+		 * feature receives (`FeatureViewProps.store`). Once a managed owner
+		 * retires, the chat renders nothing.
 		 */
-		store: Store<StreamingChatState, StreamingChatAction>;
+		store: ViewStore<StreamingChatState, StreamingChatAction>;
 
 		/**
 		 * Placeholder text for input.
@@ -112,25 +115,39 @@
 
 	// Input state
 	let inputValue = $state('');
-	let messagesContainer: HTMLDivElement;
+	let messagesContainer = $state<HTMLDivElement | undefined>();
 	let shouldAutoScroll = $state(true);
-	let fileInputRef: HTMLInputElement;
+	let fileInputRef = $state<HTMLInputElement | undefined>();
+
+	// `undefined` once a managed owner has retired.
+	const chat = $derived($store);
+
+	// A draft belongs to the conversation it was typed into. An unkeyed chat
+	// whose `store` changes must not send it to the next one.
+	$effect.pre(() => {
+		void store;
+		untrack(() => {
+			inputValue = '';
+			shouldAutoScroll = true;
+		});
+	});
 	// The store is the single source of truth. This used to be a component-local
 	// `$state` array, which meant `state.pendingAttachments` was permanently `[]`
 	// — its three reducer actions had no dispatcher, its exhaustive tests covered
 	// a path nothing took, and attachments could not survive a session restore.
-	const pendingAttachments = $derived($store.pendingAttachments);
+	const pendingAttachments = $derived(chat?.pendingAttachments ?? []);
 	// The preview lifecycle lives in the store, like `pendingAttachments` before
 	// it. A component-local boolean could not hold the element on screen for its
 	// exit animation, nor defer the removal until that exit finished.
-	const previewPresentation = $derived($store.attachmentPreview.presentation);
+	const idlePreview: PresentationState<MessageAttachment> = { status: 'idle' };
+	const previewPresentation = $derived(chat?.attachmentPreview.presentation ?? idlePreview);
 	const previewingAttachment = $derived(
 		previewPresentation.status === 'idle' ? null : previewPresentation.content
 	);
 	const previewOpen = $derived(
 		previewPresentation.status === 'presenting' || previewPresentation.status === 'presented'
 	);
-	let inputRef: HTMLTextAreaElement;
+	let inputRef = $state<HTMLTextAreaElement | undefined>();
 
 	// Handle prefill value changes
 	$effect(() => {
@@ -147,9 +164,9 @@
 		}
 	});
 
-	// Use $store auto-subscription
 	const canSendMessage = $derived(
-		!$store.isWaitingForResponse &&
+		!!chat &&
+			!chat.isWaitingForResponse &&
 			(inputValue.trim().length > 0 || pendingAttachments.length > 0)
 	);
 
@@ -179,7 +196,7 @@
 	$effect(() => {
 		if (!messagesContainer) return;
 
-		if (shouldAutoScroll && ($store.currentStreaming || $store.messages.length > 0)) {
+		if (shouldAutoScroll && chat && (chat.currentStreaming || chat.messages.length > 0)) {
 			follower?.follow();
 		} else {
 			// Stopping matters as much as starting. `follow()` runs until it reaches
@@ -234,6 +251,10 @@
 	}
 
 	async function handleFileSelect(e: Event) {
+		// The store the user picked the files in. Reading files is asynchronous,
+		// and the attachments must not land in a conversation the `store` prop
+		// has moved on to meanwhile. A retired owner drops them.
+		const target = store;
 		const input = e.target as HTMLInputElement;
 		const files = input.files;
 
@@ -263,7 +284,7 @@
 
 		// Show errors if any
 		if (errors.length > 0) {
-			store.dispatch({
+			target.dispatch({
 				type: 'streamError',
 				error: errors.join(' ')
 			});
@@ -275,11 +296,17 @@
 				validFiles.map((file) => createAttachmentFromFile(file))
 			);
 
-			for (const attachment of newAttachments) {
-				store.dispatch({ type: 'addAttachment', attachment });
+			// Retired while the files were read: nothing will ever hold these
+			// blob URLs, so release them rather than dispatch into a void.
+			if (target.state === undefined) {
+				newAttachments.forEach((attachment) => revokeFileBlobURL(attachment.url));
+			} else {
+				for (const attachment of newAttachments) {
+					target.dispatch({ type: 'addAttachment', attachment });
+				}
 			}
 		} catch (error) {
-			store.dispatch({
+			target.dispatch({
 				type: 'streamError',
 				error: `Failed to process files: ${error instanceof Error ? error.message : 'Unknown error'}`
 			});
@@ -297,171 +324,211 @@
 		store.dispatch({ type: 'removeAttachment', attachmentId });
 	}
 
-	// Unmount still revokes: the store outlives this component, and the URLs
-	// belong to the browser rather than to either of them.
+	// Pending blob URLs are held per conversation, not per prop value. An
+	// unkeyed chat whose `store` moves from A to B leaves A's URLs alone — A
+	// still has them, and may be shown again or elsewhere — but keeps following
+	// A, so that A's owner retiring later revokes what A last held. Revoking on
+	// the prop change broke a live conversation's previews; forgetting A leaked
+	// its URLs once nothing was bound to it.
+	//
+	// Retirement revokes the owner's last notified list, never a read of the
+	// store: a retired view has no state left to read.
+	//
+	// Unmount still revokes every conversation this instance holds: the store
+	// outlives this component, and the URLs belong to the browser rather than
+	// to either of them.
+	type Custody = { held: MessageAttachment[]; stop: () => void };
+	const custody = new Map<ViewStore<StreamingChatState, StreamingChatAction>, Custody>();
+	function revokeAll(attachments: MessageAttachment[]) {
+		attachments.forEach((attachment) => revokeFileBlobURL(attachment.url));
+	}
+	function hold(source: ViewStore<StreamingChatState, StreamingChatAction>) {
+		if (custody.has(source)) return;
+		const entry: Custody = { held: [], stop: () => {} };
+		custody.set(source, entry);
+		entry.stop = followOwner(
+			source,
+			(state) => {
+				entry.held = state.pendingAttachments;
+			},
+			() => {
+				custody.delete(source);
+				revokeAll(entry.held);
+			}
+		);
+	}
+	$effect.pre(() => {
+		const source = store;
+		untrack(() => hold(source));
+	});
 	onDestroy(() => {
-		$store.pendingAttachments.forEach((attachment) => {
-			revokeFileBlobURL(attachment.url);
-		});
+		const entries = [...custody.values()];
+		custody.clear();
+		for (const entry of entries) {
+			entry.stop();
+			revokeAll(entry.held);
+		}
 	});
 </script>
 
-<div class="full-streaming-chat {className}">
-	<!-- Messages Container -->
-	<div class="full-streaming-chat__messages" bind:this={messagesContainer} onscroll={handleScroll}>
-		{#if $store.messages.length === 0 && !$store.currentStreaming}
-			<div class="full-streaming-chat__empty">
-				<p>No messages yet. Start a conversation!</p>
-			</div>
-		{:else}
-			{#each $store.messages as message (message.id)}
-				<ChatMessageWithActions
-					{message}
-					{store}
-					{userLabel}
-					{assistantLabel}
-					{userAvatarUrl}
-					{assistantAvatarUrl}
-					animateIn={message.id === $store.lastAppendedId}
-				/>
-			{/each}
-
-			{#if $store.currentStreaming}
-				<ChatMessageWithActions
-					message={{
-						id: 'streaming',
-						role: 'assistant',
-						content: $store.currentStreaming.content,
-						timestamp: Date.now()
-					}}
-					{store}
-					{userLabel}
-					{assistantLabel}
-					{userAvatarUrl}
-					{assistantAvatarUrl}
-					isStreaming={true}
-				/>
-			{/if}
-		{/if}
-	</div>
-
-	<!-- Error Display -->
-	{#if $store.error}
-		<div class="full-streaming-chat__error">
-			<span class="full-streaming-chat__error-text">{$store.error}</span>
-			<button
-				class="full-streaming-chat__error-close"
-				onclick={() => store.dispatch({ type: 'clearError' })}
-				aria-label="Dismiss error"
-			>
-				✕
-			</button>
-		</div>
-	{/if}
-
-	<!-- Input Form -->
-	<form class="full-streaming-chat__form" onsubmit={handleSubmit}>
-		<!-- Pending Attachments Preview -->
-		{#if pendingAttachments.length > 0}
-			<div class="full-streaming-chat__attachments-preview">
-				{#each pendingAttachments as attachment (attachment.id)}
-					<PendingAttachmentPreview
-						{attachment}
-						onclick={() => store.dispatch({ type: 'attachmentPreviewOpened', attachment })}
-						onremove={() => removeAttachment(attachment.id)}
+{#if chat}
+	<div class="full-streaming-chat {className}">
+		<!-- Messages Container -->
+		<div class="full-streaming-chat__messages" bind:this={messagesContainer} onscroll={handleScroll}>
+			{#if chat.messages.length === 0 && !chat.currentStreaming}
+				<div class="full-streaming-chat__empty">
+					<p>No messages yet. Start a conversation!</p>
+				</div>
+			{:else}
+				{#each chat.messages as message (message.id)}
+					<ChatMessageWithActions
+						{message}
+						{store}
+						{userLabel}
+						{assistantLabel}
+						{userAvatarUrl}
+						{assistantAvatarUrl}
+						animateIn={message.id === chat.lastAppendedId}
 					/>
 				{/each}
+
+				{#if chat.currentStreaming}
+					<ChatMessageWithActions
+						message={{
+							id: 'streaming',
+							role: 'assistant',
+							content: chat.currentStreaming.content,
+							timestamp: Date.now()
+						}}
+						{store}
+						{userLabel}
+						{assistantLabel}
+						{userAvatarUrl}
+						{assistantAvatarUrl}
+						isStreaming={true}
+					/>
+				{/if}
+			{/if}
+		</div>
+
+		<!-- Error Display -->
+		{#if chat.error}
+			<div class="full-streaming-chat__error">
+				<span class="full-streaming-chat__error-text">{chat.error}</span>
+				<button
+					class="full-streaming-chat__error-close"
+					onclick={() => store.dispatch({ type: 'clearError' })}
+					aria-label="Dismiss error"
+				>
+					✕
+				</button>
 			</div>
 		{/if}
 
-		<div class="full-streaming-chat__input-wrapper">
-			<!-- Hidden file input -->
-			<input
-				type="file"
-				bind:this={fileInputRef}
-				onchange={handleFileSelect}
-				multiple
-				accept={acceptedFileTypes.length > 0
-					? acceptedFileTypes.join(',')
-					: 'image/*,video/*,audio/*,application/pdf,.pdf,.doc,.docx,.txt,.zip,.tar,.gz'}
-				style="display: none;"
-			/>
+		<!-- Input Form -->
+		<form class="full-streaming-chat__form" onsubmit={handleSubmit}>
+			<!-- Pending Attachments Preview -->
+			{#if pendingAttachments.length > 0}
+				<div class="full-streaming-chat__attachments-preview">
+					{#each pendingAttachments as attachment (attachment.id)}
+						<PendingAttachmentPreview
+							{attachment}
+							onclick={() => store.dispatch({ type: 'attachmentPreviewOpened', attachment })}
+							onremove={() => removeAttachment(attachment.id)}
+						/>
+					{/each}
+				</div>
+			{/if}
 
-			<!-- Attach button -->
-			<button
-				type="button"
-				class="full-streaming-chat__attach-btn"
-				onclick={handleAttachFiles}
-				disabled={$store.isWaitingForResponse}
-				aria-label="Attach files"
-				title="Attach files"
-			>
-				📎
-			</button>
+			<div class="full-streaming-chat__input-wrapper">
+				<!-- Hidden file input -->
+				<input
+					type="file"
+					bind:this={fileInputRef}
+					onchange={handleFileSelect}
+					multiple
+					accept={acceptedFileTypes.length > 0
+						? acceptedFileTypes.join(',')
+						: 'image/*,video/*,audio/*,application/pdf,.pdf,.doc,.docx,.txt,.zip,.tar,.gz'}
+					style="display: none;"
+				/>
 
-			<textarea
-				class="full-streaming-chat__input"
-				bind:this={inputRef}
-				bind:value={inputValue}
-				onkeydown={handleKeyDown}
-				{placeholder}
-				disabled={$store.isWaitingForResponse}
-				rows="1"
-				aria-label="Chat message input"
-			></textarea>
-			<div class="full-streaming-chat__actions">
-				{#if showClearButton && $store.messages.length > 0}
-					<button
-						type="button"
-						class="full-streaming-chat__button full-streaming-chat__button--secondary"
-						onclick={handleClear}
-						aria-label="Clear messages"
-					>
-						Clear
-					</button>
-				{/if}
-				{#if $store.currentStreaming}
-					<button
-						type="button"
-						class="full-streaming-chat__button full-streaming-chat__button--stop"
-						onclick={() => store.dispatch({ type: 'stopGeneration' })}
-						aria-label="Stop generation"
-					>
-						■ Stop
-					</button>
-				{:else}
-					<button
-						type="submit"
-						class="full-streaming-chat__button full-streaming-chat__button--primary"
-						disabled={!canSendMessage}
-						aria-label="Send message"
-					>
-						{$store.isWaitingForResponse ? 'Sending...' : 'Send'}
-					</button>
-				{/if}
+				<!-- Attach button -->
+				<button
+					type="button"
+					class="full-streaming-chat__attach-btn"
+					onclick={handleAttachFiles}
+					disabled={chat.isWaitingForResponse}
+					aria-label="Attach files"
+					title="Attach files"
+				>
+					📎
+				</button>
+
+				<textarea
+					class="full-streaming-chat__input"
+					bind:this={inputRef}
+					bind:value={inputValue}
+					onkeydown={handleKeyDown}
+					{placeholder}
+					disabled={chat.isWaitingForResponse}
+					rows="1"
+					aria-label="Chat message input"
+				></textarea>
+				<div class="full-streaming-chat__actions">
+					{#if showClearButton && chat.messages.length > 0}
+						<button
+							type="button"
+							class="full-streaming-chat__button full-streaming-chat__button--secondary"
+							onclick={handleClear}
+							aria-label="Clear messages"
+						>
+							Clear
+						</button>
+					{/if}
+					{#if chat.currentStreaming}
+						<button
+							type="button"
+							class="full-streaming-chat__button full-streaming-chat__button--stop"
+							onclick={() => store.dispatch({ type: 'stopGeneration' })}
+							aria-label="Stop generation"
+						>
+							■ Stop
+						</button>
+					{:else}
+						<button
+							type="submit"
+							class="full-streaming-chat__button full-streaming-chat__button--primary"
+							disabled={!canSendMessage}
+							aria-label="Send message"
+						>
+							{chat.isWaitingForResponse ? 'Sending...' : 'Send'}
+						</button>
+					{/if}
+				</div>
 			</div>
-		</div>
-	</form>
-</div>
+		</form>
+	</div>
 
-<!-- Attachment Preview Modal -->
-<AttachmentPreviewModal
-	attachment={previewingAttachment}
-	open={previewOpen}
-	presentation={previewPresentation}
-	onclose={() => store.dispatch({ type: 'attachmentPreviewDismissed' })}
-	onremove={() => store.dispatch({ type: 'attachmentPreviewRemoveRequested' })}
-	onPresentationComplete={() =>
-		store.dispatch({
-			type: 'attachmentPreviewPresentation',
-			event: { type: 'presentationCompleted' }
-		})}
-	onDismissalComplete={() =>
-		store.dispatch({
-			type: 'attachmentPreviewPresentation',
-			event: { type: 'dismissalCompleted' }
-		})}
-/>
+	<!-- Attachment Preview Modal -->
+	<AttachmentPreviewModal
+		attachment={previewingAttachment}
+		open={previewOpen}
+		presentation={previewPresentation}
+		onclose={() => store.dispatch({ type: 'attachmentPreviewDismissed' })}
+		onremove={() => store.dispatch({ type: 'attachmentPreviewRemoveRequested' })}
+		onPresentationComplete={() =>
+			store.dispatch({
+				type: 'attachmentPreviewPresentation',
+				event: { type: 'presentationCompleted' }
+			})}
+		onDismissalComplete={() =>
+			store.dispatch({
+				type: 'attachmentPreviewPresentation',
+				event: { type: 'dismissalCompleted' }
+			})}
+	/>
+{/if}
 
 <style>
 	.full-streaming-chat {

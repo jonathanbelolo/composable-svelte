@@ -86,6 +86,11 @@ export interface OAuthCallbackState {
 	session: SessionSnapshot | null;
 	/** Recovered from the pending record — a same-origin path, or `null`. */
 	returnTo: string | null;
+	/**
+	 * One-reduction marker: the terminal verdict admitted in this reduction,
+	 * cleared before every other action.
+	 */
+	settled: 'succeeded' | 'failed' | null;
 }
 
 export type OAuthCallbackAction =
@@ -110,7 +115,15 @@ export type OAuthCallbackAction =
 			 * the wrong thing to tell someone who is already signed in.
 			 */
 			intent: OAuthIntent | null;
-	  };
+	  }
+	/**
+	 * "Start again" or "Back to sign in", from a failed or empty callback.
+	 *
+	 * Dispatched only by a managed `OAuthCallback`; the standalone component
+	 * calls `onStartOver` instead. `oauthCallbackReducer` leaves the state
+	 * alone: `createAuthFeature` retires the callback and presents a sign-in.
+	 */
+	| { type: 'startOverRequested' };
 
 // There is deliberately no `errorDismissed`. The other flows have one because
 // dismissing leaves a form or a button behind to try again with; here it would

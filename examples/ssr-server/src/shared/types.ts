@@ -43,14 +43,18 @@ export interface PageMeta {
  * - list: Show all posts (/)
  * - post: Show single post detail (/posts/:id)
  * - comments: Show post comments - nested route (/posts/:id/comments)
+ * - notFound: Page not found destination (/404 or invalid route)
  */
 export type AppDestination =
   | { type: 'list'; state: Record<string, never> }
   | { type: 'post'; state: { postId: number } }
-  | { type: 'comments'; state: { postId: number } };
+  | { type: 'comments'; state: { postId: number } }
+  | { type: 'notFound'; state: Record<string, never> };
 
 export interface AppState {
   posts: Post[];
+  /** Retained query for this demo navigation session; canonical URLs omit it. */
+  routeSearch: string;
   comments: Comment[];
   destination: AppDestination;
   isLoading: boolean;
@@ -61,14 +65,16 @@ export interface AppState {
 
 export type AppAction =
   | { type: 'postsLoaded'; posts: Post[] }
-  | { type: 'commentsLoaded'; comments: Comment[] }
+  | { type: 'commentsLoaded'; postId: number; comments: Comment[] }
   | { type: 'navigate'; destination: AppDestination }
+  | { type: 'historyNavigated'; destination: AppDestination; locale: string; search: string }
   | { type: 'loadPostsFailed'; error: string }
   | { type: 'refreshPosts' }
   | I18nAction;
 
 export const initialState: AppState = {
   posts: [],
+  routeSearch: '',
   comments: [],
   destination: { type: 'list', state: {} },
   isLoading: false,

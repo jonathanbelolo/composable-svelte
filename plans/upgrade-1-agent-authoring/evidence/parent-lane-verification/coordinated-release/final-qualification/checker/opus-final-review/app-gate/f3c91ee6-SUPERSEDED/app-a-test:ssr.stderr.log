@@ -1,0 +1,13 @@
+node_modules/@composable-svelte/chat/dist/streaming-chat/collaborative-primitives/CursorOverlay.svelte (59:2): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+node_modules/@composable-svelte/chat/dist/streaming-chat/collaborative-primitives/CursorOverlay.svelte (59:2): A comment
+
+"/* @__PURE__ */"
+
+in "node_modules/@composable-svelte/chat/dist/streaming-chat/collaborative-primitives/CursorOverlay.svelte" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+node_modules/@xyflow/svelte/dist/lib/components/Handle/Handle.svelte (44:2): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+node_modules/@xyflow/svelte/dist/lib/components/Handle/Handle.svelte (44:2): A comment
+
+"/* @__PURE__ */"
+
+in "node_modules/@xyflow/svelte/dist/lib/components/Handle/Handle.svelte" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+"handleConnectionChange" and "handleAttributionWarning" are imported from external module "@xyflow/system" but never used in "node_modules/@xyflow/svelte/dist/lib/hooks/useNodeConnections.svelte.js", "node_modules/@xyflow/svelte/dist/lib/components/Handle/Handle.svelte" and "node_modules/@xyflow/svelte/dist/lib/components/Attribution/Attribution.svelte".

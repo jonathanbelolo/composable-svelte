@@ -517,4 +517,144 @@ describe('scopeToElement', () => {
 
     expect(scopedStore).toBeNull();
   });
+
+  it('retains last observed snapshot on state and select reads after item removal', () => {
+    const parentReducer: Reducer<ParentState, ParentAction, any> = (state, action) => {
+      if (action.type === 'removeItem') {
+        return [{ ...state, items: state.items.filter((i) => i.id !== action.id) }, Effect.none()];
+      }
+      return forEachElement<ParentState, ParentAction, CounterState, CounterAction, string, any>(
+        'counter',
+        (s) => s.items,
+        (s, items) => ({ ...s, items }),
+        counterReducer
+      )(state, action, {});
+    };
+
+    const parentStore = createStore({
+      initialState: {
+        items: [
+          { id: 'a', state: { count: 10 } },
+          { id: 'b', state: { count: 20 } }
+        ]
+      } as ParentState,
+      reducer: parentReducer,
+      dependencies: {}
+    });
+
+    const scopedStore = scopeToElement<CounterAction>(
+      parentStore,
+      'counter',
+      (s) => s.items,
+      'a'
+    );
+    expect(scopedStore).not.toBeNull();
+
+    scopedStore!.dispatch({ type: 'increment' });
+    expect(scopedStore!.state.count).toBe(11);
+    expect(scopedStore!.select((s) => s.count)).toBe(11);
+
+    parentStore.dispatch({ type: 'removeItem', id: 'a' });
+    expect(parentStore.state.items.find((i) => i.id === 'a')).toBeUndefined();
+
+    expect(() => scopedStore!.state).not.toThrow();
+    expect(scopedStore!.state.count).toBe(11);
+    expect(scopedStore!.select((s) => s.count)).toBe(11);
+  });
+
+  it('drops dispatches when item has been removed without modifying parent state', () => {
+    const parentReducer: Reducer<ParentState, ParentAction, any> = (state, action) => {
+      if (action.type === 'removeItem') {
+        return [{ ...state, items: state.items.filter((i) => i.id !== action.id) }, Effect.none()];
+      }
+      return forEachElement<ParentState, ParentAction, CounterState, CounterAction, string, any>(
+        'counter',
+        (s) => s.items,
+        (s, items) => ({ ...s, items }),
+        counterReducer
+      )(state, action, {});
+    };
+
+    const parentStore = createStore({
+      initialState: {
+        items: [{ id: 'a', state: { count: 5 } }]
+      } as ParentState,
+      reducer: parentReducer,
+      dependencies: {}
+    });
+
+    const scopedStore = scopeToElement<CounterAction>(
+      parentStore,
+      'counter',
+      (s) => s.items,
+      'a'
+    );
+    expect(scopedStore).not.toBeNull();
+
+    parentStore.dispatch({ type: 'removeItem', id: 'a' });
+    const dispatch = vi.spyOn(parentStore, 'dispatch');
+    expect(() => scopedStore!.dispatch({ type: 'increment' })).not.toThrow();
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(parentStore.state.items).toHaveLength(0);
+    expect(scopedStore!.state.count).toBe(5);
+  });
+
+  it('notifies subscribers on live updates and suppresses notifications after removal', () => {
+    const parentReducer: Reducer<ParentState, ParentAction, any> = (state, action) => {
+      if (action.type === 'removeItem') {
+        return [{ ...state, items: state.items.filter((i) => i.id !== action.id) }, Effect.none()];
+      }
+      return forEachElement<ParentState, ParentAction, CounterState, CounterAction, string, any>(
+        'counter',
+        (s) => s.items,
+        (s, items) => ({ ...s, items }),
+        counterReducer
+      )(state, action, {});
+    };
+
+    const parentStore = createStore({
+      initialState: {
+        items: [{ id: 'a', state: { count: 1 } }]
+      } as ParentState,
+      reducer: parentReducer,
+      dependencies: {}
+    });
+
+    const scopedStore = scopeToElement<CounterAction>(
+      parentStore,
+      'counter',
+      (s) => s.items,
+      'a'
+    );
+    expect(scopedStore).not.toBeNull();
+
+    const received: number[] = [];
+    const unsubscribe = scopedStore!.subscribe((state) => {
+      received.push(state.count);
+    });
+
+    expect(received).toEqual([1]);
+
+    scopedStore!.dispatch({ type: 'increment' });
+    expect(received).toEqual([1, 2]);
+
+    parentStore.dispatch({ type: 'removeItem', id: 'a' });
+    expect(received).toEqual([1, 2]);
+    expect(scopedStore!.state.count).toBe(2);
+
+    unsubscribe();
+  });
+});
+
+
+it('legacy scope provides a synchronous final snapshot to a late subscriber and supports detached select', () => {
+ const parent = createStore({initialState:{items:[{id:'a',state:{count:5}}]}, reducer:(state, action:{type:'remove'}) => [{...state,items:state.items.filter(()=>false)},Effect.none()] as const, dependencies:{}});
+ const scope=scopeToElement<CounterAction>(parent,'counter',state=>state.items,'a')!;
+ parent.dispatch({type:'remove'});
+ const values:CounterState[]=[];
+ const unsubscribe=scope.subscribe(value=>values.push(value));
+ expect(values).toEqual([{count:5}]);
+ const {select}=scope;
+ expect(select(state=>state.count)).toBe(5);
+ unsubscribe();parent.destroy();
 });

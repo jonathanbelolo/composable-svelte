@@ -1,0 +1,8 @@
+
+> check
+> svelte-check --tsconfig ./tsconfig.json --fail-on-warnings
+
+Loading svelte-check in workspace: /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-p9-starter-jcOD/starter
+Getting Svelte diagnostics...
+
+svelte-check found 0 errors and 0 warnings

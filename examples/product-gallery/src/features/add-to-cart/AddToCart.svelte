@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ScopedDestinationStore } from '@composable-svelte/core';
+  import type { PresentationView } from '@composable-svelte/core/application';
   import type { AddToCartState, AddToCartAction } from './add-to-cart.types.js';
   import type { Product } from '../../models/product.js';
   import { formatPrice } from '../../models/product.js';
@@ -9,7 +9,7 @@
   // ============================================================================
 
   interface AddToCartProps {
-    store: ScopedDestinationStore<AddToCartState, AddToCartAction>;
+    store: PresentationView<AddToCartState, AddToCartAction>;
     product: Product;
   }
 

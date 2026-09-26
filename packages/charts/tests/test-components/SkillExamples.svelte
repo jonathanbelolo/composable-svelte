@@ -21,7 +21,13 @@
 	import type { ChartAction, ChartState } from '../../src/lib/index.js';
 	import type { Store } from '@composable-svelte/core';
 
-	type ChartStore = Store<ChartState<unknown>, ChartAction<unknown>>;
+	type DemoRow = {
+		x: number; y: number; date: Date; value: number;
+		category: string; revenue: number; temperature: number;
+		sales: number; region: string; price: number; ticker: string;
+		count: number; segment: string; series: string; time: Date;
+	};
+	type ChartStore = Store<ChartState<DemoRow>, ChartAction<DemoRow>>;
 
 	let {
 		chartStore,
@@ -35,7 +41,7 @@
 
 	let selectedCategory = $state<string | null>(null);
 
-	function handleSelection(selected: Array<{ category?: string }>) {
+	function handleSelection(selected: DemoRow[]) {
 		selectedCategory = selected[0]?.category ?? null;
 	}
 </script>

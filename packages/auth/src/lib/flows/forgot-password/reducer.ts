@@ -17,6 +17,7 @@ import {
 import type { Reducer, Store } from '@composable-svelte/core';
 
 import { toAuthError } from '../../errors/helpers.js';
+import { completesSubmissionInFlight } from '../submission-feedback.js';
 import {
 	emptyForgotPasswordFields,
 	forgotPasswordSchema,
@@ -93,7 +94,10 @@ export const forgotPasswordReducer: Reducer<
 					? { ...withForm, error: null }
 					: withForm;
 
-			if (action.action.type !== 'submissionSucceeded') {
+			// Only the result of a submission in flight; see `submission-feedback.ts`.
+			// A stale one would otherwise mail a reset link to whatever address the
+			// field now holds. Asking again after `sent` stays allowed.
+			if (!completesSubmissionInFlight(state.form, withForm.form, action.action)) {
 				return [cleared, formEffect];
 			}
 
@@ -140,6 +144,10 @@ export const forgotPasswordReducer: Reducer<
 			// `state`, not `{ ...state }`: an identical object notifies every
 			// subscriber that nothing changed.
 			return [state.error === null ? state : { ...state, error: null }, Effect.none()];
+		}
+
+		case 'signInRequested': {
+			return [state, Effect.none()];
 		}
 
 		default: {

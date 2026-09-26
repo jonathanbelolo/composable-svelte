@@ -1,0 +1,25 @@
+suite exit=0
+inspect exit=0
+archive cd12784eb9288aa510b2f980eb3d0ef57efce8c3d8d8318ab72cee32ce67e51a sha512-LAm/0jRDaTNRUs+DIaRjp6J1RdUF/BPU/3qN+87tT5DifvxlAeWmtRj2Am91YsvAbkW1qs6IzwSRtcN/aeNpvw==
+profiles exit=0
+cd12784eb9288aa510b2f980eb3d0ef57efce8c3d8d8318ab72cee32ce67e51a  /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-final-starter-QxUl/arch/composable-svelte-architecture-0.13.1.tgz
+729ca89f1850e56bde5db23c9f8560090eed07a0dc4126374dd5e33fd11a8e0d  /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-final-starter-QxUl/arch/composable-svelte-core-0.13.1.tgz
+{'@composable-svelte/core': '0.13.1', 'svelte': '5.57.0'} 0.13.1 composable-svelte-architecture --mode analysis-only --project . --policy bundled:starter --expected-core-version 0.13.1
+package.json restored to shipped bytes
+core archiveFiles=1258 installedFiles=1258 mismatches=0 symlink=no
+architecture archiveFiles=40 installedFiles=40 mismatches=0 symlink=no
+svelte@5.57.0 typescript@5.9.3 vite@7.3.6 vitest@4.0.7 svelte-check@4.3.3 @playwright/test@1.56.1
+check exit=0
+test exit=0
+test:ssr exit=0
+check:architecture exit=0
+test:browser exit=0
+starter controls exit=0
+smoke exit=0
+checker host mismatches: 0 files=40
+auth controls exit=0
+bundled:auth on derivative exit=0
+bundled:starter on derivative exit=21
+bundled:auth qualification exit=22 (expect 22)
+author-apps exit=0
+DONE

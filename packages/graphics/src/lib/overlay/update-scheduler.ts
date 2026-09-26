@@ -48,6 +48,10 @@ export class UpdateScheduler {
 	 * @param registration - Element registration
 	 */
 	registerElement(registration: ElementRegistration): void {
+		if (this.elements.has(registration.id)) {
+			this.unregisterElement(registration.id);
+		}
+
 		this.elements.set(registration.id, registration);
 
 		// Add to frame update set if using frame strategy
@@ -79,15 +83,16 @@ export class UpdateScheduler {
 		const registration = this.elements.get(id);
 		if (!registration) return;
 
-		// Clean up video frame callback if present
-		if (registration.animationFrameId) {
+		// Release the video's listeners and pending callbacks
+		this.releaseVideoListeners(id);
+
+		// Clean up video frame callback if still present
+		if (typeof registration.animationFrameId === 'number') {
 			if ('cancelVideoFrameCallback' in registration.element) {
 				(registration.element as any).cancelVideoFrameCallback(registration.animationFrameId);
 			}
+			delete registration.animationFrameId;
 		}
-
-		// Release the video's play/pause listeners
-		this.releaseVideoListeners(id);
 
 		// Remove from frame updates
 		this.frameUpdateElements.delete(id);
@@ -256,46 +261,96 @@ export class UpdateScheduler {
 			return false;
 		}
 
-		const scheduleVideoUpdate = () => {
-			if (!this.elements.has(registration.id)) {
-				// Element was unregistered
-				return;
-			}
+		let pendingCallbackId: number | null = null;
+		let callbackAuthority = 0;
 
-			// Request next video frame
-			registration.animationFrameId = (video as any).requestVideoFrameCallback(
-				(now: number, metadata: any) => {
-					// Notify update
-					this.notifyUpdate(registration.id);
-
-					// Schedule next frame
-					scheduleVideoUpdate();
+		const cancelVideoCallback = () => {
+			callbackAuthority++;
+			if (pendingCallbackId !== null) {
+				if ('cancelVideoFrameCallback' in video) {
+					(video as any).cancelVideoFrameCallback(pendingCallbackId);
 				}
-			);
-		};
-
-		// Start video frame updates
-		if (!video.paused) {
-			scheduleVideoUpdate();
-		}
-
-		// Handle play/pause events
-		const handlePlay = () => scheduleVideoUpdate();
-		const handlePause = () => {
-			if (registration.animationFrameId) {
-				(video as any).cancelVideoFrameCallback(registration.animationFrameId);
+				pendingCallbackId = null;
+			}
+			if (typeof registration.animationFrameId === 'number') {
 				delete registration.animationFrameId;
 			}
 		};
 
+		const scheduleVideoUpdate = () => {
+			if (this.elements.get(registration.id) !== registration) {
+				return;
+			}
+			if (video.paused || video.ended) {
+				return;
+			}
+			if (pendingCallbackId !== null) {
+				return;
+			}
+
+			const authorityToken = ++callbackAuthority;
+			const callbackId = (video as any).requestVideoFrameCallback(
+				(now: number, metadata: any) => {
+					if (authorityToken !== callbackAuthority) {
+						return;
+					}
+					if (this.elements.get(registration.id) !== registration) {
+						return;
+					}
+					if (video.paused || video.ended) {
+						pendingCallbackId = null;
+						delete registration.animationFrameId;
+						return;
+					}
+
+				pendingCallbackId = null;
+				delete registration.animationFrameId;
+
+					this.notifyUpdate(registration.id);
+
+					if (authorityToken !== callbackAuthority) {
+						return;
+					}
+					if (this.elements.get(registration.id) !== registration) {
+						return;
+					}
+					if (video.paused || video.ended) {
+						return;
+					}
+					if (pendingCallbackId !== null) {
+						return;
+					}
+
+					scheduleVideoUpdate();
+				}
+			);
+
+		pendingCallbackId = callbackId;
+		registration.animationFrameId = callbackId;
+		};
+
+		// Start video frame updates
+		if (!video.paused && !video.ended) {
+			scheduleVideoUpdate();
+		}
+
+		// Handle play/pause/ended events
+		const handlePlay = () => scheduleVideoUpdate();
+		const handlePause = () => {
+			cancelVideoCallback();
+		};
+
 		video.addEventListener('play', handlePlay);
 		video.addEventListener('pause', handlePause);
+		video.addEventListener('ended', handlePause);
 
 		// Recorded, not wrapped. `unregisterElement` and `destroy` both call
 		// this; the method itself is never reassigned.
 		this.videoListeners.set(registration.id, () => {
 			video.removeEventListener('play', handlePlay);
 			video.removeEventListener('pause', handlePause);
+			video.removeEventListener('ended', handlePause);
+			cancelVideoCallback();
 		});
 
 		return true;
@@ -324,21 +379,20 @@ export class UpdateScheduler {
 	destroy(): void {
 		this.stop();
 
-		// Clean up all video frame callbacks
+		// Release every video's listeners and pending callbacks.
+		for (const id of Array.from(this.videoListeners.keys())) {
+			this.releaseVideoListeners(id);
+		}
+
+		// Clean up any remaining video frame callbacks
 		for (const registration of this.elements.values()) {
-			if (registration.animationFrameId && registration.type === 'video') {
+			if (typeof registration.animationFrameId === 'number' && registration.type === 'video') {
 				const video = registration.element as HTMLVideoElement;
 				if ('cancelVideoFrameCallback' in video) {
 					(video as any).cancelVideoFrameCallback(registration.animationFrameId);
 				}
+				delete registration.animationFrameId;
 			}
-		}
-
-		// Release every video's listeners. These used to be removed only by the
-		// rebound `unregisterElement`, so destroying without unregistering left
-		// them on the video elements.
-		for (const id of Array.from(this.videoListeners.keys())) {
-			this.releaseVideoListeners(id);
 		}
 
 		this.elements.clear();

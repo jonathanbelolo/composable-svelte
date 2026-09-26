@@ -13,6 +13,7 @@
 	@component
 -->
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import type { Snippet } from 'svelte';
 	import { createStore } from '../../../store.svelte.js';
 	import { calendarReducer } from './calendar.reducer.js';
@@ -124,10 +125,11 @@
 
 	// Create store
 	const store = createStore({
-		initialState: createInitialCalendarState(mode, selectedDate, minDate, maxDate),
+		initialState: createInitialCalendarState(mode, selectedDate, minDate, maxDate, selectedRange),
 		reducer: calendarReducer,
 		dependencies
 	});
+	onDestroy(() => store.destroy());
 
 	// Sync external props to the store.
 	//
@@ -275,6 +277,10 @@
 	};
 
 	const clear = () => {
+		selectedDate = null;
+		lastSelectedDate = null;
+		selectedRange = { from: null, to: null };
+		lastRange = selectedRange;
 		store.dispatch({ type: 'cleared' });
 	};
 
@@ -408,7 +414,7 @@
 					class:calendar-day--disabled={disabled}
 					disabled={disabled}
 					onclick={() => selectDate(date)}
-					aria-label={date.toLocaleDateString()}
+					aria-label={date.toLocaleDateString('en-US')}
 				>
 					{date.getDate()}
 				</button>

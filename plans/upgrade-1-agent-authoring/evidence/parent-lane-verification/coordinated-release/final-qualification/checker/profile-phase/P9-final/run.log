@@ -1,0 +1,174 @@
+ok   auth auth-consumer (ORIGINAL shipped, instrumented) ORIGINAL stays REJECTED (truthful limitation) exit=21 pass=false unsupported-construct
+ok   maps maps-fixture (ORIGINAL shipped, instrumented) ORIGINAL stays REJECTED (truthful limitation) exit=21 pass=false unsupported-construct
+ok   maps maps-fixture-production-consumer POSITIVE candidate (bundled bytes; policyId differ) exit=0 pass=true 
+ok   maps maps-fixture-production-consumer POSITIVE exact proposed bundled bytes supplied externally exit=0 pass=true 
+ok   maps maps-fixture-production-consumer DEVFEEDBACK bundled:maps analysis-only exit=0 pass=false 
+ok   maps maps-fixture-production-consumer NEG bundled:maps qualification refused exit=22 pass=false 
+ok   maps maps-fixture-production-consumer NEG envelope expects checker 0.13.0 exit=0 pass=false 
+ok   maps maps-fixture-production-consumer NEG envelope expects another policy pin exit=0 pass=false 
+ok   maps maps-fixture-production-consumer NEG wrong --policy-sha256 exit=21 pass=false policy-pin-mismatch
+ok   maps maps-fixture-production-consumer NEG wrong expected core 0.13.0 exit=21 pass=false core-version-mismatch
+ok   maps maps-fixture-production-consumer NEG wrong companion pin @composable-svelte/maps@0.3.1 exit=21 pass=false unresolved-package-import
+ok   maps maps-fixture-production-consumer NEG companion approval absent @composable-svelte/maps exit=21 pass=false unresolved-package-import
+ok   maps maps-fixture-production-consumer NEG wrong core opaque pin 0.13.2 exit=21 pass=false unresolved-package-import
+ok   maps maps-fixture-production-consumer NEG wrong svelte pin 5.57.0 (svelte reached) exit=21 pass=false unresolved-package-import
+ok   maps maps-fixture-production-consumer NEG incomplete analysis (missing root) exit=21 pass=false missing-root
+ok   maps maps-fixture-production-consumer NEG starter approvals only (companion unapproved) exit=21 pass=false unresolved-package-import
+ok   graphics graphics-fixture (ORIGINAL shipped, instrumented) ORIGINAL stays REJECTED (truthful limitation) exit=21 pass=false unsupported-construct
+ok   graphics graphics-fixture-production-consumer POSITIVE candidate (bundled bytes; policyId differ) exit=0 pass=true 
+ok   graphics graphics-fixture-production-consumer POSITIVE exact proposed bundled bytes supplied externally exit=0 pass=true 
+ok   graphics graphics-fixture-production-consumer DEVFEEDBACK bundled:graphics analysis-only exit=0 pass=false 
+ok   graphics graphics-fixture-production-consumer NEG bundled:graphics qualification refused exit=22 pass=false 
+ok   graphics graphics-fixture-production-consumer NEG envelope expects checker 0.13.0 exit=0 pass=false 
+ok   graphics graphics-fixture-production-consumer NEG envelope expects another policy pin exit=0 pass=false 
+ok   graphics graphics-fixture-production-consumer NEG wrong --policy-sha256 exit=21 pass=false policy-pin-mismatch
+ok   graphics graphics-fixture-production-consumer NEG wrong expected core 0.13.0 exit=21 pass=false core-version-mismatch
+ok   graphics graphics-fixture-production-consumer NEG wrong companion pin @composable-svelte/graphics@0.3.1 exit=21 pass=false unresolved-package-import
+ok   graphics graphics-fixture-production-consumer NEG companion approval absent @composable-svelte/graphics exit=21 pass=false unresolved-package-import
+ok   graphics graphics-fixture-production-consumer NEG wrong core opaque pin 0.13.2 exit=21 pass=false unresolved-package-import
+ok   graphics graphics-fixture-production-consumer NEG wrong svelte pin 5.57.0 (svelte reached) exit=21 pass=false unresolved-package-import
+ok   graphics graphics-fixture-production-consumer NEG incomplete analysis (missing root) exit=21 pass=false missing-root
+ok   graphics graphics-fixture-production-consumer NEG starter approvals only (companion unapproved) exit=21 pass=false unresolved-package-import
+ok   charts charts-fixture (ORIGINAL shipped, instrumented) ORIGINAL stays REJECTED (truthful limitation) exit=21 pass=false unsupported-construct
+ok   charts charts-fixture-production-consumer POSITIVE candidate (bundled bytes; policyId differ) exit=0 pass=true 
+ok   charts charts-fixture-production-consumer POSITIVE exact proposed bundled bytes supplied externally exit=0 pass=true 
+ok   charts charts-fixture-production-consumer DEVFEEDBACK bundled:charts analysis-only exit=0 pass=false 
+ok   charts charts-fixture-production-consumer NEG bundled:charts qualification refused exit=22 pass=false 
+ok   charts charts-fixture-production-consumer NEG envelope expects checker 0.13.0 exit=0 pass=false 
+ok   charts charts-fixture-production-consumer NEG envelope expects another policy pin exit=0 pass=false 
+ok   charts charts-fixture-production-consumer NEG wrong --policy-sha256 exit=21 pass=false policy-pin-mismatch
+ok   charts charts-fixture-production-consumer NEG wrong expected core 0.13.0 exit=21 pass=false core-version-mismatch
+ok   charts charts-fixture-production-consumer NEG wrong companion pin @composable-svelte/charts@0.3.1 exit=21 pass=false unresolved-package-import
+ok   charts charts-fixture-production-consumer NEG companion approval absent @composable-svelte/charts exit=21 pass=false unresolved-package-import
+ok   charts charts-fixture-production-consumer NEG wrong core opaque pin 0.13.2 exit=21 pass=false unresolved-package-import
+ok   charts charts-fixture-production-consumer NEG wrong svelte pin 5.57.0 (svelte reached) exit=21 pass=false unresolved-package-import
+ok   charts charts-fixture-production-consumer NEG incomplete analysis (missing root) exit=21 pass=false missing-root
+ok   charts charts-fixture-production-consumer NEG starter approvals only (companion unapproved) exit=21 pass=false unresolved-package-import
+ok   chat chat-managed:chat (ORIGINAL RECIPE PHASE, recipe roots) POSITIVE candidate (bundled bytes; policyId+recipe roots differ) exit=0 pass=true 
+ok   chat chat-managed:chat (ORIGINAL RECIPE PHASE, recipe roots) NEG envelope expects checker 0.13.0 exit=0 pass=false 
+ok   chat chat-managed:chat (ORIGINAL RECIPE PHASE, recipe roots) NEG envelope expects another policy pin exit=0 pass=false 
+ok   chat chat-managed:chat (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong --policy-sha256 exit=21 pass=false policy-pin-mismatch
+ok   chat chat-managed:chat (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong expected core 0.13.0 exit=21 pass=false core-version-mismatch
+ok   chat chat-managed:chat (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong companion pin @composable-svelte/chat@0.5.1 exit=21 pass=false unresolved-package-import
+ok   chat chat-managed:chat (ORIGINAL RECIPE PHASE, recipe roots) NEG companion approval absent @composable-svelte/chat exit=21 pass=false unresolved-package-import
+ok   chat chat-managed:chat (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong core opaque pin 0.13.2 exit=21 pass=false unresolved-package-import
+ok   chat chat-managed:chat (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong svelte pin 5.57.0 (svelte not reached: approval unexercised) exit=0 pass=true 
+ok   chat chat-managed:chat (ORIGINAL RECIPE PHASE, recipe roots) NEG incomplete analysis (missing root) exit=21 pass=false missing-root
+ok   chat chat-managed:chat (ORIGINAL RECIPE PHASE, recipe roots) NEG starter approvals only (companion unapproved) exit=21 pass=false unresolved-package-import
+ok   chat chat-managed-default-root-consumer POSITIVE candidate (bundled bytes; policyId differ) exit=0 pass=true 
+ok   chat chat-managed-default-root-consumer POSITIVE exact proposed bundled bytes supplied externally exit=0 pass=true 
+ok   chat chat-managed-default-root-consumer DEVFEEDBACK bundled:chat analysis-only exit=0 pass=false 
+ok   chat chat-managed-default-root-consumer NEG bundled:chat qualification refused exit=22 pass=false 
+ok   chat chat-managed-default-root-consumer NEG envelope expects checker 0.13.0 exit=0 pass=false 
+ok   chat chat-managed-default-root-consumer NEG envelope expects another policy pin exit=0 pass=false 
+ok   chat chat-managed-default-root-consumer NEG wrong --policy-sha256 exit=21 pass=false policy-pin-mismatch
+ok   chat chat-managed-default-root-consumer NEG wrong expected core 0.13.0 exit=21 pass=false core-version-mismatch
+ok   chat chat-managed-default-root-consumer NEG wrong companion pin @composable-svelte/chat@0.5.1 exit=21 pass=false unresolved-package-import
+ok   chat chat-managed-default-root-consumer NEG companion approval absent @composable-svelte/chat exit=21 pass=false unresolved-package-import
+ok   chat chat-managed-default-root-consumer NEG wrong core opaque pin 0.13.2 exit=21 pass=false unresolved-package-import
+ok   chat chat-managed-default-root-consumer NEG wrong svelte pin 5.57.0 (svelte reached) exit=21 pass=false unresolved-package-import
+ok   chat chat-managed-default-root-consumer NEG incomplete analysis (missing root) exit=21 pass=false missing-root
+ok   chat chat-managed-default-root-consumer NEG starter approvals only (companion unapproved) exit=21 pass=false unresolved-package-import
+ok   code code-managed:code (ORIGINAL RECIPE PHASE, recipe roots) POSITIVE candidate (bundled bytes; policyId+recipe roots differ) exit=0 pass=true 
+ok   code code-managed:code (ORIGINAL RECIPE PHASE, recipe roots) NEG envelope expects checker 0.13.0 exit=0 pass=false 
+ok   code code-managed:code (ORIGINAL RECIPE PHASE, recipe roots) NEG envelope expects another policy pin exit=0 pass=false 
+ok   code code-managed:code (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong --policy-sha256 exit=21 pass=false policy-pin-mismatch
+ok   code code-managed:code (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong expected core 0.13.0 exit=21 pass=false core-version-mismatch
+ok   code code-managed:code (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong companion pin @composable-svelte/code@0.5.1 exit=21 pass=false unresolved-package-import
+ok   code code-managed:code (ORIGINAL RECIPE PHASE, recipe roots) NEG companion approval absent @composable-svelte/code exit=21 pass=false unresolved-package-import
+ok   code code-managed:code (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong core opaque pin 0.13.2 exit=21 pass=false unresolved-package-import
+ok   code code-managed:code (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong svelte pin 5.57.0 (svelte not reached: approval unexercised) exit=0 pass=true 
+ok   code code-managed:code (ORIGINAL RECIPE PHASE, recipe roots) NEG incomplete analysis (missing root) exit=21 pass=false missing-root
+ok   code code-managed:code (ORIGINAL RECIPE PHASE, recipe roots) NEG starter approvals only (companion unapproved) exit=21 pass=false unresolved-package-import
+ok   code code-managed-default-root-consumer POSITIVE candidate (bundled bytes; policyId differ) exit=0 pass=true 
+ok   code code-managed-default-root-consumer POSITIVE exact proposed bundled bytes supplied externally exit=0 pass=true 
+ok   code code-managed-default-root-consumer DEVFEEDBACK bundled:code analysis-only exit=0 pass=false 
+ok   code code-managed-default-root-consumer NEG bundled:code qualification refused exit=22 pass=false 
+ok   code code-managed-default-root-consumer NEG envelope expects checker 0.13.0 exit=0 pass=false 
+ok   code code-managed-default-root-consumer NEG envelope expects another policy pin exit=0 pass=false 
+ok   code code-managed-default-root-consumer NEG wrong --policy-sha256 exit=21 pass=false policy-pin-mismatch
+ok   code code-managed-default-root-consumer NEG wrong expected core 0.13.0 exit=21 pass=false core-version-mismatch
+ok   code code-managed-default-root-consumer NEG wrong companion pin @composable-svelte/code@0.5.1 exit=21 pass=false unresolved-package-import
+ok   code code-managed-default-root-consumer NEG companion approval absent @composable-svelte/code exit=21 pass=false unresolved-package-import
+ok   code code-managed-default-root-consumer NEG wrong core opaque pin 0.13.2 exit=21 pass=false unresolved-package-import
+ok   code code-managed-default-root-consumer NEG wrong svelte pin 5.57.0 (svelte reached) exit=21 pass=false unresolved-package-import
+ok   code code-managed-default-root-consumer NEG incomplete analysis (missing root) exit=21 pass=false missing-root
+ok   code code-managed-default-root-consumer NEG starter approvals only (companion unapproved) exit=21 pass=false unresolved-package-import
+ok   media media-managed:media (ORIGINAL RECIPE PHASE, recipe roots) POSITIVE candidate (bundled bytes; policyId+recipe roots differ) exit=0 pass=true 
+ok   media media-managed:media (ORIGINAL RECIPE PHASE, recipe roots) NEG envelope expects checker 0.13.0 exit=0 pass=false 
+ok   media media-managed:media (ORIGINAL RECIPE PHASE, recipe roots) NEG envelope expects another policy pin exit=0 pass=false 
+ok   media media-managed:media (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong --policy-sha256 exit=21 pass=false policy-pin-mismatch
+ok   media media-managed:media (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong expected core 0.13.0 exit=21 pass=false core-version-mismatch
+ok   media media-managed:media (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong companion pin @composable-svelte/media@0.5.1 exit=21 pass=false unresolved-package-import
+ok   media media-managed:media (ORIGINAL RECIPE PHASE, recipe roots) NEG companion approval absent @composable-svelte/media exit=21 pass=false unresolved-package-import
+ok   media media-managed:media (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong core opaque pin 0.13.2 exit=21 pass=false unresolved-package-import
+ok   media media-managed:media (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong svelte pin 5.57.0 (svelte not reached: approval unexercised) exit=0 pass=true 
+ok   media media-managed:media (ORIGINAL RECIPE PHASE, recipe roots) NEG incomplete analysis (missing root) exit=21 pass=false missing-root
+ok   media media-managed:media (ORIGINAL RECIPE PHASE, recipe roots) NEG starter approvals only (companion unapproved) exit=21 pass=false unresolved-package-import
+ok   media media-managed-default-root-consumer POSITIVE candidate (bundled bytes; policyId differ) exit=0 pass=true 
+ok   media media-managed-default-root-consumer POSITIVE exact proposed bundled bytes supplied externally exit=0 pass=true 
+ok   media media-managed-default-root-consumer DEVFEEDBACK bundled:media analysis-only exit=0 pass=false 
+ok   media media-managed-default-root-consumer NEG bundled:media qualification refused exit=22 pass=false 
+ok   media media-managed-default-root-consumer NEG envelope expects checker 0.13.0 exit=0 pass=false 
+ok   media media-managed-default-root-consumer NEG envelope expects another policy pin exit=0 pass=false 
+ok   media media-managed-default-root-consumer NEG wrong --policy-sha256 exit=21 pass=false policy-pin-mismatch
+ok   media media-managed-default-root-consumer NEG wrong expected core 0.13.0 exit=21 pass=false core-version-mismatch
+ok   media media-managed-default-root-consumer NEG wrong companion pin @composable-svelte/media@0.5.1 exit=21 pass=false unresolved-package-import
+ok   media media-managed-default-root-consumer NEG companion approval absent @composable-svelte/media exit=21 pass=false unresolved-package-import
+ok   media media-managed-default-root-consumer NEG wrong core opaque pin 0.13.2 exit=21 pass=false unresolved-package-import
+ok   media media-managed-default-root-consumer NEG wrong svelte pin 5.57.0 (svelte reached) exit=21 pass=false unresolved-package-import
+ok   media media-managed-default-root-consumer NEG incomplete analysis (missing root) exit=21 pass=false missing-root
+ok   media media-managed-default-root-consumer NEG starter approvals only (companion unapproved) exit=21 pass=false unresolved-package-import
+ok   chat-code-media chat-code-media:chat (ORIGINAL RECIPE PHASE, recipe roots) POSITIVE candidate (bundled bytes; policyId+recipe roots differ) exit=0 pass=true 
+ok   chat-code-media chat-code-media:chat (ORIGINAL RECIPE PHASE, recipe roots) NEG envelope expects checker 0.13.0 exit=0 pass=false 
+ok   chat-code-media chat-code-media:chat (ORIGINAL RECIPE PHASE, recipe roots) NEG envelope expects another policy pin exit=0 pass=false 
+ok   chat-code-media chat-code-media:chat (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong --policy-sha256 exit=21 pass=false policy-pin-mismatch
+ok   chat-code-media chat-code-media:chat (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong expected core 0.13.0 exit=21 pass=false core-version-mismatch
+ok   chat-code-media chat-code-media:chat (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong companion pin @composable-svelte/chat@0.5.1 exit=21 pass=false unresolved-package-import
+ok   chat-code-media chat-code-media:chat (ORIGINAL RECIPE PHASE, recipe roots) NEG companion approval absent @composable-svelte/chat exit=21 pass=false unresolved-package-import
+ok   chat-code-media chat-code-media:chat (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong core opaque pin 0.13.2 exit=21 pass=false unresolved-package-import
+ok   chat-code-media chat-code-media:chat (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong svelte pin 5.57.0 (svelte not reached: approval unexercised) exit=0 pass=true 
+ok   chat-code-media chat-code-media:chat (ORIGINAL RECIPE PHASE, recipe roots) NEG incomplete analysis (missing root) exit=21 pass=false missing-root
+ok   chat-code-media chat-code-media:chat (ORIGINAL RECIPE PHASE, recipe roots) NEG starter approvals only (companion unapproved) exit=21 pass=false unresolved-package-import
+ok   chat-code-media chat-code-media:code (ORIGINAL RECIPE PHASE, recipe roots) POSITIVE candidate (bundled bytes; policyId+recipe roots differ) exit=0 pass=true 
+ok   chat-code-media chat-code-media:code (ORIGINAL RECIPE PHASE, recipe roots) NEG envelope expects checker 0.13.0 exit=0 pass=false 
+ok   chat-code-media chat-code-media:code (ORIGINAL RECIPE PHASE, recipe roots) NEG envelope expects another policy pin exit=0 pass=false 
+ok   chat-code-media chat-code-media:code (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong --policy-sha256 exit=21 pass=false policy-pin-mismatch
+ok   chat-code-media chat-code-media:code (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong expected core 0.13.0 exit=21 pass=false core-version-mismatch
+ok   chat-code-media chat-code-media:code (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong companion pin @composable-svelte/code@0.5.1 exit=21 pass=false unresolved-package-import
+ok   chat-code-media chat-code-media:code (ORIGINAL RECIPE PHASE, recipe roots) NEG companion approval absent @composable-svelte/code exit=21 pass=false unresolved-package-import
+ok   chat-code-media chat-code-media:code (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong core opaque pin 0.13.2 exit=21 pass=false unresolved-package-import
+ok   chat-code-media chat-code-media:code (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong svelte pin 5.57.0 (svelte not reached: approval unexercised) exit=0 pass=true 
+ok   chat-code-media chat-code-media:code (ORIGINAL RECIPE PHASE, recipe roots) NEG incomplete analysis (missing root) exit=21 pass=false missing-root
+ok   chat-code-media chat-code-media:code (ORIGINAL RECIPE PHASE, recipe roots) NEG starter approvals only (companion unapproved) exit=21 pass=false unresolved-package-import
+ok   chat-code-media chat-code-media:media (ORIGINAL RECIPE PHASE, recipe roots) POSITIVE candidate (bundled bytes; policyId+recipe roots differ) exit=0 pass=true 
+ok   chat-code-media chat-code-media:media (ORIGINAL RECIPE PHASE, recipe roots) NEG envelope expects checker 0.13.0 exit=0 pass=false 
+ok   chat-code-media chat-code-media:media (ORIGINAL RECIPE PHASE, recipe roots) NEG envelope expects another policy pin exit=0 pass=false 
+ok   chat-code-media chat-code-media:media (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong --policy-sha256 exit=21 pass=false policy-pin-mismatch
+ok   chat-code-media chat-code-media:media (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong expected core 0.13.0 exit=21 pass=false core-version-mismatch
+ok   chat-code-media chat-code-media:media (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong companion pin @composable-svelte/media@0.5.1 exit=21 pass=false unresolved-package-import
+ok   chat-code-media chat-code-media:media (ORIGINAL RECIPE PHASE, recipe roots) NEG companion approval absent @composable-svelte/media exit=21 pass=false unresolved-package-import
+ok   chat-code-media chat-code-media:media (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong core opaque pin 0.13.2 exit=21 pass=false unresolved-package-import
+ok   chat-code-media chat-code-media:media (ORIGINAL RECIPE PHASE, recipe roots) NEG wrong svelte pin 5.57.0 (svelte not reached: approval unexercised) exit=0 pass=true 
+ok   chat-code-media chat-code-media:media (ORIGINAL RECIPE PHASE, recipe roots) NEG incomplete analysis (missing root) exit=21 pass=false missing-root
+ok   chat-code-media chat-code-media:media (ORIGINAL RECIPE PHASE, recipe roots) NEG starter approvals only (companion unapproved) exit=21 pass=false unresolved-package-import
+ok   chat-code-media chat-code-media-default-root-consumer POSITIVE candidate (bundled bytes; policyId differ) exit=0 pass=true 
+ok   chat-code-media chat-code-media-default-root-consumer POSITIVE exact proposed bundled bytes supplied externally exit=0 pass=true 
+ok   chat-code-media chat-code-media-default-root-consumer DEVFEEDBACK bundled:chat-code-media analysis-only exit=0 pass=false 
+ok   chat-code-media chat-code-media-default-root-consumer NEG bundled:chat-code-media qualification refused exit=22 pass=false 
+ok   chat-code-media chat-code-media-default-root-consumer NEG envelope expects checker 0.13.0 exit=0 pass=false 
+ok   chat-code-media chat-code-media-default-root-consumer NEG envelope expects another policy pin exit=0 pass=false 
+ok   chat-code-media chat-code-media-default-root-consumer NEG wrong --policy-sha256 exit=21 pass=false policy-pin-mismatch
+ok   chat-code-media chat-code-media-default-root-consumer NEG wrong expected core 0.13.0 exit=21 pass=false core-version-mismatch
+ok   chat-code-media chat-code-media-default-root-consumer NEG wrong companion pin @composable-svelte/chat@0.5.1 exit=21 pass=false unresolved-package-import
+ok   chat-code-media chat-code-media-default-root-consumer NEG companion approval absent @composable-svelte/chat exit=21 pass=false unresolved-package-import
+ok   chat-code-media chat-code-media-default-root-consumer NEG wrong companion pin @composable-svelte/code@0.5.1 exit=21 pass=false unresolved-package-import
+ok   chat-code-media chat-code-media-default-root-consumer NEG companion approval absent @composable-svelte/code exit=21 pass=false unresolved-package-import
+ok   chat-code-media chat-code-media-default-root-consumer NEG wrong companion pin @composable-svelte/media@0.5.1 exit=21 pass=false unresolved-package-import
+ok   chat-code-media chat-code-media-default-root-consumer NEG companion approval absent @composable-svelte/media exit=21 pass=false unresolved-package-import
+ok   chat-code-media chat-code-media-default-root-consumer NEG wrong core opaque pin 0.13.2 exit=21 pass=false unresolved-package-import
+ok   chat-code-media chat-code-media-default-root-consumer NEG wrong svelte pin 5.57.0 (svelte reached) exit=21 pass=false unresolved-package-import
+ok   chat-code-media chat-code-media-default-root-consumer NEG incomplete analysis (missing root) exit=21 pass=false missing-root
+ok   chat-code-media chat-code-media-default-root-consumer NEG starter approvals only (companion unapproved) exit=21 pass=false unresolved-package-import
+receipt P9-final/profile-qualification-receipt.json sha256 aa1c78138e682dbcad0bf791613c806a1d0232095aaa9c3fcd894513d101c541 verdict ALL_EXPECTATIONS_MET results 172 failures 0
+exit=0

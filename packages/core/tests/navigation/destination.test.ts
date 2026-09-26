@@ -2,8 +2,15 @@
  * Tests for createDestination() core functionality
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createDestination } from '../../src/lib/navigation/destination.js';
+import {
+	destinationCases,
+	isDestinationReducer
+} from '../../src/lib/navigation/destination-metadata.js';
+import * as navigationExports from '../../src/lib/navigation/index.js';
+import * as applicationExports from '../../src/lib/application/index.js';
+import * as rootExports from '../../src/lib/index.js';
 import type { Reducer } from '../../src/lib/types.js';
 import { Effect } from '../../src/lib/effect.js';
 
@@ -612,6 +619,284 @@ describe('createDestination', () => {
 					expect(editResult.value).toEqual({ type: 'delete', id: '1' });
 				}
 			});
+		});
+	});
+
+	describe('C1 destination metadata and construction snapshot', () => {
+		it('preserves genuine result metadata identity, frozen keys/routes, null prototype, key order, and generated reducer membership', () => {
+			const map = {
+				'10': editItemReducer,
+				'2': addItemReducer,
+				addItem: addItemReducer,
+				editItem: editItemReducer
+			};
+			const Destination = createDestination(map);
+			const metadata = destinationCases(Destination);
+
+			expect(metadata).toBeDefined();
+			expect(metadata.reducer).toBe(Destination.reducer);
+			expect(Object.isFrozen(metadata)).toBe(true);
+			expect(Object.isFrozen(metadata.keys)).toBe(true);
+			expect(Object.isFrozen(metadata.routes)).toBe(true);
+			expect(Object.getPrototypeOf(metadata.routes)).toBeNull();
+
+			// Key order matches Object.keys order (integer-like first ascending, then insertion)
+			expect(metadata.keys).toEqual(Object.keys(map));
+			expect(metadata.keys).toEqual(['2', '10', 'addItem', 'editItem']);
+
+			expect(metadata.routes['2']).toBe(addItemReducer);
+			expect(metadata.routes['10']).toBe(editItemReducer);
+			expect(metadata.routes.addItem).toBe(addItemReducer);
+			expect(metadata.routes.editItem).toBe(editItemReducer);
+
+			// Result object itself remains unfrozen
+			expect(Object.isFrozen(Destination)).toBe(false);
+
+			// Reducer membership
+			expect(isDestinationReducer(Destination.reducer)).toBe(true);
+			expect(isDestinationReducer(addItemReducer)).toBe(false);
+			expect(isDestinationReducer(() => [{ count: 0 }, Effect.none()])).toBe(false);
+			expect(isDestinationReducer(null)).toBe(false);
+			expect(isDestinationReducer({})).toBe(false);
+		});
+
+		it('rejects fake, spread, proxy, Object.create, bare reducer, and primitive values from destinationCases', () => {
+			const Destination = createDestination({
+				addItem: addItemReducer,
+				editItem: editItemReducer
+			});
+
+			const expectedError = 'Expected a destination created by createDestination';
+
+			// Spread copy
+			const spread = { ...Destination };
+			expect(() => destinationCases(spread)).toThrow(TypeError);
+			expect(() => destinationCases(spread)).toThrow(expectedError);
+
+			// Object.create
+			const created = Object.create(Destination);
+			expect(() => destinationCases(created)).toThrow(TypeError);
+			expect(() => destinationCases(created)).toThrow(expectedError);
+
+			// Proxy around genuine destination
+			const proxy = new Proxy(Destination, {});
+			expect(() => destinationCases(proxy)).toThrow(TypeError);
+			expect(() => destinationCases(proxy)).toThrow(expectedError);
+
+			// Hand-built fake carrying genuine reducer and all members
+			const fake = {
+				reducer: Destination.reducer,
+				initial: Destination.initial,
+				extract: Destination.extract,
+				is: Destination.is,
+				matchCase: Destination.matchCase,
+				match: Destination.match,
+				_types: null as any
+			};
+			expect(() => destinationCases(fake)).toThrow(TypeError);
+			expect(() => destinationCases(fake)).toThrow(expectedError);
+
+			// Bare reducer
+			expect(() => destinationCases(Destination.reducer)).toThrow(TypeError);
+			expect(() => destinationCases(Destination.reducer)).toThrow(expectedError);
+
+			// Primitives and null/undefined
+			expect(() => destinationCases(null)).toThrow(TypeError);
+			expect(() => destinationCases(null)).toThrow(expectedError);
+			expect(() => destinationCases(undefined)).toThrow(TypeError);
+			expect(() => destinationCases(undefined)).toThrow(expectedError);
+			expect(() => destinationCases('destination')).toThrow(TypeError);
+			expect(() => destinationCases('destination')).toThrow(expectedError);
+			expect(() => destinationCases(123)).toThrow(TypeError);
+			expect(() => destinationCases(123)).toThrow(expectedError);
+			expect(() => destinationCases(true)).toThrow(TypeError);
+			expect(() => destinationCases(true)).toThrow(expectedError);
+			expect(() => destinationCases(Symbol('destination'))).toThrow(TypeError);
+			expect(() => destinationCases(Symbol('destination'))).toThrow(expectedError);
+			expect(() => destinationCases({})).toThrow(TypeError);
+			expect(() => destinationCases({})).toThrow(expectedError);
+		});
+
+		it('ensures post-construction mutation of caller map is inert for routing and matchers while caller map stays unfrozen', () => {
+			const map: Record<string, Reducer<any, any, any>> = {
+				addItem: addItemReducer,
+				editItem: editItemReducer
+			};
+			const Destination = createDestination(map);
+			const metadata = destinationCases(Destination);
+			const snapshotKeys = metadata.keys;
+			const snapshotRoutes = metadata.routes;
+
+			// Caller map remains unfrozen
+			expect(Object.isFrozen(map)).toBe(false);
+
+			const dummyReducer: Reducer<any, any, any> = vi.fn((state: any) => [
+				{ ...state, swapped: true },
+				Effect.none()
+			] as const);
+
+			// Mutate caller map: add, delete, swap
+			map.extraItem = dummyReducer;
+			delete map.addItem;
+			map.editItem = dummyReducer;
+
+			// 1. Deleted key still routes correctly using snapshot
+			const addInitial = Destination.initial('addItem' as any, { name: 'Test', quantity: 1 } as any);
+			const addAction = {
+				type: 'addItem',
+				action: { type: 'nameChanged', value: 'Updated' }
+			};
+			const [nextAddState] = Destination.reducer(addInitial, addAction as any, {});
+			expect(Destination.extract(nextAddState, 'addItem' as any)?.name).toBe('Updated');
+
+			// 2. Swapped key routes to original reducer, not swapped dummy
+			const editInitial = Destination.initial('editItem' as any, { id: '1', name: 'Original', quantity: 2 } as any);
+			const editAction = {
+				type: 'editItem',
+				action: { type: 'nameChanged', value: 'Edited' }
+			};
+			const [nextEditState] = Destination.reducer(editInitial, editAction as any, {});
+			expect(Destination.extract(nextEditState, 'editItem' as any)?.name).toBe('Edited');
+			expect((nextEditState as any).state.swapped).toBeUndefined();
+
+			// 3. Added key is unrouted even when state matches the added case.
+			// The spy makes this discriminate a live-map implementation.
+			const extraInitial = { type: 'extraItem', state: { value: 1 } } as any;
+			const [unroutedState, effect] = Destination.reducer(
+				extraInitial,
+				{ type: 'extraItem', action: { type: 'any' } } as any,
+				{}
+			);
+			expect(unroutedState).toBe(extraInitial);
+			expect(effect._tag).toBe('None');
+			expect(dummyReducer).not.toHaveBeenCalled();
+
+			// 4. Metadata is the same immutable construction snapshot after mutations.
+			const afterMutation = destinationCases(Destination);
+			expect(afterMutation).toBe(metadata);
+			expect(afterMutation.keys).toBe(snapshotKeys);
+			expect(afterMutation.keys).toEqual(['addItem', 'editItem']);
+			expect(afterMutation.routes).toBe(snapshotRoutes);
+			expect(afterMutation.routes.addItem).toBe(addItemReducer);
+			expect(afterMutation.routes.editItem).toBe(editItemReducer);
+			expect(Object.hasOwn(afterMutation.routes, 'extraItem')).toBe(false);
+
+			// 5. Matcher APIs are inert to mutations
+			expect(Destination.is({ type: 'addItem', action: { type: 'nameChanged' } }, 'addItem')).toBe(true);
+			expect(Destination.is({ type: 'extraItem', action: { type: 'nameChanged' } }, 'extraItem')).toBe(false);
+
+			const matchResult = Destination.matchCase(
+				{ type: 'addItem', action: { type: 'nameChanged' } },
+				addInitial,
+				'addItem'
+			);
+			expect(matchResult).toEqual({ name: 'Test', quantity: 1 });
+
+			const matchExtraResult = Destination.matchCase(
+				{ type: 'extraItem', action: { type: 'nameChanged' } },
+				addInitial,
+				'extraItem'
+			);
+			expect(matchExtraResult).toBeNull();
+		});
+
+		it('accepts a pre-frozen caller map', () => {
+			const map = Object.freeze({
+				addItem: addItemReducer,
+				editItem: editItemReducer
+			});
+			const Destination = createDestination(map);
+			expect(Destination).toBeDefined();
+
+			const metadata = destinationCases(Destination);
+			expect(metadata.keys).toEqual(['addItem', 'editItem']);
+			expect(metadata.routes.addItem).toBe(addItemReducer);
+			expect(metadata.routes.editItem).toBe(editItemReducer);
+		});
+
+		it('rejects non-function own entries at construction naming the offending case', () => {
+			expect(() =>
+				createDestination({
+					addItem: addItemReducer,
+					invalidCase: 42 as any
+				})
+			).toThrow(TypeError);
+
+			expect(() =>
+				createDestination({
+					addItem: addItemReducer,
+					invalidCase: 42 as any
+				})
+			).toThrow(/invalidCase/);
+
+			expect(() =>
+				createDestination({
+					nullCase: null as any
+				})
+			).toThrow(/nullCase/);
+
+			expect(() =>
+				createDestination({
+					objectCase: {} as any
+				})
+			).toThrow(/objectCase/);
+		});
+
+		it('ignores inherited non-reserved keys and fails closed on action/state named toString without calling Object.prototype.toString', () => {
+			// Inherited non-reserved keys are ignored
+			const inheritedProto = {
+				inheritedKey: addItemReducer
+			};
+			const ownMap = Object.create(inheritedProto);
+			ownMap.addItem = addItemReducer;
+
+			const Destination = createDestination(ownMap);
+			const metadata = destinationCases(Destination);
+			expect(metadata.keys).toEqual(['addItem']);
+			expect(metadata.routes.inheritedKey).toBeUndefined();
+			expect(Destination.is({ type: 'inheritedKey', action: { type: 'any' } }, 'inheritedKey')).toBe(false);
+
+			// State/action with type 'toString' against a destination without 'toString' case
+			const toStringSpy = vi.spyOn(Object.prototype, 'toString');
+			try {
+				const state = { type: 'toString', state: { value: 123 } } as any;
+				const action = { type: 'toString', action: { type: 'action' } } as any;
+
+				const [outState, outEffect] = Destination.reducer(state, action, {});
+				expect(outState).toBe(state);
+				expect(outEffect._tag).toBe('None');
+				expect(toStringSpy).not.toHaveBeenCalled();
+			} finally {
+				toStringSpy.mockRestore();
+			}
+		});
+
+		it('ensures unsafe reassignment of Destination.reducer does not change metadata.reducer', () => {
+			const Destination = createDestination({
+				addItem: addItemReducer,
+				editItem: editItemReducer
+			});
+
+			const originalReducer = Destination.reducer;
+			const meta1 = destinationCases(Destination);
+			expect(meta1.reducer).toBe(originalReducer);
+
+			// Unsafe reassignment
+			const replacementReducer: Reducer<any, any, any> = (s) => [s, Effect.none()];
+			(Destination as any).reducer = replacementReducer;
+
+			expect(Destination.reducer).toBe(replacementReducer);
+			const meta2 = destinationCases(Destination);
+			expect(meta2.reducer).toBe(originalReducer);
+			expect(meta2.reducer).not.toBe(replacementReducer);
+		});
+
+		it('does not expose destination metadata through runtime barrels', () => {
+			for (const mod of [navigationExports, applicationExports, rootExports]) {
+				expect('registerDestinationCases' in mod).toBe(false);
+				expect('destinationCases' in mod).toBe(false);
+				expect('isDestinationReducer' in mod).toBe(false);
+			}
 		});
 	});
 });

@@ -202,7 +202,12 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 				{
 					...nextState,
 					filteredCommands: filtered,
-					selectedIndex: Math.min(state.selectedIndex, filtered.length - 1)
+					selectedIndex:
+						filtered.length === 0
+							? -1
+							: state.selectedIndex < 0
+								? 0
+								: Math.min(state.selectedIndex, filtered.length - 1)
 				},
 				Effect.none()
 			];
@@ -214,7 +219,10 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 			}
 
 			// Wrap around to beginning
-			const nextIndex = (state.selectedIndex + 1) % state.filteredCommands.length;
+			const nextIndex =
+				state.selectedIndex < 0 || state.selectedIndex >= state.filteredCommands.length - 1
+					? 0
+					: state.selectedIndex + 1;
 
 			return [
 				{
@@ -232,7 +240,7 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 
 			// Wrap around to end
 			const prevIndex =
-				state.selectedIndex === 0
+				state.selectedIndex <= 0
 					? state.filteredCommands.length - 1
 					: state.selectedIndex - 1;
 

@@ -232,7 +232,7 @@ export type FormFields<T> = Partial<Record<FieldPath<T>, FieldState>>;
 
 /** Async validators, keyed by path, each still typed to the value at that path. */
 export type AsyncValidators<T> = {
-	[P in FieldPath<T>]?: (value: FieldValue<T, P>) => Promise<void>;
+	[P in FieldPath<T>]?: (value: FieldValue<T, P>, signal?: AbortSignal) => Promise<void>;
 };
 
 /**

@@ -49,6 +49,8 @@ export {
 	type UnknownAuthError
 } from './errors/index.js';
 
+export type { HttpSessionOptions } from './session/http.js';
+
 // Session — reducer, store factory, HTTP deps
 export {
 	sessionReducer,
@@ -305,7 +307,29 @@ export type {
 } from './deps.js';
 
 // HTTP — the Composable Rust adapter, beside `createHttpSessionDeps` above
-export { createHttpAuthDeps, authErrorFromResponse } from './http/index.js';
+export { createHttpAuthDeps, authErrorFromResponse, type HttpAuthOptions } from './http/index.js';
+
+// Application — the managed auth feature: session plus login and MFA slots
+export {
+	createAuthFeature,
+	type AuthFeature,
+	type AuthFeatureState,
+	type AuthFeatureAction,
+	type AuthFeatureDependencies,
+	type AuthFeatureCatalog,
+	type AuthHandoff,
+	type AuthHandoffSource,
+	type AuthHandoffRefusalReason,
+	type AuthMfaOutcome,
+	type AuthOAuthOutcome,
+	type AuthMagicLinkOutcome,
+	type AuthConnectedAccountsOutcome,
+	type AuthChangeEmailOutcome,
+	type AuthChangeEmailConfirmOutcome,
+	type AuthChangePasswordOutcome,
+	type AuthDeleteAccountOutcome,
+	type AuthSessionRefreshOutcome
+} from './application/index.js';
 
 // Components — thin store consumers (zero async)
 export {

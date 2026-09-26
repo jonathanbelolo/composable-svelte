@@ -90,6 +90,9 @@ export async function mfaRoutes(
 	app.post('/auth/mfa/enrol', async (request, reply) => {
 		const current = requireAccount(request, reply, store, { now, idleMs });
 		if (current === null) return reply;
+		if (current.account.mfaEnabled && !requireFresh(reply, current, { freshnessMs, now })) {
+			return reply;
+		}
 
 		const secret = newSecret();
 		const enrolmentId = id();
@@ -123,6 +126,9 @@ export async function mfaRoutes(
 		async (request, reply) => {
 			const current = requireAccount(request, reply, store, { now, idleMs });
 			if (current === null) return reply;
+			if (current.account.mfaEnabled && !requireFresh(reply, current, { freshnessMs, now })) {
+				return reply;
+			}
 
 			const enrolment = store.enrolments.peek(request.body.enrolment_id);
 			if (enrolment === null || enrolment.accountId !== current.account.id) {

@@ -53,7 +53,7 @@ export function createLocalStorage<T = unknown>(
 	}
 
 	const { prefix = '', validator, debug = false } = config;
-	const listeners = new Set<StorageEventListener<T>>();
+	const listeners = new Set<{ listener: StorageEventListener<T>; active: boolean }>();
 
 	// Internal helper: add prefix to key
 	function _prefixKey(key: string): string {
@@ -90,34 +90,37 @@ export function createLocalStorage<T = unknown>(
 		}
 	}
 
-	// Setup storage event listener for cross-tab sync
-	if (typeof window !== 'undefined') {
-		window.addEventListener('storage', (event) => {
-			// Only process events for our prefix
-			if (!event.key || !event.key.startsWith(prefix)) {
-				return;
+	function handleStorage(event: StorageEvent): void {
+		// Filter by storageArea: only respond to actual localStorage events
+		if (event.storageArea && event.storageArea !== window.localStorage) {
+			return;
+		}
+
+		// Only process events for our prefix
+		if (!event.key || !event.key.startsWith(prefix)) {
+			return;
+		}
+
+		const key = _unprefixKey(event.key);
+		const newValue = event.newValue ? _parseJSON(key, event.newValue) : null;
+		const oldValue = event.oldValue ? _parseJSON(key, event.oldValue) : null;
+
+		_log(`Storage event for key "${key}"`, { newValue, oldValue });
+
+		const eventData = {
+			key,
+			newValue,
+			oldValue,
+			url: event.url || ''
+		};
+
+		[...listeners].forEach((subscription) => {
+			if (!subscription.active) return;
+			try {
+				subscription.listener(eventData);
+			} catch (error) {
+				console.error('[LocalStorage] Error in listener:', error);
 			}
-
-			const key = _unprefixKey(event.key);
-			const newValue = event.newValue ? _parseJSON(key, event.newValue) : null;
-			const oldValue = event.oldValue ? _parseJSON(key, event.oldValue) : null;
-
-			_log(`Storage event for key "${key}"`, { newValue, oldValue });
-
-			const eventData = {
-				key,
-				newValue,
-				oldValue,
-				url: event.url || ''
-			};
-
-			listeners.forEach((listener) => {
-				try {
-					listener(eventData);
-				} catch (error) {
-					console.error('[LocalStorage] Error in listener:', error);
-				}
-			});
 		});
 	}
 
@@ -198,12 +201,24 @@ export function createLocalStorage<T = unknown>(
 		},
 
 		subscribe(listener: StorageEventListener<T>): Unsubscribe {
-			listeners.add(listener);
+			const subscription = { listener, active: true };
+			listeners.add(subscription);
 			_log(`Subscribed listener (total: ${listeners.size})`);
 
+			if (listeners.size === 1 && typeof window !== 'undefined') {
+				window.addEventListener('storage', handleStorage);
+			}
+
 			return () => {
-				listeners.delete(listener);
+				if (!subscription.active) {
+					return;
+				}
+				subscription.active = false;
+				listeners.delete(subscription);
 				_log(`Unsubscribed listener (total: ${listeners.size})`);
+				if (listeners.size === 0 && typeof window !== 'undefined') {
+					window.removeEventListener('storage', handleStorage);
+				}
 			};
 		}
 	};
@@ -443,7 +458,7 @@ export interface MockStorage<T = unknown> extends SyncStorage<T> {
 export function createMockStorage<T = unknown>(config: StorageConfig<T> = {}): MockStorage<T> {
 	const { prefix = '', validator, debug = false } = config;
 	const store = new Map<string, string>();
-	const listeners = new Set<StorageEventListener<T>>();
+	const listeners = new Set<{ listener: StorageEventListener<T>; active: boolean }>();
 
 	const full = (key: string): string => prefix + key;
 	const bare = (key: string): string =>
@@ -471,9 +486,10 @@ export function createMockStorage<T = unknown>(config: StorageConfig<T> = {}): M
 	};
 
 	const notify = (key: string, newValue: T | null, oldValue: T | null, url: string): void => {
-		listeners.forEach((listener) => {
+		[...listeners].forEach((subscription) => {
+			if (!subscription.active) return;
 			try {
-				listener({ key, newValue, oldValue, url });
+				subscription.listener({ key, newValue, oldValue, url });
 			} catch (error) {
 				// One bad listener must not stop the others, as in the real one.
 				console.error('[MockStorage] Error in listener:', error);
@@ -507,8 +523,13 @@ export function createMockStorage<T = unknown>(config: StorageConfig<T> = {}): M
 			return this.keys().length;
 		},
 		subscribe(listener: StorageEventListener<T>): Unsubscribe {
-			listeners.add(listener);
-			return () => listeners.delete(listener);
+			const subscription = { listener, active: true };
+			listeners.add(subscription);
+			return () => {
+				if (!subscription.active) return;
+				subscription.active = false;
+				listeners.delete(subscription);
+			};
 		},
 		simulateSetItem(key: string, value: T, url = ''): void {
 			const oldValue = parse(key, store.get(full(key)));
@@ -525,6 +546,7 @@ export function createMockStorage<T = unknown>(config: StorageConfig<T> = {}): M
 		},
 		reset(): void {
 			store.clear();
+			for (const subscription of listeners) subscription.active = false;
 			listeners.clear();
 		}
 	};

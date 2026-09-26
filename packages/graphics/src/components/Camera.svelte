@@ -5,8 +5,7 @@
  */
 
 import { untrack } from 'svelte';
-import type { Store } from '@composable-svelte/core';
-import type { GraphicsState, GraphicsAction, Vector3, CameraType } from '../core/types.js';
+import type { GraphicsStore, Vector3, CameraType } from '../core/types.js';
 
 // Props
 let {
@@ -19,7 +18,7 @@ let {
   far,
   orthoSize
 }: {
-  store: Store<GraphicsState, GraphicsAction>;
+  store: GraphicsStore;
   type?: CameraType | undefined;
   position: Vector3;
   lookAt: Vector3;
@@ -69,7 +68,10 @@ const cameraConfig = $derived({
  */
 $effect(() => {
   const config = cameraConfig;
-  untrack(() => store.dispatch({ type: 'updateCamera', camera: config }));
+  untrack(() => {
+    if (!store.state) return;
+    store.dispatch({ type: 'updateCamera', camera: config });
+  });
 });
 </script>
 

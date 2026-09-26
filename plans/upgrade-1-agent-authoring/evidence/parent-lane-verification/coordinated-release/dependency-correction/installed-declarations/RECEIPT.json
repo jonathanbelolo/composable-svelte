@@ -1,0 +1,47 @@
+{
+  "archiveManifest": "/private/tmp/companion-runtime-release/archives-r6/MANIFEST.json",
+  "materialization": "npm install exact local candidate tarballs; not registry retrieval",
+  "packages": [
+    {
+      "name": "@composable-svelte/core",
+      "sha256": "729ca89f1850e56bde5db23c9f8560090eed07a0dc4126374dd5e33fd11a8e0d",
+      "installedFilesMatched": 1258
+    },
+    {
+      "name": "@composable-svelte/auth",
+      "sha256": "dbb2611bb01616e4e9ef86a54016724cf6271e0ec337b759b5cbcb21dae27112",
+      "installedFilesMatched": 404
+    }
+  ],
+  "checks": [
+    {
+      "set": "implementer",
+      "exitCode": 2,
+      "expectedExitCode": 2,
+      "log": "/private/tmp/companion-runtime-release/r6-declaration-check/implementer/FINAL-tsc.log",
+      "output": "implementer/n1-negative.ts(12,58): error TS2769: No overload matches this call.\n  Overload 1 of 2, '(slot: DestinationSlot<S, A, DestinationReducers, string>, policy?: (Omit<ChildPolicy<S, A, { readonly type: string; readonly state: any; }, { ...; }, Missing>, \"startup\"> & { ...; }) | undefined): ManagedIntegrationBuilder<...>', gave the following error.\n    Argument of type 'OptionalSlot<S, A, AuthFeatureState, AuthFeatureAction, \"auth\">' is not assignable to parameter of type 'DestinationSlot<S, A, DestinationReducers, string>'.\n      Property 'case' is missing in type 'OptionalSlot<S, A, AuthFeatureState, AuthFeatureAction, \"auth\">' but required in type 'DestinationSlot<S, A, DestinationReducers, string>'.\n  Overload 2 of 2, '(slot: OptionalSlot<S, A, AuthFeatureState, AuthFeatureAction, \"auth\">, child: Reducer<AuthFeatureState, AuthFeatureAction, Missing> | ManagedComposition<...>, policy?: ChildPolicy<...> | undefined): ManagedIntegrationBuilder<...>', gave the following error.\n    Argument of type 'ManagedComposition<AuthFeatureState, AuthFeatureAction, AuthFeatureDependencies, AuthFeatureCatalog>' is not assignable to parameter of type 'Reducer<AuthFeatureState, AuthFeatureAction, Missing> | ManagedComposition<AuthFeatureState, AuthFeatureAction, Missing, AuthFeatureCatalog>'.\n      Type 'ManagedComposition<AuthFeatureState, AuthFeatureAction, AuthFeatureDependencies, AuthFeatureCatalog>' is not assignable to type 'ManagedComposition<AuthFeatureState, AuthFeatureAction, Missing, AuthFeatureCatalog>'.\n        Types of property 'reducer' are incompatible.\n          Type 'Reducer<AuthFeatureState, AuthFeatureAction, AuthFeatureDependencies>' is not assignable to type 'Reducer<AuthFeatureState, AuthFeatureAction, Missing>'.\n            Types of parameters 'dependencies' and 'dependencies' are incompatible.\n              Type 'Missing' is not assignable to type 'AuthFeatureDependencies'.\n                Property 'fetchAccount' is missing in type 'Missing' but required in type 'AccountDependencies'.\nimplementer/n1-negative.ts(21,63): error TS2769: No overload matches this call.\n  Overload 1 of 2, '(slot: DestinationSlot<P, PA, DestinationReducers, string>, policy?: (Omit<ChildPolicy<P, PA, { readonly type: string; readonly state: any; }, { ...; }, Narrow>, \"startup\"> & { ...; }) | undefined): ManagedIntegrationBuilder<...>', gave the following error.\n    Argument of type 'OptionalSlot<P, PA, C, CA, \"child\">' is not assignable to parameter of type 'DestinationSlot<P, PA, DestinationReducers, string>'.\n      Property 'case' is missing in type 'OptionalSlot<P, PA, C, CA, \"child\">' but required in type 'DestinationSlot<P, PA, DestinationReducers, string>'.\n  Overload 2 of 2, '(slot: OptionalSlot<P, PA, C, CA, \"child\">, child: Reducer<C, CA, Narrow> | ManagedComposition<C, CA, Narrow, Record<\"leaf\", SlotSchema<...>>>, policy?: ChildPolicy<...> | undefined): ManagedIntegrationBuilder<...>', gave the following error.\n    Argument of type 'ManagedComposition<C, CA, Wide, Record<\"leaf\", SlotSchema<Leaf, LeafA, {}, true>>>' is not assignable to parameter of type 'Reducer<C, CA, Narrow> | ManagedComposition<C, CA, Narrow, Record<\"leaf\", SlotSchema<Leaf, LeafA, {}, true>>>'.\n      Type 'ManagedComposition<C, CA, Wide, Record<\"leaf\", SlotSchema<Leaf, LeafA, {}, true>>>' is not assignable to type 'ManagedComposition<C, CA, Narrow, Record<\"leaf\", SlotSchema<Leaf, LeafA, {}, true>>>'.\n        Types of property 'reducer' are incompatible.\n          Type 'Reducer<C, CA, Wide>' is not assignable to type 'Reducer<C, CA, Narrow>'.\n            Types of parameters 'dependencies' and 'dependencies' are incompatible.\n              Property 'fetchRows' is missing in type 'Narrow' but required in type 'Wide'.\nimplementer/n1-negative.ts(27,113): error TS2322: Type 'AuthFeatureDependencies' is not assignable to type 'Ext | undefined'.\n  Property 'fetchActivity' is missing in type 'AuthFeatureDependencies' but required in type 'Ext'.\n"
+    },
+    {
+      "set": "probes",
+      "exitCode": 0,
+      "expectedExitCode": 0,
+      "log": "/private/tmp/companion-runtime-release/r6-declaration-check/probes/FINAL-tsc.log",
+      "output": ""
+    },
+    {
+      "set": "fences",
+      "exitCode": 0,
+      "expectedExitCode": 0,
+      "log": "/private/tmp/companion-runtime-release/r6-declaration-check/fences/FINAL-tsc.log",
+      "output": ""
+    },
+    {
+      "set": "emitted",
+      "exitCode": 0,
+      "expectedExitCode": 0,
+      "log": "/private/tmp/companion-runtime-release/r6-declaration-check/emitted/FINAL-tsc.log",
+      "output": ""
+    }
+  ],
+  "status": "PASSED"
+}

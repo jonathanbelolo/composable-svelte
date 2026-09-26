@@ -69,7 +69,7 @@ describe('Clock', () => {
 			const formatted = clock.format(timestamp);
 
 			// Default en-US format
-			expect(formatted).toContain('1/1/2024');
+			expect(formatted).toBe(new Date(timestamp).toLocaleDateString('en-US'));
 		});
 
 		it('should format timestamp with custom locale', () => {
@@ -79,7 +79,7 @@ describe('Clock', () => {
 			const formatted = clock.format(timestamp, 'en-GB');
 
 			// UK format: DD/MM/YYYY
-			expect(formatted).toContain('01/01/2024');
+			expect(formatted).toBe(new Date(timestamp).toLocaleDateString('en-GB'));
 		});
 
 		it('should format timestamp with custom options', () => {
@@ -89,7 +89,8 @@ describe('Clock', () => {
 			const formatted = clock.format(timestamp, 'en-US', {
 				year: 'numeric',
 				month: 'long',
-				day: 'numeric'
+				day: 'numeric',
+				timeZone: 'UTC'
 			});
 
 			expect(formatted).toBe('January 1, 2024');
@@ -200,7 +201,8 @@ describe('Clock', () => {
 			const formatted = clock.format(1704067200000, 'en-US', {
 				year: 'numeric',
 				month: 'long',
-				day: 'numeric'
+				day: 'numeric',
+				timeZone: 'UTC'
 			});
 
 			expect(formatted).toBe('January 1, 2024');
@@ -212,7 +214,8 @@ describe('Clock', () => {
 			const formatted = clock.format(undefined, 'en-US', {
 				year: 'numeric',
 				month: 'long',
-				day: 'numeric'
+				day: 'numeric',
+				timeZone: 'UTC'
 			});
 
 			expect(formatted).toBe('January 1, 2024');
@@ -248,8 +251,8 @@ describe('Clock', () => {
 		it('should handle different date formats', () => {
 			const clock = createMockClock(1704067200000);
 
-			const us = clock.format(undefined, 'en-US', { dateStyle: 'short' });
-			const uk = clock.format(undefined, 'en-GB', { dateStyle: 'short' });
+			const us = clock.format(undefined, 'en-US', { dateStyle: 'short', timeZone: 'UTC' });
+			const uk = clock.format(undefined, 'en-GB', { dateStyle: 'short', timeZone: 'UTC' });
 			const iso = clock.toISO();
 
 			expect(us).toContain('1/1/24');

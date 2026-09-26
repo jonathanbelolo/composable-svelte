@@ -1,0 +1,730 @@
+[
+  {
+    "status": "M",
+    "path": "packages/auth/CHANGELOG.md",
+    "before": "254ad2a2d1cb8277f0e772124be50478d0bd747aefd5a86cb40d6a8cd49c8501",
+    "after": "0e3001348832ebf693751f9cd08c842759c6373bf9c8507601b6566793fa31dc",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/README.md",
+    "before": "4d081b7ee92e20b6c4e1e924c54da5851f5bf0669c3c83c10d122b272265328f",
+    "after": "e5f118647f3edaae283abafa0b297a4f12851d8743a5f3b783e2a87e0977b340",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/consumer/README.md",
+    "before": "8872585b95d53da1c35ee61e7f598486221a3c8ac3aa91638fe3757b11dd9e31",
+    "after": "ebe931141a66a3d61be2291c9e7e4e90b4419a438db8274386d2339b84394289",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/consumer/scripts/browser.mjs",
+    "before": "36ac3f35654b6618c51469b1c0e671faaf956974a24af271faf9589cd807a34b",
+    "after": "191bc353e810c57942316c142b94aa59eff983b93e8d31ef1bc10d8e752875ef",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/consumer/scripts/ssr.mjs",
+    "before": "3929e3c33345216b1acc28242b61a03e499b094f077ec35e1d6dc7dc56bdebf5",
+    "after": "c095938bcc95ae06c3e4a5e4439b5528b0c4b9b7b18c3e318d891d0912ca2101",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "packages/auth/consumer/src/AccountScope.svelte",
+    "before": null,
+    "after": "c16d7548a53a3124ac2db4860d0ec28026cbe599b336ca96bfd9516967c1a79e",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "packages/auth/consumer/src/AccountViewPort.svelte",
+    "before": null,
+    "after": "b62aa3129231626edb8eb3b1ed3409afd45563c487371aefb64dcb1e7b951317",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/consumer/src/App.svelte",
+    "before": "4a660685d2f9cddc0cc9e0ab9cada7faa6627008f6d7d55ebd571a04b8481d9e",
+    "after": "d85ebfb7302497299987be0ea64c388eafd88944879c0bf31e47156d9284cd4e",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "packages/auth/consumer/src/ConnectedAccountsSettings.svelte",
+    "before": null,
+    "after": "d0a7af0d8b58831a5f995317f4e654c4a2b883634ca66673a14ee53b64c83c45",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "packages/auth/consumer/src/MfaSettings.svelte",
+    "before": null,
+    "after": "0740aa14748aa653203a1013d70efe33a73b6ca35136e08a3b4a3914a750305c",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "packages/auth/consumer/src/OAuthStartViewPort.svelte",
+    "before": null,
+    "after": "2fd586414e4ef717685ed62466022a1de74d28298f1b3427ff840c87fadc7620",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/consumer/src/Props.svelte",
+    "before": "1cd9fe6e9ab816ca62994951a520ad6d9983dfe233fad2ed530f2cf5f9bceb4b",
+    "after": "3516b573f32bccf74b751b16fd54f9aa7a5dce77162f3c996864fa6bd3e6d6e6",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/consumer/src/main-controlled.ts",
+    "before": "8e99e230d12a38e9bd5e98c4cc675bbe3f29348bc08c41ddf22914e26af596da",
+    "after": "d62e6b87a9e52638c6ef898ba1806dd8f4ec28ac4491a1dfd7b53037db6ea1a3",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/consumer/src/main.ts",
+    "before": "4d8c5505abd8ad97e74d876340564f079ea05a6e58a7667976c32d5f20d0d6ff",
+    "after": "2d1da95870d4d64ada927e8beb1281a16c799bb8d9e20e67b773640d6a8eaf85",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/consumer/src/model.ts",
+    "before": "c8d91e18dae7e623a084805745cf492154124b736f3184fb0626e7bf6c12ddb3",
+    "after": "064e05bba2917d1c54f3d70d1b05028f77e72d6acb3aac1c7793e67b8b968986",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/package.json",
+    "before": "3c097860eede03c1e08cd6c2e57421ca4c031bc1e56231fc46e8eefe50700ea8",
+    "after": "69e62b10f0b022a83643fc83bf028d4c3fd6c2afe8d5ee97569249fef9720cdd",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/application/feature.ts",
+    "before": "77e0c8ad412f2b37f8c3f3cdbd35101725646220fffdaaa7c480cde0d2103393",
+    "after": "61ece5655a36ab782f3f9b4bcfe0e4d0d0a59ab6b69e8b5d1d04cc04ad105366",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/application/index.ts",
+    "before": "04890bd3c318347fece1555b65d387eff6177b6b01402661dc7af06dfc51d02c",
+    "after": "94aec323bf4835d95a473ee21a901744771fefe3ac41b68d95d3cc3cead14ccd",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/components/ChangeEmailForm.svelte",
+    "before": "19029f1b99e74254ec5e66a9e2bdc8f6a154697a9c8d79a115efded24fcf9eec",
+    "after": "8dfa792dc17ec4240e71eedbfdfb4e99989c3cd6c1148d8fa02044861dc75506",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/components/ChangePasswordForm.svelte",
+    "before": "de1bf8cd6ce619b85fc40959e55c7487a5ef25d3c5285edbdc1a11d006d12fd0",
+    "after": "0d7494a609ea0049201a1bff5f3373fc4bba67ec847562ab0383dedbc2237acb",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/components/ConnectedAccountsPanel.svelte",
+    "before": "01ae4bc09f42b8e68d1a4b1e4390aec1234e26162e5567fe242fcde598119711",
+    "after": "6782b007562f8cac2c75e72a08832f6c5554434578b11129bfc79c5423aba0af",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/components/DeleteAccountPanel.svelte",
+    "before": "dd36a58e51f15c72c0d1a462ed9c7c3a71d9d488c9b3891e7c23bc1ff07dcab6",
+    "after": "2a061a23d21c4ca4f30accf54707d65808f0e20340b49d1c75918e2835dd0bfe",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/components/EmailChangeConfirmation.svelte",
+    "before": "d012b517d9524811257f02c71533a249579bee7957391837ee03c975469c20ce",
+    "after": "c2162a8fdc25acabdde22ea1fce2e2abbc2d7d0bad72c99f69131aa812a995b1",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/components/MagicLinkRequestForm.svelte",
+    "before": "56e867e27ec165367cd17fd9549aa27eff4fa43bae149e5de12698489ae1f73f",
+    "after": "289c7aa9d9a554776b9b52cfde04c1b85d6d48dfc0aeef96ee554505f90c84b5",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/components/MagicLinkSignIn.svelte",
+    "before": "17df971e7474ce04bde03b9c282742d584e96b3c92f709c691693f8d168a54ed",
+    "after": "20ec1bb91a06e667aa917d735b19cb33cb5ac0211ec5dbdebb77e082ca0a5463",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/components/MfaEnrolment.svelte",
+    "before": "7edd9e833c9e34ed2db7761b4b7c65204828803fcf8702d4565ffe4c8cfe9083",
+    "after": "55a8a3745f82eaa6efc0cb31f702a79ae1d569c43b0485abee03cf781e5af075",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/components/MfaManagementPanel.svelte",
+    "before": "aa9d7ab9d992ce186b4a27bd48dbcfb91f92c989cd2da48fa470c96024072421",
+    "after": "08e37dc84aaf97cfdd66413b20fe1a3a5c9feb5ffac47fd206e54dac6091d318",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/components/OAuthCallback.svelte",
+    "before": "5a0afd4e4ffcf071d5bfc580bbf93e021a33bd320daea2702c6c29633a1f76ec",
+    "after": "6a722d6a677d4b9b604c8ac562e5426b8d162df11573a960fbf2d411e65a8746",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/components/OAuthSignIn.svelte",
+    "before": "7aaf37a9f87c30298556e7d0cd85d1d33bc87fc308c88f64902f53637849ba0c",
+    "after": "294a12a56e92f7f4bacd224358ea0d5c683d2c453dbe928329a43ca2b3640fe0",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/components/RecoveryCodes.svelte",
+    "before": "1e53d45d8c0cf44e8427434929041325eff8b4cbee985aa894b760f4541f0612",
+    "after": "73777a39194f77840ef5a81206cb9f0923ac8be6bed21ba2fd908e8290987107",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/components/SessionRefresh.svelte",
+    "before": "309374b37e7a806c4eba6ff4d23cbaae80cbed14d65b2b84ef163359c9310ef0",
+    "after": "c8c56531f4d08f0015a60d5a0b076fb5533745a6ebfbce693927d393ddd1cdbe",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/flows/change-email-confirm/reducer.ts",
+    "before": "18648cfb5b47fd856ca75747818d1048849c0881d2eb90dbdc7ba7c5e7809e0b",
+    "after": "fe1e68a7bbad6664da944767c98c6a5a3d5da6c467bd984c046717a955590316",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/flows/change-email-confirm/types.ts",
+    "before": "2bd314c2382e54784fbf9cb46774ee87add6f5dc971ead2465ece40de1c41e6b",
+    "after": "5ae3f05ac7ad3b8809e3d69063280c73d3e43330a1bdfdd2c89ffb8ff1483725",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/flows/change-email/reducer.ts",
+    "before": "b59f52f3810e41bc5afd3a65f7e0ddd33debfe4570126bafeb89eb6e55ff2b24",
+    "after": "f03c946fece4fce1210cdf2e5d4db9217e8fc95e29a0f0e0ab5e4fd870f764d9",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/flows/change-email/types.ts",
+    "before": "48dedac0b5f84faa5ce3293e539d7f0343e8c06fe1c2b4684ca7945114aef87f",
+    "after": "b359fdb3abbb49d3bf02edee4c8f785dca2a061324524c8b2721fc3492b3d1ca",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/flows/change-password/reducer.ts",
+    "before": "ea0e3a084e5d57355aa2d017f5005b766080a39a8a6f7480241fb51fef731f9f",
+    "after": "95b38701373e083a5546ef39f83c5823cd3efa704123940a03b3a8265ae3e3ce",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/flows/change-password/types.ts",
+    "before": "260e22074cd612d3ab6690d34640ed2459eff2a8accc01c025e7b9265002f4f8",
+    "after": "e36c82ecc04b5865523b476b1dd336d7547fe12474f53a8a34e3a42887ab8841",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/flows/connected-accounts/reducer.ts",
+    "before": "e28f821bb385e994ce97ade7ab05c5a5a383a363aab53cae410dda0a65d97eab",
+    "after": "85d1697682e79b3af5d99c38a6992197aef665b6cbba6b832a7e75fefd0dfefd",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/flows/connected-accounts/types.ts",
+    "before": "6bf578da0ab9ea03925b457d6deb5afac201ef18b097edbe9d6f1602fc29dd2f",
+    "after": "d7b7377d8508c9046c972b83036b3fe0b6034abf52758ce640dffec99f20348a",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/flows/delete-account/reducer.ts",
+    "before": "23969bc1d8229111650f5e32c26e119b033d2ab85cb8b1b386eec34dd773f449",
+    "after": "c14c3cecd053400effa1cfbb59715efc3a17430382affd803fb085452bb805fc",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/flows/delete-account/types.ts",
+    "before": "ea8e4bd0d14a3572587f9368c652ef1a61536b5c221674ef5e8aaa993d0f3bcb",
+    "after": "74a0d01776daec2cc5bc5736af694766a7fbfc869ee49d4ec0c9c9da74d81cd4",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/flows/magic-link-request/reducer.ts",
+    "before": "4f57202c8cae4416ca67a47d48f9ba87d49dec89895af38083f1a8d70a8b19a6",
+    "after": "1f5b6da5c740fa2bbc4e58ae4691e2e2818804e7ea8b7313c17ef596b6086f10",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/flows/magic-link-request/types.ts",
+    "before": "0aade9e9fc012a4252cb517f0fc6d7ecfeceb28c7bc50d6daf3eec9c3298ac3d",
+    "after": "7f5a411a3be8875d9d26e19021fd21315b7f76f5177c3c91e71e4fafd03c64c5",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/flows/magic-link-signin/reducer.ts",
+    "before": "ba6a53ebf0d670ba79d79cb04443afb459e4bb8cedd0aef7c254ea20da0f305e",
+    "after": "c292be611d0a00447b777064efeac57cebad945d99c69a7e546c727dfbd71cd1",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/flows/magic-link-signin/types.ts",
+    "before": "3ee72028666e70cf8a8e27f6742bf84fa2d2ef03d39cacc37a47e4b1154ee632",
+    "after": "5ba18c4fe9a301d0753f19a221a1a5a3eef194e34c4dd473346a8066c789afb4",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/flows/mfa-enrolment/reducer.ts",
+    "before": "1ceb743e7b6798b2bfcc9e69ce272e4db37ad5f6404a3d1f4c4a047cf02b00e3",
+    "after": "576d56eec3f46a8f2edf6e8da4926326f438ec52d53417d6606987cda14d531a",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/flows/mfa-enrolment/types.ts",
+    "before": "fe7980068a3bc4b808140bc6f097a5fad2048696f367a1999f42b15ed70ae2d9",
+    "after": "b79fea814dcd2f6f7c1b9e66431f474723fa3916bbf482f5f1754f57ec39af6a",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/flows/mfa-management/reducer.ts",
+    "before": "4faa9dd12b2147f878e01f5dfacdfe8264d292bc534a27d045da454f13aca5c7",
+    "after": "cc77b3500646ab7e93c181e38edeadbbd0b779e451724e22ff8e30f2b687d3d0",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/flows/mfa-management/types.ts",
+    "before": "a6b74e1fe8649dc534ce198618a81b53ebc3d2569a3b9b36f8f223703cb8b512",
+    "after": "63076d5b3704d9bd028364e06118a3ef440cfd05289cf3f79ce0776fa9ef97ab",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/flows/oauth-callback/reducer.ts",
+    "before": "7d150fbe2d125754f9e87bec9da1b9b9c523bd0e173b1bc7f8e953b2b5b495c6",
+    "after": "de2a2a220c0bfcceff53abcf36bfe9955b57fec485e38e93e2ab7617c55745a0",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/flows/oauth-callback/types.ts",
+    "before": "a079d05e30a066d11ccd0d85cd8e64b9f5e6d235975c9776a6a2bec0987d8d13",
+    "after": "e3ee64483dd6cb7134675668d40b4abc9b287c7e8cf70c904d04ad54cfb046d6",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/flows/oauth-pending.ts",
+    "before": "daba31c8c0651e1e0888a8a636cbbb7330f34d61b30ada25e81ced82ad92ffb7",
+    "after": "8e3bc09ebb25dfd7c7ec90605d8b7131e0ec028b8f572051a608a60be7579416",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/flows/session-refresh/reducer.ts",
+    "before": "c97fce7734f6927e1c2533ba035a9c6bb6e0a18dc9a0201760daa1feb3c3cfae",
+    "after": "5717e28d93da38aaac563b16f6a2ca56163ce536e9f79ff017ab94bcfb6d972d",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/src/lib/index.ts",
+    "before": "65ec92c0ea81ed948ee0fd3175fdb3bd564fb666efff631962304977a9f30406",
+    "after": "7d84f12ee6a22147ab45550a02f110db29978884c5102cfb9e41b3c299f141e4",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/tests/auth-feature.test.ts",
+    "before": "4ac80ac2a69469dec48fa40364d668f5de0877d9ca778a0d4e18aea75edaa6b0",
+    "after": "5ee58113e186f080fe5a7eef8469a854ecf76fa7d606e226e9b25e87d09bd85c",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/tests/fixtures/managed-auth-drivers.ts",
+    "before": "d3f4b93882c8b5a81708da4357786eac060c2c199a787ac1b47e37507dd47110",
+    "after": "1fe885645de6f8b32c44753cf23887ea93c9388d89db3b559a2d28ee5f1ae015",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/tests/magic-link-flow.test.ts",
+    "before": "bf0d1de457543b44fe224163f48b99e992ca6c7ada1afd20bd27769e34034a81",
+    "after": "7d3c6fc1a6a4587d7c710e0051ae4e3fdc59c7394142465ef1904c9a0f398650",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "packages/auth/tests/managed-change-email.test.ts",
+    "before": null,
+    "after": "989b44edf67f2b03bfb60b2e3aba4c7749c8ff5ac11844af91de3aa04708e745",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "packages/auth/tests/managed-connected-accounts.test.ts",
+    "before": null,
+    "after": "a96364ea7049c26b28060e0a2bff741b39bac0288c3b7e38adcd5aea91311f11",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/tests/managed-forms.test.ts",
+    "before": "ad518f24a535d51ac8111bafa661fdf3cfb57ed6dbd006435687e696bf2dd9a0",
+    "after": "d36c4fef7648bdc0c73abfab09bf5716e76a4c3f5c3668764801e3585a54e4b0",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "packages/auth/tests/managed-magic-link.test.ts",
+    "before": null,
+    "after": "6ee1785c24161a10060b49dcafcb0566d39276ba9d910dfd7c52dad3291180c6",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "packages/auth/tests/managed-mfa-settings.test.ts",
+    "before": null,
+    "after": "8a9d3cff32d0a351c1af51f6a33a0f88a5a9a7a0fa58471858fbb96d6b08ad99",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "packages/auth/tests/managed-mfa-views.test.ts",
+    "before": null,
+    "after": "a29b217c4e202a43297be351deedcddbb1a4b1a3f80153d45514129f134bfb31",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "packages/auth/tests/managed-oauth.test.ts",
+    "before": null,
+    "after": "0ee86ba22c363a594e40fc1e51abfa4181dd47769c92f152fd9c6d517211dce1",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "packages/auth/tests/managed-password-delete.test.ts",
+    "before": null,
+    "after": "1f9f23bb01ee07e80aa8352574426a738f64d0b158905898dba1d16299fafe00",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "packages/auth/tests/managed-session-refresh.test.ts",
+    "before": null,
+    "after": "8df6b5a938c73921a6918a6e7aac2122525e5c975b395266c8ae374d1010bbff",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/tests/oauth-flow.test.ts",
+    "before": "19ebdfbf19ab4eef7cea19da78866bc22796ac5dcc29929babbe0b67caa4ce54",
+    "after": "b8563f3fc62e6bc73bac83e6de46e3b79f1429f9577dc6dbfa5c5569cc3ff45b",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "packages/auth/tests/ssr/managed-change-email-ssr.test.ts",
+    "before": null,
+    "after": "547ba37703fd1d21834c03063e58a3bf123664373a3ea7f51a5b09fb142dfe61",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "packages/auth/tests/ssr/managed-connected-accounts-ssr.test.ts",
+    "before": null,
+    "after": "fb34c3f4b49cb41b85c78c66a714778ad15ba67fd8cfce43860677e3a77f4684",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "packages/auth/tests/ssr/managed-magic-link-ssr.test.ts",
+    "before": null,
+    "after": "c7494e940c7cd43b94429c04516458ab2f3e8ae1a2ad5ea0bb7a6dba6d9dde54",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "packages/auth/tests/ssr/managed-mfa-ssr.test.ts",
+    "before": null,
+    "after": "3af41dea9481c8f489602d2e4e304ce37ab8a6fef9b52416c1d82e802dc6107f",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "packages/auth/tests/ssr/managed-oauth-ssr.test.ts",
+    "before": null,
+    "after": "77b3f5dfa62d8cd140decd6d6bacfae10f70dddb3d1e07f98e9eba34c1968aff",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "packages/auth/tests/ssr/managed-password-delete-ssr.test.ts",
+    "before": null,
+    "after": "53fd865a1cdaf2d49bb211b5fc524298e4019c60023e369a49273e515518e4aa",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "packages/auth/tests/ssr/managed-session-refresh-ssr.test.ts",
+    "before": null,
+    "after": "6eceb4d48cc43a45d1e389bd6d90f6ac6a1d3c4dcc4ce844cbd106c73741a1c7",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "packages/auth/tests/test-components/MagicLinkRequestStoreSwap.svelte",
+    "before": null,
+    "after": "577c08acdc45bb711eefefb31cb776d8c488c1745086f5a2abee32fac62e62f3",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/tests/test-components/ManagedAuthRecipe.svelte",
+    "before": "091d4c01f1e2e4a184d1e42fb451995353db7112be185182da23fd027c25b9cf",
+    "after": "9df20195cbd70a071525de885e11d6042e2f373745ffa1973f2b330f90230f7c",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "packages/auth/tests/test-components/ManagedFormProps.svelte",
+    "before": "d1d6f7e7a6214bcf9bf1f8ee92f47d72d6b26b36ed0e71e02ce7e7abe224d6e3",
+    "after": "bc206368789d4c367a8857bfc1a29dabf48d881f5520264d64e31a36f4ed327a",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "packages/auth/tests/test-components/MfaEnrolmentStoreSwap.svelte",
+    "before": null,
+    "after": "1d61431c51afd32db041eea73a9bb89e938b4d2fee2dd1334a877f8056972b0a",
+    "alreadyApplied": false
+  },
+  {
+    "status": "M",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/A-INVENTORY.md",
+    "before": "328f33bff757a23fb67fa25fa22e5444edd31fd091c563bf238f588edb82c9db",
+    "after": "08fe4290344534cc1026d8b37ba2af53413e59218f5903355b56f8beb3424485",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/D-MFA-SETTINGS-PROOF.md",
+    "before": null,
+    "after": "2e82c898203e903b29e33a3af1f3d6181461b461f0d85972d4f41fde5eaa22d5",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/E-OAUTH-PROOF.md",
+    "before": null,
+    "after": "7f117cbff54b1142b61002878027f22516f2f72f23c657711280f0363d34d16c",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/F-MAGIC-LINK-PROOF.md",
+    "before": null,
+    "after": "da564aec067d1c5bc0b395fc814853387ca0dc524e10d85a7fbf37489ea8e0c7",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/FINAL-ARTIFACT-RECEIPT.json",
+    "before": null,
+    "after": "dc7e9ae3cea9af06593c4f215598dc087cbd405827ae0d2a5992cbc3ae90d3a8",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/FINAL-OPUS-REVIEW.md",
+    "before": null,
+    "after": "3bc3dcb02af0800b9a68712a7478bb361d64a670231a2178b74cf7338febe4c1",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/G-CONNECTED-ACCOUNTS-PROOF.md",
+    "before": null,
+    "after": "f517156d4e0678e8287debe57e443ae63f6abffd1c794b4ba7b113461d12dc12",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/H-CHANGE-EMAIL-PROOF.md",
+    "before": null,
+    "after": "281c07f9cc8517d818362cd63672b633d35048fd97070f74742c036bc12db167",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/I-PASSWORD-DELETE-PROOF.md",
+    "before": null,
+    "after": "3b2842781672fcf25768f99a45de2743542bc91a40810e9d783d00c48380a1f3",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/J-OPUS-REVIEW-1.md",
+    "before": null,
+    "after": "20837f5964dee246c056516507615f211297f404986c26712dfd81568f1cabe5",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/J-OPUS-REVIEW-2.md",
+    "before": null,
+    "after": "4c490e626c42e36856d0e35af423c83cb3c1cb432f8448d9565240e98fcd8b63",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/J-SESSION-REFRESH-PROOF.md",
+    "before": null,
+    "after": "5085ec9eec9f3da159d35e58d3f175ad2bcc05950de0f60c1dd52f99d82ad4f5",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/K-CROSS-CUTTING-PROOF.md",
+    "before": null,
+    "after": "5f760a5840244a514393be7656749bdc6740da12e4757fa266057b7b7b8f7f06",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/K-OPUS-REVIEW-1.md",
+    "before": null,
+    "after": "921b44ca04ea6bcd3480ff4d885e48fb98dc68c2ef38e7f1b0d271e55989881e",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/K-OPUS-REVIEW-2.md",
+    "before": null,
+    "after": "bf74ec37d4664b85c3e612feded464a8f4f0aee2c02da43809ef6c15e1869fb3",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/L-FINAL-HANDOFF.md",
+    "before": null,
+    "after": "1fc1d7501cc91f5736d122d98278ba42526e0228c40f989418a610c28b5b15a2",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/final-qualification-logs/backend-current.log",
+    "before": null,
+    "after": "af74a5bfe159c5af912cd8ad1c9447ac75dabc689e2f8759db644174307537a5",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/final-qualification-logs/backend-min.log",
+    "before": null,
+    "after": "aadae7485ef61f06b59bc85d786cf14d3a30f9739f91086aaee552d1748b2ad5",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/final-qualification-logs/check.log",
+    "before": null,
+    "after": "c0d537c25b125edcc719024eb35998c64b7df8ebc57a357f08ec50584b7058c2",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/final-qualification-logs/consumer-current.log",
+    "before": null,
+    "after": "31376620d9ebba226373abbdc2124a080b8842e3d7a24694693c3cb5a4ca0e5a",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/final-qualification-logs/consumer-min.log",
+    "before": null,
+    "after": "b85da69d2daec090a51a7578915379843533ec34e773ee0cbeaf7596d12ae93e",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/final-qualification-logs/reference-backend-suite.log",
+    "before": null,
+    "after": "ab61cf85af629e0060b0d05e9a37c10063a6fc9ca3bdea4e4b531c561d9f6805",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/final-qualification-logs/tests.log",
+    "before": null,
+    "after": "22a3f8aa3c0f5e5e0f4f910a9ab8789d2feba046a532b927071d7c0aa852a5db",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/final-qualification-logs/typecheck.log",
+    "before": null,
+    "after": "502cb0e4fe41f00de99f624ce3ad889411fd555f778a9f4fe0ac6fc99dabbe7b",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/installed-backend-proof.mts",
+    "before": null,
+    "after": "72a0c87f39681df3f9d57991e257a5d0ca80a8e8cc04425b5c6ac7fb78762d9d",
+    "alreadyApplied": false
+  },
+  {
+    "status": "A",
+    "path": "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/verify-final-artifact.py",
+    "before": null,
+    "after": "8074cb2060d9533fbe4c968ecf1989e5b42fadccddfefce808f4ad18cd38b330",
+    "alreadyApplied": false
+  }
+]

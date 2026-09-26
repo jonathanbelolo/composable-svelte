@@ -1,102 +1,64 @@
 <script lang="ts">
-  import { createStore, Effect } from '@composable-svelte/core';
-  import type { PresentationState } from '@composable-svelte/core/navigation';
+  import { Effect } from '@composable-svelte/core';
+  import type { Reducer } from '@composable-svelte/core';
+  import { ApplicationHost, ApplicationRoot, defineApplication, ManagedIntegrationBuilder, optionalSlot, scopeTo } from '@composable-svelte/core/application';
+  import type { PresentationAction, PresentationState } from '@composable-svelte/core/navigation';
   import { Drawer } from '@composable-svelte/core/navigation-components';
   import { Button } from '@composable-svelte/core/components/ui';
 
   interface DemoState {
     showDrawer: boolean;
+    drawerContent: boolean | null;
     presentation: PresentationState<boolean>;
   }
-
-  type PresentationEvent =
-    | { type: 'presentationCompleted' }
-    | { type: 'dismissalCompleted' };
-
+  type DrawerContentAction = { type: 'presentationCompleted' } | { type: 'dismissalCompleted' };
   type DemoAction =
     | { type: 'openDrawer' }
     | { type: 'closeDrawer' }
-    | { type: 'presentation'; event: PresentationEvent };
+    | { type: 'drawerContent'; action: PresentationAction<DrawerContentAction> };
 
-  const demoStore = createStore<DemoState, DemoAction>({
-    initialState: {
-      showDrawer: false,
-      presentation: { status: 'idle' }
-    },
-    reducer: (state, action) => {
-      switch (action.type) {
-        case 'openDrawer':
-          return [
-            {
-              showDrawer: true,
-              presentation: {
-                status: 'presenting' as const,
-                content: true,
-                duration: 300
-              }
-            },
-            Effect.afterDelay(300, (d) => d({ type: 'presentation', event: { type: 'presentationCompleted' } }))
-          ];
-
-        case 'closeDrawer':
-          // Only allow dismissal if we're in presented state
-          if (state.presentation.status !== 'presented') {
-            return [state, Effect.none()];
-          }
-          return [
-            {
-              ...state,
-              presentation: {
-                status: 'dismissing' as const,
-                content: state.presentation.content,
-                duration: 200
-              }
-            },
-            Effect.afterDelay(200, (d) => d({ type: 'presentation', event: { type: 'dismissalCompleted' } }))
-          ];
-
-        case 'presentation':
-          if (action.event.type === 'presentationCompleted') {
-            return [
-              {
-                ...state,
-                presentation: {
-                  status: 'presented' as const,
-                  content: state.presentation.status === 'presenting' ? state.presentation.content : true
-                }
-              },
-              Effect.none()
-            ];
-          }
-          if (action.event.type === 'dismissalCompleted') {
-            return [
-              {
-                showDrawer: false,
-                presentation: { status: 'idle' as const }
-              },
-              Effect.none()
-            ];
-          }
-          return [state, Effect.none()];
-
-        default:
-          return [state, Effect.none()];
+  const reducer: Reducer<DemoState, DemoAction, undefined> = (state, action) => {
+    if (action.type === 'drawerContent') {
+      if (action.action.type === 'dismiss') {
+        if (state.presentation.status !== 'presented') return [state, Effect.none()];
+        return [{ ...state, presentation: { status: 'dismissing', content: state.presentation.content } }, Effect.none()];
       }
-    },
-    dependencies: {}
+      if (action.action.action.type === 'presentationCompleted') {
+        if (state.presentation.status !== 'presenting') return [state, Effect.none()];
+        return [{ ...state, presentation: { status: 'presented', content: state.presentation.content } }, Effect.none()];
+      }
+      if (state.presentation.status !== 'dismissing') return [state, Effect.none()];
+      return [{ ...state, showDrawer: false, drawerContent: null, presentation: { status: 'idle' } }, Effect.none()];
+    }
+    switch (action.type) {
+      case 'openDrawer':
+        if (state.presentation.status === 'presenting' || state.presentation.status === 'presented') return [state, Effect.none()];
+        return [{ ...state, showDrawer: true, drawerContent: true, presentation: { status: 'presenting', content: true } }, Effect.none()];
+      case 'closeDrawer':
+        if (state.presentation.status !== 'presented') return [state, Effect.none()];
+        return [{ ...state, presentation: { status: 'dismissing', content: state.presentation.content } }, Effect.none()];
+      default:
+        return [state, Effect.none()];
+    }
+  };
+  const drawerSlot = optionalSlot<DemoState, DemoAction>()('drawerContent');
+  const childReducer: Reducer<boolean, DrawerContentAction, undefined> = state => [state, Effect.none()];
+  const composition = new ManagedIntegrationBuilder(reducer).with(drawerSlot, childReducer, {
+    dismissal: 'deferred',
+    replaceOn: action => action.type === 'openDrawer'
+  }).build();
+  const application = defineApplication(composition, {
+    initialState: (): DemoState => ({ showDrawer: false, drawerContent: null, presentation: { status: 'idle' } })
   });
-
-  // Create a store wrapper with dismiss() method for Drawer component
-  const storeWithDismiss = $derived({
-    ...demoStore,
-    state: $demoStore,
-    dispatch: demoStore.dispatch,
-    dismiss: () => demoStore.dispatch({ type: 'closeDrawer' })
-  });
-
-  const state = $derived($demoStore);
 </script>
 
+
+<ApplicationRoot definition={application} options={{ dependencies: undefined, initial: { input: undefined } }}>
+{#snippet children(app)}
+<ApplicationHost {app}>
+{@const demoStore = app.store}
+{@const state = app.store.state}
+{@const drawerView = scopeTo(app.store, drawerSlot)}
 <div class="space-y-12">
   <!-- Live Demo Section -->
   <section class="space-y-6">
@@ -210,13 +172,18 @@
 
 <!-- Drawer Implementation -->
 {#if state.showDrawer}
+  <!--
+    Interim legacy bridge: this demo keeps explicit PresentationState so the existing
+    animation callbacks remain visible. The framework-owned view supplies lifetime and
+    dismissal authority; it does not synthesize these presentation states.
+  -->
   <Drawer
-    store={storeWithDismiss}
+    store={drawerView}
     presentation={state.presentation}
     onPresentationComplete={() =>
-      demoStore.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } })}
+      drawerView?.dispatch({ type: 'presentationCompleted' })}
     onDismissalComplete={() =>
-      demoStore.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })}
+      drawerView?.dispatch({ type: 'dismissalCompleted' })}
     side="left"
     width="320px"
   >
@@ -292,3 +259,6 @@
     {/snippet}
   </Drawer>
 {/if}
+</ApplicationHost>
+{/snippet}
+</ApplicationRoot>

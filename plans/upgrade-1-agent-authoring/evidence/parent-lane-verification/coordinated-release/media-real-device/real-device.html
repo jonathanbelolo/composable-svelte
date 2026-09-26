@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VoiceInput Real-Device M12 Release Qualification</title>
+    <style>
+      :root {
+        --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        --color-bg: #f8fafc;
+        --color-surface: #ffffff;
+        --color-border: #e2e8f0;
+        --color-text: #0f172a;
+        --color-text-muted: #64748b;
+        --color-primary: #2563eb;
+        --color-primary-hover: #1d4ed8;
+        --color-success: #16a34a;
+        --color-success-bg: #f0fdf4;
+        --color-success-border: #bbf7d0;
+        --color-fail: #dc2626;
+        --color-fail-bg: #fef2f2;
+        --color-fail-border: #fecaca;
+        --color-blocked: #d97706;
+        --color-blocked-bg: #fffbeb;
+        --color-blocked-border: #fde68a;
+        --color-running: #0284c7;
+        --color-running-bg: #f0f9ff;
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: var(--font-sans);
+        background: var(--color-bg);
+        color: var(--color-text);
+        padding: 24px;
+        max-width: 1100px;
+        margin: 0 auto;
+        line-height: 1.5;
+      }
+
+      header {
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--color-border);
+      }
+
+      h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--color-text);
+        margin-bottom: 6px;
+      }
+
+      .subtitle {
+        color: var(--color-text-muted);
+        font-size: 0.95rem;
+      }
+
+      .controls-card {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      }
+
+      .button-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .btn {
+        padding: 10px 18px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        border-radius: 6px;
+        border: 1px solid var(--color-border);
+        background: var(--color-surface);
+        color: var(--color-text);
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+
+      .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+      .btn:hover {
+        background: #f1f5f9;
+      }
+
+      .btn-primary {
+        background: var(--color-primary);
+        color: #ffffff;
+        border-color: var(--color-primary);
+        font-size: 1.05rem;
+        padding: 12px 22px;
+      }
+
+      .btn-primary:hover {
+        background: var(--color-primary-hover);
+        border-color: var(--color-primary-hover);
+      }
+
+      .btn-secondary {
+        background: #f8fafc;
+        color: var(--color-text-muted);
+      }
+
+      .status-card {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 6px 14px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        border-radius: 9999px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .badge-idle { background: #e2e8f0; color: #475569; }
+      .badge-running { background: var(--color-running-bg); color: var(--color-running); border: 1px solid #bae6fd; }
+      .badge-pass { background: var(--color-success-bg); color: var(--color-success); border: 1px solid var(--color-success-border); }
+      .badge-fail { background: var(--color-fail-bg); color: var(--color-fail); border: 1px solid var(--color-fail-border); }
+      .badge-blocked { background: var(--color-blocked-bg); color: var(--color-blocked); border: 1px solid var(--color-blocked-border); }
+
+      .status-message {
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: var(--color-text);
+      }
+
+      /* Blocker Banner */
+      .blocker-banner {
+        background: var(--color-blocked-bg);
+        border: 2px solid var(--color-blocked-border);
+        border-radius: 8px;
+        padding: 18px;
+        margin-bottom: 20px;
+      }
+
+      .blocker-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--color-blocked);
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-bottom: 10px;
+      }
+
+      .blocker-body p { margin-bottom: 8px; font-size: 0.95rem; }
+      .blocker-action {
+        margin-top: 10px;
+        background: #ffffff;
+        border: 1px solid var(--color-blocked-border);
+        border-radius: 6px;
+        padding: 12px;
+      }
+
+      .blocker-action pre {
+        margin-top: 6px;
+        font-family: inherit;
+        white-space: pre-wrap;
+        font-size: 0.9rem;
+        color: #78350f;
+      }
+
+      /* Results */
+      .suite-overview {
+        background: var(--color-surface);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+        border: 1px solid var(--color-border);
+      }
+
+      .suite-pass { border-left: 6px solid var(--color-success); }
+      .suite-fail { border-left: 6px solid var(--color-fail); }
+      .suite-blocked { border-left: 6px solid var(--color-blocked); }
+
+      .suite-meta {
+        font-size: 0.85rem;
+        color: var(--color-text-muted);
+        margin-top: 4px;
+      }
+
+      .case-card {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 18px;
+        margin-bottom: 18px;
+      }
+
+      .case-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+      }
+
+      .case-header h4 {
+        font-size: 1.05rem;
+        font-weight: 600;
+      }
+
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 10px;
+        margin-bottom: 16px;
+        background: #f8fafc;
+        border: 1px solid var(--color-border);
+        border-radius: 6px;
+        padding: 12px;
+      }
+
+      .metric-item {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .metric-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: var(--color-text-muted);
+        letter-spacing: 0.04em;
+        font-weight: 600;
+      }
+
+      .metric-val {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--color-text);
+        margin-top: 2px;
+      }
+
+      .assertions-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.88rem;
+      }
+
+      .assertions-table th, .assertions-table td {
+        padding: 8px 12px;
+        text-align: left;
+        border-bottom: 1px solid var(--color-border);
+      }
+
+      .assertions-table th {
+        background: #f1f5f9;
+        font-weight: 600;
+        color: var(--color-text-muted);
+        font-size: 0.78rem;
+        text-transform: uppercase;
+      }
+
+      .assertions-table tr.pass td { background: rgba(240, 253, 244, 0.4); }
+      .assertions-table tr.fail td { background: rgba(254, 242, 242, 0.6); }
+
+      .assertion-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+
+      /* Mount area */
+      .voice-mount-area {
+        background: var(--color-surface);
+        border: 2px dashed var(--color-border);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 20px;
+        min-height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* JSON & Logs */
+      .section-title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 20px 0 8px 0;
+        color: var(--color-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .json-block {
+        background: #0f172a;
+        color: #38bdf8;
+        padding: 16px;
+        border-radius: 6px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 0.82rem;
+        max-height: 280px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+
+      .event-log {
+        background: #1e293b;
+        color: #f1f5f9;
+        padding: 14px;
+        border-radius: 6px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 0.8rem;
+        max-height: 220px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>VoiceInput Real-Device M12 Release Qualification</h1>
+      <p class="subtitle">
+        Bounded qualification using real <code>getUserMedia</code>, native <code>MediaRecorder</code>, and provisioned candidate packages (@composable-svelte/media 0.5.0, core 0.13.1).
+      </p>
+    </header>
+
+    <div class="controls-card">
+      <div class="button-group">
+        <button id="run-qualification" class="btn btn-primary" data-testid="run-qualification">
+          Run Qualification (All Cases)
+        </button>
+        <button id="run-ptt" class="btn">1. Run Push-to-Talk</button>
+        <button id="run-conversation" class="btn">2. Run Conversation</button>
+        <button id="run-managed" class="btn">3. Run Managed Parent (Conversation)</button>
+      </div>
+    </div>
+
+    <div id="status-card" class="status-card">
+      <div id="status-badge" class="badge badge-idle">IDLE</div>
+      <div id="status-message" class="status-message">
+        Ready. Click "Run Qualification (All Cases)" to execute bounded test cases.
+      </div>
+    </div>
+
+    <!-- Blocker Banner (Shown only if blocked by permissions or hardware) -->
+    <div id="blocker-banner" class="blocker-banner" style="display: none;" role="alert"></div>
+
+    <!-- Live Component Mount Outlet -->
+    <div class="section-title">Mounted VoiceInput Component View</div>
+    <div id="voice" class="voice-mount-area"></div>
+
+    <!-- Structured Assertions & Results -->
+    <div class="section-title">Structured Qualification Results</div>
+    <div id="results-summary"></div>
+
+    <div class="section-title">Machine-Readable Structured Assertions (JSON)</div>
+    <pre id="results-json" data-testid="results-json" class="json-block">{
+  "status": "awaiting_run",
+  "summary": "Harness loaded. Browser execution has not occurred yet. Click 'Run Qualification (All Cases)' to execute real-device verification."
+}</pre>
+
+    <div class="section-title">Event Execution Log</div>
+    <pre id="log" class="event-log" aria-live="polite"></pre>
+
+    <script type="module" src="/src/real-device.ts"></script>
+  </body>
+</html>

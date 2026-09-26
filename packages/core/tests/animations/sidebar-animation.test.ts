@@ -1,3 +1,4 @@
+import { waitForState } from '../helpers/wait-for-state.js';
 /**
  * Sidebar animation lifecycle.
  *
@@ -23,27 +24,6 @@ import { assertMotionAllowed, midFlight, settleValue, waitUntil } from '../../sr
 // margin between the endpoints rather than six reads at 30 ms (R1-REVIEW 2.1).
 beforeAll(() => assertMotionAllowed());
 
-function waitForState<State>(
-	store: { subscribe: (listener: (state: State) => void) => () => void },
-	condition: (state: State) => boolean,
-	options: { timeout?: number; description?: string } = {}
-): Promise<State> {
-	const { timeout = 3000, description = 'state condition' } = options;
-	return new Promise((resolve, reject) => {
-		let unsubscribe: (() => void) | null = null;
-		const timeoutId = setTimeout(() => {
-			unsubscribe?.();
-			reject(new Error(`Timeout waiting for ${description} after ${timeout}ms`));
-		}, timeout);
-		unsubscribe = store.subscribe((state) => {
-			if (condition(state)) {
-				clearTimeout(timeoutId);
-				unsubscribe?.();
-				resolve(state);
-			}
-		});
-	});
-}
 
 const store = () => (window as any).__sidebarTestStore;
 

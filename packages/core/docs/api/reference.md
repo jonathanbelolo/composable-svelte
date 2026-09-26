@@ -1557,98 +1557,64 @@ function scopeToOptional<State, Action, ChildState>(
 
 ---
 
-### Dismiss Dependency
+### Managed Dismissal
 
-#### createDismissDependency
+Managed presentation features expose two owner-bound dismissal surfaces from
+`@composable-svelte/core/application`.
 
-Create a dismiss dependency for child features.
+#### managedDismissDependency
 
 ```typescript
-function createDismissDependency<ParentAction>(
-  dispatch: Dispatch<ParentAction>,
-  actionWrapper: (action: PresentationAction<any>) => ParentAction
-): DismissDependency
+import {
+  managedDismissDependency,
+  type DismissDependency
+} from '@composable-svelte/core/application';
+
+function managedDismissDependency(
+  cleanup?: (signal?: AbortSignal) => void | PromiseLike<void>
+): DismissDependency;
 ```
 
-**Returns:** `DismissDependency` — a function returning an `Effect` that
-dispatches the wrapped dismiss action.
+Inject the returned dependency into a child reducer that is integrated through an
+`optionalSlot` or a registered `destinationSlot` case. Calling `deps.dismiss()`
+returns an `Effect`; the enclosing managed presentation claims its private request
+and dismisses that exact owner. No raw parent dispatch, action-field string, or
+current-occupant lookup is captured.
 
-The effect dispatches through the `dispatch` captured here, *not* through the
-dispatch it is executed with. That is deliberate: a child's effects are mapped
-by `ifLet` with `fromChildAction`, and `actionWrapper` already produces a parent
-action, so dispatching through the effect stream would wrap the dismiss twice
-and the parent could not route it.
-
-Build it where the store is built. A reducer is `(state, action, dependencies)`
-and has no `dispatch` in scope, so capture the store's dispatch lazily.
-
-**Example:**
+If cleanup is asynchronous, dismissal occurs only after it settles and only while
+the originating presentation is still live. Replacement or destruction retires the
+request, so a stale child cannot dismiss its successor.
 
 ```typescript
-let dispatch: Dispatch<ParentAction> = () => {};
+type ChildDeps = { readonly dismiss: DismissDependency };
 
-const store = createStore({
-  initialState,
-  reducer: parentReducer,
-  dependencies: {
-    dismiss: createDismissDependency(
-      (action) => dispatch(action),
-      (pa) => ({ type: 'destination', action: pa })
-    )
-  }
-});
+const childReducer: Reducer<ChildState, ChildAction, ChildDeps> =
+  (state, action, deps) => {
+    if (action.type === 'cancel') return [state, deps.dismiss()];
+    return [state, Effect.none()];
+  };
 
-dispatch = (action) => store.dispatch(action);
-
-// In the child reducer — `deps.dismiss()` IS the effect; return it.
-const childReducer: Reducer<ChildState, ChildAction, { dismiss: DismissDependency }> = (
-  state,
-  action,
-  deps
-) => {
-  switch (action.type) {
-    case 'cancelButtonTapped':
-      return [state, deps.dismiss()];
-    default:
-      return [state, Effect.none()];
-  }
+const dependencies: ChildDeps = {
+  dismiss: managedDismissDependency()
 };
 ```
 
-Under `TestStore`, hand the dependency `store.dispatch` the same way; the
-dismiss then arrives as a received action.
+A managed dismissal request refuses raw store dispatch, hand-written dispatch, keyed
+slots, and legacy lifts. Import both the value and type from the application subpath;
+they are intentionally absent from the root and navigation barrels.
 
----
+#### PresentationView.dismiss
 
-#### createDismissDependencyWithCleanup
+`PresentationView<State, Action>` is the view returned for an admitted optional
+presentation or registered destination case. Its `dismiss()` method is bound to the
+exact presentation owner that minted the view. A copied or stale view cannot dismiss
+a replacement, and destroying the store makes later calls inert. Obtain views from
+managed composition (`bind`, `resolveView`, or typed `scopeTo`); do not construct or
+cast structural lookalikes.
 
-Create a dismiss dependency that runs a cleanup callback before dismissing.
-
-```typescript
-function createDismissDependencyWithCleanup<ParentAction>(
-  dispatch: Dispatch<ParentAction>,
-  actionWrapper: (action: PresentationAction<any>) => ParentAction,
-  cleanup?: () => void | Promise<void>
-): DismissDependency
-```
-
-The cleanup is awaited before the dismiss action is dispatched.
-
----
-
-#### dismissDependency
-
-Convenience wrapper for the common parent action shape
-`{ type: actionField, action: PresentationAction }`.
-
-```typescript
-function dismissDependency<ParentAction>(
-  dispatch: Dispatch<ParentAction>,
-  actionField: string
-): DismissDependency
-```
-
-Equivalent to `createDismissDependency(dispatch, (pa) => ({ type: actionField, action: pa }))`.
+Legacy `scopeToDestination`, `scopeToOptional`, and fluent
+`scopeTo(store).into(...)` remain available for state/read and action dispatch. Their
+returned stores do not carry dismissal authority.
 
 ---
 

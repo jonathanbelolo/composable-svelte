@@ -281,7 +281,7 @@ describe('dependencies are read live — snippet-taking components', () => {
 		await rerender({ onSelect: b });
 		await settle();
 
-		click(container.querySelector('[aria-haspopup="true"]'));
+		click(container.querySelector('[aria-haspopup="menu"]'));
 		// The menu is `opacity: 0` while presenting; wait past animateDropdownIn
 		// before clicking through it.
 		await settle(450);

@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { createDismissalBoundary } from '../../actions/dismissalBoundary.js';
+  const registerDismissalLayer = createDismissalBoundary();
   import type { Snippet } from 'svelte';
-  import type { ScopedDestinationStore } from '../../navigation/scope-to-destination.js';
+  import { assertPresentationView, type PresentationView } from '../../navigation/managed-integration.js';
   import type { PresentationState } from '../../navigation/types.js';
   import type { SpringConfig } from '../../animation/spring-config.js';
   import { animateSidebarExpand, animateSidebarCollapse } from '../../animation/animate.js';
@@ -11,10 +13,10 @@
 
   interface SidebarPrimitiveProps<State, Action> {
     /**
-     * Scoped store for the sidebar content.
-     * When null, sidebar is hidden. When non-null, sidebar is visible.
+     * Managed presentation view for the sidebar content.
+     * When undefined or retired, sidebar is hidden (unless presentation retains exit shell).
      */
-    store: ScopedDestinationStore<State, Action> | null;
+    store?: PresentationView<State, Action> | undefined;
 
     /**
      * Presentation state for animation lifecycle.
@@ -62,7 +64,7 @@
       [
         {
           visible: boolean;
-          store: ScopedDestinationStore<State, Action> | null;
+          store: PresentationView<State, Action> | undefined;
           side: 'left' | 'right';
           width: string;
           bindContent: (node: HTMLElement) => void;
@@ -84,18 +86,25 @@
   }: SidebarPrimitiveProps<unknown, unknown> = $props();
 
   // ============================================================================
-  // Derived State
+  // Membership & Derived State
   // ============================================================================
 
-  // Visible when store is non-null OR presentation is not idle
+  const admittedStore = $derived.by(() => {
+    if (store !== undefined) {
+      assertPresentationView(store);
+    }
+    return store;
+  });
+
+  // Visible when admitted store has live state OR presentation is not idle
   const visible = $derived(
-    (store !== null && store.state !== null) ||
+    (admittedStore !== undefined && admittedStore.state !== undefined) ||
       (presentation?.status !== 'idle' && presentation?.status !== undefined)
   );
 
-  // Only allow interactions when fully presented or no animation system
+  // Entrance motion must not delay accepted user intent. Exit shells remain inert.
   const interactionsEnabled = $derived(
-    presentation ? presentation.status === 'presented' : (store !== null)
+    visible && (!presentation || presentation.status === 'presenting' || presentation.status === 'presented')
   );
 
   // ============================================================================
@@ -150,17 +159,46 @@
   // Event Handlers
   // ============================================================================
 
-  function handleEscape(event: KeyboardEvent) {
-    if (event.key === 'Escape' && !disableEscapeKey && store) {
-      event.preventDefault();
-      try {
-        store.dismiss();
-      } catch (error) {
-        console.error('[SidebarPrimitive] Failed to dismiss:', error);
-      }
+  function presentationLayer(
+    node: HTMLElement,
+    layer: { view: PresentationView<unknown, unknown> | undefined }
+  ) {
+    function dismissal(view: PresentationView<unknown, unknown> | undefined) {
+      return Object.freeze({
+        identity: () => view,
+        onEscape: (event: KeyboardEvent) => {
+          if (event.key === 'Escape' && !disableEscapeKey && view && interactionsEnabled) {
+            event.preventDefault();
+            try {
+              view.dismiss();
+            } catch (error) {
+              console.error('[SidebarPrimitive] Failed to dismiss:', error);
+            }
+          }
+        }
+      });
     }
-  }
 
+    let currentView = layer.view;
+    const handle = registerDismissalLayer.enroll({
+      node,
+      ...dismissal(currentView),
+      escapeEnabled: () => visible && interactionsEnabled && !disableEscapeKey && !!currentView
+    });
+    return {
+      update(next: { view: PresentationView<unknown, unknown> | undefined }) {
+        if (next.view !== currentView) {
+          handle.replaceDismissal(dismissal(next.view));
+          currentView = next.view;
+        }
+        handle.refresh();
+      },
+      destroy() {
+        handle.release();
+        currentView = undefined;
+      }
+    };
+  }
   // Note: Sidebars are persistent desktop navigation
   // - No backdrop (content stays visible)
   // - No body scroll lock (sidebar coexists with page)
@@ -172,16 +210,16 @@
 <!-- Keyboard Listeners -->
 <!-- ============================================================================ -->
 
-<svelte:window on:keydown={handleEscape} />
+
 
 <!-- ============================================================================ -->
 <!-- Inline Content (no portal, always in DOM for animation) -->
 <!-- ============================================================================ -->
 
-<div style:pointer-events={interactionsEnabled ? 'auto' : 'none'}>
+<div use:presentationLayer={{ view: admittedStore }} style:pointer-events={interactionsEnabled ? 'auto' : 'none'}>
   {@render children?.({
     visible,
-    store,
+    store: admittedStore,
     side,
     width,
     bindContent: (node: HTMLElement) => { contentElement = node; }

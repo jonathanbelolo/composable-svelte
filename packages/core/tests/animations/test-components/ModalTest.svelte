@@ -1,9 +1,11 @@
 <script lang="ts">
 	let { startOpen = false }: { startOpen?: boolean } = $props();
 
+	import { onDestroy } from 'svelte';
 	import { createStore } from '../../../src/lib/store.svelte.js';
 	import Modal from '../../../src/lib/navigation-components/Modal.svelte';
-	import type { PresentationState } from '../../../src/lib/navigation/types.js';
+	import { optionalSlot, ManagedIntegrationBuilder } from '../../../src/lib/navigation/managed-integration.js';
+	import type { PresentationState, PresentationAction } from '../../../src/lib/navigation/types.js';
 	import { Effect } from '../../../src/lib/effect.js';
 	// The value `Effect` shadows the type of the same name, which lives in
 	// `types.ts`. Aliased so the reducer's return type resolves.
@@ -21,11 +23,14 @@
 	type TestAction =
 		| { type: 'openModal' }
 		| { type: 'dismissModal' }
+		| { type: 'modalContent'; action: PresentationAction<{ type: 'inert' }> }
 		| { type: 'presentation'; event: { type: 'presentationCompleted' | 'dismissalCompleted' } };
 
 	// ============================================================================
 	// Reducer
 	// ============================================================================
+
+	const childReducer = (s: string): [string, EffectType<{ type: 'inert' }>] => [s, Effect.none()];
 
 	function testReducer(state: TestState, action: TestAction): [TestState, EffectType<TestAction>] {
 		switch (action.type) {
@@ -50,6 +55,15 @@
 					},
 					Effect.none()
 				];
+
+			case 'modalContent':
+				if (action.action.type === 'dismiss') {
+					if (state.presentation.status !== 'presented') {
+						return [{ ...state, modalContent: state.presentation.status === 'idle' ? null : state.presentation.content }, Effect.none()];
+					}
+					return [{ ...state, modalContent: state.presentation.content, presentation: { ...state.presentation, status: 'dismissing' } }, Effect.none()];
+				}
+				return [state, Effect.none()];
 
 			case 'presentation':
 				if (action.event.type === 'presentationCompleted') {
@@ -85,8 +99,11 @@
 	}
 
 	// ============================================================================
-	// Store
+	// Store & Managed Composition
 	// ============================================================================
+
+	const modalSlot = optionalSlot<TestState, TestAction>()('modalContent');
+	const composition = new ManagedIntegrationBuilder<TestState, TestAction, undefined>(testReducer).with(modalSlot, childReducer).build();
 
 	const store = createStore({
 		// `startOpen` mounts already `presented` — what SSR hydration produces for a
@@ -102,19 +119,11 @@
 					modalContent: null,
 					presentation: { status: 'idle' as const }
 				}) satisfies TestState,
-		reducer: testReducer
+		...composition
 	});
 
-	// Scoped store for modal
-	const modalStore = $derived(
-		store.state.modalContent
-			? {
-					state: store.state.modalContent,
-					dispatch: store.dispatch,
-					dismiss: () => store.dispatch({ type: 'dismissModal' })
-				}
-			: null
-	);
+	onDestroy(() => store.destroy());
+	const modalStore = $derived(store.state.modalContent != null ? composition.bind(store, modalSlot) : undefined);
 
 	// Expose store for testing (attach to window)
 	if (typeof window !== 'undefined') {
@@ -134,6 +143,8 @@
 
 <!-- Modal Component -->
 <Modal
+	backdropClass="actual-modal-backdrop"
+	class="actual-modal-content"
 	store={modalStore}
 	presentation={store.state.presentation}
 	onPresentationComplete={() =>
@@ -142,7 +153,6 @@
 		store.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })}
 >
 	{#snippet children({ store: scopedStore })}
-		<div data-testid="modal-backdrop" class="modal-test-backdrop"></div>
 		<div data-testid="modal-content" class="modal-test-content">
 			<h2>Test Modal</h2>
 			<p>{scopedStore!.state}</p>
@@ -163,12 +173,6 @@
 </Modal>
 
 <style>
-	.modal-test-backdrop {
-		position: fixed;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.5);
-	}
-
 	.modal-test-content {
 		position: fixed;
 		left: 50%;

@@ -60,7 +60,9 @@ export class DeviceCapabilities {
 
 		// Check WebGL2 support
 		const testCanvas = document.createElement('canvas');
-		this.supportsWebGL2 = !!testCanvas.getContext('webgl2');
+		const gl2 = testCanvas.getContext('webgl2');
+		this.supportsWebGL2 = !!gl2;
+		gl2?.getExtension('WEBGL_lose_context')?.loseContext();
 
 		// Set conservative limits for mobile
 		if (this.isMobile) {

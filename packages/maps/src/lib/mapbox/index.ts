@@ -56,6 +56,47 @@ export class MapboxAdapter implements MapAdapter {
 	private markers: globalThis.Map<string, mapboxgl.Marker> = new globalThis.Map();
 	private layers: globalThis.Map<string, Layer> = new globalThis.Map();
 	private popups: globalThis.Map<string, mapboxgl.Popup> = new globalThis.Map();
+	currentFlightId = 0;
+	private pendingLayers: globalThis.Map<string, Layer> = new globalThis.Map();
+	private styleReadyListener: (() => void) | null = null;
+	private listeningMap: mapboxgl.Map | null = null;
+
+	private clearStyleReadyListener(): void {
+		if (this.styleReadyListener && this.listeningMap) {
+			for (const event of ['style.load', 'styledata', 'idle'] as const) {
+				this.listeningMap.off(event, this.styleReadyListener);
+			}
+		}
+		this.styleReadyListener = null;
+		this.listeningMap = null;
+	}
+
+	private ensureStyleReadyListener(): void {
+		if (!this.map || this.styleReadyListener) return;
+
+		const currentMap = this.map;
+		this.listeningMap = currentMap;
+
+		const onStyleReady = () => {
+			if (this.map !== currentMap || this.styleReadyListener !== onStyleReady) return;
+			if (!currentMap.isStyleLoaded()) return;
+			this.clearStyleReadyListener();
+
+			const queued = Array.from(this.pendingLayers.values());
+			this.pendingLayers.clear();
+
+			for (const pending of queued) {
+				if (this.map === currentMap) {
+					this.addLayer(pending, true);
+				}
+			}
+		};
+
+		this.styleReadyListener = onStyleReady;
+		for (const event of ['style.load', 'styledata', 'idle'] as const) {
+			currentMap.on(event, onStyleReady);
+		}
+	}
 
 	initialize(container: HTMLElement, options: MapInitOptions): void {
 		if (!options.accessToken) {
@@ -99,6 +140,7 @@ export class MapboxAdapter implements MapAdapter {
 	flyTo(options: FlyToOptions): void {
 		if (!this.map) return;
 
+		const flightId = ++this.currentFlightId;
 		this.map.flyTo({
 			center: options.center,
 			...(options.zoom !== undefined ? { zoom: options.zoom } : {}),
@@ -106,7 +148,7 @@ export class MapboxAdapter implements MapAdapter {
 			...(options.pitch !== undefined ? { pitch: options.pitch } : {}),
 			...(options.duration !== undefined ? { duration: options.duration } : {}),
 			...(options.essential !== undefined ? { essential: options.essential } : {})
-		});
+		}, { flightId });
 	}
 
 	fitBounds(bounds: BBox, padding?: number): void {
@@ -172,9 +214,12 @@ export class MapboxAdapter implements MapAdapter {
 
 		// Layers cannot be added before the style is loaded; retry once it is.
 		if (!skipStyleCheck && !this.map.isStyleLoaded()) {
-			this.map.once('styledata', () => this.addLayer(layer, true));
+			this.pendingLayers.set(layer.id, layer);
+			this.ensureStyleReadyListener();
 			return;
 		}
+
+		this.pendingLayers.delete(layer.id);
 
 		if (this.map.getSource(layer.id)) return;
 
@@ -192,6 +237,8 @@ export class MapboxAdapter implements MapAdapter {
 	}
 
 	removeLayer(id: string): void {
+		this.pendingLayers.delete(id);
+		if (this.pendingLayers.size === 0) this.clearStyleReadyListener();
 		if (!this.map) return;
 
 		if (this.map.getLayer(id)) this.map.removeLayer(id);
@@ -202,12 +249,19 @@ export class MapboxAdapter implements MapAdapter {
 	}
 
 	toggleLayerVisibility(id: string): void {
+		const pending = this.pendingLayers.get(id);
+		if (pending) {
+			this.pendingLayers.set(id, { ...pending, visible: !pending.visible });
+		}
+
 		if (!this.map) return;
 
 		const layer = this.layers.get(id);
 		if (!layer) return;
 
-		const visibility = layer.visible ? 'visible' : 'none';
+		const nextVisible = !layer.visible;
+		this.layers.set(id, { ...layer, visible: nextVisible });
+		const visibility = nextVisible ? 'visible' : 'none';
 		if (this.map.getLayer(id)) this.map.setLayoutProperty(id, 'visibility', visibility);
 		if (this.map.getLayer(strokeLayerId(id))) {
 			this.map.setLayoutProperty(strokeLayerId(id), 'visibility', visibility);
@@ -215,6 +269,11 @@ export class MapboxAdapter implements MapAdapter {
 	}
 
 	updateLayerStyle(id: string, style: Partial<LayerStyle>): void {
+		const pending = this.pendingLayers.get(id);
+		if (pending) {
+			this.pendingLayers.set(id, { ...pending, style: { ...pending.style, ...style } });
+		}
+
 		if (!this.map) return;
 
 		const layer = this.layers.get(id);
@@ -258,7 +317,12 @@ export class MapboxAdapter implements MapAdapter {
 	}
 
 	changeStyle(styleURL: string): void {
-		this.map?.setStyle(styleURL);
+		if (!this.map) return;
+		this.clearStyleReadyListener();
+		// Mapbox declares font fields required although it supplies defaults when
+		// they are omitted. Passing explicit undefined overrides those defaults.
+		this.map.setStyle(styleURL, { diff: false } as Parameters<typeof this.map.setStyle>[1]);
+		if (this.pendingLayers.size > 0) this.ensureStyleReadyListener();
 	}
 
 	on(event: string, handler: Function): void {
@@ -270,6 +334,9 @@ export class MapboxAdapter implements MapAdapter {
 	}
 
 	destroy(): void {
+		this.clearStyleReadyListener();
+		this.pendingLayers.clear();
+		this.currentFlightId = 0;
 		this.markers.forEach((marker) => marker.remove());
 		this.markers.clear();
 

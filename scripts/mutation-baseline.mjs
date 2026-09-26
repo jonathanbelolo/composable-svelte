@@ -29,6 +29,7 @@
  *   node scripts/mutation-baseline.mjs --strict   # exit 1 unless all KILLED (R5.4)
  */
 
+import { isRedBaseline, mutationVerdict, strictExitCode } from './mutation-verdict.mjs';
 import { execSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -215,7 +216,7 @@ process.on('SIGTERM', () => process.exit(143));
 /**
  * @param {string} suite
  * @param {'browser' | 'node'} config
- * @returns {{ exit: number, failed: string[] | null }} failed test full names; null when no JSON came back
+ * @returns {{ exit: number, failed: string[] | null }} failed test full names; null when the report is missing or malformed
  */
 function runSuite(suite, config) {
 	const out = join(backupDir, `${suite.replace(/[^\w.-]/g, '_')}.json`);
@@ -232,11 +233,23 @@ function runSuite(suite, config) {
 		exit = typeof error?.status === 'number' ? error.status : -1;
 	}
 	if (!existsSync(out)) return { exit, failed: null };
-	const report = JSON.parse(readFileSync(out, 'utf8'));
+	let report;
+	try {
+		report = JSON.parse(readFileSync(out, 'utf8'));
+	} catch {
+		return { exit, failed: null };
+	}
+	if (!report || !Array.isArray(report.testResults)) return { exit, failed: null };
 	const failed = [];
-	for (const file of report.testResults ?? []) {
-		for (const test of file.assertionResults ?? []) {
-			if (test.status === 'failed') failed.push(test.fullName ?? test.title);
+	for (const file of report.testResults) {
+		if (!file || !Array.isArray(file.assertionResults)) return { exit, failed: null };
+		for (const test of file.assertionResults) {
+			if (!test || typeof test.status !== 'string') return { exit, failed: null };
+			if (test.status === 'failed') {
+				const name = test.fullName ?? test.title;
+				if (typeof name !== 'string') return { exit, failed: null };
+				failed.push(name);
+			}
 		}
 	}
 	return { exit, failed };
@@ -251,8 +264,8 @@ const redBaseline = [];
 for (const entry of suites) {
 	const [config, suite] = entry.split(':');
 	const { exit, failed } = runSuite(suite, config);
-	if (exit !== 0 || failed === null || failed.length > 0) {
-		redBaseline.push(`${suite}: ${failed === null ? `no report (exit ${exit})` : failed.join('; ') || `exit ${exit}`}`);
+	if (isRedBaseline({ exit, failed })) {
+		redBaseline.push(`${suite}: ${failed === null ? `missing or malformed report (exit ${exit})` : failed.join('; ') || `exit ${exit}`}`);
 	}
 }
 if (redBaseline.length > 0) {
@@ -296,21 +309,7 @@ for (const m of MUTATIONS) {
 		continue;
 	}
 
-	const { exit, failed } = result;
-	if (failed === null) {
-		rows.push({ ...m, verdict: 'ERROR', detail: `the suite produced no report (exit ${exit}) — a crash or a timeout, not a verdict` });
-	} else if (failed.some((name) => name.includes(m.expect))) {
-		const others = failed.filter((name) => !name.includes(m.expect));
-		rows.push({ ...m, verdict: 'KILLED', detail: others.length ? `also failed: ${others.join('; ')}` : '' });
-	} else if (exit !== 0 || failed.length > 0) {
-		rows.push({
-			...m,
-			verdict: 'SUSPECT',
-			detail: `the suite failed but not the test that guards this line (${JSON.stringify(m.expect)}); failed: ${failed.join('; ') || `exit ${exit}, no failed test`}`
-		});
-	} else {
-		rows.push({ ...m, verdict: 'SURVIVED', detail: '' });
-	}
+	rows.push({ ...m, ...mutationVerdict(result, m.expect) });
 }
 
 console.log('| id | mutation | suite | verdict | detail |');
@@ -329,7 +328,7 @@ try {
 }
 
 const notKilled = rows.filter((r) => r.verdict !== 'KILLED');
-if (strict && notKilled.length > 0) {
+if (strictExitCode(rows, strict) !== 0) {
 	console.error(`\n${notKilled.length} mutation(s) not killed.`);
 	process.exit(1);
 }

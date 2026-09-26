@@ -166,6 +166,8 @@ export class AudioManager {
 		try {
 			await this.audio.play();
 		} catch (error) {
+			// Pausing/loading interrupts pending playback normally; disposal retires callbacks.
+			if (this.isDisposed || (error instanceof Error && error.name === 'AbortError')) return;
 			console.error('[AudioManager] Play failed:', error);
 			this.config.onAction({
 				type: 'error',
@@ -235,6 +237,11 @@ export class AudioManager {
 		this.audio.playbackRate = Math.max(0.25, Math.min(2.0, speed));
 	}
 
+	/** Whether `dispose()` has run. A disposed manager never dispatches again. */
+	get disposed(): boolean {
+		return this.isDisposed;
+	}
+
 	/**
 	 * Get current audio element (for advanced use cases).
 	 */
@@ -280,9 +287,20 @@ export function createAudioManager(config: AudioManagerConfig): AudioManager {
 // Global registry for audio managers (similar to voice-input pattern)
 const audioManagers = new Map<string, AudioManager>();
 
+// Managers a mounted player created for itself. The player alone disposes
+// them, on unmount or retirement; the public registry functions may look one
+// up, but never reconfigure or dispose it.
+const playerOwned = new WeakSet<AudioManager>();
+const warnedReconfigure = new WeakSet<AudioManager>();
+
 /**
  * Get or create an audio manager with the given ID.
  * If the manager exists, updates its config.
+ *
+ * A mounted player's manager is registered under its explicit `id` so it can
+ * be looked up. That manager belongs to the player: this returns it without
+ * applying `config`, and warns once, because replacing its `onAction` would
+ * silently detach the player from its store.
  */
 export function getAudioManager(
 	id: string,
@@ -293,6 +311,14 @@ export function getAudioManager(
 	if (!manager) {
 		manager = new AudioManager(config);
 		audioManagers.set(id, manager);
+	} else if (playerOwned.has(manager)) {
+		if (!warnedReconfigure.has(manager)) {
+			warnedReconfigure.add(manager);
+			console.warn(
+				`[AudioManager] "${id}" belongs to a mounted player, whose events go to its store. ` +
+					'The manager is returned unchanged; its onAction and createAudioElement were not replaced.'
+			);
+		}
 	} else {
 		// Update config to ensure callbacks are fresh
 		manager.updateConfig(config);
@@ -303,12 +329,56 @@ export function getAudioManager(
 
 /**
  * Delete an audio manager by ID.
+ *
+ * A manager you created is disposed. A mounted player's manager is not: the
+ * name is removed, and the player keeps its element until it unmounts or its
+ * owner retires, which is when it releases the element itself.
  */
 export function deleteAudioManager(id: string): void {
 	const manager = audioManagers.get(id);
+	if (!manager) return;
 
-	if (manager) {
-		manager.dispose();
-		audioManagers.delete(id);
+	audioManagers.delete(id);
+	if (playerOwned.has(manager)) {
+		console.warn(
+			`[AudioManager] "${id}" belongs to a mounted player. The name was removed; the player keeps ` +
+				'its audio element and releases it when it unmounts or its owner retires.'
+		);
+		return;
 	}
+	manager.dispose();
+}
+
+/**
+ * Internal: what `_nameAudioManager` did with the name.
+ * - `named`: the name refers to the player's manager;
+ * - `moved`: another mounted player held it, and it moved to this one;
+ * - `kept`: the application registered a manager under it, which keeps it.
+ */
+export type _NameOutcome = 'named' | 'moved' | 'kept';
+
+/**
+ * Internal: register a player-owned manager under a caller-chosen name.
+ *
+ * The player owns the manager whatever happens to the name. If another player
+ * already holds it, the name moves to this one and the other keeps playing —
+ * it is neither reconfigured nor disposed. A manager the application registered
+ * through `getAudioManager` keeps the name: the player does not adopt it (nor
+ * its `createAudioElement`) and does not orphan it.
+ */
+export function _nameAudioManager(id: string, manager: AudioManager): _NameOutcome {
+	playerOwned.add(manager);
+	const previous = audioManagers.get(id);
+	const live = previous !== undefined && previous !== manager && !previous.disposed;
+	if (live && !playerOwned.has(previous)) return 'kept';
+	audioManagers.set(id, manager);
+	return live ? 'moved' : 'named';
+}
+
+/**
+ * Internal: remove a name only if it still refers to `manager`, so releasing
+ * one player can never remove, or dispose, the manager of another.
+ */
+export function _unnameAudioManager(id: string, manager: AudioManager): void {
+	if (audioManagers.get(id) === manager) audioManagers.delete(id);
 }

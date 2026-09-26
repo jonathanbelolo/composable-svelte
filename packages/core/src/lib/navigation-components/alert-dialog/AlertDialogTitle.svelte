@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, onDestroy } from 'svelte';
 	import type { Snippet } from 'svelte';
 
 	import { cn } from '../../utils.js';
@@ -25,7 +25,8 @@
 	// whether a title was rendered, and naming an element that does not exist
 	// makes assistive technology announce nothing at all.
 	const ctx = getContext<AlertDialogContext | undefined>(ALERT_DIALOG_KEY);
-	ctx?.registerTitle();
+	const unregister = ctx?.registerTitle();
+	if (unregister) onDestroy(unregister);
 </script>
 
 <svelte:element

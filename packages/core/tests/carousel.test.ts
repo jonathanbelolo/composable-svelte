@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TestStore } from '../src/lib/test/test-store.js';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { TestStore as BaseTestStore, type TestStoreConfig } from '../src/lib/test/test-store.js';
 import { carouselReducer } from '../src/lib/components/ui/carousel/carousel.reducer.js';
 import {
   createInitialCarouselState,
@@ -7,6 +7,13 @@ import {
   type CarouselState,
   type CarouselAction
 } from '../src/lib/components/ui/carousel/carousel.types.js';
+
+const activeStores: Array<{ destroy(): void }> = [];
+class TestStore<S, A, D = any> extends BaseTestStore<S, A, D> {
+ constructor(config: TestStoreConfig<S,A,D>) { super(config); activeStores.push(this); }
+}
+beforeEach(() => vi.useFakeTimers());
+afterEach(() => { for (const store of activeStores.splice(0)) store.destroy(); vi.clearAllTimers(); vi.useRealTimers(); });
 
 describe('Carousel Component', () => {
   const testSlides: CarouselSlide[] = [
@@ -270,6 +277,57 @@ describe('Carousel Component', () => {
         reducer: carouselReducer
       });
 
+      await store.send({ type: 'autoPlayTick' }, (state) => {
+        expect(state.currentIndex).toBe(0);
+      });
+    });
+
+    it('should preserve autoplay timer when autoPlayTick coincides with transition', async () => {
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
+        initialState: {
+          ...createInitialCarouselState(testSlides, 0, true, 1000),
+          isAutoPlaying: true,
+          isTransitioning: true
+        },
+        reducer: carouselReducer
+      });
+
+      // When autoPlayTick fires during transition, it should not change slide
+      await store.send({ type: 'autoPlayTick' }, (state) => {
+        expect(state.currentIndex).toBe(0);
+        expect(state.isAutoPlaying).toBe(true);
+        expect(state.isTransitioning).toBe(true);
+      });
+
+      // Transition completes
+      await store.send({ type: 'transitionCompleted' }, (state) => {
+        expect(state.isTransitioning).toBe(false);
+        expect(state.isAutoPlaying).toBe(true);
+      });
+
+      // Subsequent tick advances slide normally
+      await store.send({ type: 'autoPlayTick' });
+      await store.receive({ type: 'transitionStarted' }, (state) => {
+        expect(state.currentIndex).toBe(1);
+        expect(state.isTransitioning).toBe(true);
+      });
+    });
+
+    it('should cancel pending autoplay timer on autoPlayStopped', async () => {
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
+        initialState: createInitialCarouselState(testSlides, 0, true, 1000),
+        reducer: carouselReducer
+      });
+
+      await store.send({ type: 'autoPlayStarted' }, (state) => {
+        expect(state.isAutoPlaying).toBe(true);
+      });
+
+      await store.send({ type: 'autoPlayStopped' }, (state) => {
+        expect(state.isAutoPlaying).toBe(false);
+      });
+
+      // Tick arriving after stop should be ignored
       await store.send({ type: 'autoPlayTick' }, (state) => {
         expect(state.currentIndex).toBe(0);
       });

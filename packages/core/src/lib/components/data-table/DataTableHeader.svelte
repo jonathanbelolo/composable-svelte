@@ -54,6 +54,12 @@
 		return sort ? sort.direction : null;
 	}
 
+	function getAriaSort(column: keyof T, sortable?: boolean): 'ascending' | 'descending' | 'none' | undefined {
+		if (sortable === false) return undefined;
+		const direction = getSortDirection(column);
+		return direction === 'asc' ? 'ascending' : direction === 'desc' ? 'descending' : 'none';
+	}
+
 	function handleSort(column: keyof T) {
 		const currentDirection = getSortDirection(column);
 		let newDirection: SortDirection;
@@ -78,6 +84,7 @@
 <tr class={cn('border-b hover:bg-muted/50', className)}>
 	{#each columns as col}
 		<th
+			aria-sort={getAriaSort(col.key, col.sortable)}
 			class={cn(
 				'h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0',
 				col.class
@@ -93,6 +100,7 @@
 					<span>{col.label}</span>
 					{#if getSortDirection(col.key) === 'asc'}
 						<svg
+							aria-hidden="true"
 							class="ml-2 h-4 w-4"
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 24 24"
@@ -102,11 +110,11 @@
 							stroke-linecap="round"
 							stroke-linejoin="round"
 						>
-							<path d="m7 15 5 5 5-5" />
 							<path d="m7 9 5-5 5 5" />
 						</svg>
 					{:else if getSortDirection(col.key) === 'desc'}
 						<svg
+							aria-hidden="true"
 							class="ml-2 h-4 w-4"
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 24 24"
@@ -117,10 +125,10 @@
 							stroke-linejoin="round"
 						>
 							<path d="m7 15 5 5 5-5" />
-							<path d="m7 9 5-5 5 5" />
 						</svg>
 					{:else}
 						<svg
+							aria-hidden="true"
 							class="ml-2 h-4 w-4 opacity-50"
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 24 24"

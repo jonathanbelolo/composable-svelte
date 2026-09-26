@@ -839,3 +839,70 @@ describe('OneTimeCodeInput', () => {
 		}
 	});
 });
+
+describe('successful MFA terminal presentation', () => {
+  it('withdraws the completed form and announces success', async () => {
+    const onSuccess = vi.fn();
+    const h = mountChallenge({ verifyMfaChallenge: vi.fn(async () => session) }, { onSuccess });
+    try {
+      h.flowStore.dispatch({ type: 'challengeSucceeded', session });
+      flushSync();
+      await expect.poll(() => h.text()).toContain('Verification complete.');
+      expect(h.target.querySelector('form')).toBeNull();
+      expect(h.button('Use a recovery code')).toBeUndefined();
+      expect(onSuccess).toHaveBeenCalledTimes(1);
+      const heading = h.target.querySelector('h2');
+      expect(heading?.textContent?.trim()).toBe('Verification complete');
+      expect(document.activeElement).toBe(heading);
+      const statusEl = h.target.querySelector('.mfa-challenge__status');
+      expect(statusEl?.getAttribute('role')).toBe('status');
+      expect(statusEl?.getAttribute('aria-live')).toBe('polite');
+      expect(statusEl?.textContent?.trim()).toBe('Verification complete.');
+    } finally { h.cleanup(); }
+  });
+  it('hands the session over once per logical form lifetime', async () => {
+    const onSuccess = vi.fn();
+    const h = mountChallenge({ verifyMfaChallenge: vi.fn(async () => session) }, { onSuccess });
+    try {
+      h.flowStore.dispatch({ type: 'challengeSucceeded', session });
+      flushSync();
+      // Duplicate success in the same form generation must not repeat handoff.
+      h.flowStore.dispatch({ type: 'challengeSucceeded', session });
+      flushSync();
+      expect(onSuccess).toHaveBeenCalledTimes(1);
+      expect(h.sessionActions.filter(action => action.type === 'sessionEstablished')).toHaveLength(1);
+
+      // A newly provided challenge begins a new form generation and hands off again on success.
+      h.flowStore.dispatch({ type: 'challengeProvided', challengeId: 'another', methods: ['totp'] });
+      flushSync();
+      h.flowStore.dispatch({ type: 'challengeSucceeded', session });
+      flushSync();
+      expect(onSuccess).toHaveBeenCalledTimes(2);
+      expect(h.sessionActions.filter(action => action.type === 'sessionEstablished')).toHaveLength(2);
+    } finally { h.cleanup(); }
+  });
+  it('same challenge survives first mount and remount while verification is active', async () => {
+    let resolve!: (value: SessionSnapshot) => void;
+    const pending = new Promise<SessionSnapshot>(done => resolve = done);
+    let signal: AbortSignal | undefined;
+    const verifyMfaChallenge: MfaChallengeDependencies['verifyMfaChallenge'] = vi.fn(async (_id, _code, _method, requestSignal) => { signal=requestSignal; return pending; });
+    const flowStore = createStore({ initialState: createInitialMfaChallengeState('chal_active', ['totp']), reducer: mfaChallengeReducer, dependencies: { verifyMfaChallenge } });
+    flowStore.dispatch({type:'form',action:{type:'fieldChanged',field:'code',value:'456789'}});
+    flowStore.dispatch({type:'form',action:{type:'submitTriggered'}});
+    await expect.poll(()=>flowStore.state.status).toBe('submitting');
+    const target=mountTarget(); const spy=sessionSpy(); const onSuccess=vi.fn();
+    const props={flowStore,sessionStore:spy.store,challenge:{challengeId:'chal_active',methods:['totp'] as const},onStartOver:()=>{},onSuccess};
+    let component=mount(MfaChallengeForm,{target,props});
+    try {
+      flushSync();expect(flowStore.state.form.data.code).toBe('456789');expect(flowStore.state.formGeneration).toBe(0);expect(signal?.aborted).toBe(false);
+      await unmount(component);component=mount(MfaChallengeForm,{target,props});flushSync();
+      expect(flowStore.state.status).toBe('submitting');expect(flowStore.state.form.data.code).toBe('456789');expect(signal?.aborted).toBe(false);
+      resolve(session);await expect.poll(()=>onSuccess.mock.calls.length).toBe(1);expect(verifyMfaChallenge).toHaveBeenCalledTimes(1);
+    } finally {await unmount(component);flowStore.destroy();target.remove();}
+  });
+  it('does not steal focus back after the success callback moves to application content', async () => {
+    const destination=document.createElement('button');document.body.appendChild(destination);
+    const h=mountChallenge({verifyMfaChallenge:vi.fn(async()=>session)},{onSuccess:()=>destination.focus()});
+    try {h.flowStore.dispatch({type:'challengeSucceeded',session});flushSync();await Promise.resolve();flushSync();expect(document.activeElement).toBe(destination);}finally{h.cleanup();destination.remove();}
+  });
+});

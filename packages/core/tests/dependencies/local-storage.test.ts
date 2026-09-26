@@ -548,4 +548,25 @@ describe('Storage (LocalStorage & SessionStorage)', () => {
 			expect(storage.getItem('counter')).toBe(99);
 		});
 	});
+
+	describe('Subscription Lifecycle (MockStorage)', () => {
+		it('supports idempotent unsubscribe and repeated subscriptions for identical callback', () => {
+			const storage = createMockStorage<string>();
+			const listener = vi.fn();
+
+			const unsub1 = storage.subscribe(listener);
+			const unsub2 = storage.subscribe(listener);
+
+			unsub1();
+			unsub1(); // Idempotent
+
+			storage.simulateSetItem('msg', 'hello');
+			expect(listener).toHaveBeenCalledTimes(1);
+
+			unsub2();
+			unsub2(); // Idempotent
+			storage.simulateSetItem('msg', 'world');
+			expect(listener).toHaveBeenCalledTimes(1);
+		});
+	});
 });

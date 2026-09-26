@@ -1,0 +1,38 @@
+import assert from 'node:assert/strict';
+import { pathToFileURL } from 'node:url';
+import { createServer } from "../../../../examples/auth-server/src/server.ts";
+import { SEED, SEED_PASSWORD } from "../../../../examples/auth-server/src/store.ts";
+import { createCookieJar } from "../../../../examples/auth-server/tests/cookie-jar.ts";
+const fixture=process.argv[2];
+const {createHttpAuthDeps}=await import(pathToFileURL(fixture+'/node_modules/@composable-svelte/auth/dist/http/index.js').href);
+let now=Date.parse('2026-09-26T10:00:00Z');
+const {app}=await createServer({now:()=>now});
+await app.listen({port:0,host:'127.0.0.1'});
+const address=app.server.address();
+assert(address && typeof address!=='string');
+const origin='http://127.0.0.1:'+address.port;
+const jar=createCookieJar(globalThis.fetch,()=>now);
+const secondJar=createCookieJar(globalThis.fetch,()=>now);
+const calls:RequestInit[]=[];
+const deps=createHttpAuthDeps(origin,{fetch:async(input:any,init:any)=>{calls.push(init);return jar.fetch(input,init);}});
+const other=createHttpAuthDeps(origin,{fetch:secondJar.fetch});
+try {
+ assert.equal(await deps.fetchSession(),null);
+ await assert.rejects(deps.login({email:SEED.ada.email,password:'wrong'}),(e:any)=>e.code==='invalid_credentials');
+ const session=await deps.login({email:SEED.ada.email,password:SEED_PASSWORD});
+ assert.equal((await deps.fetchSession()).subject_id,session.subject_id);
+ assert.equal(await other.fetchSession(),null);
+ const before=Date.parse(session.expires_at);
+ now+=60_000;
+ const lifetime=await deps.refreshSession();
+ assert(Date.parse(lifetime.expiresAt)>before);
+ assert.equal((await deps.fetchSession()).expires_at,lifetime.expiresAt);
+ const controller=new AbortController(); controller.abort();
+ await assert.rejects(deps.fetchAccount(controller.signal));
+ assert.equal(calls.at(-1)?.signal,controller.signal);
+ assert(calls.every(c=>c.credentials==='include'));
+ await deps.fetchLogout();
+ assert.equal(await deps.fetchSession(),null);
+ await assert.rejects(deps.refreshSession(),(e:any)=>e.code==='invalid_credentials');
+ console.log('PASS installed HTTP adapter with live reference backend:',fixture,'login, structured failure, cookies, isolated session, expiry refresh, abort, credentials, logout');
+} finally {await app.close();}

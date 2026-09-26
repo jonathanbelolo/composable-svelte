@@ -17,6 +17,8 @@ export default defineConfig({
 
 		// Test file patterns
 		include: ['tests/**/*.{test,spec}.{js,ts}'],
+		// Server render runs in node: vitest.ssr.config.ts.
+		exclude: ['tests/ssr/**'],
 
 		// Suppress console output during tests (for CI/prepublish)
 		silent: process.env.CI === 'true' || process.env.SILENT_TESTS === 'true',

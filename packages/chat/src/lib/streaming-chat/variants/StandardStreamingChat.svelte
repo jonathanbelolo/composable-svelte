@@ -13,15 +13,18 @@
 
 	import { createScrollFollower, prefersReducedMotion } from '@composable-svelte/core/animation';
 	import type { ScrollFollower } from '@composable-svelte/core/animation';
-	import type { Store } from '@composable-svelte/core';
+	import { untrack } from 'svelte';
+	import type { ViewStore } from '../../internal/view-store.js';
 	import type { StreamingChatState, StreamingChatAction } from '../types.js';
 	import ChatMessage from '../primitives/ChatMessage.svelte';
 
 	interface Props {
 		/**
-		 * Store managing chat state.
+		 * Store managing chat state: a standalone `Store`, or the managed view a
+		 * feature receives (`FeatureViewProps.store`). Once a managed owner
+		 * retires, the chat renders nothing.
 		 */
-		store: Store<StreamingChatState, StreamingChatAction>;
+		store: ViewStore<StreamingChatState, StreamingChatAction>;
 
 		/**
 		 * Placeholder text for input.
@@ -60,11 +63,25 @@
 
 	// Input state
 	let inputValue = $state('');
-	let messagesContainer: HTMLDivElement;
+	let messagesContainer = $state<HTMLDivElement | undefined>();
 	let shouldAutoScroll = $state(true);
 
-	// Use $store auto-subscription
-	const canSendMessage = $derived(!$store.isWaitingForResponse && inputValue.trim().length > 0);
+	// `undefined` once a managed owner has retired.
+	const chat = $derived($store);
+
+	// A draft belongs to the conversation it was typed into. An unkeyed chat
+	// whose `store` changes must not send it to the next one.
+	$effect.pre(() => {
+		void store;
+		untrack(() => {
+			inputValue = '';
+			shouldAutoScroll = true;
+		});
+	});
+
+	const canSendMessage = $derived(
+		!!chat && !chat.isWaitingForResponse && inputValue.trim().length > 0
+	);
 
 	// The follower owns the smooth scroll, because the browser must not.
 	//
@@ -92,7 +109,7 @@
 	$effect(() => {
 		if (!messagesContainer) return;
 
-		if (shouldAutoScroll && ($store.currentStreaming || $store.messages.length > 0)) {
+		if (shouldAutoScroll && chat && (chat.currentStreaming || chat.messages.length > 0)) {
 			follower?.follow();
 		} else {
 			// Stopping matters as much as starting. `follow()` runs until it reaches
@@ -138,99 +155,101 @@
 	}
 </script>
 
-<div class="standard-streaming-chat {className}">
-	<!-- Messages Container -->
-	<div class="standard-streaming-chat__messages" bind:this={messagesContainer} onscroll={handleScroll}>
-		{#if $store.messages.length === 0 && !$store.currentStreaming}
-			<div class="standard-streaming-chat__empty">
-				<p>No messages yet. Start a conversation!</p>
-			</div>
-		{:else}
-			{#each $store.messages as message (message.id)}
-				<ChatMessage
-					{message}
-					{userLabel}
-					{assistantLabel}
-					animateIn={message.id === $store.lastAppendedId}
-				/>
-			{/each}
+{#if chat}
+	<div class="standard-streaming-chat {className}">
+		<!-- Messages Container -->
+		<div class="standard-streaming-chat__messages" bind:this={messagesContainer} onscroll={handleScroll}>
+			{#if chat.messages.length === 0 && !chat.currentStreaming}
+				<div class="standard-streaming-chat__empty">
+					<p>No messages yet. Start a conversation!</p>
+				</div>
+			{:else}
+				{#each chat.messages as message (message.id)}
+					<ChatMessage
+						{message}
+						{userLabel}
+						{assistantLabel}
+						animateIn={message.id === chat.lastAppendedId}
+					/>
+				{/each}
 
-			{#if $store.currentStreaming}
-				<ChatMessage
-					message={{
-						id: 'streaming',
-						role: 'assistant',
-						content: $store.currentStreaming.content,
-						timestamp: Date.now()
-					}}
-					isStreaming={true}
-					{userLabel}
-					{assistantLabel}
-				/>
+				{#if chat.currentStreaming}
+					<ChatMessage
+						message={{
+							id: 'streaming',
+							role: 'assistant',
+							content: chat.currentStreaming.content,
+							timestamp: Date.now()
+						}}
+						isStreaming={true}
+						{userLabel}
+						{assistantLabel}
+					/>
+				{/if}
 			{/if}
-		{/if}
-	</div>
-
-	<!-- Error Display -->
-	{#if $store.error}
-		<div class="standard-streaming-chat__error">
-			<span class="standard-streaming-chat__error-text">{$store.error}</span>
-			<button
-				class="standard-streaming-chat__error-close"
-				onclick={() => store.dispatch({ type: 'clearError' })}
-				aria-label="Dismiss error"
-			>
-				✕
-			</button>
 		</div>
-	{/if}
 
-	<!-- Input Form -->
-	<form class="standard-streaming-chat__form" onsubmit={handleSubmit}>
-		<div class="standard-streaming-chat__input-wrapper">
-			<textarea
-				class="standard-streaming-chat__input"
-				bind:value={inputValue}
-				onkeydown={handleKeyDown}
-				{placeholder}
-				disabled={$store.isWaitingForResponse}
-				rows="1"
-				aria-label="Chat message input"
-			></textarea>
-			<div class="standard-streaming-chat__actions">
-				{#if showClearButton && $store.messages.length > 0}
-					<button
-						type="button"
-						class="standard-streaming-chat__button standard-streaming-chat__button--secondary"
-						onclick={handleClear}
-						aria-label="Clear messages"
-					>
-						Clear
-					</button>
-				{/if}
-				{#if $store.currentStreaming}
-					<button
-						type="button"
-						class="standard-streaming-chat__button standard-streaming-chat__button--stop"
-						onclick={() => store.dispatch({ type: 'stopGeneration' })}
-						aria-label="Stop generation"
-					>
-						■ Stop
-					</button>
-				{:else}
-					<button
-						type="submit"
-						class="standard-streaming-chat__button standard-streaming-chat__button--primary"
-						disabled={!canSendMessage}
-						aria-label="Send message"
-					>
-						{$store.isWaitingForResponse ? 'Sending...' : 'Send'}
-					</button>
-				{/if}
+		<!-- Error Display -->
+		{#if chat.error}
+			<div class="standard-streaming-chat__error">
+				<span class="standard-streaming-chat__error-text">{chat.error}</span>
+				<button
+					class="standard-streaming-chat__error-close"
+					onclick={() => store.dispatch({ type: 'clearError' })}
+					aria-label="Dismiss error"
+				>
+					✕
+				</button>
 			</div>
-		</div>
-	</form>
-</div>
+		{/if}
+
+		<!-- Input Form -->
+		<form class="standard-streaming-chat__form" onsubmit={handleSubmit}>
+			<div class="standard-streaming-chat__input-wrapper">
+				<textarea
+					class="standard-streaming-chat__input"
+					bind:value={inputValue}
+					onkeydown={handleKeyDown}
+					{placeholder}
+					disabled={chat.isWaitingForResponse}
+					rows="1"
+					aria-label="Chat message input"
+				></textarea>
+				<div class="standard-streaming-chat__actions">
+					{#if showClearButton && chat.messages.length > 0}
+						<button
+							type="button"
+							class="standard-streaming-chat__button standard-streaming-chat__button--secondary"
+							onclick={handleClear}
+							aria-label="Clear messages"
+						>
+							Clear
+						</button>
+					{/if}
+					{#if chat.currentStreaming}
+						<button
+							type="button"
+							class="standard-streaming-chat__button standard-streaming-chat__button--stop"
+							onclick={() => store.dispatch({ type: 'stopGeneration' })}
+							aria-label="Stop generation"
+						>
+							■ Stop
+						</button>
+					{:else}
+						<button
+							type="submit"
+							class="standard-streaming-chat__button standard-streaming-chat__button--primary"
+							disabled={!canSendMessage}
+							aria-label="Send message"
+						>
+							{chat.isWaitingForResponse ? 'Sending...' : 'Send'}
+						</button>
+					{/if}
+				</div>
+			</div>
+		</form>
+	</div>
+{/if}
 
 <style>
 	.standard-streaming-chat {

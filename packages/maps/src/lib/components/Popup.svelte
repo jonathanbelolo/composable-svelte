@@ -16,9 +16,8 @@
  * </Popup>
  */
 
-import { onMount, onDestroy } from 'svelte';
-import type { Store } from '@composable-svelte/core';
-import type { MapState, MapAction, LngLat } from '../types/map.types.js';
+import { onMount } from 'svelte';
+import type { MapStore, LngLat } from '../types/map.types.js';
 import type { Snippet } from 'svelte';
 
 // Props
@@ -31,7 +30,7 @@ let {
   closeOnClick = false,
   children
 }: {
-  store: Store<MapState, MapAction>;
+  store: MapStore;
   id: string;
   position: LngLat;
   isOpen?: boolean | undefined;
@@ -46,13 +45,22 @@ let contentElement: HTMLDivElement | null = $state(null);
 // Track previous values to detect changes
 let previousIsOpen = isOpen;
 let previousPosition = position;
-let hasInitialized = false;
+let hasInitialized = $state(false);
+let active = store.state !== undefined;
 
 // Open popup on mount and update when props change
 onMount(() => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const unsubscribe = store.subscribe((state) => {
+    if (state === undefined) {
+      active = false;
+      if (timer !== undefined) clearTimeout(timer);
+    }
+  });
+  if (!active) return unsubscribe;
   // Wait for content to render
-  setTimeout(() => {
-    if (!contentElement) return;
+  timer = setTimeout(() => {
+    if (!active || !contentElement) return;
 
     // Initial popup creation
     store.dispatch({
@@ -70,8 +78,10 @@ onMount(() => {
   }, 0);
 
   return () => {
+    unsubscribe();
+    clearTimeout(timer);
     // Close popup on unmount
-    store.dispatch({
+    if (active) store.dispatch({
       type: 'closePopup',
       id
     });
@@ -80,7 +90,7 @@ onMount(() => {
 
 // Manual prop change detection (avoid $effect infinite loops)
 $effect(() => {
-  if (!hasInitialized || !contentElement) return;
+  if (!active || !hasInitialized || !contentElement) return;
 
   const isOpenChanged = previousIsOpen !== isOpen;
   const positionChanged = previousPosition[0] !== position[0] || previousPosition[1] !== position[1];

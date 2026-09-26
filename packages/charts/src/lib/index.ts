@@ -15,7 +15,8 @@ export type {
   ChartConfig,
   SelectionState,
   ZoomTransform,
-  DataTransform
+  DataTransform,
+  ChartAccessor
 } from './types/chart.types.js';
 // NOTE: `DataTransforms` is intentionally not re-exported as a type here. The
 // interface in chart.types.ts and the const in utils/data-transforms.ts share a
@@ -27,6 +28,7 @@ export type {
 // Reducers
 // ============================================================================
 export { chartReducer, createInitialChartState } from './reducers/chart.reducer.js';
+export type { ChartReducer } from './reducers/chart.reducer.js';
 
 // ============================================================================
 // Components

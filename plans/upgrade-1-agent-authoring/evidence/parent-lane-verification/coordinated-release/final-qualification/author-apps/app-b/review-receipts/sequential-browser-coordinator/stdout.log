@@ -1,0 +1,17 @@
+
+> test:browser
+> playwright test
+
+
+Running 8 tests using 1 worker
+
+  ✓  1 [chromium] › tests/browser/dashboard.pw.ts:11:1 › accepted sign-in changes the route; rejected sign-in does not (552ms)
+  ✓  2 [chromium] › tests/browser/dashboard.pw.ts:25:1 › unauthenticated /dashboard request is vetoed to /login (136ms)
+  ✓  3 [chromium] › tests/browser/dashboard.pw.ts:33:1 › MFA challenge then dashboard for the MFA subject (271ms)
+  ✓  4 [chromium] › tests/browser/dashboard.pw.ts:51:1 › keyboard chart selection reaches the owning feature as a typed row (240ms)
+  ✓  5 [chromium] › tests/browser/dashboard.pw.ts:66:1 › password change keeps the account view and reports documented outcome (278ms)
+  ✓  6 [chromium] › tests/browser/dashboard.pw.ts:79:1 › logout removes the former account and lets a different subject sign in (336ms)
+  ✓  7 [chromium] › tests/browser/dashboard.pw.ts:96:1 › browser Back after sign-in does not strand the signed-in account on an empty sign-in page (236ms)
+  ✓  8 [chromium] › tests/browser/dashboard.pw.ts:106:1 › no uncaught page errors or framework layout errors across the main journey (250ms)
+
+  8 passed (4.3s)

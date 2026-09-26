@@ -1,0 +1,1 @@
+<script lang="ts">import {useRegistry} from '../../src/lib/application/renderer/context.js';import type {TargetRegistry} from '../../src/lib/application/renderer/target-registry.js';let {inspect}:{inspect:(registry:TargetRegistry)=>void}=$props();inspect(useRegistry());</script>

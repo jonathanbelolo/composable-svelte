@@ -1,12 +1,15 @@
 <script lang="ts">
   import { createStore } from '@composable-svelte/core';
-  import { counterReducer, initialState, type CounterAction } from './counter';
+  import { counterReducer, initialState } from './counter';
+  import { defaultFactService } from './facts';
   import { onDestroy } from 'svelte';
 
-  // Create store (uses Svelte 5 $state internally)
+  // Create store with managed execution and default deterministic fact dependency
   const store = createStore({
     initialState,
-    reducer: counterReducer
+    reducer: counterReducer,
+    dependencies: { factService: defaultFactService },
+    execution: { mode: 'managed' }
   });
 
   // Derived state (uses Svelte 5 $derived for reactivity)
@@ -73,11 +76,11 @@
     <div class="info-panel">
       <h3>This example demonstrates:</h3>
       <ul>
-        <li><strong>State Management:</strong> Reactive state using Svelte 5 $state</li>
+        <li><strong>State Management:</strong> Reactive state owned by the store</li>
         <li><strong>Actions:</strong> Discriminated union of all events</li>
         <li><strong>Pure Reducers:</strong> State transformations without side effects</li>
-        <li><strong>Effects:</strong> Async API calls with Effect.run()</li>
-        <li><strong>Derived State:</strong> Computed values with $derived</li>
+        <li><strong>Cancellable Effects:</strong> Async operations via Effect.cancellable()</li>
+        <li><strong>Managed Execution:</strong> Framework effect cancellation and lifecycle</li>
         <li><strong>Type Safety:</strong> Full TypeScript integration</li>
       </ul>
     </div>

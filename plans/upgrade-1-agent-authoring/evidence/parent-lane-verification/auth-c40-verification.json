@@ -1,0 +1,22 @@
+{
+  "lane": "auth",
+  "worktree": "/Users/jonathanbelolo/.codex/worktrees/fe42/composable-svelte",
+  "baseline": "7861fbe8",
+  "candidate": "c40ebc30b50cc8a73eabd17cf410e9fcee654ca1",
+  "parentReviewed": [
+    "eight flow reducer changes and internal submission-feedback helper",
+    "c40 route/dismissal/hydration fixture delta",
+    "T2-ADR-INPUT.md"
+  ],
+  "parentBrowserCommand": "pnpm --filter @composable-svelte/auth exec vitest run tests/managed-auth-composition.test.ts tests/submission-feedback.test.ts tests/login-flow.test.ts",
+  "tests": {
+    "managedComposition": 28,
+    "submissionFeedback": 38,
+    "loginFlow": 11,
+    "total": 77,
+    "result": "passed"
+  },
+  "acceptance": "pending final c40 Opus delta review and public contract decision",
+  "integratedIntoOriginalCheckout": false,
+  "fullLaneComplete": false
+}

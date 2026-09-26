@@ -1,0 +1,20 @@
+{
+  "appliedAt": "2026-09-25T11:16:40.670775+00:00",
+  "originalPatchSha256": "6c381aafaf589b17dd7e58a34891cb8716501db5aca4d5b02c86d6779e0d4a23",
+  "appliedPatchSha256": "6c381aafaf589b17dd7e58a34891cb8716501db5aca4d5b02c86d6779e0d4a23",
+  "normalization": null,
+  "tarSha256": "191596e3c4c32df71383e6a7633e30ec4343034abefb62c028124bba683622ae",
+  "mainVerification": {
+    "build": "pass",
+    "typecheck": "pass",
+    "svelteCheck": "0 errors, 0 warnings",
+    "browserTests": 339,
+    "ssrTests": 11
+  },
+  "scope": "runtime and T5",
+  "remaining": [
+    "final version and peer assignment",
+    "final archive qualification",
+    "shared skills/checker profiles"
+  ]
+}

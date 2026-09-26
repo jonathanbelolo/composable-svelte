@@ -6,7 +6,10 @@ export interface QuickViewState {
   productId: string;
 }
 
-export type QuickViewAction = { type: 'closeButtonTapped' };
+export type QuickViewAction =
+  | { type: 'closeButtonTapped' }
+  | { type: 'presentationCompleted' }
+  | { type: 'dismissalCompleted' };
 
 // ============================================================================
 // Factory Functions

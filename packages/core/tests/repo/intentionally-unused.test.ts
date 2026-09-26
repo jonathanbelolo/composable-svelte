@@ -137,7 +137,7 @@ const REGISTER: Entry[] = [
 		cls: 'RenderPipeline',
 		member: 'clear',
 		file: 'lib/shaders/render-pipeline.ts',
-		callSites: ['lib/shaders/render-pipeline.ts:382 this'],
+		callSites: ['lib/shaders/render-pipeline.ts:404 this'],
 		why:
 			'a different category, and recorded rather than merged: it *is* called, from ' +
 			'`renderBatch` — which is itself in this register. Reachable only through ' +

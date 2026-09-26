@@ -1,11 +1,13 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
+  import { onDestroy, type Snippet } from 'svelte';
   import { portal } from '../../actions/portal.js';
-  import { clickOutside } from '../../actions/clickOutside.js';
-  import { focusTrap } from '../../actions/focusTrap.js';
-  import type { ScopedDestinationStore } from '../../navigation/scope-to-destination.js';
+  import { createDismissalBoundary } from '../../actions/dismissalBoundary.js';
+  const registerDismissalLayer = createDismissalBoundary();
+  import { documentScrollLock } from '../../actions/documentScrollLock.js';
+  import { assertPresentationView, type PresentationView } from '../../navigation/managed-integration.js';
   import type { PresentationState } from '../../navigation/types.js';
   import type { SpringConfig } from '../../animation/spring-config.js';
+  import { createRemovedContentDismissal } from './presentationCompletion.js';
   import {
     animateAlertIn,
     animateAlertOut,
@@ -19,10 +21,10 @@
 
   interface AlertPrimitiveProps<State, Action> {
     /**
-     * Scoped store for the alert content.
-     * When null, alert is hidden. When non-null, alert is visible.
+     * Managed presentation view for the alert content.
+     * When undefined or retired, alert is hidden (unless presentation retains exit shell).
      */
-    store: ScopedDestinationStore<State, Action> | null;
+    store?: PresentationView<State, Action> | undefined;
 
     /**
      * Presentation state for animation lifecycle.
@@ -72,9 +74,9 @@
       [
         {
           visible: boolean;
-          store: ScopedDestinationStore<State, Action> | null;
-          bindBackdrop: (node: HTMLElement) => void;
-          bindContent: (node: HTMLElement) => void;
+          store: PresentationView<State, Action> | undefined;
+          bindBackdrop: (node: HTMLElement) => { destroy: () => void };
+          bindContent: (node: HTMLElement) => { destroy: () => void };
           initialOpacity: string | undefined;
         }
       ]
@@ -94,19 +96,29 @@
   }: AlertPrimitiveProps<unknown, unknown> = $props();
 
   // ============================================================================
-  // Derived State
+  // Membership & Derived State
   // ============================================================================
 
-  // Visible when store is non-null OR presentation is not idle
+  const admittedStore = $derived.by(() => {
+    if (store !== undefined) {
+      assertPresentationView(store);
+    }
+    return store;
+  });
+
+  // Visible when admitted store has live state OR presentation is not idle
   // This ensures alert stays mounted during 'dismissing' state for exit animation
   const visible = $derived(
-    (store !== null && store.state !== null) ||
+    (admittedStore !== undefined && admittedStore.state !== undefined) ||
       (presentation?.status !== 'idle' && presentation?.status !== undefined)
   );
 
-  // Only allow interactions when fully presented
+  // Focus authority retires at 'dismissing'; pointer/Escape shielding keeps following visible
+  const focusActive = $derived(visible && presentation?.status !== 'dismissing');
+
+  // Entrance motion must not delay accepted user intent. Exit shells remain inert.
   const interactionsEnabled = $derived(
-    presentation ? presentation.status === 'presented' : visible
+    visible && (!presentation || presentation.status === 'presenting' || presentation.status === 'presented')
   );
 
   // ============================================================================
@@ -114,7 +126,10 @@
   // ============================================================================
 
   let contentElement: HTMLElement | undefined = $state();
-  let backdropElement: HTMLElement | undefined = $state();
+  // The internal bind:this backdrop stays the fallback; a consumer-bound backdrop owns the slot only while its action is active.
+  let internalBackdropElement: HTMLElement | undefined = $state();
+  let boundBackdropElement: HTMLElement | undefined = $state();
+  const backdropElement = $derived(boundBackdropElement ?? internalBackdropElement);
 
 
   // The (status, content) pair this effect last acted on.
@@ -126,93 +141,168 @@
   // questions only diverge when the component mounts already `presented` — SSR
   // hydration of a page rendered with this overlay open — and the difference is
   // a permanent deadlock: the collapse branch is refused, `dismissalCompleted`
-  // never fires, and the reducer's own `status !== 'presented'` guard then
-  // rejects every further dismiss.
+  // never fires, and a reducer waiting for that completion cannot finish teardown.
+  // Entrance itself must not prevent the managed dismissal request.
   let lastAnimated: { status: string; content: unknown } | null = null;
-  let clickOutsideCleanup: (() => void) | undefined = undefined;
+
+
+  // Bound content removed while the same 'presenting' or 'dismissing' pair stays live settles
+  // that transition once: `lastAnimated` marks the pair, then the matching callback is notified.
+  const removedContentSettlement = createRemovedContentDismissal();
 
   // Watch presentation status and trigger animations
   $effect(() => {
-    if (!presentation || !contentElement || !backdropElement) return;
+    // Retire a completed marker even when idle/cleared content cannot reach the backdrop-dependent animation branch.
+    if (!presentation || presentation.status === 'idle') lastAnimated = null;
+    if (!presentation || !contentElement) {
+      return removedContentSettlement.contentLost(presentation, lastAnimated, (pair) => {
+        lastAnimated = pair;
+        if (pair.status === 'presenting') onPresentationComplete?.();
+        else onDismissalComplete?.();
+      });
+    }
+    removedContentSettlement.contentBound(presentation);
+    if (!backdropElement) return;
 
     if (presentation.status === 'idle') {
-      lastAnimated = null;
       return;
     }
 
     const { status, content } = presentation;
     if (lastAnimated?.status === status && lastAnimated.content === content) return;
     lastAnimated = { status, content };
+    if (status !== 'presenting' && status !== 'dismissing') return;
+    const owner = new AbortController();
+    let completed = false;
 
     if (status === 'presenting') {
       Promise.all([
-        animateAlertIn(contentElement, springConfig),
-        animateBackdropIn(backdropElement)
+        animateAlertIn(contentElement, springConfig, owner.signal),
+        animateBackdropIn(backdropElement, owner.signal)
       ]).then(() => {
-        queueMicrotask(() => onPresentationComplete?.());
+        queueMicrotask(() => {
+          if (owner.signal.aborted) return;
+          completed = true;
+          onPresentationComplete?.();
+        });
       });
     }
 
     if (status === 'dismissing') {
       Promise.all([
-        animateAlertOut(contentElement, springConfig),
-        animateBackdropOut(backdropElement)
+        animateAlertOut(contentElement, springConfig, owner.signal),
+        animateBackdropOut(backdropElement, owner.signal)
       ]).then(() => {
-        queueMicrotask(() => onDismissalComplete?.());
+        queueMicrotask(() => {
+          if (owner.signal.aborted) return;
+          completed = true;
+          onDismissalComplete?.();
+        });
       });
     }
+    return () => {
+      owner.abort();
+      // A cancelled attempt must be restartable even when the logical pair is unchanged.
+      if (!completed) lastAnimated = null;
+    };
   });
 
   // ============================================================================
   // Event Handlers
   // ============================================================================
 
-  function handleEscape(event: KeyboardEvent) {
-    if (event.key === 'Escape' && !disableEscapeKey && store && interactionsEnabled) {
-      event.preventDefault();
-      try {
-        store.dismiss();
-      } catch (error) {
-        console.error('[AlertPrimitive] Failed to dismiss:', error);
+  function presentationLayer(
+    node: HTMLElement,
+    layer: { view: PresentationView<unknown, unknown> | undefined; focusActive: boolean }
+  ) {
+    function dismissal(view: PresentationView<unknown, unknown> | undefined) {
+      return Object.freeze({
+        identity: () => view,
+        onPointerOutside: () => {
+          if (!disableClickOutside && view && interactionsEnabled) {
+            try {
+              view.dismiss();
+            } catch (error) {
+              console.error('[AlertPrimitive] Failed to dismiss:', error);
+            }
+          }
+        },
+        onEscape: (event: KeyboardEvent) => {
+          if (event.key === 'Escape' && !disableEscapeKey && view && interactionsEnabled) {
+            event.preventDefault();
+            try {
+              view.dismiss();
+            } catch (error) {
+              console.error('[AlertPrimitive] Failed to dismiss:', error);
+            }
+          }
+        }
+      });
+    }
+
+    let currentView = layer.view;
+    const handle = registerDismissalLayer.enroll({
+      node,
+      ...dismissal(currentView),
+      focusActive: layer.focusActive,
+      pointerBoundary: () => contentElement,
+      pointerEnabled: () => visible,
+      escapeEnabled: () => visible,
+      focus: { node, modal: true, returnFocus: () => returnFocusTo }
+    });
+
+    return {
+      update(next: { view: PresentationView<unknown, unknown> | undefined; focusActive: boolean }) {
+        if (next.view !== currentView) {
+          handle.replaceDismissal(dismissal(next.view));
+          currentView = next.view;
+        }
+        handle.setFocusActive(next.focusActive);
+        handle.refresh();
+      },
+      destroy() {
+        handle.release();
+        currentView = undefined;
       }
-    }
-  }
-
-  function handleClickOutside(event: PointerEvent) {
-    if (!disableClickOutside && store && interactionsEnabled) {
-      try {
-        store.dismiss();
-      } catch (error) {
-        console.error('[AlertPrimitive] Failed to dismiss:', error);
-      }
-    }
-  }
-
-  // ============================================================================
-  // Side Effects
-  // ============================================================================
-
-  // Prevent body scroll when alert is open
-  $effect(() => {
-    if (!visible) return;
-
-    const originalOverflow = document.body.style.overflow;
-    const originalPaddingRight = document.body.style.paddingRight;
-    const scrollbarWidth =
-      window.innerWidth - document.documentElement.clientWidth;
-
-    document.body.style.overflow = 'hidden';
-    if (scrollbarWidth > 0) {
-      document.body.style.paddingRight = `${scrollbarWidth}px`;
-    }
-
-    return () => {
-      document.body.style.overflow = originalOverflow;
-      document.body.style.paddingRight = originalPaddingRight;
-      // Cleanup clickOutside action when alert unmounts
-      clickOutsideCleanup?.();
-      clickOutsideCleanup = undefined;
     };
+  }
+
+  let releaseContent: (() => void) | undefined;
+  function bindContent(node: HTMLElement) {
+    releaseContent?.();
+    contentElement = node;
+    let disposed = false;
+    const destroy = () => {
+      if (disposed) return;
+      disposed = true;
+      if (releaseContent === destroy) {
+        releaseContent = undefined;
+        contentElement = undefined;
+      }
+    };
+    releaseContent = destroy;
+    return { destroy };
+  }
+  // The consumer backdrop follows the same ownership; releasing it falls back to the internal bind:this backdrop.
+  let releaseBackdrop: (() => void) | undefined;
+  function bindBackdrop(node: HTMLElement) {
+    releaseBackdrop?.();
+    boundBackdropElement = node;
+    let disposed = false;
+    const destroy = () => {
+      if (disposed) return;
+      disposed = true;
+      if (releaseBackdrop === destroy) {
+        releaseBackdrop = undefined;
+        boundBackdropElement = undefined;
+      }
+    };
+    releaseBackdrop = destroy;
+    return { destroy };
+  }
+  onDestroy(() => {
+    releaseContent?.();
+    releaseBackdrop?.();
   });
 </script>
 
@@ -220,7 +310,7 @@
 <!-- Keyboard Listeners -->
 <!-- ============================================================================ -->
 
-<svelte:window on:keydown={handleEscape} />
+
 
 <!-- ============================================================================ -->
 <!-- Portal Content -->
@@ -231,7 +321,7 @@
     <!-- Backdrop (separate element for independent animation) -->
     <!-- Note: pointer-events: none allows clicks to pass through to clickOutside handler -->
     <div
-      bind:this={backdropElement}
+      bind:this={internalBackdropElement}
       class="alert-backdrop"
       aria-hidden="true"
       style:pointer-events="none"
@@ -239,21 +329,15 @@
 
     <!-- Content Container -->
     <div
-      use:focusTrap={{ returnFocus: returnFocusTo }}
+      use:documentScrollLock={visible}
+      use:presentationLayer={{ view: admittedStore, focusActive }}
       style:pointer-events={interactionsEnabled ? 'auto' : 'none'}
     >
       {@render children?.({
         visible,
-        store,
-        bindBackdrop: (node: HTMLElement) => { backdropElement = node; },
-        bindContent: (node: HTMLElement) => {
-          contentElement = node;
-          // Apply clickOutside to the content element
-          if (!disableClickOutside) {
-            const action = clickOutside(node, handleClickOutside);
-            clickOutsideCleanup = action.destroy;
-          }
-        },
+        store: admittedStore,
+        bindBackdrop,
+        bindContent,
         initialOpacity: presentation?.status === 'presenting' ? '0' : undefined
       })}
     </div>

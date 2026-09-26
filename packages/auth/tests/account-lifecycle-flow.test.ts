@@ -31,6 +31,8 @@ import {
 	sessionRefreshReducer,
 	createInitialSessionRefreshState,
 	type ChangeEmailDependencies,
+	type ChangeEmailState,
+	type ChangeEmailAction,
 	type DeleteAccountDependencies,
 	type SessionRefreshDependencies
 } from '../src/lib/index.js';
@@ -41,15 +43,20 @@ import type { AuthError } from '../src/lib/errors/types.js';
 // ---------------------------------------------------------------------------
 
 function changeEmailStore(deps: Partial<ChangeEmailDependencies> = {}) {
-	return createTestStore({
+	const completed = vi.fn();
+	const store = createTestStore({
 		initialState: createInitialChangeEmailState(),
-		reducer: changeEmailReducer,
+		reducer: (state: ChangeEmailState, action: ChangeEmailAction, dependencies: ChangeEmailDependencies) => {
+			if (action.type === 'form' && action.action.type === 'submissionSucceeded') completed(action.action);
+			return changeEmailReducer(state, action, dependencies);
+		},
 		dependencies: {
 			requestEmailChange: vi.fn(async () => undefined),
 			resendEmailChange: vi.fn(async () => undefined),
 			...deps
 		} satisfies ChangeEmailDependencies
 	});
+	return Object.assign(store, { completed });
 }
 
 describe('change-email', () => {
@@ -64,8 +71,13 @@ describe('change-email', () => {
 		// The form validates, then submits; each step is an action of its own.
 		await store.receive({ type: 'form' });
 		await store.receive({ type: 'form' });
-		await store.receive({ type: 'form', action: { type: 'submissionStarted' } });
-		await store.receive({ type: 'form', action: { type: 'submissionSucceeded' } });
+		await store.receive({ type: 'form', action: { type: 'submissionStarted', validationId: 2, snapshot: { email: 'new@example.com' } } });
+		// Nested matching is exact; completion now also carries its event-time Date.
+		await store.receive({ type: 'form' });
+		// Parent business success may already reset the child; observe the delegated event.
+		expect(store.completed).toHaveBeenCalledExactlyOnceWith({
+			type: 'submissionSucceeded', submissionId: 1, submittedAt: expect.any(Date)
+		});
 		await store.receive({ type: 'changeRequestSucceeded', email: 'new@example.com' }, (s) => {
 			expect(s.pendingEmail).toBe('new@example.com');
 			// Cleared, because the panel now says "we sent a link to …" and leaving
@@ -94,8 +106,13 @@ describe('change-email', () => {
 		await store.send({ type: 'form', action: { type: 'submitTriggered' } });
 		await store.receive({ type: 'form' });
 		await store.receive({ type: 'form' });
-		await store.receive({ type: 'form', action: { type: 'submissionStarted' } });
-		await store.receive({ type: 'form', action: { type: 'submissionSucceeded' } });
+		await store.receive({ type: 'form', action: { type: 'submissionStarted', validationId: 2, snapshot: { email: 'taken@example.com' } } });
+		// Nested matching is exact; completion now also carries its event-time Date.
+		await store.receive({ type: 'form' });
+		// Parent business success may already reset the child; observe the delegated event.
+		expect(store.completed).toHaveBeenCalledExactlyOnceWith({
+			type: 'submissionSucceeded', submissionId: 1, submittedAt: expect.any(Date)
+		});
 		await store.receive({ type: 'changeRequestFailed', error: taken }, (s) => {
 			expect(s.status).toBe('idle');
 			expect(s.error).toEqual(taken);

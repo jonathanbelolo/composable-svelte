@@ -1,0 +1,40 @@
+{
+  "checkedAt": "2026-09-26T14:38:02.991Z",
+  "manifestSha256": "2813a2094329e87d368d73d5244ecdb48d34f5e1015ad05e8b3ac144fe6f3951",
+  "lockSha256": "5e64835b656f38430e707f4ef9c881cda0f6afdd1475d454048d69a00a6dae9e",
+  "lockUnchangedSinceR6Refresh": true,
+  "packageJsonUnchangedSinceR6Refresh": true,
+  "packages": [
+    {
+      "name": "@composable-svelte/core",
+      "spec": "file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz",
+      "archiveSha256": "729ca89f1850e56bde5db23c9f8560090eed07a0dc4126374dd5e33fd11a8e0d",
+      "matchesManifest": true,
+      "lockIntegrityMatchesManifest": true,
+      "installedFiles": 1258,
+      "mismatchedOrMissing": 0,
+      "extra": 0
+    },
+    {
+      "name": "@composable-svelte/auth",
+      "spec": "file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-auth-0.3.0.tgz",
+      "archiveSha256": "dbb2611bb01616e4e9ef86a54016724cf6271e0ec337b759b5cbcb21dae27112",
+      "matchesManifest": true,
+      "lockIntegrityMatchesManifest": true,
+      "installedFiles": 404,
+      "mismatchedOrMissing": 0,
+      "extra": 0
+    },
+    {
+      "name": "@composable-svelte/charts",
+      "spec": "file:/private/tmp/composable-final-authoring/artifacts-b/composable-svelte-charts-0.3.0.tgz",
+      "archiveSha256": "c36b7a06e5a293259cdbebd599a1698cd448c000eac343c66411c1282a73c21d",
+      "matchesManifest": true,
+      "lockIntegrityMatchesManifest": true,
+      "installedFiles": 53,
+      "mismatchedOrMissing": 0,
+      "extra": 0
+    }
+  ],
+  "ancestors": []
+}

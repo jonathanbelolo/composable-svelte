@@ -8,6 +8,6 @@
     "composite": false,
     "types": ["svelte", "vitest/globals"]
   },
-  "include": ["src/**/*", "tests/**/*"],
+  "include": ["src/**/*", "tests/**/*", "recipes/**/*"],
   "exclude": ["dist", "node_modules"]
 }

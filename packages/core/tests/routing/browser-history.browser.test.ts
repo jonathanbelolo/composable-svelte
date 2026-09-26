@@ -1,566 +1,134 @@
-/**
- * Browser Tests: Browser History Integration
- *
- * Tests for syncBrowserHistory function with real browser APIs.
- * Phase 7, Day 5: Browser History Integration
- *
- * @vitest-environment jsdom
- */
-
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { syncBrowserHistory } from '../../src/lib/routing/browser-history';
-import { createStore } from '../../src/lib/store.svelte';
-import type { Reducer } from '../../src/lib/types';
-import { Effect } from '../../src/lib/effect';
-
-// Test State and Types
-interface TestState {
-	destination: TestDestination | null;
-	items: string[];
-}
-
-type TestDestination =
-	| { type: 'detail'; state: { id: string } }
-	| { type: 'edit'; state: { id: string } }
-	| { type: 'add'; state: {} };
-
-type TestAction =
-	| { type: 'itemSelected'; id: string }
-	| { type: 'editTapped'; id: string }
-	| { type: 'addTapped' }
-	| { type: 'closeDestination' };
-
-// Serializer/Parser helpers
-const serializeState = (state: TestState): string => {
-	if (!state.destination) return '/inventory';
-	switch (state.destination.type) {
-		case 'detail':
-			return `/inventory/item-${state.destination.state.id}`;
-		case 'edit':
-			return `/inventory/item-${state.destination.state.id}/edit`;
-		case 'add':
-			return '/inventory/add';
-	}
-};
-
-const parseURL = (path: string): TestDestination | null => {
-	if (path === '/inventory') return null;
-	if (path === '/inventory/add') return { type: 'add', state: {} };
-
-	// Check edit pattern first (more specific)
-	const editMatch = path.match(/^\/inventory\/item-([^/]+)\/edit$/);
-	if (editMatch) {
-		return { type: 'edit', state: { id: editMatch[1]! } };
-	}
-
-	// Then check detail pattern
-	const detailMatch = path.match(/^\/inventory\/item-([^/]+)$/);
-	if (detailMatch) {
-		return { type: 'detail', state: { id: detailMatch[1]! } };
-	}
-
-	return null;
-};
-
-const destinationToAction = (dest: TestDestination | null): TestAction | null => {
-	if (!dest) return { type: 'closeDestination' };
-	switch (dest.type) {
-		case 'detail':
-			return { type: 'itemSelected', id: dest.state.id };
-		case 'edit':
-			return { type: 'editTapped', id: dest.state.id };
-		case 'add':
-			return { type: 'addTapped' };
-	}
-};
-
-// Test Reducer
-const testReducer: Reducer<TestState, TestAction, {}> = (state, action) => {
-	switch (action.type) {
-		case 'itemSelected':
-			return [
-				{
-					...state,
-					destination: { type: 'detail', state: { id: action.id } }
-				},
-				Effect.none()
-			];
-		case 'editTapped':
-			return [
-				{
-					...state,
-					destination: { type: 'edit', state: { id: action.id } }
-				},
-				Effect.none()
-			];
-		case 'addTapped':
-			return [
-				{
-					...state,
-					destination: { type: 'add', state: {} }
-				},
-				Effect.none()
-			];
-		case 'closeDestination':
-			return [{ ...state, destination: null }, Effect.none()];
-		default:
-			return [state, Effect.none()];
-	}
-};
-
-describe('syncBrowserHistory', () => {
-	let originalPathname: string;
-
-	beforeEach(() => {
-		// Store original pathname
-		originalPathname = window.location.pathname;
-
-		// Reset to base URL
-		history.replaceState(null, '', '/inventory');
-	});
-
-	afterEach(() => {
-		// Restore original pathname
-		history.replaceState(null, '', originalPathname);
-	});
-
-	describe('browser navigation to store', () => {
-		it('dispatches action when back button is clicked', async () => {
-			const store = createStore({
-				initialState: { destination: null, items: [] },
-				reducer: testReducer,
-				dependencies: {}
-			});
-
-			const cleanup = syncBrowserHistory(store, {
-				parse: parseURL,
-				serialize: serializeState,
-				destinationToAction
-			});
-
-			// Navigate forward
-			history.pushState(null, '', '/inventory/item-123');
-
-			// Trigger popstate (simulate back button)
-			history.back();
-
-			// Wait for popstate event
-			await new Promise((resolve) => setTimeout(resolve, 100));
-
-			// State should have been updated
-			expect(store.state.destination).toBe(null);
-
-			cleanup();
-		});
-
-		it('dispatches action for forward button', async () => {
-			const store = createStore({
-				initialState: { destination: null, items: [] },
-				reducer: testReducer,
-				dependencies: {}
-			});
-
-			const cleanup = syncBrowserHistory(store, {
-				parse: parseURL,
-				serialize: serializeState,
-				destinationToAction
-			});
-
-			// Setup history: /inventory -> /item-123 -> /inventory
-			history.pushState(null, '', '/inventory/item-123');
-			history.pushState(null, '', '/inventory');
-
-			// Go back to /item-123
-			history.back();
-			await new Promise((resolve) => setTimeout(resolve, 100));
-
-			// Go forward to /inventory
-			history.forward();
-			await new Promise((resolve) => setTimeout(resolve, 100));
-
-			// Should be back at inventory root
-			expect(store.state.destination).toBe(null);
-
-			cleanup();
-		});
-
-		it('parses URL and dispatches correct action', async () => {
-			const store = createStore({
-				initialState: { destination: null, items: [] },
-				reducer: testReducer,
-				dependencies: {}
-			});
-
-			const cleanup = syncBrowserHistory(store, {
-				parse: parseURL,
-				serialize: serializeState,
-				destinationToAction
-			});
-
-			// Navigate to detail page
-			history.pushState(null, '', '/inventory/item-456');
-
-			// Simulate popstate
-			window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
-			await new Promise((resolve) => setTimeout(resolve, 50));
-
-			// State should be updated
-			expect(store.state.destination).toEqual({
-				type: 'detail',
-				state: { id: '456' }
-			});
-
-			cleanup();
-		});
-
-		it('handles multiple back clicks', async () => {
-			const store = createStore({
-				initialState: { destination: null, items: [] },
-				reducer: testReducer,
-				dependencies: {}
-			});
-
-			const cleanup = syncBrowserHistory(store, {
-				parse: parseURL,
-				serialize: serializeState,
-				destinationToAction
-			});
-
-			// Setup history: / -> /item-1 -> /item-2 -> /item-3
-			history.pushState(null, '', '/inventory/item-1');
-			history.pushState(null, '', '/inventory/item-2');
-			history.pushState(null, '', '/inventory/item-3');
-
-			// Click back twice
-			history.back();
-			window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
-			await new Promise((resolve) => setTimeout(resolve, 50));
-
-			expect(store.state.destination).toEqual({ type: 'detail', state: { id: '2' } });
-
-			history.back();
-			window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
-			await new Promise((resolve) => setTimeout(resolve, 50));
-
-			expect(store.state.destination).toEqual({ type: 'detail', state: { id: '1' } });
-
-			cleanup();
-		});
-	});
-
-	describe('loop prevention', () => {
-		it('ignores popstate events from own URL updates', async () => {
-			const dispatchSpy = vi.fn();
-			const store = createStore({
-				initialState: { destination: null, items: [] },
-				reducer: testReducer,
-				dependencies: {}
-			});
-
-			// Spy on dispatch
-			const originalDispatch = store.dispatch.bind(store);
-			store.dispatch = vi.fn((action) => {
-				dispatchSpy(action);
-				return originalDispatch(action);
-			});
-
-			const cleanup = syncBrowserHistory(store, {
-				parse: parseURL,
-				serialize: serializeState,
-				destinationToAction
-			});
-
-			// Simulate URL sync effect update (with metadata flag)
-			history.pushState({ composableSvelteSync: true }, '', '/inventory/item-789');
-
-			// Trigger popstate
-			window.dispatchEvent(
-				new PopStateEvent('popstate', {
-					state: { composableSvelteSync: true }
-				})
-			);
-			await new Promise((resolve) => setTimeout(resolve, 50));
-
-			// Dispatch should NOT have been called (loop prevented)
-			expect(dispatchSpy).not.toHaveBeenCalled();
-
-			cleanup();
-		});
-
-		it('processes popstate without metadata flag', async () => {
-			const dispatchSpy = vi.fn();
-			const store = createStore({
-				initialState: { destination: null, items: [] },
-				reducer: testReducer,
-				dependencies: {}
-			});
-
-			// Spy on dispatch
-			const originalDispatch = store.dispatch.bind(store);
-			store.dispatch = vi.fn((action) => {
-				dispatchSpy(action);
-				return originalDispatch(action);
-			});
-
-			const cleanup = syncBrowserHistory(store, {
-				parse: parseURL,
-				serialize: serializeState,
-				destinationToAction
-			});
-
-			// Simulate browser navigation (no metadata)
-			history.pushState(null, '', '/inventory/item-999');
-
-			// Trigger popstate
-			window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
-			await new Promise((resolve) => setTimeout(resolve, 50));
-
-			// Dispatch SHOULD have been called
-			expect(dispatchSpy).toHaveBeenCalledWith({ type: 'itemSelected', id: '999' });
-
-			cleanup();
-		});
-	});
-
-	describe('cleanup', () => {
-		it('removes event listener on cleanup', async () => {
-			const store = createStore({
-				initialState: { destination: null, items: [] },
-				reducer: testReducer,
-				dependencies: {}
-			});
-
-			const cleanup = syncBrowserHistory(store, {
-				parse: parseURL,
-				serialize: serializeState,
-				destinationToAction
-			});
-
-			// Cleanup immediately
-			cleanup();
-
-			// Try to trigger popstate
-			history.pushState(null, '', '/inventory/item-123');
-			window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
-			await new Promise((resolve) => setTimeout(resolve, 50));
-
-			// State should NOT have changed (listener was removed)
-			expect(store.state.destination).toBe(null);
-		});
-
-		it('can call cleanup multiple times safely', () => {
-			const store = createStore({
-				initialState: { destination: null, items: [] },
-				reducer: testReducer,
-				dependencies: {}
-			});
-
-			const cleanup = syncBrowserHistory(store, {
-				parse: parseURL,
-				serialize: serializeState,
-				destinationToAction
-			});
-
-			// Call cleanup multiple times
-			expect(() => {
-				cleanup();
-				cleanup();
-				cleanup();
-			}).not.toThrow();
-		});
-	});
-
-	describe('invalid URLs', () => {
-		it('handles invalid URL gracefully', async () => {
-			const store = createStore({
-				initialState: { destination: null, items: [] },
-				reducer: testReducer,
-				dependencies: {}
-			});
-
-			const cleanup = syncBrowserHistory(store, {
-				parse: parseURL,
-				serialize: serializeState,
-				destinationToAction
-			});
-
-			// Navigate to invalid URL
-			history.pushState(null, '', '/invalid/path');
-
-			// Trigger popstate
-			window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
-			await new Promise((resolve) => setTimeout(resolve, 50));
-
-			// State should remain unchanged (or handle as closeDestination)
-			expect(store.state.destination).toBe(null);
-
-			cleanup();
-		});
-
-		it('handles null action from destinationToAction', async () => {
-			const store = createStore({
-				initialState: { destination: null, items: [] },
-				reducer: testReducer,
-				dependencies: {}
-			});
-
-			const cleanup = syncBrowserHistory(store, {
-				parse: parseURL,
-				serialize: serializeState,
-				destinationToAction: () => null // Always return null
-			});
-
-			// Navigate to valid URL
-			history.pushState(null, '', '/inventory/item-123');
-
-			// Trigger popstate
-			window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
-			await new Promise((resolve) => setTimeout(resolve, 50));
-
-			// State should remain unchanged (no action dispatched)
-			expect(store.state.destination).toBe(null);
-
-			cleanup();
-		});
-	});
-
-	describe('different destination types', () => {
-		it('handles detail destination', async () => {
-			const store = createStore({
-				initialState: { destination: null, items: [] },
-				reducer: testReducer,
-				dependencies: {}
-			});
-
-			const cleanup = syncBrowserHistory(store, {
-				parse: parseURL,
-				serialize: serializeState,
-				destinationToAction
-			});
-
-			history.pushState(null, '', '/inventory/item-abc');
-			window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
-			await new Promise((resolve) => setTimeout(resolve, 50));
-
-			expect(store.state.destination).toEqual({
-				type: 'detail',
-				state: { id: 'abc' }
-			});
-
-			cleanup();
-		});
-
-		it('handles edit destination', async () => {
-			const store = createStore({
-				initialState: { destination: null, items: [] },
-				reducer: testReducer,
-				dependencies: {}
-			});
-
-			const cleanup = syncBrowserHistory(store, {
-				parse: parseURL,
-				serialize: serializeState,
-				destinationToAction
-			});
-
-			history.pushState(null, '', '/inventory/item-def/edit');
-			window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
-			await new Promise((resolve) => setTimeout(resolve, 50));
-
-			expect(store.state.destination).toEqual({
-				type: 'edit',
-				state: { id: 'def' }
-			});
-
-			cleanup();
-		});
-
-		it('handles add destination', async () => {
-			const store = createStore({
-				initialState: { destination: null, items: [] },
-				reducer: testReducer,
-				dependencies: {}
-			});
-
-			const cleanup = syncBrowserHistory(store, {
-				parse: parseURL,
-				serialize: serializeState,
-				destinationToAction
-			});
-
-			history.pushState(null, '', '/inventory/add');
-			window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
-			await new Promise((resolve) => setTimeout(resolve, 50));
-
-			expect(store.state.destination).toEqual({
-				type: 'add',
-				state: {}
-			});
-
-			cleanup();
-		});
-
-		it('handles return to root', async () => {
-			const store = createStore({
-				initialState: {
-					destination: { type: 'detail', state: { id: '123' } },
-					items: []
-				},
-				reducer: testReducer,
-				dependencies: {}
-			});
-
-			const cleanup = syncBrowserHistory(store, {
-				parse: parseURL,
-				serialize: serializeState,
-				destinationToAction
-			});
-
-			history.pushState(null, '', '/inventory');
-			window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
-			await new Promise((resolve) => setTimeout(resolve, 50));
-
-			expect(store.state.destination).toBe(null);
-
-			cleanup();
-		});
-	});
-
-	describe('rapid navigation', () => {
-		it('handles rapid back/forward clicks', async () => {
-			const store = createStore({
-				initialState: { destination: null, items: [] },
-				reducer: testReducer,
-				dependencies: {}
-			});
-
-			const cleanup = syncBrowserHistory(store, {
-				parse: parseURL,
-				serialize: serializeState,
-				destinationToAction
-			});
-
-			// Setup history
-			history.pushState(null, '', '/inventory/item-1');
-			history.pushState(null, '', '/inventory/item-2');
-
-			// Rapid navigation with small delays between each
-			history.back();
-			window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
-			await new Promise((resolve) => setTimeout(resolve, 50));
-
-			history.forward();
-			window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
-			await new Promise((resolve) => setTimeout(resolve, 50));
-
-			history.back();
-			window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
-			await new Promise((resolve) => setTimeout(resolve, 50));
-
-			// Should end up at item-1 (after final back click)
-			expect(store.state.destination).toEqual({ type: 'detail', state: { id: '1' } });
-
-			cleanup();
-		});
-	});
+import { it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createStore } from '../../src/lib/store.svelte.js';
+import { syncBrowserHistory } from '../../src/lib/routing/browser-history.js';
+import { createURLSyncEffect } from '../../src/lib/routing/sync-effect.js';
+import { Effect } from '../../src/lib/effect.js';
+const disposers: Array<() => void> = [];
+let originalURL: string;
+let originalState: unknown;
+let originalPush: typeof history.pushState;
+let originalReplace: typeof history.replaceState;
+beforeEach(() => { originalURL = location.href; originalState = history.state; originalPush = history.pushState; originalReplace = history.replaceState; history.replaceState(null, '', '/routing-base'); });
+afterEach(() => { for (const dispose of disposers.splice(0))
+    dispose(); vi.restoreAllMocks(); vi.useRealTimers(); history.pushState = originalPush; history.replaceState = originalReplace; history.replaceState(originalState, '', originalURL); });
+function owner() { const store = createStore<string, string>({ initialState: '/routing-base', reducer: (_state, path) => [path, Effect.none()] }); disposers.push(() => store.destroy()); return store; }
+const config = { parse: (path: string) => path, destinationToAction: (path: string | null) => path };
+const traversal = (direction: 'back' | 'forward') => new Promise<void>(resolve => { window.addEventListener('popstate', () => resolve(), { once: true }); history[direction](); });
+it('receives real Back and Forward including recently marked library entries', async () => {
+    const store = owner();
+    disposers.push(syncBrowserHistory(store, config));
+    history.replaceState({ composableSvelteSync: true }, '', '/routing-base');
+    history.pushState({ composableSvelteSync: true }, '', '/routing-detail');
+    store.dispatch('/unset');
+    await traversal('back');
+    expect(store.state).toBe('/routing-base');
+    await traversal('forward');
+    expect(store.state).toBe('/routing-detail');
+});
+it('never replaces global history methods, including with multiple listeners and cleanup order', () => {
+    const push = history.pushState, replace = history.replaceState;
+    const a = owner(), b = owner();
+    const stopA = syncBrowserHistory(a, config), stopB = syncBrowserHistory(b, config);
+    disposers.push(stopA, stopB);
+    expect(history.pushState).toBe(push);
+    expect(history.replaceState).toBe(replace);
+    stopA();
+    stopA();
+    expect(history.pushState).toBe(push);
+    stopB();
+    expect(history.replaceState).toBe(replace);
+});
+it('delivers legitimate popstate immediately after a library-marked push', () => {
+    const store = owner();
+    disposers.push(syncBrowserHistory(store, config));
+    history.pushState({ composableSvelteSync: true }, '', '/routing-detail');
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { composableSvelteSync: true } }));
+    expect(store.state).toBe('/routing-detail');
+});
+it('does not dispatch for native pushState without traversal', () => {
+    const store = owner();
+    disposers.push(syncBrowserHistory(store, config));
+    history.pushState(null, '', '/routing-detail');
+    expect(store.state).toBe('/routing-base');
+});
+it('parses queries and supports null destinations while null actions skip delivery', () => {
+    const store = owner();
+    let skip = false;
+    const makeAction = vi.fn((_path: string | null, query?: string) => skip ? null : query ?? 'root');
+    disposers.push(syncBrowserHistory(store, { parse: () => null, parseQuery: search => search, destinationToAction: makeAction }));
+    history.replaceState(null, '', '/unknown?q=value');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    expect(store.state).toBe('?q=value');
+    expect(makeAction).toHaveBeenCalledWith(null, '?q=value');
+    skip = true;
+    history.replaceState(null, '', '/unknown?q=other');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    expect(store.state).toBe('?q=value');
+});
+it('accepts falsy actions other than the explicit null sentinel', () => {
+    const store = createStore<number, number>({ initialState: 1, reducer: (_state, action) => [action, Effect.none()] });
+    disposers.push(() => store.destroy());
+    disposers.push(syncBrowserHistory(store, { parse: () => 0, destinationToAction: () => 0 }));
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    expect(store.state).toBe(0);
+});
+it('removes only its own listener and cleanup is idempotent', () => {
+    const a = owner(), b = owner();
+    const stopA = syncBrowserHistory(a, config), stopB = syncBrowserHistory(b, config);
+    disposers.push(stopB);
+    stopA();
+    stopA();
+    history.replaceState(null, '', '/routing-new');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    expect(a.state).toBe('/routing-base');
+    expect(b.state).toBe('/routing-new');
+});
+it('Back invalidates actual-store pending URL writes, even without state-to-URL dispatch on traversal', async () => {
+    history.replaceState({ base: true }, '', '/routing-base');
+    history.pushState({ detail: true }, '', '/routing-detail');
+    const sync = createURLSyncEffect<string, string>(path => path, { debounceMs: 50 });
+    const store = createStore<string, string>({ initialState: '/routing-detail', reducer: (_state, path) => [path, sync(path)], ssr: { deferEffects: false } });
+    disposers.push(() => store.destroy());
+    vi.useFakeTimers();
+    store.dispatch('/obsolete');
+    await traversal('back');
+    expect(location.pathname).toBe('/routing-base');
+    // After Back, a controlled wait past the exact debounce would reveal an obsolete write.
+    await vi.advanceTimersByTimeAsync(50);
+    expect(location.pathname).toBe('/routing-base');
+    expect(history.state).toEqual({ base: true });
+});
+
+it('skips undefined while preserving falsy actions', () => {
+ const dispatch=vi.fn();const store=createStore<unknown,unknown>({initialState:'untouched',reducer:(_state,action)=>{dispatch(action);return [action,Effect.none()];}});
+ disposers.push(()=>store.destroy());disposers.push(syncBrowserHistory(store,{parse:()=>null,destinationToAction:()=>undefined}));
+ window.dispatchEvent(new PopStateEvent('popstate'));expect(dispatch).not.toHaveBeenCalled();expect(store.state).toBe('untouched');
+});
+it.each([false,true])('integrates real traversal with canonicalization (replace=%s)', async replace => {
+ history.replaceState({entry:'earlier'},'','/earlier');history.pushState({entry:'base'},'','/inventory?utm_source=newsletter');
+ const sync=createURLSyncEffect<string,string>(path=>path,{replace});
+ history.pushState({entry:'detail'},'','/inventory/item-1');
+ const store=createStore<string,string>({initialState:'/inventory/item-1',reducer:(_state,path)=>[path,sync(path)]});disposers.push(()=>store.destroy());
+ disposers.push(syncBrowserHistory(store,{parse:path=>path,destinationToAction:path=>path}));
+ const length=history.length;
+ await traversal('back');expect(store.state).toBe('/inventory');expect(location.pathname).toBe('/inventory');
+ if(replace){expect(history.length).toBe(length);await traversal('back');expect(store.state).toBe('/earlier');}
+ else { // Known F4: correction pushes back over the traversed entry and repeats forever.
+  const push=vi.spyOn(history,'pushState');await traversal('back');expect(push).toHaveBeenCalledTimes(1);expect(location.pathname).toBe('/inventory');
+ }
+});
+
+it.each([false,true])('integrates debounced traversal with observer installed first=%s', observerFirst => {
+ // Real traversal promise is returned so Vitest owns the complete browser round trip.
+ return (async()=>{
+ history.replaceState(null,'','/routing-base');history.pushState(null,'','/routing-detail');
+ const sync=createURLSyncEffect<string,string>(path=>path,{debounceMs:100});
+ const store=createStore<string,string>({initialState:'/routing-detail',reducer:(_state,path)=>[path,sync(path)]});disposers.push(()=>store.destroy());
+ vi.useFakeTimers();
+ const attach=()=>disposers.push(syncBrowserHistory(store,config));
+ if(observerFirst)attach();store.dispatch('/obsolete');if(!observerFirst)attach();
+ const length=history.length;await traversal('back');await vi.advanceTimersByTimeAsync(100);
+ expect(store.state).toBe('/routing-base');expect(location.pathname).toBe('/routing-base');expect(history.length).toBe(length);
+ await traversal('forward');expect(store.state).toBe('/routing-detail');expect(location.pathname).toBe('/routing-detail');
+ })();
 });

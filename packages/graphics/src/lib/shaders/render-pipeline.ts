@@ -54,6 +54,15 @@ export interface RenderOptions {
 	clearColor?: [number, number, number, number];
 }
 
+const FULLSCREEN_QUAD_VERTICES = new Float32Array([
+	-1.0, 1.0,
+	1.0, 1.0,
+	-1.0, -1.0,
+	1.0, 1.0,
+	1.0, -1.0,
+	-1.0, -1.0
+]);
+
 /**
  * Render Pipeline
  *
@@ -212,6 +221,8 @@ export class RenderPipeline {
 		// Update quad position if bounds provided
 		if (options.bounds && options.canvasWidth && options.canvasHeight) {
 			this.updateQuadPosition(options.bounds, options.canvasWidth, options.canvasHeight);
+		} else {
+			this.resetFullscreenQuad();
 		}
 
 		// Use shader program
@@ -231,6 +242,17 @@ export class RenderPipeline {
 
 		// Clean up
 		this.cleanupAttributes(program);
+	}
+
+	/**
+	 * Reset quad buffer to fullscreen quad vertices
+	 */
+	private resetFullscreenQuad(): void {
+		if (this.quadBuffer) {
+			const gl = this.gl;
+			gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
+			gl.bufferSubData(gl.ARRAY_BUFFER, 0, FULLSCREEN_QUAD_VERTICES);
+		}
 	}
 
 	/**

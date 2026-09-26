@@ -11,7 +11,10 @@ export type AddToCartAction =
   | { type: 'incrementQuantity' }
   | { type: 'decrementQuantity' }
   | { type: 'addButtonTapped' }
-  | { type: 'cancelButtonTapped' };
+  | { type: 'cancelButtonTapped' }
+  | { type: 'presentationCompleted' }
+  | { type: 'dismissalCompleted' }
+  | { type: 'addConfirmed'; productId: string; quantity: number };
 
 // ============================================================================
 // Factory Functions

@@ -57,8 +57,12 @@ export const toastReducer: Reducer<ToastState, ToastAction, ToastDependencies> =
 			//
 			// Evicted dismissing toasts are reported here instead, so the
 			// callback fires exactly once on every path.
+			const effectiveMaxToasts =
+				typeof state.maxToasts === 'number' && Number.isFinite(state.maxToasts)
+					? Math.max(0, Math.floor(state.maxToasts))
+					: 0;
 			const evicted: Toast[] = [];
-			while (newToasts.length > state.maxToasts) {
+			while (newToasts.length > effectiveMaxToasts) {
 				const victimIndex = newToasts.findIndex((t) => t.dismissing);
 				const index = victimIndex === -1 ? 0 : victimIndex;
 				evicted.push(newToasts[index]!);
@@ -67,13 +71,14 @@ export const toastReducer: Reducer<ToastState, ToastAction, ToastDependencies> =
 
 			const newState: ToastState = {
 				...state,
+				maxToasts: effectiveMaxToasts,
 				toasts: newToasts
 			};
 
 			// Create auto-dismiss effect if duration is set
 			const effects: EffectType<ToastAction>[] = [];
 
-			if (toast.duration && toast.duration > 0) {
+			if (newToasts.includes(toast) && toast.duration && toast.duration > 0) {
 				effects.push(
 					Effect.afterDelay<ToastAction>(toast.duration, (dispatch) => {
 						dispatch({ type: 'toastAutoDismissed', id: toast.id });
@@ -214,20 +219,39 @@ export const toastReducer: Reducer<ToastState, ToastAction, ToastDependencies> =
 		}
 
 		case 'maxToastsChanged': {
-			let newToasts = state.toasts;
+			const normalizedMax =
+				typeof action.maxToasts === 'number' && Number.isFinite(action.maxToasts)
+					? Math.max(0, Math.floor(action.maxToasts))
+					: Number.isFinite(state.maxToasts) ? Math.max(0, Math.floor(state.maxToasts)) : 0;
 
-			// If reducing max toasts, remove oldest toasts
-			if (action.maxToasts < state.toasts.length) {
-				newToasts = state.toasts.slice(state.toasts.length - action.maxToasts);
+			let newToasts = [...state.toasts];
+			const evicted: Toast[] = [];
+
+			while (newToasts.length > normalizedMax) {
+				const victimIndex = newToasts.findIndex((t) => t.dismissing);
+				const index = victimIndex === -1 ? 0 : victimIndex;
+				evicted.push(newToasts[index]!);
+				newToasts = [...newToasts.slice(0, index), ...newToasts.slice(index + 1)];
+			}
+
+			const effects: EffectType<ToastAction>[] = [];
+			for (const victim of evicted) {
+				if (victim.dismissing && deps?.onToastDismissed) {
+					effects.push(
+						Effect.run<ToastAction>(async () => {
+							deps.onToastDismissed?.(victim);
+						})
+					);
+				}
 			}
 
 			return [
 				{
 					...state,
-					maxToasts: action.maxToasts,
+					maxToasts: normalizedMax,
 					toasts: newToasts
 				},
-				Effect.none<ToastAction>()
+				effects.length > 0 ? Effect.batch(...effects) : Effect.none<ToastAction>()
 			];
 		}
 

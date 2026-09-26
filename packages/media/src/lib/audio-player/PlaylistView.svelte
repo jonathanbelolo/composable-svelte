@@ -12,12 +12,12 @@
 	 * - Remove track button
 	 */
 
-	import type { Store } from '@composable-svelte/core';
 	import type { AudioPlayerState, AudioPlayerAction, AudioTrack } from './types.js';
+	import type { ViewStore } from '../internal/view-store.js';
 
 	interface Props {
-		/** Store containing audio player state */
-		store: Store<AudioPlayerState, AudioPlayerAction>;
+		/** A standalone store, or the managed feature view (`FeatureViewProps.store`) */
+		store: ViewStore<AudioPlayerState, AudioPlayerAction>;
 		/** Optional CSS class */
 		class?: string | undefined;
 		/** Show track numbers (default: true) */
@@ -39,7 +39,8 @@
 		enableRemove = true
 	}: Props = $props();
 
-	const playerState = $derived($store);
+	// `undefined` once a managed view's owner retires; the playlist then renders nothing.
+	const playerState: AudioPlayerState | undefined = $derived($store);
 
 	// Drag and drop state
 	let draggedIndex = $state<number | null>(null);
@@ -106,6 +107,7 @@
 	}
 </script>
 
+{#if playerState}
 <div class="playlist-view {className}" role="list" aria-label="Playlist">
 	{#if playerState.playlist.length === 0}
 		<div class="empty-playlist">
@@ -204,6 +206,7 @@
 		{/each}
 	{/if}
 </div>
+{/if}
 
 <style>
 	.playlist-view {

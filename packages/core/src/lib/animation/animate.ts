@@ -9,7 +9,8 @@
  * interrupted — measured, and relied on elsewhere in this repo — so a helper
  * whose animation is superseded returns a promise that stays pending forever.
  * Call sites that can be interrupted must therefore use `void`, never `await`,
- * and nothing may sequence on one.
+ * and nothing may sequence on one unless it supplies explicit cancellation.
+ * The generic fades, dropdown and overlay helpers accept an owner signal and settle when that signal aborts.
  *
  * @packageDocumentation
  */
@@ -98,6 +99,8 @@ export async function animateListItemIn(
 
 /** Options shared by the generic fades. */
 export interface FadeOptions {
+	/** Optional renderer lifetime; abort stops owned playback without writing its end state. */
+	signal?: AbortSignal | undefined;
 	/** Seconds. Defaults to 0.2 — what the CSS transitions these replace used. */
 	duration?: number;
 }
@@ -126,19 +129,23 @@ export interface FadeOptions {
  * left the element at 0, and skipping the animation must not skip the outcome.
  */
 export async function animateFadeIn(element: HTMLElement, options?: FadeOptions): Promise<void> {
+	if (options?.signal?.aborted) return;
 	if (prefersReducedMotion()) {
 		element.style.opacity = '1';
 		return;
 	}
 
 	try {
-		await motionAnimate(
+		const playback = motionAnimate(
 			element,
 			{ opacity: [0, 1] },
 			{ duration: options?.duration ?? 0.2, ease: [0.4, 0, 1, 1] }
-		).finished;
+		);
+		await settlePlayback(playback, options?.signal);
+		if (options?.signal?.aborted) return;
 		element.style.opacity = '1';
 	} catch (error) {
+		if (options?.signal?.aborted) return;
 		console.error('[animateFadeIn] Animation failed:', error);
 		element.style.opacity = '1';
 	}
@@ -152,23 +159,29 @@ export async function animateFadeIn(element: HTMLElement, options?: FadeOptions)
  * final frame stick. Under `prefers-reduced-motion` that write *is* the whole
  * implementation.
  *
- * An interrupted fade never settles, so the trailing write is not reached when a
- * fade-in takes over. That is the intended behaviour, not an oversight.
+ * Without an owner signal, a superseded fade retains the legacy pending-promise
+ * behavior. With `options.signal`, abort stops playback and settles without a
+ * trailing end-state write. Abort the previous owner before applying fallback,
+ * including when reduced-motion preference changes during playback.
  */
 export async function animateFadeOut(element: HTMLElement, options?: FadeOptions): Promise<void> {
+	if (options?.signal?.aborted) return;
 	if (prefersReducedMotion()) {
 		element.style.opacity = '0';
 		return;
 	}
 
 	try {
-		await motionAnimate(
+		const playback = motionAnimate(
 			element,
 			{ opacity: [1, 0] },
 			{ duration: options?.duration ?? 0.2, ease: [0.4, 0, 1, 1] }
-		).finished;
+		);
+		await settlePlayback(playback, options?.signal);
+		if (options?.signal?.aborted) return;
 		element.style.opacity = '0';
 	} catch (error) {
+		if (options?.signal?.aborted) return;
 		console.error('[animateFadeOut] Animation failed:', error);
 		element.style.opacity = '0';
 	}
@@ -184,12 +197,14 @@ export async function animateFadeOut(element: HTMLElement, options?: FadeOptions
  */
 export async function animateModalIn(
 	element: HTMLElement,
-	springConfig?: Partial<SpringConfig>
+	springConfig?: Partial<SpringConfig>,
+	signal?: AbortSignal
 ): Promise<void> {
+	if (signal?.aborted) return;
 	try {
 		const config = getSpringConfig(springPresets.modal, springConfig);
 
-		await motionAnimate(
+		const playback = motionAnimate(
 			element,
 			{
 				opacity: [0, 1],
@@ -205,11 +220,14 @@ export async function animateModalIn(
 				visualDuration: config.visualDuration,
 				bounce: config.bounce
 			}
-		).finished;
+		);
+		await settlePlayback(playback, signal);
+		if (signal?.aborted) return;
 
 		// Wait for one more frame to ensure styles are applied
-		await new Promise(resolve => requestAnimationFrame(resolve));
+		await waitAnimationFrame(signal);
 	} catch (error) {
+		if (signal?.aborted) return;
 		console.error('[animateModalIn] Animation failed:', error);
 	}
 }
@@ -220,12 +238,14 @@ export async function animateModalIn(
  */
 export async function animateModalOut(
 	element: HTMLElement,
-	springConfig?: Partial<SpringConfig>
+	springConfig?: Partial<SpringConfig>,
+	signal?: AbortSignal
 ): Promise<void> {
+	if (signal?.aborted) return;
 	try {
 		const config = getSpringConfig(springPresets.modal, springConfig);
 
-		await motionAnimate(
+		const playback = motionAnimate(
 			element,
 			{
 				opacity: [1, 0],
@@ -241,11 +261,14 @@ export async function animateModalOut(
 				visualDuration: config.visualDuration,
 				bounce: config.bounce
 			}
-		).finished;
+		);
+		await settlePlayback(playback, signal);
+		if (signal?.aborted) return;
 
 		// Wait for one more frame to ensure styles are applied
-		await new Promise(resolve => requestAnimationFrame(resolve));
+		await waitAnimationFrame(signal);
 	} catch (error) {
+		if (signal?.aborted) return;
 		console.error('[animateModalOut] Animation failed:', error);
 	}
 }
@@ -253,11 +276,12 @@ export async function animateModalOut(
 /**
  * Animate backdrop in with fade.
  */
-export async function animateBackdropIn(element: HTMLElement): Promise<void> {
+export async function animateBackdropIn(element: HTMLElement, signal?: AbortSignal): Promise<void> {
+	if (signal?.aborted) return;
 	try {
 		const config = getSpringConfig(springPresets.modal);
 
-		await motionAnimate(
+		const playback = motionAnimate(
 			element,
 			{ opacity: [0, 1] },
 			{
@@ -265,11 +289,14 @@ export async function animateBackdropIn(element: HTMLElement): Promise<void> {
 				visualDuration: config.visualDuration,
 				bounce: config.bounce
 			}
-		).finished;
+		);
+		await settlePlayback(playback, signal);
+		if (signal?.aborted) return;
 
 		// Wait for one more frame to ensure styles are applied
-		await new Promise(resolve => requestAnimationFrame(resolve));
+		await waitAnimationFrame(signal);
 	} catch (error) {
+		if (signal?.aborted) return;
 		console.error('[animateBackdropIn] Animation failed:', error);
 	}
 }
@@ -277,11 +304,12 @@ export async function animateBackdropIn(element: HTMLElement): Promise<void> {
 /**
  * Animate backdrop out with fade.
  */
-export async function animateBackdropOut(element: HTMLElement): Promise<void> {
+export async function animateBackdropOut(element: HTMLElement, signal?: AbortSignal): Promise<void> {
+	if (signal?.aborted) return;
 	try {
 		const config = getSpringConfig(springPresets.modal);
 
-		await motionAnimate(
+		const playback = motionAnimate(
 			element,
 			{ opacity: [1, 0] },
 			{
@@ -289,11 +317,14 @@ export async function animateBackdropOut(element: HTMLElement): Promise<void> {
 				visualDuration: config.visualDuration,
 				bounce: config.bounce
 			}
-		).finished;
+		);
+		await settlePlayback(playback, signal);
+		if (signal?.aborted) return;
 
 		// Wait for one more frame to ensure styles are applied
-		await new Promise(resolve => requestAnimationFrame(resolve));
+		await waitAnimationFrame(signal);
 	} catch (error) {
+		if (signal?.aborted) return;
 		console.error('[animateBackdropOut] Animation failed:', error);
 	}
 }
@@ -308,8 +339,10 @@ export async function animateBackdropOut(element: HTMLElement): Promise<void> {
 export async function animateSheetIn(
 	element: HTMLElement,
 	side: 'bottom' | 'left' | 'right' = 'bottom',
-	springConfig?: Partial<SpringConfig>
+	springConfig?: Partial<SpringConfig>,
+	signal?: AbortSignal
 ): Promise<void> {
+	if (signal?.aborted) return;
 	try {
 		const config = getSpringConfig(springPresets.sheet, springConfig);
 
@@ -320,7 +353,7 @@ export async function animateSheetIn(
 					? { x: ['-100%', '0%'] }
 					: { x: ['100%', '0%'] };
 
-		await motionAnimate(
+		const playback = motionAnimate(
 			element,
 			{
 				opacity: [0, 1],
@@ -331,8 +364,11 @@ export async function animateSheetIn(
 				visualDuration: config.visualDuration,
 				bounce: config.bounce
 			}
-		).finished;
+		);
+		await settlePlayback(playback, signal);
+		if (signal?.aborted) return;
 	} catch (error) {
+		if (signal?.aborted) return;
 		console.error('[animateSheetIn] Animation failed:', error);
 	}
 }
@@ -343,8 +379,10 @@ export async function animateSheetIn(
 export async function animateSheetOut(
 	element: HTMLElement,
 	side: 'bottom' | 'left' | 'right' = 'bottom',
-	springConfig?: Partial<SpringConfig>
+	springConfig?: Partial<SpringConfig>,
+	signal?: AbortSignal
 ): Promise<void> {
+	if (signal?.aborted) return;
 	try {
 		const config = getSpringConfig(springPresets.sheet, springConfig);
 
@@ -355,7 +393,7 @@ export async function animateSheetOut(
 					? { x: ['0%', '-100%'] }
 					: { x: ['0%', '100%'] };
 
-		await motionAnimate(
+		const playback = motionAnimate(
 			element,
 			{
 				opacity: [1, 0],
@@ -366,8 +404,11 @@ export async function animateSheetOut(
 				visualDuration: config.visualDuration,
 				bounce: config.bounce
 			}
-		).finished;
+		);
+		await settlePlayback(playback, signal);
+		if (signal?.aborted) return;
 	} catch (error) {
+		if (signal?.aborted) return;
 		console.error('[animateSheetOut] Animation failed:', error);
 	}
 }
@@ -382,12 +423,14 @@ export async function animateSheetOut(
 export async function animateDrawerIn(
 	element: HTMLElement,
 	side: 'left' | 'right' = 'left',
-	springConfig?: Partial<SpringConfig>
+	springConfig?: Partial<SpringConfig>,
+	signal?: AbortSignal
 ): Promise<void> {
+	if (signal?.aborted) return;
 	try {
 		const config = getSpringConfig(springPresets.drawer, springConfig);
 
-		await motionAnimate(
+		const playback = motionAnimate(
 			element,
 			{
 				opacity: [0, 1],
@@ -398,8 +441,11 @@ export async function animateDrawerIn(
 				visualDuration: config.visualDuration,
 				bounce: config.bounce
 			}
-		).finished;
+		);
+		await settlePlayback(playback, signal);
+		if (signal?.aborted) return;
 	} catch (error) {
+		if (signal?.aborted) return;
 		console.error('[animateDrawerIn] Animation failed:', error);
 	}
 }
@@ -410,12 +456,14 @@ export async function animateDrawerIn(
 export async function animateDrawerOut(
 	element: HTMLElement,
 	side: 'left' | 'right' = 'left',
-	springConfig?: Partial<SpringConfig>
+	springConfig?: Partial<SpringConfig>,
+	signal?: AbortSignal
 ): Promise<void> {
+	if (signal?.aborted) return;
 	try {
 		const config = getSpringConfig(springPresets.drawer, springConfig);
 
-		await motionAnimate(
+		const playback = motionAnimate(
 			element,
 			{
 				opacity: [1, 0],
@@ -426,8 +474,11 @@ export async function animateDrawerOut(
 				visualDuration: config.visualDuration,
 				bounce: config.bounce
 			}
-		).finished;
+		);
+		await settlePlayback(playback, signal);
+		if (signal?.aborted) return;
 	} catch (error) {
+		if (signal?.aborted) return;
 		console.error('[animateDrawerOut] Animation failed:', error);
 	}
 }
@@ -442,12 +493,14 @@ export async function animateDrawerOut(
  */
 export async function animateAlertIn(
 	element: HTMLElement,
-	springConfig?: Partial<SpringConfig>
+	springConfig?: Partial<SpringConfig>,
+	signal?: AbortSignal
 ): Promise<void> {
+	if (signal?.aborted) return;
 	try {
 		const config = getSpringConfig(springPresets.alert, springConfig);
 
-		await motionAnimate(
+		const playback = motionAnimate(
 			element,
 			{
 				opacity: [0, 1],
@@ -462,11 +515,14 @@ export async function animateAlertIn(
 				visualDuration: config.visualDuration,
 				bounce: config.bounce
 			}
-		).finished;
+		);
+		await settlePlayback(playback, signal);
+		if (signal?.aborted) return;
 
 		// Wait for one more frame to ensure styles are applied
-		await new Promise(resolve => requestAnimationFrame(resolve));
+		await waitAnimationFrame(signal);
 	} catch (error) {
+		if (signal?.aborted) return;
 		console.error('[animateAlertIn] Animation failed:', error);
 	}
 }
@@ -477,12 +533,14 @@ export async function animateAlertIn(
  */
 export async function animateAlertOut(
 	element: HTMLElement,
-	springConfig?: Partial<SpringConfig>
+	springConfig?: Partial<SpringConfig>,
+	signal?: AbortSignal
 ): Promise<void> {
+	if (signal?.aborted) return;
 	try {
 		const config = getSpringConfig(springPresets.alert, springConfig);
 
-		await motionAnimate(
+		const playback = motionAnimate(
 			element,
 			{
 				opacity: [1, 0],
@@ -497,11 +555,14 @@ export async function animateAlertOut(
 				visualDuration: config.visualDuration,
 				bounce: config.bounce
 			}
-		).finished;
+		);
+		await settlePlayback(playback, signal);
+		if (signal?.aborted) return;
 
 		// Wait for one more frame to ensure styles are applied
-		await new Promise(resolve => requestAnimationFrame(resolve));
+		await waitAnimationFrame(signal);
 	} catch (error) {
+		if (signal?.aborted) return;
 		console.error('[animateAlertOut] Animation failed:', error);
 	}
 }
@@ -517,6 +578,11 @@ export async function animateTooltipIn(
 	element: HTMLElement,
 	springConfig?: Partial<SpringConfig>
 ): Promise<void> {
+	if (prefersReducedMotion()) {
+		element.style.opacity = '1';
+		element.style.transform = 'scale(1)';
+		return;
+	}
 	try {
 		const config = getSpringConfig(springPresets.tooltip, springConfig);
 
@@ -541,6 +607,10 @@ export async function animateTooltipIn(
  * Animate tooltip out with fade (no scale for faster exit).
  */
 export async function animateTooltipOut(element: HTMLElement): Promise<void> {
+	if (prefersReducedMotion()) {
+		element.style.opacity = '0';
+		return;
+	}
 	try {
 		const config = getSpringConfig(springPresets.tooltip);
 
@@ -647,6 +717,10 @@ export async function animateCarouselTrack(
 	durationMs: number
 ): Promise<void> {
 	const target = `${offsetPercent}%`;
+	if (prefersReducedMotion()) {
+		element.style.transform = `translateX(${target})`;
+		return;
+	}
 	try {
 		await motionAnimate(
 			element,
@@ -678,13 +752,15 @@ export async function animateChevron(
 	// the fallback path needs.
 	element: HTMLElement | SVGElement,
 	expanded: boolean,
-	springConfig?: Partial<SpringConfig>
+	springConfig?: Partial<SpringConfig>,
+	signal?: AbortSignal
 ): Promise<void> {
+	if (signal?.aborted) return;
 	const degrees = expanded ? 180 : 0;
 	try {
 		const config = getSpringConfig(springPresets.dropdown, springConfig);
 
-		await motionAnimate(
+		const playback = motionAnimate(
 			element,
 			{ rotate: degrees },
 			{
@@ -692,8 +768,11 @@ export async function animateChevron(
 				visualDuration: config.visualDuration,
 				bounce: config.bounce
 			}
-		).finished;
+		);
+		await settlePlayback(playback, signal);
+		if (signal?.aborted) return;
 	} catch (error) {
+		if (signal?.aborted) return;
 		console.error('[animateChevron] Animation failed:', error);
 		// Land on the correct orientation even if the animation fails.
 		if (element) {
@@ -702,60 +781,58 @@ export async function animateChevron(
 	}
 }
 
-export async function animateDropdownIn(element: HTMLElement): Promise<void> {
+/** Resolve completed playback or stop and settle when its renderer owner aborts. */
+async function settlePlayback(playback: ReturnType<typeof motionAnimate>, signal?: AbortSignal): Promise<void> {
+	if (!signal) { await playback.finished; return; }
+	let abort: (() => void) | undefined;
 	try {
-		const config = getSpringConfig(springPresets.tooltip); // Fast like tooltip
+		await Promise.race([playback.finished, new Promise<void>(resolve => {
+			abort = () => {
+				try { playback.stop(); } catch { /* Already detached playback may refuse a final style commit. */ }
+				resolve();
+			};
+			if (signal.aborted) abort(); else signal.addEventListener('abort', abort, { once: true });
+		})]);
+	} finally { if (abort) signal.removeEventListener('abort', abort); }
+}
 
-		await motionAnimate(
-			element,
-			{
-				opacity: [0, 1],
-				scale: [0.95, 1],
-				y: [-4, 0]
-			},
-			{
-				type: 'spring',
-				visualDuration: config.visualDuration,
-				bounce: config.bounce
-			}
-		).finished;
+/** The final style-application frame belongs to the same renderer lifetime. */
+function waitAnimationFrame(signal?: AbortSignal): Promise<void> {
+	if (signal?.aborted) return Promise.resolve();
+	return new Promise(resolve => {
+		const abort = () => { cancelAnimationFrame(frame); resolve(); };
+		const frame = requestAnimationFrame(() => {
+			signal?.removeEventListener('abort', abort);
+			resolve();
+		});
+		signal?.addEventListener('abort', abort, { once: true });
+	});
+}
+
+/** Dropdown playback settles when completed or explicitly aborted by its owner. */
+export async function animateDropdownIn(element: HTMLElement, signal?: AbortSignal): Promise<void> {
+	if (signal?.aborted) return;
+	if (prefersReducedMotion()) { element.style.opacity = '1'; element.style.transform = 'none'; return; }
+	try {
+		const config = getSpringConfig(springPresets.tooltip);
+		await settlePlayback(motionAnimate(element, { opacity: [0, 1], scale: [0.95, 1], y: [-4, 0] }, { type: 'spring', visualDuration: config.visualDuration, bounce: config.bounce }), signal);
 	} catch (error) {
+		if (signal?.aborted) return;
 		console.error('[animateDropdownIn] Animation failed:', error);
-		// Ensure element is visible even if animation fails
-		if (element) {
-			element.style.opacity = '1';
-			element.style.transform = 'scale(1) translateY(0)';
-		}
+		element.style.opacity = '1'; element.style.transform = 'none';
 	}
 }
 
-/**
- * Animate dropdown/popover out with fade (fast exit).
- *
- * @param element - The dropdown element to animate
- * @returns Promise that resolves when animation completes (or fails gracefully)
- */
-export async function animateDropdownOut(element: HTMLElement): Promise<void> {
+/** Dropdown exit settles when completed or explicitly aborted by its owner. */
+export async function animateDropdownOut(element: HTMLElement, signal?: AbortSignal): Promise<void> {
+	if (signal?.aborted) return;
+	if (prefersReducedMotion()) { element.style.opacity = '0'; return; }
 	try {
 		const config = getSpringConfig(springPresets.tooltip);
-
-		await motionAnimate(
-			element,
-			{
-				opacity: [1, 0]
-			},
-			{
-				type: 'spring',
-				visualDuration: config.visualDuration * 0.7, // Faster exit
-				bounce: 0
-			}
-		).finished;
+		await settlePlayback(motionAnimate(element, { opacity: [1, 0] }, { type: 'spring', visualDuration: config.visualDuration * 0.7, bounce: 0 }), signal);
 	} catch (error) {
-		console.error('[animateDropdownOut] Animation failed:', error);
-		// Ensure element is hidden even if animation fails
-		if (element) {
-			element.style.opacity = '0';
-		}
+		if (signal?.aborted) return;
+		console.error('[animateDropdownOut] Animation failed:', error); element.style.opacity = '0';
 	}
 }
 
@@ -875,8 +952,10 @@ export async function animateSidebarCollapse(
 export async function animatePopoverIn(
 	element: HTMLElement,
 	positionTransform: string = '',
-	springConfig?: Partial<SpringConfig>
+	springConfig?: Partial<SpringConfig>,
+	signal?: AbortSignal
 ): Promise<void> {
+	if (signal?.aborted) return;
 	try {
 		const config = getSpringConfig(springPresets.popover, springConfig);
 
@@ -884,7 +963,7 @@ export async function animatePopoverIn(
 		const transformFrom = positionTransform ? `${positionTransform} scale(0.96)` : 'scale(0.96)';
 		const transformTo = positionTransform ? `${positionTransform} scale(1)` : 'scale(1)';
 
-		await motionAnimate(
+		const playback = motionAnimate(
 			element,
 			{
 				opacity: [0, 1],
@@ -895,11 +974,14 @@ export async function animatePopoverIn(
 				visualDuration: config.visualDuration,
 				bounce: config.bounce
 			}
-		).finished;
+		);
+		await settlePlayback(playback, signal);
+		if (signal?.aborted) return;
 
 		// Wait for one more frame to ensure styles are applied
-		await new Promise(resolve => requestAnimationFrame(resolve));
+		await waitAnimationFrame(signal);
 	} catch (error) {
+		if (signal?.aborted) return;
 		console.error('[animatePopoverIn] Animation failed:', error);
 	}
 }
@@ -911,8 +993,10 @@ export async function animatePopoverIn(
 export async function animatePopoverOut(
 	element: HTMLElement,
 	positionTransform: string = '',
-	springConfig?: Partial<SpringConfig>
+	springConfig?: Partial<SpringConfig>,
+	signal?: AbortSignal
 ): Promise<void> {
+	if (signal?.aborted) return;
 	try {
 		const config = getSpringConfig(springPresets.popover, springConfig);
 
@@ -920,7 +1004,7 @@ export async function animatePopoverOut(
 		const transformFrom = positionTransform ? `${positionTransform} scale(1)` : 'scale(1)';
 		const transformTo = positionTransform ? `${positionTransform} scale(0.96)` : 'scale(0.96)';
 
-		await motionAnimate(
+		const playback = motionAnimate(
 			element,
 			{
 				opacity: [1, 0],
@@ -931,11 +1015,14 @@ export async function animatePopoverOut(
 				visualDuration: config.visualDuration,
 				bounce: config.bounce
 			}
-		).finished;
+		);
+		await settlePlayback(playback, signal);
+		if (signal?.aborted) return;
 
 		// Wait for one more frame to ensure styles are applied
-		await new Promise(resolve => requestAnimationFrame(resolve));
+		await waitAnimationFrame(signal);
 	} catch (error) {
+		if (signal?.aborted) return;
 		console.error('[animatePopoverOut] Animation failed:', error);
 	}
 }
@@ -952,12 +1039,14 @@ export async function animatePopoverOut(
  */
 export async function animateStackPushIn(
 	element: HTMLElement,
-	springConfig?: Partial<SpringConfig>
+	springConfig?: Partial<SpringConfig>,
+	signal?: AbortSignal
 ): Promise<void> {
+	if (signal?.aborted) return;
 	try {
 		const config = getSpringConfig(springPresets.drawer, springConfig);
 
-		await motionAnimate(
+		const playback = motionAnimate(
 			element,
 			{
 				opacity: [0, 1],
@@ -968,8 +1057,10 @@ export async function animateStackPushIn(
 				visualDuration: config.visualDuration,
 				bounce: config.bounce
 			}
-		).finished;
+		);
+		await settlePlayback(playback, signal);
 	} catch (error) {
+		if (signal?.aborted) return;
 		console.error('[animateStackPushIn] Animation failed:', error);
 		// Ensure element is visible even if animation fails
 		if (element) {
@@ -987,12 +1078,14 @@ export async function animateStackPushIn(
  */
 export async function animateStackPushOut(
 	element: HTMLElement,
-	springConfig?: Partial<SpringConfig>
+	springConfig?: Partial<SpringConfig>,
+	signal?: AbortSignal
 ): Promise<void> {
+	if (signal?.aborted) return;
 	try {
 		const config = getSpringConfig(springPresets.drawer, springConfig);
 
-		await motionAnimate(
+		const playback = motionAnimate(
 			element,
 			{
 				opacity: [1, 0.7],
@@ -1003,8 +1096,10 @@ export async function animateStackPushOut(
 				visualDuration: config.visualDuration,
 				bounce: config.bounce
 			}
-		).finished;
+		);
+		await settlePlayback(playback, signal);
 	} catch (error) {
+		if (signal?.aborted) return;
 		console.error('[animateStackPushOut] Animation failed:', error);
 		// Ensure element state even if animation fails
 		if (element) {
@@ -1022,12 +1117,14 @@ export async function animateStackPushOut(
  */
 export async function animateStackPopOut(
 	element: HTMLElement,
-	springConfig?: Partial<SpringConfig>
+	springConfig?: Partial<SpringConfig>,
+	signal?: AbortSignal
 ): Promise<void> {
+	if (signal?.aborted) return;
 	try {
 		const config = getSpringConfig(springPresets.drawer, springConfig);
 
-		await motionAnimate(
+		const playback = motionAnimate(
 			element,
 			{
 				opacity: [1, 0],
@@ -1038,8 +1135,10 @@ export async function animateStackPopOut(
 				visualDuration: config.visualDuration,
 				bounce: config.bounce
 			}
-		).finished;
+		);
+		await settlePlayback(playback, signal);
 	} catch (error) {
+		if (signal?.aborted) return;
 		console.error('[animateStackPopOut] Animation failed:', error);
 		// Ensure element is hidden even if animation fails
 		if (element) {
@@ -1057,12 +1156,14 @@ export async function animateStackPopOut(
  */
 export async function animateStackPopIn(
 	element: HTMLElement,
-	springConfig?: Partial<SpringConfig>
+	springConfig?: Partial<SpringConfig>,
+	signal?: AbortSignal
 ): Promise<void> {
+	if (signal?.aborted) return;
 	try {
 		const config = getSpringConfig(springPresets.drawer, springConfig);
 
-		await motionAnimate(
+		const playback = motionAnimate(
 			element,
 			{
 				opacity: [0.7, 1],
@@ -1073,8 +1174,10 @@ export async function animateStackPopIn(
 				visualDuration: config.visualDuration,
 				bounce: config.bounce
 			}
-		).finished;
+		);
+		await settlePlayback(playback, signal);
 	} catch (error) {
+		if (signal?.aborted) return;
 		console.error('[animateStackPopIn] Animation failed:', error);
 		// Ensure element is visible even if animation fails
 		if (element) {

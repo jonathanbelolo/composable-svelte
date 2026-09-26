@@ -35,7 +35,15 @@ User Action → Store.dispatch(action)
 
 ## Packages
 
-All packages follow the Composable Architecture pattern (reducer + effects + store), depend on `@composable-svelte/core`, and are built for Svelte 5. Source lives in `packages/<name>/src/lib/`.
+Runtime packages follow the Composable Architecture pattern (reducer + effects + store) and are built for Svelte 5. Their source lives in `packages/<name>/src/lib/`. The development-only architecture CLI is described separately below.
+
+### `@composable-svelte/architecture`
+
+Development-only architecture checker paired with the core prerelease. Install it
+as a development dependency and run `composable-svelte-architecture` using the
+[package instructions](../packages/architecture/README.md). Its five bounded rule
+families complement functional tests and independent architectural review. It has
+no runtime exports and is not part of the browser application bundle.
 
 ### `@composable-svelte/core`
 

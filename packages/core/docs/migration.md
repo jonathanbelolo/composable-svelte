@@ -1029,3 +1029,44 @@ For migration assistance:
 - [API Reference](api/reference.md)
 - [Testing Guide](core-concepts/testing.md)
 - [Examples](https://github.com/jonathanbelolo/composable-svelte/tree/main/examples)
+
+## Sanitizer return modes and Trusted Types
+
+Filtered TrustedHTML now requires an explicit application policy, nested wrapper calls from peer hooks fail closed, and empty input follows its selected return mode. See [the sanitizer migration note](./ssr/sanitization.md#migration-from-the-earlier-wrapper) for compatibility details and accurate return types.
+
+### Theme ownership and subscriptions
+
+Theme managers implement the Svelte store contract; use `$manager.theme` or `$manager.resolvedTheme` in views. Return `manager.initialize()` from `onMount` so the framework releases that owner's listener lease on unmount. Multiple owners share one listener; the last release resets `initialized` to false. `destroy()` forcefully retires all owners and is intended for whole-manager teardown.
+
+Use `createThemeManager(initialTheme)` per server request and provide that instance through context. The exported singleton is browser-only. A valid browser preference in storage takes precedence over the initial seed during initialization. Factory state can update without browser globals; it must never be shared across requests.
+
+### Progress without a value
+
+An omitted Progress value displays a full-width indeterminate indicator without `aria-valuenow`. Switching to a numeric value starts at that value without animating backwards from a full bar.
+
+### Authoritative form validation
+
+A complete schema-valid form validation replaces earlier per-field verdicts, including programmatic `setFieldError` messages, and retires older pending field validation attempts. Store persistent business flags separately from temporary field errors.
+
+### Combobox loading and close transitions
+
+The reducer marks loading directly when it accepts `searchDebounced`; it no longer emits a redundant `loadingStarted` action for that internal path. Explicit `loadingStarted` remains supported. Closing an already idle combobox is a no-op, so it does not schedule a closing animation.
+
+### Route base paths
+
+Nonempty `basePath` values are directory boundaries: `/inventory` matches itself and `/inventory/add`, but cannot match the sibling `/inventoryadd`. Applications using a partial segment as a prefix must use an explicit route pattern instead. An explicitly empty base retains relative-input support. Pass pathname separately from query parameters, as before.
+
+Custom validators receive only present normalized fields. A missing optional key, a child below `null`, or a missing array item defers its custom validator; an explicitly present `undefined` remains a value. The rule is the same for field validation and full-form submission. For an opaque transform whose normalized output cannot be computed while another field is invalid, the last async verdict is retained until revalidation can run; it is not a fresh verdict for changed sibling inputs.
+
+### Managed execution
+
+Managed execution is opt-in with `execution: { mode: 'managed' }` on `createStore` and `createTestStore`. The default remains legacy execution for backwards compatibility.
+
+Key differences when migrating to managed execution:
+
+- **FIFO turn queue:** Reentrant dispatches from state/action observers and effects queue sequential turns rather than reducing recursively.
+- **Post-settlement dispatch suppression:** `Run`, `Cancellable`, and timer executors own dispatch capability only until their returned promise settles. Synchronous executors returning `void` complete at the next promise checkpoint. Callbacks invoked after completion are dropped and diagnosed; callback-based event sources belong in `Effect.subscription`, whose setup must be synchronous and return cleanup.
+- **Owner-local groups and IDs:** Cancellation groups and effect IDs are scoped to the originating feature owner token rather than matching globally across features.
+- **Bounded root throttle:** Retained root throttle channels default to 1024 entries (`execution.rootThrottleCapacity`). At capacity, a new channel reports `RootThrottleCapacityError` and does not execute; existing entries are not evicted. `Effect.cancel(id)` releases admission. Legacy execution rejects this option.
+
+See [Managed execution: current foundation and migration contract](./managed-execution.md) for full architectural semantics, lifecycle rules, and TestStore details.

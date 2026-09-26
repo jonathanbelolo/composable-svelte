@@ -6,8 +6,9 @@
     "declaration": false,
     "declarationMap": false,
     "composite": false,
+    "paths": { "@composable-svelte/charts": ["."] },
     "types": ["svelte", "vitest/globals"]
   },
-  "include": ["src/**/*", "tests/**/*"],
+  "include": ["src/**/*", "tests/**/*", "fixtures/**/*"],
   "exclude": ["dist", "node_modules"]
 }

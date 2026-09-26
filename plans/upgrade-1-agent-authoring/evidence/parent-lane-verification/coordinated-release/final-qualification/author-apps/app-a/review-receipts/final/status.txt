@@ -1,0 +1,6 @@
+npm run check exit=0
+npm run test exit=0
+npm run build exit=0
+npm run test:ssr exit=0
+npm run test:browser exit=0
+repeat exit=0

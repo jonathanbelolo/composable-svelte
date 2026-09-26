@@ -1,323 +1,102 @@
 import { test, expect } from '@playwright/test';
 
-/**
- * E2E tests for SSR server example.
- *
- * These tests verify the complete SSR flow from an external client perspective:
- * 1. Server-side rendering produces correct HTML
- * 2. State is serialized and embedded in HTML
- * 3. Client-side hydration works correctly
- * 4. Interactivity works after hydration
- */
+test('SSR sends routed content, safe serialized state and one metadata owner', async ({ request }) => {
+  const response = await request.get('/posts/1/comments?source=email');
+  expect(response.status()).toBe(200);
+  const html = await response.text();
+  expect(html).toContain('class="comments-page');
+  expect(html.match(/<title>/g)).toHaveLength(1);
+  expect(html.match(/rel="canonical"/g)).toHaveLength(1);
+  const serialized = html.match(/<script id="__COMPOSABLE_SVELTE_STATE__" type="application\/json">([\s\S]*?)<\/script>/);
+  expect(serialized).not.toBeNull();
+  const state = JSON.parse(serialized![1]!);
+  expect(state.destination).toEqual({ type: 'comments', state: { postId: 1 } });
+  expect(state.routeSearch).toBe('?source=email');
+  expect(state.comments.some((comment: { postId: number }) => comment.postId !== 1)).toBe(true);
+});
 
-test.describe('SSR Server Example', () => {
-  test('should render the application on the server', async ({ page }) => {
-    // Navigate to the application
-    await page.goto('/');
-
-    // Verify the page title (state-driven from first post)
-    await expect(page).toHaveTitle('Getting Started with Composable Svelte - Composable Svelte Blog');
-
-    // Verify main heading is present
-    await expect(page.locator('.app > header h1').first()).toContainText('Composable Svelte SSR Example');
-
-    // Verify the sidebar is rendered
-    await expect(page.locator('aside.sidebar').first()).toBeVisible();
-
-    // Verify post list is rendered - count all instances
-    const postItems = page.locator('aside.sidebar ul li');
-    // Since there might be duplicates during hydration, check that we have at least 5
-    expect(await postItems.count()).toBeGreaterThanOrEqual(5);
-
-    // Verify main content area is rendered
-    await expect(page.locator('article.main-content').first()).toBeVisible();
+for (const locale of ['en', 'fr', 'es']) {
+  test(`${locale} routes render the correct language and localized links without JavaScript`, async ({ browser }) => {
+    const context = await browser.newContext({ javaScriptEnabled: false });
+    const page = await context.newPage();
+    try {
+      const prefix = locale === 'en' ? '' : `/${locale}`;
+      const response = await page.goto(`${test.info().project.use.baseURL}${prefix}/posts/1`);
+      expect(response?.status()).toBe(200);
+      await expect(page.locator('html')).toHaveAttribute('lang', locale);
+      await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `https://example.com${prefix}/posts/1`);
+      await expect(page.locator('.comments-link')).toHaveAttribute('href', `${prefix}/posts/1/comments`);
+      await page.locator('.comments-link').click();
+      await expect(page.locator('.comments-page')).toBeVisible();
+      await expect(page).toHaveURL(new RegExp(`${prefix}/posts/1/comments$`));
+    } finally { await context.close(); }
   });
+}
 
-  test('should serialize state correctly', async ({ page }) => {
-    // Get the raw HTML response
-    const response = await page.goto('/');
-    const html = await response?.text();
-
-    // Verify the state script tag exists
-    expect(html).toContain('__COMPOSABLE_SVELTE_STATE__');
-
-    // Extract and parse the serialized state
-    const stateMatch = html?.match(
-      /<script id="__COMPOSABLE_SVELTE_STATE__" type="application\/json">(.*?)<\/script>/s
-    );
-    expect(stateMatch).toBeTruthy();
-
-    const serializedState = JSON.parse(stateMatch![1]);
-
-    // Verify state structure
-    expect(serializedState).toHaveProperty('posts');
-    expect(serializedState).toHaveProperty('selectedPostId');
-    expect(serializedState).toHaveProperty('isLoading');
-    expect(serializedState).toHaveProperty('error');
-
-    // Verify posts data
-    expect(serializedState.posts).toHaveLength(5);
-    expect(serializedState.posts[0]).toHaveProperty('id');
-    expect(serializedState.posts[0]).toHaveProperty('title');
-    expect(serializedState.posts[0]).toHaveProperty('author');
-    expect(serializedState.posts[0]).toHaveProperty('date');
-    expect(serializedState.posts[0]).toHaveProperty('content');
-    expect(serializedState.posts[0]).toHaveProperty('tags');
-
-    // Verify initial selected post
-    expect(serializedState.selectedPostId).toBe(1);
+for (const route of ['/missing', '/posts/999999', '/fr/posts/999999/comments', '/posts/1garbage']) {
+  test(`unknown resource ${route} is a real 404 with not-found content`, async ({ request }) => {
+    const response = await request.get(route);
+    expect(response.status()).toBe(404);
+    expect(response.headers()['content-type']).toContain('text/html');
+    const html = await response.text();
+    expect(html).toContain('class="not-found');
+    expect(html).not.toContain('class="post-card');
+    expect(html.match(/<title>/g)).toHaveLength(1);
   });
+}
 
-  test('should hydrate correctly on the client', async ({ page }) => {
-    // Listen for console messages
-    const messages: string[] = [];
-    page.on('console', (msg) => {
-      messages.push(msg.text());
-    });
+test('path locale takes priority over query and language headers', async ({ request }) => {
+  const response = await request.get('/fr/posts/1?lang=es', { headers: { 'Accept-Language': 'en' } });
+  expect(await response.text()).toContain('<html lang="fr">');
+  const query = await request.get('/posts/1?lang=es');
+  expect(await query.text()).toContain('<html lang="es">');
+});
 
-    // Navigate to the application
-    await page.goto('/');
+test('hydrated navigation retains query, locale and comments through Back/Forward', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  const hydrated = page.waitForEvent('console', message => message.text().includes('hydrated successfully'));
+  await page.goto('/fr/posts/1/comments?source=email');
+  await hydrated;
+  const firstComments = await page.locator('.comment').count();
+  expect(firstComments).toBeGreaterThan(0);
+  await page.evaluate(() => { document.body.dataset.sameDocument = 'yes'; });
+  await page.locator('.breadcrumb a').first().click();
+  await expect(page).toHaveURL(/\/fr\/\?source=email$/);
+  await page.locator('.post-card a[href="/fr/posts/2"]').click();
+  await expect(page).toHaveURL(/\/fr\/posts\/2\?source=email$/);
+  await page.locator('.comments-link').click();
+  await expect(page.locator('.comment')).not.toHaveCount(0);
+  await expect(page).toHaveURL(/\/fr\/posts\/2\/comments\?source=email$/);
+  await page.goBack();
+  await expect(page.locator('.detail-page')).toBeVisible();
+  await page.goForward();
+  await expect(page.locator('.comments-page')).toBeVisible();
+  expect(await page.locator('body').getAttribute('data-same-document')).toBe('yes');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
+  expect(errors).toEqual([]);
+});
 
-    // Wait for hydration to complete
-    await page.waitForTimeout(1000);
+test('language switch performs a supported localized document navigation', async ({ page }) => {
+  await page.goto('/posts/1');
+  await page.getByRole('link', { name: 'Español' }).click();
+  await expect(page).toHaveURL(/\/es\/posts\/1$/);
+  await expect(page.locator('html')).toHaveAttribute('lang', 'es');
+  await expect(page.locator('.detail-page')).toBeVisible();
+});
 
-    // Verify hydration success message
-    expect(messages.some(msg => msg.includes('✅ Composable Svelte hydrated successfully'))).toBe(true);
-
-    // Verify no hydration errors
-    expect(messages.some(msg => msg.includes('❌ Hydration failed'))).toBe(false);
-  });
-
-  test('should display correct initial post content', async ({ page }) => {
-    await page.goto('/');
-
-    // Wait for content to be visible
-    await page.waitForSelector('article.post-detail');
-
-    // Verify first post is displayed
-    const article = page.locator('article.post-detail').first();
-    await expect(article.locator('h1')).toContainText('Getting Started with Composable Svelte');
-    await expect(article).toContainText('By Jane Developer');
-    await expect(article).toContainText('January 5, 2025');
-
-    // Verify tags are displayed
-    const tags = article.locator('.tag');
-    await expect(tags).toHaveCount(3);
-    await expect(tags.nth(0)).toContainText('svelte');
-    await expect(tags.nth(1)).toContainText('architecture');
-    await expect(tags.nth(2)).toContainText('tutorial');
-
-    // Verify content is displayed
-    await expect(article).toContainText('Composable Svelte');
-    await expect(article).toContainText('brings the power of the Composable Architecture');
-  });
-
-  test('should handle post selection interactivity', async ({ page }) => {
-    await page.goto('/');
-
-    // Wait for hydration
-    await page.waitForTimeout(2000);
-
-    // Verify initial content
-    let article = page.locator('article.post-detail').first();
-    await expect(article.locator('h1')).toContainText('Getting Started with Composable Svelte');
-
-    // Click on the second post button
-    const secondPost = page.locator('aside.sidebar ul li').nth(1);
-    await secondPost.locator('button').click();
-
-    // Wait for state update and re-render
-    await page.waitForTimeout(1000);
-
-    // Verify content updated to second post
-    article = page.locator('article.post-detail').first();
-    await expect(article.locator('h1')).toContainText('Understanding Server-Side Rendering');
-    await expect(article).toContainText('By John Architect');
-    await expect(article).toContainText('January 8, 2025');
-
-    // Verify tags updated
-    const tags = article.locator('.tag');
-    await expect(tags).toHaveCount(3);
-    await expect(tags.nth(0)).toContainText('ssr');
-    await expect(tags.nth(1)).toContainText('performance');
-    await expect(tags.nth(2)).toContainText('seo');
-  });
-
-  test('should navigate through all posts', async ({ page }) => {
-    await page.goto('/');
-
-    // Wait for hydration
-    await page.waitForTimeout(2000);
-
-    const postTitles = [
-      'Getting Started with Composable Svelte',
-      'Understanding Server-Side Rendering',
-      'Building Production-Ready Apps',
-      'Testing Strategies for SSR',
-      'Fastify and Modern Node.js'
-    ];
-
-    // Click through each post and verify content
-    for (let i = 0; i < postTitles.length; i++) {
-      const postItem = page.locator('aside.sidebar ul li').nth(i);
-      await postItem.locator('button').click();
-      await page.waitForTimeout(800);
-
-      // Verify content updated
-      const article = page.locator('article.post-detail').first();
-      await expect(article.locator('h1')).toContainText(postTitles[i]);
-    }
-  });
-
-  test('should maintain responsive layout', async ({ page }) => {
-    await page.goto('/');
-
-    // Test desktop viewport
-    await page.setViewportSize({ width: 1280, height: 720 });
-    await expect(page.locator('aside.sidebar').first()).toBeVisible();
-    await expect(page.locator('main').first()).toBeVisible();
-
-    // Test tablet viewport
-    await page.setViewportSize({ width: 768, height: 1024 });
-    await expect(page.locator('aside.sidebar').first()).toBeVisible();
-    await expect(page.locator('main').first()).toBeVisible();
-
-    // Test mobile viewport
-    await page.setViewportSize({ width: 375, height: 667 });
-    // On mobile, layout might change but elements should still be present
-    await expect(page.locator('.app > header h1').first()).toBeVisible();
-    await expect(page.locator('article.post-detail').first()).toBeVisible();
-  });
-
-  test('should have correct meta tags for SEO', async ({ page }) => {
-    const response = await page.goto('/');
-    const html = await response?.text();
-
-    // Verify state-driven title (from first post)
-    expect(html).toContain('<title>Getting Started with Composable Svelte - Composable Svelte Blog</title>');
-
-    // Verify state-driven description meta tag (from first post)
-    expect(html).toContain('<meta name="description"');
-    expect(html).toContain('Composable Svelte');
-    expect(html).toContain('brings the power of the Composable Architecture');
-
-    // Verify Open Graph tags
-    expect(html).toContain('<meta property="og:title"');
-    expect(html).toContain('<meta property="og:image" content="/og/post-1.jpg"');
-    expect(html).toContain('<link rel="canonical" href="https://example.com/posts/1"');
-  });
-
-  test('should update meta tags when post changes', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForTimeout(2000); // Wait for hydration
-
-    // Verify initial title (first post)
-    await expect(page).toHaveTitle('Getting Started with Composable Svelte - Composable Svelte Blog');
-
-    // Click on the second post
-    const secondPost = page.locator('aside.sidebar ul li').nth(1);
-    await secondPost.locator('button').click();
-    await page.waitForTimeout(1000);
-
-    // Verify title updated to second post
-    await expect(page).toHaveTitle('Understanding Server-Side Rendering - Composable Svelte Blog');
-
-    // Click on the third post
-    const thirdPost = page.locator('aside.sidebar ul li').nth(2);
-    await thirdPost.locator('button').click();
-    await page.waitForTimeout(1000);
-
-    // Verify title updated to third post
-    await expect(page).toHaveTitle('Building Production-Ready Apps - Composable Svelte Blog');
-  });
-
-  test('should load CSS correctly', async ({ page }) => {
-    await page.goto('/');
-
-    // Wait for CSS to load
-    await page.waitForTimeout(2000);
-
-    // Verify sidebar has background color (should be #f8f9fa)
-    const sidebar = page.locator('aside.sidebar').first();
-    const backgroundColor = await sidebar.evaluate((el) => {
-      return window.getComputedStyle(el).backgroundColor;
-    });
-
-    // Should have light gray background color - check it's not transparent
-    expect(backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
-    expect(backgroundColor).not.toBe('transparent');
-
-    // Verify font is loaded
-    const body = page.locator('body');
-    const fontFamily = await body.evaluate((el) => {
-      return window.getComputedStyle(el).fontFamily;
-    });
-
-    // Should have custom font family
-    expect(fontFamily).toMatch(/(apple-system|BlinkMacSystemFont|Segoe UI)/i);
-  });
-
-  test('should handle health check endpoint', async ({ request }) => {
-    const response = await request.get('/health');
-    expect(response.ok()).toBeTruthy();
-
-    const data = await response.json();
-    expect(data).toHaveProperty('status', 'ok');
-    expect(data).toHaveProperty('timestamp');
-  });
-
-  test('should serve client assets correctly', async ({ page }) => {
-    const response = await page.goto('/');
-
-    // Check that JavaScript is loaded
-    const scripts = await page.locator('script[src]').all();
-    expect(scripts.length).toBeGreaterThan(0);
-
-    // Verify at least one script loads successfully
-    let hasValidScript = false;
-    for (const script of scripts) {
-      const src = await script.getAttribute('src');
-      if (src && src.startsWith('/assets/')) {
-        const scriptResponse = await page.request.get(src);
-        if (scriptResponse.ok()) {
-          hasValidScript = true;
-          break;
-        }
-      }
-    }
-    expect(hasValidScript).toBe(true);
-  });
-
-  test('should handle no JavaScript gracefully', async ({ page, context }) => {
-    // Disable JavaScript
-    await context.setOffline(false);
-    await page.goto('/', { waitUntil: 'domcontentloaded' });
-
-    // Content should still be visible (SSR)
-    await expect(page.locator('.app > header h1').first()).toContainText('Composable Svelte SSR Example');
-    expect(await page.locator('aside.sidebar ul li').count()).toBeGreaterThanOrEqual(5);
-    await expect(page.locator('article.post-detail').first()).toBeVisible();
-
-    // Content should match the first post
-    await expect(page.locator('article.post-detail').first().locator('h1')).toContainText('Getting Started with Composable Svelte');
-  });
-
-  test('should not have console errors', async ({ page }) => {
-    const errors: string[] = [];
-    page.on('console', (msg) => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
-    });
-
-    await page.goto('/');
-    await page.waitForTimeout(1000);
-
-    // Click on a post to trigger interactivity
-    await page.locator('aside.sidebar ul li').nth(2).locator('button').click();
-    await page.waitForTimeout(500);
-
-    // Should have no console errors
-    expect(errors).toHaveLength(0);
-  });
+test('Back restores the initial header-detected locale on an unprefixed entry', async ({ browser }) => {
+  const context = await browser.newContext({ locale: 'fr', baseURL: `http://127.0.0.1:${process.env.SSR_TEST_PORT ?? 3198}` });
+  const page = await context.newPage();
+  const hydrated = page.waitForEvent('console', message => message.text().includes('hydrated successfully'));
+  await page.goto('/posts/1?source=header');
+  await hydrated;
+  await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
+  await page.locator('.comments-link').click();
+  await expect(page).toHaveURL(/\/fr\/posts\/1\/comments\?source=header$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/posts\/1\?source=header$/);
+  await expect(page.locator('.header-text h1')).toHaveText('Articles de Blog');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
+  await context.close();
 });

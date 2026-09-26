@@ -106,9 +106,10 @@ describe('a nested error lands on the nested field', () => {
 		await store.send({ type: 'submitTriggered' });
 		await store.receive({ type: 'formValidationStarted' });
 		await store.receive({ type: 'formValidationCompleted' }, (state) => {
-			// All five keys. The old code spread `undefined` into a new object and
+			// Complete core field record plus async-error provenance. The old code spread `undefined` into a new object and
 			// produced a two-key record missing `warnings` and `isValidating`.
 			expect(state.fields['address']).toEqual({
+			asyncError: null,
 				touched: true,
 				dirty: false,
 				error: expect.any(String),

@@ -22,7 +22,7 @@ The composable-svelte navigation system provides **state-driven navigation** tha
 - ✅ **Type-safe** - Full TypeScript inference
 - ✅ **Testable** - Pure reducers, no side effects
 - ✅ **Composable** - Nest navigation arbitrarily deep
-- ✅ **Accessible** - WCAG 2.1 AA compliant components
+- ✅ **Accessible foundations** - keyboard, focus-boundary, focus-restoration, and dismissal primitives for accessible navigation
 - ✅ **Predictable** - State determines UI, always
 
 ### Navigation Patterns
@@ -84,197 +84,99 @@ type DestinationState =
 
 ### 3. Parent Observation Pattern
 
-**✅ CORRECT**: Parent observes child actions and handles dismissal
+The parent observes presented child actions that carry business results. Managed
+composition routes those actions through the child reducer and owns the separate
+presentation dismissal action.
 
 ```typescript
-case 'destination': {
-  const [newState, effect] = ifLetPresentation(
-    (s) => s.destination,
-    (s, d) => ({ ...s, destination: d }),
-    'destination',
-    (childAction): ParentAction => ({
-      type: 'destination',
-      action: { type: 'presented', action: childAction }
-    }),
-    destinationReducer
-  )(state, action, deps);
-  // A dismiss is handled above: the field is nulled and the presentation's
-  // effects are cancelled (`effect` carries that cancel — keep it).
-
-  // Observe child completion actions
-  if ('action' in action &&
+const rootReducer: Reducer<AppState, AppAction, AppDeps> = (state, action) => {
+  if (action.type === 'destination' &&
       action.action.type === 'presented' &&
-      action.action.action.type === 'saveButtonTapped') {
-    // Child completed: dismiss, cancel what it still had in flight, and
-    // handle the save in the parent (an effect the child returned with this
-    // action would be cancelled with the rest — the parent's own is not).
+      action.action.action.type === 'saved') {
     return [
-      { ...newState, destination: null },
-      Effect.batch(
-        effect,
-        Effect.cancelGroup('destination'),
-        Effect.run(async (dispatch) => {
-          // Handle save...
-        })
-      )
+      { ...state, destination: null, saved: action.action.action.value },
+      Effect.none()
     ];
   }
-
-  return [newState, effect];
-}
+  return [state, Effect.none()];
+};
 ```
 
-`integrate(core).with('destination', destinationReducer)` does the same with
-less: the core reducer nulls the field or changes its case, and the builder
-appends the cancel.
-
-**Avoid for observed actions**: Don't use `deps.dismiss()` when the parent needs to react to the action.
-
-```typescript
-// ❌ WRONG for save — parent needs to handle the save data
-case 'saveButtonTapped':
-  return [state, deps.dismiss()];  // Parent never sees this action!
-```
-
-The `dismiss` dependency (via `createDismissDependency()`) is fine for simple close/cancel buttons where the parent doesn't need to react.
+Do not replace an observable save/cancel result with `deps.dismiss()`: dismissal carries
+no business payload. For a close button whose only meaning is close, inject
+`managedDismissDependency()` into the child and return its `dismiss()` effect.
 
 ---
 
 ## Tree-Based Navigation
 
-### Using `ifLetPresentation`
-
-The `ifLetPresentation` operator composes a child reducer for optional state:
-
-```typescript
-ifLetPresentation<ParentState, ParentAction, ChildState, ChildAction, Dependencies>(
-  toChildState,      // Extract child state: (s) => s.destination
-  fromChildState,    // Update child state: (s, d) => ({ ...s, destination: d })
-  actionType,        // Action type string: 'destination'
-  fromChildAction,   // Wrap child action: (ca) => ({ type: 'destination', ... })
-  childReducer       // Child reducer function
-): Reducer<ParentState, ParentAction, Dependencies>
-```
-
-**Complete Example**:
+Use managed composition for every presentation rendered by `Modal`, `Alert`, `Sheet`,
+`Drawer`, `Popover`, or `Sidebar`. The slot owns lifetime and dismissal; the root
+reducer owns business events such as opening or replacing a destination.
 
 ```typescript
-import { ifLetPresentation } from '@composable-svelte/core/navigation';
+import { Effect, createDestination, type PresentationAction, type Reducer } from '@composable-svelte/core';
+import { destinationSlot, ManagedIntegrationBuilder } from '@composable-svelte/core/application';
 
-interface AppState {
-  productDetail: ProductDetailState | null;
-}
-
-type AppAction =
-  | { type: 'productClicked'; productId: string }
-  | { type: 'productDetail'; action: PresentationAction<ProductDetailAction> };
-
-const appReducer: Reducer<AppState, AppAction, AppDeps> = (state, action, deps) => {
-  switch (action.type) {
-    case 'productClicked':
-      // Show product detail
-      return [{
-        ...state,
-        productDetail: { productId: action.productId }
-      }, Effect.none()];
-
-    case 'productDetail': {
-      // Compose child reducer
-      const [newState, effect] = ifLetPresentation(
-        (s: AppState) => s.productDetail,
-        (s: AppState, detail) => ({ ...s, productDetail: detail }),
-        'productDetail',
-        (childAction): AppAction => ({
-          type: 'productDetail',
-          action: { type: 'presented', action: childAction }
-        }),
-        productDetailReducer
-      )(state, action, deps);
-
-      // Observe dismiss
-      if ('action' in action && action.action.type === 'dismiss') {
-        return [{ ...newState, productDetail: null }, effect];
-      }
-
-      return [newState, effect];
-    }
-
-    default:
-      return [state, Effect.none()];
-  }
-};
-```
-
-### Enum Destinations
-
-For multiple destination types, use discriminated unions:
-
-```typescript
-type Destination =
-  | { type: 'addToCart'; state: AddToCartState }
-  | { type: 'share'; state: ShareState }
-  | { type: 'quickView'; state: QuickViewState }
-  | { type: 'deleteAlert'; state: DeleteAlertState };
-
-interface ProductDetailState {
-  productId: string;
-  destination: Destination | null;
-}
-```
-
-**Reducer Helper** (`createDestinationReducer` is deprecated in favour of
-`createDestination`, which routes by the action's case and maps each child's
-effect back into it; the older form is shown because existing code uses it):
-
-```typescript
-import { createDestinationReducer } from '@composable-svelte/core/navigation';
-
-const destinationReducer = createDestinationReducer<
-  Destination,
-  DestinationAction,
-  Dependencies
->({
+const destination = createDestination({
   addToCart: addToCartReducer,
-  share: shareReducer,
-  quickView: quickViewReducer,
-  deleteAlert: deleteAlertReducer
+  share: shareReducer
 });
+
+type DestinationState = typeof destination._types.State;
+type DestinationAction = typeof destination._types.Action;
+
+interface AppState { destination: DestinationState | null }
+type AppAction =
+  | { type: 'openAddToCart' }
+  | { type: 'destination'; action: PresentationAction<DestinationAction> };
+
+const reducer: Reducer<AppState, AppAction, AppDeps> = (state, action) => {
+  if (action.type === 'openAddToCart') {
+    return [{ destination: destination.initial('addToCart', initialAddToCart) }, Effect.none()];
+  }
+  // The managed slot handles PresentationAction.dismiss. Observe presented child
+  // actions here when the parent must save data or start parent-owned work.
+  return [state, Effect.none()];
+};
+
+const slot = destinationSlot<AppState, AppAction>()('destination', destination);
+export const composition = new ManagedIntegrationBuilder(reducer)
+  .with(slot, { replaceOn: action => action.type === 'openAddToCart' })
+  .build();
 ```
 
-### Store Scoping
+Declare each destination case once. `FeatureViews` supplies framework-minted views;
+components never mint, copy, or cast dismissal capability.
 
-Create scoped stores for child components:
-
-```typescript
-import { scopeToDestination } from '@composable-svelte/core/navigation';
-
-// In your Svelte component
-const addToCartStore = $derived(
-  scopeToDestination(store, ['destination'], 'addToCart', 'destination')
-);
-```
-
-**Component Usage**:
+Register the snippet as the `content` for the `addToCart` case in the application’s
+`defineViews` plan:
 
 ```svelte
 <script lang="ts">
+  import type { PresentationFeatureViewProps } from '@composable-svelte/core/application';
   import { Sheet } from '@composable-svelte/core/navigation-components';
-
-  let { store } = $props();
-
-  const addToCartStore = $derived(
-    scopeToDestination(store, ['destination'], 'addToCart', 'destination')
-  );
 </script>
 
-{#if addToCartStore}
-  <Sheet
-    store={addToCartStore}
-  >
-    <AddToCartContent store={addToCartStore} />
+{#snippet addToCartView({ store, surface }: PresentationFeatureViewProps<AddToCartState, AddToCartAction>)}
+  <Sheet {store} ariaLabel="Add to cart">
+    <form use:surface>
+      {#if store.state}
+        <AddToCartContent state={store.state} onAction={action => store.dispatch(action)} />
+      {/if}
+      <button type="button" onclick={() => store.dismiss()}>Cancel</button>
+    </form>
   </Sheet>
-{/if}
+{/snippet}
 ```
+
+Legacy `scopeToDestination`, `scopeToOptional`, and fluent `scopeTo` remain useful for
+state reads and action dispatch outside presentation rendering. Their stores do not
+carry dismissal authority and must not be passed to dismissing components.
+
+`ifLetPresentation` remains supported at a reducer-only legacy boundary. Such a
+boundary handles `PresentationAction.dismiss` itself because no managed slot owns it.
+Do not duplicate that manual branch after adopting `ManagedIntegrationBuilder`.
 
 ---
 
@@ -348,296 +250,182 @@ const wizardReducer: Reducer<WizardState, WizardAction, WizardDeps> = (state, ac
   let { store } = $props();
 </script>
 
-<NavigationStack {store} stack={store.state.stack} onBack={() => store.dispatch({ type: 'popped' })}>
-  {#snippet children({ currentScreen: screen })}
-    {#if screen.type === 'step1'}
-      <Step1Screen state={screen.data} store={store} />
-    {:else if screen.type === 'step2'}
-      <Step2Screen state={screen.data} store={store} />
-    {:else if screen.type === 'step3'}
-      <Step3Screen state={screen.data} store={store} />
-    {/if}
-  {/snippet}
-</NavigationStack>
+{#if store.state}
+  <NavigationStack {store} stack={store.state.stack} onBack={() => store.dispatch({ type: 'popped' })}>
+    {#snippet children({ currentScreen })}
+      {@const screen = currentScreen as WizardScreen | undefined}
+      {#if screen?.type === 'step1'}
+        <Step1Screen state={screen.data} store={store} />
+      {:else if screen?.type === 'step2'}
+        <Step2Screen state={screen.data} store={store} />
+      {:else if screen?.type === 'step3'}
+        <Step3Screen state={screen.data} store={store} />
+      {/if}
+    {/snippet}
+  </NavigationStack>
+{/if}
 ```
 
 ---
 
 ## Navigation Components
 
-### Modal
-
-Full-screen overlay dialog:
+The six dismissing families require a framework-minted `PresentationView` from a
+managed optional slot or destination case. In a `defineViews` content snippet, pass
+the supplied `store` directly and attach `surface` to the presentation boundary.
 
 ```svelte
-<Modal
-  store={scopedStore}
->
-  <ProductDetails store={store} />
-</Modal>
+<script lang="ts">
+  import type { PresentationFeatureViewProps } from '@composable-svelte/core/application';
+  import { Modal } from '@composable-svelte/core/navigation-components';
+</script>
+
+{#snippet modalView({ store, surface }: PresentationFeatureViewProps<State, Action>)}
+  <Modal {store} ariaLabel="Details">
+    <section use:surface>...</section>
+  </Modal>
+{/snippet}
 ```
 
-**Styling**:
-- Mobile: Full viewport
-- Desktop: Centered, max-width 600px
-- Backdrop: Dark overlay
-- Focus: Trapped, returns on close
-
-### Sheet
-
-Bottom drawer (mobile-first):
-
 ```svelte
-<Sheet
-  store={scopedStore}
->
-  <AddToCartForm store={store} />
-</Sheet>
+<script lang="ts">
+  import type { PresentationFeatureViewProps } from '@composable-svelte/core/application';
+  import { Alert } from '@composable-svelte/core/navigation-components';
+</script>
+
+{#snippet alertView({ store, surface }: PresentationFeatureViewProps<State, Action>)}
+  <Alert {store} ariaLabel="Confirm">
+    <section use:surface>...</section>
+  </Alert>
+{/snippet}
 ```
 
-**Styling**:
-- Mobile: Slides from bottom, 60vh default
-- Desktop: Same as mobile (mobile-first)
-- Swipe-to-dismiss: Supported
-- Focus: Trapped, returns on close
-
-### Alert
-
-Confirmation dialog:
-
 ```svelte
-<Alert store={scopedStore}>
-  {#snippet children({ store })}
-    <h2 class="text-lg font-semibold">Delete Product?</h2>
-    <p class="text-sm text-muted-foreground">This action cannot be undone.</p>
-    <div class="flex justify-end gap-2">
-      <Button onclick={() => store.dispatch({ type: 'cancelButtonTapped' })}>Cancel</Button>
-      <Button variant="destructive" onclick={() => store.dispatch({ type: 'confirmButtonTapped' })}>
-        Delete
-      </Button>
-    </div>
-  {/snippet}
-</Alert>
+<script lang="ts">
+  import type { PresentationFeatureViewProps } from '@composable-svelte/core/application';
+  import { Sheet } from '@composable-svelte/core/navigation-components';
+</script>
+
+{#snippet sheetView({ store, surface }: PresentationFeatureViewProps<State, Action>)}
+  <Sheet {store} side="bottom">
+    <section use:surface>...</section>
+  </Sheet>
+{/snippet}
 ```
 
-**Styling**:
-- Centered dialog
-- Max-width 400px
-- Action buttons at bottom
-- Focus: Trapped, returns on close
-
-### Drawer
-
-Side panel (left/right):
-
 ```svelte
-<Drawer
-  store={scopedStore}
-  side="right"
->
-  <FilterOptions store={store} />
-</Drawer>
+<script lang="ts">
+  import type { PresentationFeatureViewProps } from '@composable-svelte/core/application';
+  import { Drawer } from '@composable-svelte/core/navigation-components';
+</script>
+
+{#snippet drawerView({ store, surface }: PresentationFeatureViewProps<State, Action>)}
+  <Drawer {store} side="right">
+    <section use:surface>...</section>
+  </Drawer>
+{/snippet}
 ```
 
-**Styling**:
-- Default width: 320px
-- Sides: left, right
-- Backdrop: Dark overlay
-- Focus: Trapped, returns on close
-
-### Popover
-
-Contextual menu/tooltip:
-
 ```svelte
-<!-- You own the trigger; Popover positions itself with `style`. -->
-<div class="relative">
-  <Button onclick={() => store.dispatch({ type: 'infoButtonTapped' })}>Info</Button>
+<script lang="ts">
+  import type { PresentationFeatureViewProps } from '@composable-svelte/core/application';
+  import { Popover } from '@composable-svelte/core/navigation-components';
+</script>
 
-  <Popover store={scopedStore} style="top: 100%; left: 0;">
-    {#snippet children()}
-      <ProductInfo product={product} />
-    {/snippet}
+{#snippet popoverView({ store, surface }: PresentationFeatureViewProps<State, Action>)}
+  <Popover {store} style="top: 100%; left: 0">
+    <section use:surface>...</section>
   </Popover>
-</div>
+{/snippet}
 ```
-
-**Styling**:
-- No backdrop
-- Positioned relative to trigger
-- Auto-placement to stay in viewport
-- Focus: Trapped, click-outside closes
-
-### Sidebar
-
-Persistent navigation (desktop):
 
 ```svelte
-<Sidebar
-  expanded={state.sidebarExpanded}
-  onToggle={() => dispatch({ type: 'sidebarToggled' })}
->
-  {#snippet content()}
-    <nav>
-      <a href="/dashboard">Dashboard</a>
-      <a href="/products">Products</a>
-      <a href="/orders">Orders</a>
-    </nav>
-  {/snippet}
-</Sidebar>
+<script lang="ts">
+  import type { PresentationFeatureViewProps } from '@composable-svelte/core/application';
+  import { Sidebar } from '@composable-svelte/core/navigation-components';
+</script>
+
+{#snippet sidebarView({ store, surface }: PresentationFeatureViewProps<State, Action>)}
+  <Sidebar {store} side="left" width="240px">
+    <nav use:surface>...</nav>
+  </Sidebar>
+{/snippet}
 ```
 
-**Styling**:
-- Expanded: 240px
-- Collapsed: 64px (icon-only)
-- Persistent: Not modal
-- Focus: Normal tab order
+- Modal, Alert, Sheet, and Drawer are modal focus boundaries and render a backdrop.
+- Popover has no backdrop and is non-modal, while still owning Escape and outside-pointer dismissal.
+- Sidebar is a dismissing managed presentation; it is not the old boolean-expanded widget.
+- Each family also has a `*Primitive` form with the same managed-view authority boundary.
 
-### Tabs
-
-Horizontal tabbed navigation:
+`Tabs`, `NavigationStack`, and `AnimatedNavigationStack` are non-dismissing families.
+They consume a `ChildView`; they do not expose `dismiss()`.
 
 ```svelte
-<Tabs
-  tabs={[
-    { id: 'details', label: 'Details' },
-    { id: 'reviews', label: 'Reviews' },
-    { id: 'specs', label: 'Specifications' }
-  ]}
-  selectedId={state.selectedTab}
-  onSelect={(id) => dispatch({ type: 'tabSelected', tabId: id })}
->
-  {#snippet panel(tabId)}
-    {#if tabId === 'details'}
-      <DetailsPanel />
-    {:else if tabId === 'reviews'}
-      <ReviewsPanel />
-    {:else}
-      <SpecsPanel />
-    {/if}
-  {/snippet}
-</Tabs>
-```
+<script lang="ts">
+  import { NavigationStack } from '@composable-svelte/core/navigation-components';
+</script>
 
-**Styling**:
-- Horizontal tabs at top
-- Underline indicator
-- Keyboard: Arrow keys, Home/End
-- ARIA: tab, tabpanel roles
+{#if store.state}
+  <NavigationStack {store} stack={store.state.stack} onBack={() => store.dispatch({ type: 'popped' })}>
+    {#snippet children({ currentScreen })}
+      {@const screen = currentScreen as Screen | undefined}
+      {#if screen?.type === 'step1'}
+        <Step1 {store} />
+      {/if}
+    {/snippet}
+  </NavigationStack>
+{/if}
+```
 
 ---
 
 ## Best Practices
 
-### 1. Parent Observation Over Child Dismissal
+### Parent observation and child dismissal
 
-**✅ DO**: Parent observes and handles
-
-```typescript
-// Parent reducer
-case 'addToCart': {
-  const [newState, effect] = ifLetPresentation(...)(state, action, deps);
-
-  // Observe completion
-  if (action.action.type === 'presented' &&
-      action.action.action.type === 'addButtonTapped') {
-    return [
-      { ...newState, destination: null }, // Dismiss
-      Effect.batch(
-        effect,
-        Effect.run(async (dispatch) => {
-          // Handle add to cart...
-        })
-      )
-    ];
-  }
-
-  return [newState, effect];
-}
-```
-
-**Avoid for observed actions**: Don't use `deps.dismiss()` for actions the parent needs to react to (like saves). The `dismiss` dependency is fine for simple close/cancel buttons.
+Use ordinary presented child actions when the parent must save data, navigate, or
+start parent-owned work. A close/cancel action may return `deps.dismiss()` when the
+dependency was created with `managedDismissDependency()` and the child does not need
+to send business data to its parent.
 
 ```typescript
-// ❌ WRONG for save actions — parent never sees this
-case 'addButtonTapped':
-  return [state, deps.dismiss()]; // Parent can't observe the save!
+case 'saveButtonTapped':
+  return [state, Effect.run(dispatch => dispatch({ type: 'saved', value: state.value }))];
 
-// ✅ OK for simple close
 case 'cancelButtonTapped':
-  return [state, deps.dismiss()]; // Fine — parent doesn't need to react
+  return [state, deps.dismiss()];
 ```
 
-### 2. Type Annotations for Action Mappers
+`deps.dismiss()` is an effect. Return or batch it. It is accepted only while executing
+through the framework lift for the exact live managed presentation; a stale, copied,
+or raw dispatch cannot mint dismissal authority.
 
-Always annotate the return type of `fromChildAction`:
+### Rendering optional state
 
-```typescript
-// ✅ GOOD: Type annotation ensures proper inference
-ifLetPresentation(
-  (s) => s.destination,
-  (s, d) => ({ ...s, destination: d }),
-  'destination',
-  (childAction): ParentAction => ({  // ← Type annotation
-    type: 'destination',
-    action: { type: 'presented', action: childAction }
-  }),
-  childReducer
-)
-
-// ❌ BAD: No type annotation, inference fails
-ifLetPresentation(
-  (s) => s.destination,
-  (s, d) => ({ ...s, destination: d }),
-  'destination',
-  (childAction) => ({  // ← TypeScript infers `string` for type field
-    type: 'destination',
-    action: { type: 'presented', action: childAction }
-  }),
-  childReducer
-)
-```
-
-### 3. Null Checks for Optional State
-
-Always check for null before rendering:
+Render through the declared application view. `FeatureOutlet` renders nothing when
+the managed slot has no live view. Inside a presentation snippet, `store.state` can
+become `undefined` when the owner retires, so guard reads that require live state.
 
 ```svelte
-<script lang="ts">
-  const scopedStore = $derived(scopeToDestination(store, ['destination'], 'addToCart', 'destination'));
-</script>
-
-{#if scopedStore}
-  <Sheet store={scopedStore}>
-    <AddToCartContent store={scopedStore} />
-  </Sheet>
-{/if}
-```
-
-### 4. Dismissal Is Driven by State
-
-There is no `onOpenChange`. A presented overlay is one whose scoped store is
-non-null, so dismissing means clearing the destination — either from the child
-via `store.dismiss()`, or from the parent reducer.
-
-```svelte
-<Modal store={scopedStore}>
-  {#snippet children({ store })}
-    <Content {store} onClose={() => store.dismiss()} />
+<FeatureViews store={app.store} definition={viewPlan}>
+  {#snippet children(views)}
+    <FeatureOutlet view={views.destination} />
   {/snippet}
-</Modal>
+</FeatureViews>
 ```
 
-### 5. Focus Management
+### Replacement identity
 
-Navigation components automatically manage focus:
+Use a slot policy's `replaceOn` for a business action that replaces a non-null child
+with a new owner. Ordinary child updates retain the owner. Do not infer replacement
+from object inequality and do not reuse a captured view after its owner retires.
 
-- ✅ Focus trap: Tab stays within modal
-- ✅ Focus return: Returns to trigger on close
-- ✅ Auto-focus: First focusable element on open
-- ✅ Escape key: Closes modal
+### Focus and dismissal
 
-**No additional work needed** - built into components!
+The components coordinate initial focus, containment, Escape, outside pointer,
+return focus, portals, and document adoption. Supply actual content boundaries with
+the snippet's `surface` action. Do not add application timers, document listeners, or
+deep-active-element fallbacks to duplicate that coordinator.
 
 ---
 
@@ -677,22 +465,28 @@ type Destination =
   | { type: 'editItem'; state: EditItemState };
 ```
 
-### Store Typing
+### View and Store Typing
+
+An application instance exposes an `ApplicationStore<State, Action>` managed projection.
+The broader `Store<State, Action>` remains the type for a legacy store created directly with
+`createStore`; it is not the type of `app.store`. Managed render declarations receive either
+`FeatureViewProps` or `PresentationFeatureViewProps`; dismissing families require the latter's
+nominal `PresentationView`.
 
 ```typescript
-import type { Store } from '@composable-svelte/core';
+import type {
+  ApplicationStore,
+  PresentationFeatureViewProps,
+  FeatureViewProps
+} from '@composable-svelte/core/application';
 
-// Fully typed store
-const store: Store<AppState, AppAction> = createStore({
-  initialState,
-  reducer: appReducer,
-  dependencies: appDependencies
-});
-
-// Scoped store is also fully typed
-const childStore = scopeToDestination(store, ['destination'], 'addItem', 'destination');
-// Type: Store<AddItemState, AddItemAction> | null
+const root: ApplicationStore<AppState, AppAction> = app.store;
+type DialogProps = PresentationFeatureViewProps<DialogState, DialogAction>;
+type StackProps = FeatureViewProps<WizardState, WizardAction>;
 ```
+
+Legacy scopes return read/dispatch stores. They remain valid for non-presentation code,
+but they are deliberately not assignable to a dismissing component's `store` prop.
 
 ---
 
@@ -700,34 +494,15 @@ const childStore = scopeToDestination(store, ['destination'], 'addItem', 'destin
 
 ### Complete Flow Example
 
-See `examples/product-gallery/` for a comprehensive example demonstrating:
-
-- ✅ All 8 navigation components in real use
-- ✅ Nested navigation (3 levels deep)
-- ✅ Parent observation pattern throughout
-- ✅ 39 tests with 100% pass rate
-- ✅ Full TypeScript type safety
-- ✅ Comprehensive architecture guide
+See `examples/product-gallery/` for a larger application example. When reading older
+example code, keep the authority boundary from this guide: dismissing components take
+managed presentation views, while legacy scopes remain read/dispatch-only.
 
 **Key Files**:
 - `examples/product-gallery/README.md` - Architecture guide
 - `examples/product-gallery/src/app/app.reducer.ts` - Root navigation
 - `examples/product-gallery/src/features/product-detail/` - Nested navigation
 - `examples/product-gallery/tests/app.browser.test.ts` - Integration tests
-
-### Quick Start
-
-```bash
-# Install
-pnpm add @composable-svelte/core
-
-# Run example
-cd examples/product-gallery
-pnpm install
-pnpm dev
-```
-
----
 
 ## Additional Resources
 

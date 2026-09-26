@@ -1,8 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { untrack } from 'svelte';
 	import NavigationStackPrimitive from './primitives/NavigationStackPrimitive.svelte';
-	import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
+	import type { ChildView } from '../navigation/managed-integration.js';
 	import type { PresentationState } from '../navigation/types.js';
 	import type { SpringConfig } from '../animation/spring-config.js';
 	import { cn } from '../utils.js';
@@ -21,7 +20,7 @@
 		/**
 		 * Scoped store for the stack content.
 		 */
-		store: ScopedDestinationStore<State, Action> | null;
+		store: ChildView<State, Action> | undefined;
 
 		/**
 		 * Stack of screen states.
@@ -89,7 +88,7 @@
 			[
 				{
 					visible: boolean;
-					store: ScopedDestinationStore<State, Action> | null;
+					store: ChildView<State, Action> | undefined;
 					currentScreen: State | undefined;
 					canGoBack: boolean;
 					onBack: (() => void) | undefined;
@@ -137,27 +136,16 @@
 	let currentScreenElement: HTMLElement | null = $state(null);
 	let previousScreenElement: HTMLElement | null = $state(null);
 
-	// Track the last animated presentation to prevent duplicate animations
-	// Not $state: the effect below reads and writes this. A reactive guard
-	// re-triggers the effect it lives in (effect_update_depth_exceeded).
-	let lastAnimatedPresentationKey: string | null = null;
-
-	// Helper to create unique key for each presentation change
-	// Include stack length to ensure each push/pop has a unique key
-	function getPresentationKey(p: PresentationState<any>, stackLen: number): string {
-		// `content` exists on every status except `idle`.
-		const contentId = (p.status === 'idle' ? null : p.content?.id) || 'null';
-		return `${p.status}:${contentId}:${stackLen}`;
-	}
-
-	// Freeze ONLY the current screen during dismissal to prevent it from changing mid-animation
-	// Previous screen is always rendered with live state so it appears correct after pop
-	let frozenCurrentScreen: any = $state(null);
-
-	// Track when animation promise completes
-	// Not $state: the effect below reads and writes this. A reactive guard
-	// re-triggers the effect it lives in (effect_update_depth_exceeded).
-	let animationPromiseCompleted = false;
+	// Presentation content is generic: optional business IDs cannot identify a
+	// renderer lifetime. Keep the actual content and mounted layer identities.
+	let lastAnimated: {
+		status: string;
+		content: unknown;
+		depth: number;
+		current: HTMLElement;
+		previous: HTMLElement | null;
+	} | null = null;
+	let frozenCurrentScreen: unknown = $state(null);
 
 	// Track transition direction based on presentation state
 	const isAnimating = $derived(
@@ -171,97 +159,48 @@
 	// ============================================================================
 
 	$effect(() => {
-
-		// Unfreeze current screen when BOTH conditions are met:
-		// 1. Animation promise has completed
-		// 2. Status has returned to 'presented' or 'idle'
-		if (animationPromiseCompleted && (presentation.status === 'presented' || presentation.status === 'idle')) {
-			if (untrack(() => frozenCurrentScreen) !== null) {
-				frozenCurrentScreen = null;
-				animationPromiseCompleted = false; // Reset for next animation
-			}
+		const status = presentation.status;
+		if (status !== 'presenting' && status !== 'dismissing') {
+			lastAnimated = null;
+			frozenCurrentScreen = null;
+			return;
 		}
-
-		// Handle push animations (new screen slides in from right, previous screen slides left)
-		const currentPresentationKey = getPresentationKey(presentation, stack.length);
-		if (
-			presentation.status === 'presenting' &&
-			currentScreenElement &&
-			lastAnimatedPresentationKey !== currentPresentationKey
-		) {
-			lastAnimatedPresentationKey = currentPresentationKey;
-			animationPromiseCompleted = false;
-
-			// Freeze the current screen (new screen being presented) at animation start
-			// Previous screen uses live state (no need to freeze)
-			frozenCurrentScreen = stack[stack.length - 1];
-
-
-			// Animate current screen sliding in from right
-			animateStackPushIn(currentScreenElement, springConfig).then(() => {
-
-				// Clear transforms AND opacity to prevent white screen issues
-				if (currentScreenElement) {
-					currentScreenElement.style.transform = '';
-					currentScreenElement.style.opacity = '';
+		const current = currentScreenElement;
+		const previous = previousScreenElement;
+		if (!current) return;
+		const content = presentation.content;
+		const depth = stack.length;
+		if (lastAnimated?.status === status && lastAnimated.content === content &&
+			lastAnimated.depth === depth && lastAnimated.current === current &&
+			lastAnimated.previous === previous) return;
+		lastAnimated = { status, content, depth, current, previous };
+		frozenCurrentScreen = stack[stack.length - 1];
+		const owner = new AbortController();
+		let completed = false;
+		const incoming = status === 'presenting';
+		const foreground = incoming ? animateStackPushIn : animateStackPopOut;
+		const background = incoming ? animateStackPushOut : animateStackPopIn;
+		Promise.all([
+			foreground(current, springConfig, owner.signal),
+			previous ? background(previous, springConfig, owner.signal) : Promise.resolve()
+		]).then(() => {
+			queueMicrotask(() => {
+				if (owner.signal.aborted) return;
+				current.style.transform = '';
+				current.style.opacity = '';
+				if (previous) {
+					previous.style.transform = '';
+					previous.style.opacity = '';
 				}
-				if (previousScreenElement) {
-					previousScreenElement.style.transform = '';
-					previousScreenElement.style.opacity = '';
-				}
-
-				animationPromiseCompleted = true;
-
-				if (onPresentationComplete) {
-					queueMicrotask(() => onPresentationComplete());
-				}
+				completed = true;
+				if (incoming) onPresentationComplete?.();
+				else onDismissalComplete?.();
 			});
-
-			// Animate previous screen sliding left (if it exists)
-			if (previousScreenElement) {
-				animateStackPushOut(previousScreenElement, springConfig);
-			}
-		}
-
-		// Handle pop animations (current screen slides out to right, previous screen slides in from left)
-		if (
-			presentation.status === 'dismissing' &&
-			currentScreenElement &&
-			lastAnimatedPresentationKey !== currentPresentationKey
-		) {
-
-			lastAnimatedPresentationKey = currentPresentationKey;
-			animationPromiseCompleted = false;
-
-			// Freeze ONLY the current screen (the one being dismissed)
-			// Previous screen uses live state so it appears correct when animation completes
-			frozenCurrentScreen = stack[stack.length - 1];
-
-			// Animate current screen sliding out to right
-			animateStackPopOut(currentScreenElement, springConfig).then(() => {
-
-				// Clear transforms AND opacity to prevent white screen issues
-				if (currentScreenElement) {
-					currentScreenElement.style.transform = '';
-					currentScreenElement.style.opacity = '';
-				}
-				if (previousScreenElement) {
-					previousScreenElement.style.transform = '';
-					previousScreenElement.style.opacity = '';
-				}
-
-				animationPromiseCompleted = true;
-
-				if (onDismissalComplete) {
-					queueMicrotask(() => onDismissalComplete());
-				}
-			});
-
-			// Animate previous screen sliding in from left (if it exists)
-			if (previousScreenElement) {
-				animateStackPopIn(previousScreenElement, springConfig);
-			}
-		}
+		});
+		return () => {
+			owner.abort();
+			if (!completed) lastAnimated = null;
+		};
 	});
 </script>
 

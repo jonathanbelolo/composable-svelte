@@ -17,7 +17,7 @@ import {
 	MalformedSessionError
 } from '../session/http.js';
 import { authErrorFromResponse } from './errors.js';
-import { send } from './transport.js';
+import { send, readResponseJson, isCancellation } from './transport.js';
 
 import type {
 	AccountSnapshot,
@@ -32,6 +32,10 @@ import type {
 	SignupOutcome
 } from '../deps.js';
 import type { SessionSnapshot } from '../subject/types.js';
+
+export interface HttpAuthOptions {
+	fetch?: typeof fetch | undefined;
+}
 
 /**
  * Build the full auth dependencies against `baseUrl` (default: same origin).
@@ -49,15 +53,20 @@ import type { SessionSnapshot } from '../subject/types.js';
  * const session = createSessionStore(deps);
  * ```
  */
-export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
+
+export function createHttpAuthDeps(
+	baseUrl: string = '',
+	options?: HttpAuthOptions
+): AuthDependencies {
 	const base = baseUrl.replace(/\/+$/, '');
 	const url = (path: string): string => `${base}${path}`;
+	const request = (target: string, init: RequestInit) => send(target, init, options?.fetch);
 
 	return {
-		...createHttpSessionDeps(baseUrl),
+		...createHttpSessionDeps(baseUrl, options),
 
 		async login(credentials: LoginCredentials, signal?: AbortSignal): Promise<SessionSnapshot> {
-			const response = await send(url('/auth/password-login'), {
+			const response = await request(url('/auth/password-login'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -73,14 +82,14 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 				// The whole point. The old adapter threw the status in a sentence and
 				// discarded the body; this reads both, so `mfa_required` arrives with
 				// its challenge and a rate limit arrives with its delay.
-				throw await authErrorFromResponse(response, 'Sign-in failed.');
+				throw await authErrorFromResponse(response, 'Sign-in failed.', signal);
 			}
 
-			return decodeSessionSnapshot(response);
+			return decodeSessionSnapshot(response, signal);
 		},
 
 		async signup(credentials: SignupCredentials, signal?: AbortSignal): Promise<SignupOutcome> {
-			const response = await send(url('/auth/signup'), {
+			const response = await request(url('/auth/signup'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -89,7 +98,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			});
 
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'Could not create the account.');
+				throw await authErrorFromResponse(response, 'Could not create the account.', signal);
 			}
 
 			// `202 Accepted` is the conventional "we have taken it, but it is not
@@ -104,11 +113,11 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			// Anything else must be a session, and `decodeSessionSnapshot` refuses
 			// to guess — a 200 carrying "check your email" throws
 			// `MalformedSessionError` rather than fabricating a signed-in user.
-			return { kind: 'session', session: await decodeSessionSnapshot(response) };
+			return { kind: 'session', session: await decodeSessionSnapshot(response, signal) };
 		},
 
 		async verifyEmail(token: string, signal?: AbortSignal): Promise<SessionSnapshot | null> {
-			const response = await send(url('/auth/verify-email'), {
+			const response = await request(url('/auth/verify-email'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -117,7 +126,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			});
 
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'That link is no longer valid.');
+				throw await authErrorFromResponse(response, 'That link is no longer valid.', signal);
 			}
 
 			// `204 No Content` is "verified, but not signed in" — the address is
@@ -125,11 +134,11 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			// than the body, for the reason `signup` documents.
 			if (response.status === 204) return null;
 
-			return decodeSessionSnapshot(response);
+			return decodeSessionSnapshot(response, signal);
 		},
 
 		async requestPasswordReset(email: string, signal?: AbortSignal): Promise<void> {
-			const response = await send(url('/auth/request-password-reset'), {
+			const response = await request(url('/auth/request-password-reset'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -142,7 +151,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			// that answers 404 is misconfigured and should be told so loudly rather
 			// than have the client paper over it.
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'Could not send a reset link.');
+				throw await authErrorFromResponse(response, 'Could not send a reset link.', signal);
 			}
 		},
 
@@ -151,7 +160,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			password: string,
 			signal?: AbortSignal
 		): Promise<SessionSnapshot | null> {
-			const response = await send(url('/auth/reset-password'), {
+			const response = await request(url('/auth/reset-password'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -160,14 +169,14 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			});
 
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'That reset link is no longer valid.');
+				throw await authErrorFromResponse(response, 'That reset link is no longer valid.', signal);
 			}
 
 			// `204` is "changed, now sign in" — read the status, not the body, for
 			// the reason `verifyEmail` documents.
 			if (response.status === 204) return null;
 
-			return decodeSessionSnapshot(response);
+			return decodeSessionSnapshot(response, signal);
 		},
 
 		async verifyMfaChallenge(
@@ -176,7 +185,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			method: MfaMethod,
 			signal?: AbortSignal
 		): Promise<SessionSnapshot> {
-			const response = await send(url('/auth/mfa/verify'), {
+			const response = await request(url('/auth/mfa/verify'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -185,31 +194,31 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			});
 
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'That code was not accepted.');
+				throw await authErrorFromResponse(response, 'That code was not accepted.', signal);
 			}
 
 			// A session, always. There is no 204 branch here: a second factor that
 			// verified without producing a session would leave the user having
 			// proved who they are and still signed out.
-			return decodeSessionSnapshot(response);
+			return decodeSessionSnapshot(response, signal);
 		},
 
 		async beginMfaEnrolment(signal?: AbortSignal): Promise<MfaEnrolmentStart> {
-			const response = await send(url('/auth/mfa/enrol'), {
+			const response = await request(url('/auth/mfa/enrol'), {
 				method: 'POST',
 				credentials: 'include',
 				...(signal !== undefined && { signal })
 			});
 
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'Could not start setting up authentication.');
+				throw await authErrorFromResponse(response, 'Could not start setting up authentication.', signal);
 			}
 
-			return decodeEnrolmentStart(response);
+			return decodeEnrolmentStart(response, signal);
 		},
 
 		async requestMagicLink(email: string, signal?: AbortSignal): Promise<void> {
-			const response = await send(url('/auth/magic-link'), {
+			const response = await request(url('/auth/magic-link'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -218,12 +227,12 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			});
 
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'Could not send that link.');
+				throw await authErrorFromResponse(response, 'Could not send that link.', signal);
 			}
 		},
 
 		async signInWithMagicLink(token: string, signal?: AbortSignal): Promise<SessionSnapshot> {
-			const response = await send(url('/auth/magic-link/signin'), {
+			const response = await request(url('/auth/magic-link/signin'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -235,34 +244,34 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			});
 
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'That sign-in link is no longer valid.');
+				throw await authErrorFromResponse(response, 'That sign-in link is no longer valid.', signal);
 			}
 
-			return decodeSessionSnapshot(response);
+			return decodeSessionSnapshot(response, signal);
 		},
 
 		async fetchAccount(signal?: AbortSignal): Promise<AccountSnapshot> {
 			// The second read in this adapter, and the second non-POST. `GET`
 			// because it is a read: the settings surface asks this on entry and
 			// again after anything changes.
-			const response = await send(url('/auth/account'), {
+			const response = await request(url('/auth/account'), {
 				method: 'GET',
 				credentials: 'include',
 				...(signal !== undefined && { signal })
 			});
 
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'Could not load your account.');
+				throw await authErrorFromResponse(response, 'Could not load your account.', signal);
 			}
 
-			return decodeAccountSnapshot(response);
+			return decodeAccountSnapshot(response, signal);
 		},
 
 		async changePassword(
 			newPassword: string,
 			signal?: AbortSignal
 		): Promise<SessionSnapshot | null> {
-			const response = await send(url('/auth/account/password'), {
+			const response = await request(url('/auth/account/password'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -271,18 +280,18 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			});
 
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'Could not change your password.');
+				throw await authErrorFromResponse(response, 'Could not change your password.', signal);
 			}
 
 			// `204 No Content` is "changed, session untouched" — the same contract
 			// `resetPassword` uses. Read the status rather than sniffing the body.
 			if (response.status === 204) return null;
 
-			return decodeSessionSnapshot(response);
+			return decodeSessionSnapshot(response, signal);
 		},
 
 		async requestEmailChange(newEmail: string, signal?: AbortSignal): Promise<void> {
-			const response = await send(url('/auth/account/email'), {
+			const response = await request(url('/auth/account/email'), {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
 				credentials: 'include',
@@ -291,26 +300,26 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			});
 
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'Could not change your email address.');
+				throw await authErrorFromResponse(response, 'Could not change your email address.', signal);
 			}
 		},
 
 		async resendEmailChange(signal?: AbortSignal): Promise<void> {
 			// No body: the pending address lives on the session, so there is
 			// nothing for the client to send back.
-			const response = await send(url('/auth/account/email/resend'), {
+			const response = await request(url('/auth/account/email/resend'), {
 				method: 'POST',
 				credentials: 'include',
 				...(signal !== undefined && { signal })
 			});
 
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'Could not send that again.');
+				throw await authErrorFromResponse(response, 'Could not send that again.', signal);
 			}
 		},
 
 		async confirmEmailChange(token: string, signal?: AbortSignal): Promise<string> {
-			const response = await send(url('/auth/account/email/confirm'), {
+			const response = await request(url('/auth/account/email/confirm'), {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
 				credentials: 'include',
@@ -319,24 +328,24 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			});
 
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'That link is no longer valid.');
+				throw await authErrorFromResponse(response, 'That link is no longer valid.', signal);
 			}
 
-			return decodeChangedEmail(response);
+			return decodeChangedEmail(response, signal);
 		},
 
 		async deleteAccount(signal?: AbortSignal): Promise<void> {
 			// DELETE, the only one in this adapter. A cross-site `<form>` cannot
 			// issue it and it forces a CORS preflight, so the most destructive
 			// endpoint here is also the hardest to trigger by navigation.
-			const response = await send(url('/auth/account'), {
+			const response = await request(url('/auth/account'), {
 				method: 'DELETE',
 				credentials: 'include',
 				...(signal !== undefined && { signal })
 			});
 
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'Could not delete your account.');
+				throw await authErrorFromResponse(response, 'Could not delete your account.', signal);
 			}
 		},
 
@@ -346,46 +355,46 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			// cross-site POST entirely, but *sends* it on a cross-site top-level
 			// GET navigation — so a GET version could be extended by luring
 			// someone to click a link.
-			const response = await send(url('/auth/session/refresh'), {
+			const response = await request(url('/auth/session/refresh'), {
 				method: 'POST',
 				credentials: 'include',
 				...(signal !== undefined && { signal })
 			});
 
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'Could not extend your session.');
+				throw await authErrorFromResponse(response, 'Could not extend your session.', signal);
 			}
 
-			return decodeSessionLifetime(response);
+			return decodeSessionLifetime(response, signal);
 		},
 
 		async disableMfa(signal?: AbortSignal): Promise<void> {
-			const response = await send(url('/auth/mfa/disable'), {
+			const response = await request(url('/auth/mfa/disable'), {
 				method: 'POST',
 				credentials: 'include',
 				...(signal !== undefined && { signal })
 			});
 
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'Could not turn that off.');
+				throw await authErrorFromResponse(response, 'Could not turn that off.', signal);
 			}
 		},
 
 		async regenerateRecoveryCodes(signal?: AbortSignal): Promise<MfaEnrolmentResult> {
-			const response = await send(url('/auth/mfa/recovery-codes'), {
+			const response = await request(url('/auth/mfa/recovery-codes'), {
 				method: 'POST',
 				credentials: 'include',
 				...(signal !== undefined && { signal })
 			});
 
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'Could not issue new codes.');
+				throw await authErrorFromResponse(response, 'Could not issue new codes.', signal);
 			}
 
 			// The same decoder enrolment uses, which refuses an empty array: a
 			// surface that showed none would tell the user they were finished when
 			// they were not.
-			return decodeEnrolmentResult(response);
+			return decodeEnrolmentResult(response, signal);
 		},
 
 		async linkOAuthProvider(
@@ -394,7 +403,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			state: string,
 			signal?: AbortSignal
 		): Promise<void> {
-			const response = await send(url('/auth/oauth/link'), {
+			const response = await request(url('/auth/oauth/link'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -403,7 +412,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			});
 
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'Could not link that account.');
+				throw await authErrorFromResponse(response, 'Could not link that account.', signal);
 			}
 			// Nothing is decoded, deliberately. A link that returned a session
 			// would be a second sign-in nobody asked for, and reading one here
@@ -411,7 +420,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 		},
 
 		async unlinkOAuthProvider(provider: string, signal?: AbortSignal): Promise<void> {
-			const response = await send(url('/auth/oauth/unlink'), {
+			const response = await request(url('/auth/oauth/unlink'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -421,12 +430,12 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			});
 
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'Could not unlink that account.');
+				throw await authErrorFromResponse(response, 'Could not unlink that account.', signal);
 			}
 		},
 
 		async beginOAuth(provider: string, signal?: AbortSignal): Promise<OAuthStart> {
-			const response = await send(url('/auth/oauth/begin'), {
+			const response = await request(url('/auth/oauth/begin'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -438,10 +447,10 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			});
 
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'Could not start that sign-in.');
+				throw await authErrorFromResponse(response, 'Could not start that sign-in.', signal);
 			}
 
-			return decodeOAuthStart(response);
+			return decodeOAuthStart(response, signal);
 		},
 
 		async completeOAuth(
@@ -450,7 +459,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			state: string,
 			signal?: AbortSignal
 		): Promise<SessionSnapshot> {
-			const response = await send(url('/auth/oauth/complete'), {
+			const response = await request(url('/auth/oauth/complete'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -462,10 +471,10 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			});
 
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'Could not finish that sign-in.');
+				throw await authErrorFromResponse(response, 'Could not finish that sign-in.', signal);
 			}
 
-			return decodeSessionSnapshot(response);
+			return decodeSessionSnapshot(response, signal);
 		},
 
 		async confirmMfaEnrolment(
@@ -473,7 +482,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			code: string,
 			signal?: AbortSignal
 		): Promise<MfaEnrolmentResult> {
-			const response = await send(url('/auth/mfa/enrol/confirm'), {
+			const response = await request(url('/auth/mfa/enrol/confirm'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -482,14 +491,14 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			});
 
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'That code was not accepted.');
+				throw await authErrorFromResponse(response, 'That code was not accepted.', signal);
 			}
 
-			return decodeEnrolmentResult(response);
+			return decodeEnrolmentResult(response, signal);
 		},
 
 		async resendVerification(email: string, signal?: AbortSignal): Promise<void> {
-			const response = await send(url('/auth/resend-verification'), {
+			const response = await request(url('/auth/resend-verification'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -498,7 +507,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			});
 
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'Could not send another email.');
+				throw await authErrorFromResponse(response, 'Could not send another email.', signal);
 			}
 		}
 	};
@@ -537,8 +546,8 @@ export { authErrorFromResponse } from './errors.js';
  * and one that defaulted `mfaEnabled` would tell someone their account is less
  * protected than it is — both are worse than an error.
  */
-async function decodeAccountSnapshot(response: Response): Promise<AccountSnapshot> {
-	const payload = await readJson(response);
+async function decodeAccountSnapshot(response: Response, signal?: AbortSignal): Promise<AccountSnapshot> {
+	const payload = await readJson(response, signal);
 
 	const email = payload['email'];
 	const emailVerified = payload['email_verified'];
@@ -588,8 +597,8 @@ async function decodeAccountSnapshot(response: Response): Promise<AccountSnapsho
  * Refuses rather than guesses, like every decoder here: a confirmation page has
  * no other source for what it just changed to.
  */
-async function decodeChangedEmail(response: Response): Promise<string> {
-	const payload = await readJson(response);
+async function decodeChangedEmail(response: Response, signal?: AbortSignal): Promise<string> {
+	const payload = await readJson(response, signal);
 	const email = (payload as Record<string, unknown>)['email'];
 
 	if (typeof email !== 'string') {
@@ -606,12 +615,12 @@ async function decodeChangedEmail(response: Response): Promise<string> {
  * which is a legitimate answer rather than a malformed one — the client simply
  * has nothing to schedule against and falls back to reacting to a 401.
  */
-async function decodeSessionLifetime(response: Response): Promise<SessionLifetime> {
+async function decodeSessionLifetime(response: Response, signal?: AbortSignal): Promise<SessionLifetime> {
 	if (response.status === 204) {
 		return { expiresAt: null };
 	}
 
-	const payload = await readJson(response);
+	const payload = await readJson(response, signal);
 	const expiresAt = (payload as Record<string, unknown>)['expires_at'];
 
 	if (expiresAt !== undefined && expiresAt !== null && typeof expiresAt !== 'string') {
@@ -621,8 +630,8 @@ async function decodeSessionLifetime(response: Response): Promise<SessionLifetim
 	return { expiresAt: (expiresAt as string | null | undefined) ?? null };
 }
 
-async function decodeOAuthStart(response: Response): Promise<OAuthStart> {
-	const payload = await readJson(response);
+async function decodeOAuthStart(response: Response, signal?: AbortSignal): Promise<OAuthStart> {
+	const payload = await readJson(response, signal);
 
 	const authorizeUrl = payload['authorize_url'];
 	const state = payload['state'];
@@ -648,8 +657,8 @@ async function decodeOAuthStart(response: Response): Promise<OAuthStart> {
 	return { authorizeUrl, state };
 }
 
-async function decodeEnrolmentStart(response: Response): Promise<MfaEnrolmentStart> {
-	const payload = await readJson(response);
+async function decodeEnrolmentStart(response: Response, signal?: AbortSignal): Promise<MfaEnrolmentStart> {
+	const payload = await readJson(response, signal);
 
 	const enrolmentId = payload['enrolment_id'];
 	const secret = payload['secret'];
@@ -671,8 +680,8 @@ async function decodeEnrolmentStart(response: Response): Promise<MfaEnrolmentSta
  * only way back in after a lost device, and a surface that showed none would
  * tell the user they were finished when they were not.
  */
-async function decodeEnrolmentResult(response: Response): Promise<MfaEnrolmentResult> {
-	const payload = await readJson(response);
+async function decodeEnrolmentResult(response: Response, signal?: AbortSignal): Promise<MfaEnrolmentResult> {
+	const payload = await readJson(response, signal);
 	const codes = payload['recovery_codes'];
 
 	if (!Array.isArray(codes) || codes.some((code) => typeof code !== 'string')) {
@@ -685,11 +694,12 @@ async function decodeEnrolmentResult(response: Response): Promise<MfaEnrolmentRe
 	return { recoveryCodes: codes as readonly string[] };
 }
 
-async function readJson(response: Response): Promise<Record<string, unknown>> {
+async function readJson(response: Response, signal?: AbortSignal): Promise<Record<string, unknown>> {
 	let payload: unknown;
 	try {
-		payload = await response.json();
-	} catch {
+		payload = await readResponseJson(response, signal);
+	} catch (error) {
+		if (isCancellation(error, signal) || !(error instanceof SyntaxError)) throw error;
 		throw new MalformedSessionError('body is not JSON');
 	}
 	if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {

@@ -5,7 +5,85 @@ All notable changes to `@composable-svelte/core` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.13.1] - 2026-09-26
+
+### Added
+
+- Additive owner-action seam: exports `observeChildActions` and `isManagedChildView` from `@composable-svelte/core/application` for managed companion view action observation.
+
+### Changed
+
+- Starter pinned to core and architecture checker 0.13.1 (`--expected-core-version 0.13.1`); its Svelte pin stays 5.57.0.
+- Guidance names the coordinated companion releases (auth, maps, graphics and charts 0.3.0; code, media and chat 0.5.0), which declare `@composable-svelte/core ^0.13.1`. Applications that include `code` need Svelte 5.30 or newer.
+
+### Fixed
+
+- A `ManagedComposition` nests under a parent whose dependencies extend its own: `ManagedIntegrationBuilder.with` and `.forEach` accept a child composition such as `createAuthFeature().composition` when the application's dependency type adds its own services. Previously the composition's dependency type was invariant and this failed with TS2769. A parent that lacks a dependency the child requires, a child that needs more than its parent supplies, and a store built without the parent's extra services are still rejected. Type-only: the managed reduction seam and `ManagedComposition.reduce` accept any dependency object that extends the composition's own; emitted JavaScript is unchanged.
+
+### Notes
+
+- Core's Svelte peer minimum remains the verified `^5.20.0`.
+
+## [0.13.0] - 2026-09-24
+
+### Added
+
+- Upgrade 1 stable release of managed composition, owner-bound views, routing, presentation and motion APIs introduced in the 0.13 prereleases.
+- Bundled agent authoring patterns, executable examples and owned-work testing guidance covering explicit ownership, request freshness, save acceptance and shared policies.
+- Starter pinned to core and architecture checker 0.13.0, with direct agent guidance entry points.
+
+### Fixed
+
+- Actionable TestStore diagnostics for unfinished owned work and unmatched received actions.
+
+### Migration
+
+- Includes the breaking presentation and managed-view changes listed under 0.13.0-next.0. Read `docs/prerelease.md` before upgrading from 0.12. Runtime companion releases remain separately qualified.
+
+## [0.13.0-next.1] - 2026-09-22
+
+### Added
+
+- Concise application-authoring contract and paired development-only architecture
+  checker guidance in the packaged consumer starter. Checks cover five bounded
+  rule families and require independent architectural review.
+
+### Fixed
+
+- Harden managed entrance interaction and presentation completion handling.
+- Clarify Modal layout and animation ownership for custom presentation styles.
+
+## [0.13.0-next.0] - 2026-09-21
+
+Core-only prerelease for the `next` channel; adoption of this candidate does not
+imply compatibility with the currently published companion packages. See
+[prerelease scope and migration](./docs/prerelease.md).
+
+### Added
+
+- Managed application composition and typed feature views with owner-bound dispatch,
+  presentation dismissal, effect cancellation and resource cleanup.
+- Public `MotionElement`, `useMotion` and `useMotionGroup` for authored motion recipes,
+  including reduced-motion endpoints and managed playback lifetimes. Automatic
+  presentation animation defaults remain outside this prerelease.
+- Opt-in `dismissal: 'deferred'` for optional and destination slots. Dismissal requests
+  retain the current feature through an explicit exit; a distinct completion action
+  sent through its captured view lets the parent remove it safely.
+
+### Changed
+
+- **Breaking:** presentation components require genuine framework-bound presentation
+  views. Raw dismiss factories and `DestinationRouter` are retired; use managed
+  dismissal and typed `defineViews`/`FeatureViews`/`FeatureOutlet` composition.
+- Publish consumer guidance for the supported core and motion paths, with installed
+  package checks for public imports, examples, SSR, cancellation and browser behavior.
+
+### Fixed
+
+- Harden effect execution and stale-owner rejection, presentation focus and dismissal
+  coordination, and motion cleanup under replacement and teardown.
+- Preserve exact current feature state during deferred exits and prevent repeated
+  dismissal requests from being interpreted as animation completion.
 
 ## [0.12.2] - 2026-09-18
 

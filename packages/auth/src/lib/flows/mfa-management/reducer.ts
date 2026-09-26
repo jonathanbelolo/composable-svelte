@@ -24,7 +24,7 @@ const DISABLE_EFFECT_ID = 'auth/flows/mfa-management/disable';
 const REGENERATE_EFFECT_ID = 'auth/flows/mfa-management/regenerate';
 
 export function createInitialMfaManagementState(): MfaManagementState {
-	return { status: 'idle', recoveryCodes: null, error: null, operation: null };
+	return { status: 'idle', recoveryCodes: null, error: null, operation: null, settled: null };
 }
 
 /** Whether an operation may start. See the note at the top about the shared guard. */
@@ -32,7 +32,19 @@ function isBusy(state: MfaManagementState): boolean {
 	return state.status === 'disabling' || state.status === 'regenerating';
 }
 
+/**
+ * `settled` lasts one reduction: cleared before every action, and set again
+ * only by the arm that accepts a result. Identical state when it was already
+ * `null`, so an action that changes nothing still returns the same object.
+ */
 export const mfaManagementReducer: Reducer<
+	MfaManagementState,
+	MfaManagementAction,
+	MfaManagementDependencies
+> = (state, action, deps) =>
+	reduceManagement(state.settled === null ? state : { ...state, settled: null }, action, deps);
+
+const reduceManagement: Reducer<
 	MfaManagementState,
 	MfaManagementAction,
 	MfaManagementDependencies
@@ -69,8 +81,12 @@ export const mfaManagementReducer: Reducer<
 		}
 
 		case 'disableSucceeded': {
+			// Results land only on the operation in flight. A refused result keeps
+			// the identical state, so a managed parent reading `mfaOutcome` is never
+			// told about an operation this owner was not running.
+			if (state.status !== 'disabling') return [state, Effect.none()];
 			return [
-				{ ...state, status: 'disabled', recoveryCodes: null, error: null, operation: null },
+				{ ...state, status: 'disabled', recoveryCodes: null, error: null, operation: null, settled: 'disable' },
 				Effect.none()
 			];
 		}
@@ -79,7 +95,11 @@ export const mfaManagementReducer: Reducer<
 			// Back to `idle`, so it can be tried again — including after the user
 			// satisfies a `reauthentication_required` demand, which is the commonest
 			// reason this arm is reached.
-			return [{ ...state, status: 'idle', error: action.error, operation: 'disable' }, Effect.none()];
+			if (state.status !== 'disabling') return [state, Effect.none()];
+			return [
+				{ ...state, status: 'idle', error: action.error, operation: 'disable', settled: 'disable' },
+				Effect.none()
+			];
 		}
 
 		case 'regenerateRequested': {
@@ -113,21 +133,24 @@ export const mfaManagementReducer: Reducer<
 		}
 
 		case 'regenerateSucceeded': {
+			if (state.status !== 'regenerating') return [state, Effect.none()];
 			return [
 				{
 					...state,
 					status: 'idle',
 					recoveryCodes: action.recoveryCodes,
 					error: null,
-					operation: null
+					operation: null,
+					settled: 'regenerate'
 				},
 				Effect.none()
 			];
 		}
 
 		case 'regenerateFailed': {
+			if (state.status !== 'regenerating') return [state, Effect.none()];
 			return [
-				{ ...state, status: 'idle', error: action.error, operation: 'regenerate' },
+				{ ...state, status: 'idle', error: action.error, operation: 'regenerate', settled: 'regenerate' },
 				Effect.none()
 			];
 		}

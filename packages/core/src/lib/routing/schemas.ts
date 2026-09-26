@@ -398,6 +398,12 @@ export function literal<T extends string | number | boolean>(literal: T): Schema
 
 			if (typeof literal === 'number') {
 				// Number literal
+				if (
+					(typeof str !== 'number' && typeof str !== 'string') ||
+					(typeof str === 'string' && str.trim() === '')
+				) {
+					throw new Error(`Value must be ${literal}`);
+				}
 				parsed = Number(str);
 			} else if (typeof literal === 'boolean') {
 				// Boolean literal - handle string to boolean conversion

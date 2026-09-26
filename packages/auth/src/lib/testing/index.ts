@@ -604,8 +604,13 @@ export function createMockAuthDeps(options: MockAuthOptions = {}): AuthDependenc
 			// The provider is carried in the URL so a demo can see which button it
 			// pressed, and so a test asserting the round trip has something to
 			// distinguish two starts by.
+			const isAbsolute = /^https?:\/\//i.test(oauthAuthorizeUrl);
+			const url = new URL(oauthAuthorizeUrl, 'https://placeholder.invalid');
+			url.searchParams.set('provider', provider);
+			url.searchParams.set('state', oauthState);
+
 			return {
-				authorizeUrl: `${oauthAuthorizeUrl}&provider=${encodeURIComponent(provider)}&state=${encodeURIComponent(oauthState)}`,
+				authorizeUrl: isAbsolute ? url.toString() : `${url.pathname}${url.search}${url.hash}`,
 				state: oauthState
 			};
 		},

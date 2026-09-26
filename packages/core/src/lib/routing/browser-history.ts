@@ -64,9 +64,9 @@ export interface BrowserHistoryConfig<State, Action, Dest> {
 	 *
 	 * @param destination - Parsed destination state, or null for root
 	 * @param query - Parsed query parameters (if parseQuery provided)
-	 * @returns Action to dispatch, or null to skip
+	 * @returns Action to dispatch, or null/undefined to skip
 	 */
-	destinationToAction: (destination: Dest | null, query?: any) => Action | null;
+	destinationToAction: (destination: Dest | null, query?: any) => Action | null | undefined;
 }
 
 /**
@@ -117,43 +117,11 @@ export function syncBrowserHistory<State, Action, Dest>(
 	store: Store<State, Action>,
 	config: BrowserHistoryConfig<State, Action, Dest>
 ): () => void {
-	// Track the last pushState timestamp to detect programmatic navigation
-	let lastPushStateTime = 0;
-	const PUSHSTATE_DEBOUNCE_MS = 50; // Time window to ignore popstate after pushState
+	if (typeof window === 'undefined') return () => {};
 
-	// Intercept history.pushState to track when we programmatically navigate
-	const originalPushState = history.pushState.bind(history);
-	const originalReplaceState = history.replaceState.bind(history);
-
-	history.pushState = function (state: any, title: string, url?: string | URL | null) {
-		if (state?.composableSvelteSync) {
-			lastPushStateTime = Date.now();
-		}
-		return originalPushState(state, title, url);
-	};
-
-	history.replaceState = function (state: any, title: string, url?: string | URL | null) {
-		if (state?.composableSvelteSync) {
-			lastPushStateTime = Date.now();
-		}
-		return originalReplaceState(state, title, url);
-	};
-
-	// Listen to browser back/forward
-	const handlePopState = (event: PopStateEvent) => {
-		// Check if this popstate fired immediately after our pushState/replaceState
-		// If so, ignore it to prevent dispatching the same action twice
-		const timeSinceLastPush = Date.now() - lastPushStateTime;
-		if (event.state?.composableSvelteSync && timeSinceLastPush < PUSHSTATE_DEBOUNCE_MS) {
-			// Popstate triggered by our own pushState - ignore it
-			// This prevents infinite loops where:
-			// 1. Action updates state
-			// 2. Effect updates URL (pushState)
-			// 3. popstate fires immediately
-			// 4. We dispatch action again (loop!)
-			return;
-		}
-
+	// Native pushState/replaceState do not emit popstate. Every traversal matters,
+	// including entries written by this library immediately before Back is used.
+	const handlePopState = () => {
 		// Navigation triggered by browser (back/forward button or manual URL change)
 		const path = window.location.pathname;
 		const destination = config.parse(path);
@@ -163,7 +131,7 @@ export function syncBrowserHistory<State, Action, Dest>(
 
 		// Convert destination to action
 		const action = config.destinationToAction(destination, query);
-		if (action) {
+		if (action != null) {
 			store.dispatch(action);
 		}
 	};
@@ -174,8 +142,5 @@ export function syncBrowserHistory<State, Action, Dest>(
 	// Return cleanup function
 	return () => {
 		window.removeEventListener('popstate', handlePopState);
-		// Restore original history methods
-		history.pushState = originalPushState;
-		history.replaceState = originalReplaceState;
 	};
 }

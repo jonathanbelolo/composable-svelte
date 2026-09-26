@@ -1,0 +1,37 @@
+
+> build
+> vite build
+
+vite v7.3.6 building client environment for production...
+transforming...
+✓ 1176 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                             0.43 kB │ gzip:   0.30 kB
+dist/assets/index-Dff8Xjyn.css             11.96 kB │ gzip:   2.31 kB
+dist/assets/index-D2H8w3V_.css             22.80 kB │ gzip:   3.92 kB
+dist/assets/index-BDUebQtH.css             68.96 kB │ gzip:  10.60 kB
+dist/assets/chat_false-DnSfa4Af.js          0.12 kB │ gzip:   0.13 kB
+dist/assets/prism-json-xwnKirkR.js          0.45 kB │ gzip:   0.27 kB
+dist/assets/prism-typescript-Dz_X6HHe.js    1.80 kB │ gzip:   0.88 kB
+dist/assets/prism-yaml-Chm5ZdEN.js          1.94 kB │ gzip:   0.86 kB
+dist/assets/index-D8OSxBA_.js               2.01 kB │ gzip:   1.25 kB
+dist/assets/prism-python-CHZhKcQg.js        2.61 kB │ gzip:   1.38 kB
+dist/assets/prism-rust-C6_Ryya7.js          2.99 kB │ gzip:   1.46 kB
+dist/assets/prism-sql-AgAyy5H_.js           3.26 kB │ gzip:   1.81 kB
+dist/assets/prism-javascript-2LMHe_9g.js    4.72 kB │ gzip:   1.65 kB
+dist/assets/prism-markdown-4MKFcK2x.js      5.24 kB │ gzip:   2.00 kB
+dist/assets/prism-bash-DTkDXsAh.js          6.15 kB │ gzip:   2.96 kB
+dist/assets/index-BbC_yNCB.js              13.97 kB │ gzip:   5.99 kB
+dist/assets/prism-CmU8EOQI.js              19.46 kB │ gzip:   7.35 kB
+dist/assets/index-CvnuQtui.js              26.52 kB │ gzip:   8.82 kB
+dist/assets/index-bMEwSd4-.js              28.24 kB │ gzip:  12.52 kB
+dist/assets/index-Bw4Gaz4b.js              28.73 kB │ gzip:  11.41 kB
+dist/assets/index-CCV3QE1V.js              43.69 kB │ gzip:  12.58 kB
+dist/assets/index-B18vEvrq.js              44.34 kB │ gzip:  15.36 kB
+dist/assets/index-DcxfGw8s.js              45.10 kB │ gzip:  18.65 kB
+dist/assets/index-BLvFgT7c.js              83.70 kB │ gzip:  29.55 kB
+dist/assets/index-DX3eKNW0.js              84.54 kB │ gzip:  32.61 kB
+dist/assets/index-DCbnXi0P.js             189.39 kB │ gzip:  61.61 kB
+dist/assets/index-EDsSXETw.js             869.17 kB │ gzip: 277.66 kB
+✓ built in 2.65s

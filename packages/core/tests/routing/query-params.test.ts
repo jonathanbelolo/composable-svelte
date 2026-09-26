@@ -434,3 +434,46 @@ describe('Round-trip consistency', () => {
 		expect(parsed).toEqual(original);
 	});
 });
+
+describe('Object.prototype safety', () => {
+	it('ignores inherited Object.prototype properties for missing keys', () => {
+		const empty = parseQueryParams('');
+		expect(hasQueryParam(empty, 'toString')).toBe(false);
+		expect(hasQueryParam(empty, 'valueOf')).toBe(false);
+		expect(hasQueryParam(empty, 'constructor')).toBe(false);
+		expect(getQueryParam(empty, 'toString')).toBeUndefined();
+		expect(getQueryParam(empty, 'toString', 'default')).toBe('default');
+		expect(getQueryParamAll(empty, 'toString')).toEqual([]);
+	});
+
+	it('parses explicit query parameters named after Object.prototype properties', () => {
+		const parsed = parseQueryParams('?toString=custom&valueOf=123');
+		expect(parsed.toString).toBe('custom');
+		expect(hasQueryParam(parsed, 'toString')).toBe(true);
+		expect(getQueryParam(parsed, 'toString')).toBe('custom');
+		expect(getQueryParamAll(parsed, 'toString')).toEqual(['custom']);
+
+		const parsedMultiple = parseQueryParams('?toString=first&toString=second');
+		expect(parsedMultiple.toString).toEqual(['first', 'second']);
+		expect(getQueryParam(parsedMultiple, 'toString')).toBe('first');
+		expect(getQueryParamAll(parsedMultiple, 'toString')).toEqual(['first', 'second']);
+	});
+});
+
+
+it('round-trips own __proto__ query values without changing the result prototype',()=>{
+ const parsed=parseQueryParams('?__proto__=first&__proto__=second&constructor=value');
+ expect(Object.getPrototypeOf(parsed)).toBe(Object.prototype);expect(hasQueryParam(parsed,'__proto__')).toBe(true);expect(getQueryParamAll(parsed,'__proto__')).toEqual(['first','second']);expect(parseQueryParams(serializeQueryParams(parsed))).toEqual(parsed);
+});
+
+
+describe('merge own special query keys', () => {
+ it.each([{ value: 'value' }, { value: ['a', 'b'] }])('preserves __proto__ update as own data', ({ value }) => {
+  const updates = Object.fromEntries([['__proto__', value]]);
+  const result = mergeQueryParams({}, updates);
+  expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
+  expect(Object.prototype.hasOwnProperty.call(result, '__proto__')).toBe(true);
+  expect(result['__proto__']).toEqual(value);
+  expect(mergeQueryParams(result, Object.fromEntries([['__proto__', undefined]]))).toEqual({});
+ });
+});

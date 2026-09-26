@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import PopoverPrimitive from './primitives/PopoverPrimitive.svelte';
-  import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
+  import { assertPresentationView, type PresentationView } from '../navigation/managed-integration.js';
   import type { PresentationState } from '../navigation/types.js';
   import type { SpringConfig } from '../animation/spring-config.js';
   import { cn } from '../utils.js';
@@ -12,9 +12,9 @@
 
   interface PopoverProps<State, Action> {
     /**
-     * Scoped store for the popover content.
+     * Managed presentation view for the popover content.
      */
-    store: ScopedDestinationStore<State, Action> | null;
+    store?: PresentationView<State, Action> | undefined;
 
     /**
      * Presentation state for animation lifecycle.
@@ -74,7 +74,7 @@
       [
         {
           visible: boolean;
-          store: ScopedDestinationStore<State, Action> | null;
+          store: PresentationView<State, Action> | undefined;
         }
       ]
     > | undefined;
@@ -93,6 +93,13 @@
     style = '',
     children: renderContent
   }: PopoverProps<unknown, unknown> = $props();
+
+  const admittedStore = $derived.by(() => {
+    if (store !== undefined) {
+      assertPresentationView(store);
+    }
+    return store;
+  });
 
   // ============================================================================
   // Computed Classes and Styles
@@ -125,7 +132,7 @@
 <!-- ============================================================================ -->
 
 <PopoverPrimitive
-  {store}
+  store={admittedStore}
   {presentation}
   {onPresentationComplete}
   {onDismissalComplete}
@@ -133,7 +140,7 @@
   {disableClickOutside}
   {disableEscapeKey}
 >
-  {#snippet children({ visible, store, bindContent, initialOpacity })}
+  {#snippet children({ visible, store: primitiveStore, bindContent, initialOpacity })}
     <div
       use:bindContent={extractedStyles.transform}
       class={contentClasses}
@@ -141,7 +148,7 @@
       role="dialog"
       aria-modal="false"
     >
-      {@render renderContent?.({ visible, store })}
+      {@render renderContent?.({ visible, store: primitiveStore })}
     </div>
   {/snippet}
 </PopoverPrimitive>

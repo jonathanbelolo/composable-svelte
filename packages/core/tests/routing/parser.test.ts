@@ -593,3 +593,19 @@ describe('createParserConfig', () => {
 		expect(parseDestination('/elsewhere', config)).toBeNull();
 	});
 });
+
+describe('base path directory boundaries', () => {
+  it('rejects a sibling prefix even when the helper could normalize it to a real route', () => {
+    const config = createParserConfig<InventoryDestination>({ '/add': () => ({ type: 'addItem', state: {} }) }, { basePath: '/inventory' });
+    expect(parseDestination('/inventoryadd', config)).toBeNull();
+    expect(parseDestination('/inventory/add', config)).toEqual({ type: 'addItem', state: {} });
+  });
+  it('retains a destination at the exact base path', () => {
+    const config = createParserConfig<InventoryDestination>({ '/': () => ({ type: 'addItem', state: {} }) }, { basePath: '/inventory' });
+    expect(parseDestination('/inventory', config)).toEqual({ type: 'addItem', state: {} });
+  });
+  it('retains relative input compatibility when the base path is explicitly empty', () => {
+    const config = createParserConfig<InventoryDestination>({ '/add': () => ({ type: 'addItem', state: {} }) }, { basePath: '' });
+    expect(parseDestination('add', config)).toEqual({ type: 'addItem', state: {} });
+  });
+});

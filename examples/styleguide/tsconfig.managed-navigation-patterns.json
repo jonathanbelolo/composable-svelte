@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/lib/components/demos/ModalDemo.svelte",
+    "src/lib/components/demos/TabsDemo.svelte",
+    "tests/managed-navigation-patterns.test.ts"
+  ]
+}

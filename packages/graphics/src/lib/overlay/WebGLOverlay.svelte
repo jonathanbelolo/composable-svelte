@@ -16,22 +16,58 @@ import type {
   UpdateStrategy
 } from './overlay-types.js';
 
+export interface OverlayOwner {
+  readonly state: unknown | undefined;
+  subscribe(listener: (state: unknown | undefined) => void): () => void;
+}
+
 // Props
 let {
-  options = {}
+  options = {},
+  owner
 }: {
   options?: OverlayOptions | undefined;
+  /**
+   * Managed view or store driving this overlay's lifetime.
+   * When the owner is retired (`state` becomes `undefined`), the overlay
+   * stops and destroys immediately without waiting for DOM unmount.
+   */
+  owner?: OverlayOwner | undefined;
 } = $props();
 
 // Canvas element
 let canvas: HTMLCanvasElement | null = $state(null);
 let overlay: OverlayContextAPI | null = $state(null);
+let isDestroyed = false;
+let resizeListenerAttached = false;
+let unsubscribeOwner: (() => void) | null = null;
+
+function destroyOverlayInstance(): void {
+  if (isDestroyed) return;
+  isDestroyed = true;
+
+  if (unsubscribeOwner) {
+    unsubscribeOwner();
+    unsubscribeOwner = null;
+  }
+
+  if (resizeListenerAttached) {
+    window.removeEventListener('resize', handleResize);
+    resizeListenerAttached = false;
+  }
+
+  if (overlay) {
+    overlay.stop();
+    overlay.destroy();
+    overlay = null;
+  }
+}
 
 /**
  * Update canvas size to match window viewport
  */
 function updateCanvasSize(): void {
-  if (!canvas) return;
+  if (!canvas || isDestroyed) return;
 
   const dpr = window.devicePixelRatio || 1;
   const width = window.innerWidth;
@@ -52,11 +88,21 @@ function updateCanvasSize(): void {
   }
 }
 
+const handleResize = () => {
+  updateCanvasSize();
+};
+
 /**
  * Initialize overlay on mount
  */
 onMount(() => {
   if (!canvas) return;
+
+  if (owner && owner.state === undefined) {
+    // Owner is already retired at mount
+    isDestroyed = true;
+    return;
+  }
 
   // Set initial canvas size
   updateCanvasSize();
@@ -82,17 +128,24 @@ onMount(() => {
   overlay.start();
 
   // Handle window resize
-  const handleResize = () => {
-    updateCanvasSize();
-  };
   window.addEventListener('resize', handleResize);
+  resizeListenerAttached = true;
+
+  if (owner) {
+    unsubscribeOwner = owner.subscribe((state) => {
+      if (state === undefined) {
+        destroyOverlayInstance();
+      }
+    });
+    if (isDestroyed) {
+      unsubscribeOwner();
+      unsubscribeOwner = null;
+    }
+  }
 
   // Cleanup on unmount
   return () => {
-    window.removeEventListener('resize', handleResize);
-    overlay?.stop();
-    overlay?.destroy();
-    overlay = null;
+    destroyOverlayInstance();
   };
 });
 
@@ -106,13 +159,15 @@ export function registerElement(registration: {
   updateStrategy?: UpdateStrategy | undefined;
   onTextureLoaded?: (() => void) | undefined;
 }): ElementRegistration | OverlayError {
-  if (!overlay) {
+  if (isDestroyed || !overlay) {
     const error = OverlayError.invalidElementType(
       registration.id,
-      'Overlay not initialized yet'
+      isDestroyed ? 'Overlay has been retired' : 'Overlay not initialized yet'
     );
-    console.warn(`[WebGLOverlay] ${error.message}`);
-    options.onError?.(error);
+    if (!isDestroyed) {
+      console.warn(`[WebGLOverlay] ${error.message}`);
+      options.onError?.(error);
+    }
     return error;
   }
 
@@ -131,9 +186,12 @@ export function registerElement(registration: {
     registration.domElement instanceof HTMLCanvasElement ? 'canvas' : null;
 
   if (elementType === null) {
+    const tag = registration.domElement?.tagName
+      ? `<${registration.domElement.tagName.toLowerCase()}>`
+      : 'element';
     const error = OverlayError.invalidElementType(
       registration.id,
-      `Cannot render <${registration.domElement.tagName.toLowerCase()}>: ` +
+      `Cannot render ${tag}: ` +
         'only <img>, <video> and <canvas> are supported'
     );
     console.error(`[WebGLOverlay] ${error.message}`);

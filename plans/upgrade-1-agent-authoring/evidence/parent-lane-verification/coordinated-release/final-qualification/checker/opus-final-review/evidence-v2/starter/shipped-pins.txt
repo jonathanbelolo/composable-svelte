@@ -1,0 +1,1 @@
+{'@composable-svelte/core': '0.13.1', 'svelte': '5.57.0'} 0.13.1 composable-svelte-architecture --mode analysis-only --project . --policy bundled:starter --expected-core-version 0.13.1

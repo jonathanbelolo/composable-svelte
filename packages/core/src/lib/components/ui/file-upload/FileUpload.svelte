@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { createStore } from '../../../store.svelte.js';
   import { fileUploadReducer } from './file-upload.reducer.js';
   import { createInitialFileUploadState, formatFileSize } from './file-upload.types.js';
@@ -22,7 +23,7 @@
   const validation = $derived<FileValidationConfig>({
     maxSize,
     acceptedTypes: accept ? accept.split(',').map((t) => t.trim()) : [],
-    maxFiles
+    maxFiles: multiple ? maxFiles : Math.min(maxFiles ?? 1, 1)
   });
 
   // Create file upload store with reducer
@@ -35,6 +36,7 @@
     // store validating against the original config, and swapping `onUpload`
     // left it calling the original handler.
     dependencies: {
+      get previews() { return showPreviews; },
       get onFilesChange() {
         return onFilesChange;
       },
@@ -46,6 +48,8 @@
       }
     }
   });
+
+  onDestroy(() => store.destroy());
 
   let fileInputElement: HTMLInputElement | undefined = $state();
 
@@ -179,6 +183,7 @@
     ondrop={handleDrop}
     onclick={handleDropzoneClick}
     role="button"
+    aria-disabled={disabled}
     tabindex={disabled ? -1 : 0}
     aria-label="File upload dropzone"
     onkeydown={(e) => {
@@ -209,9 +214,9 @@
         <p class="text-sm text-gray-500">Maximum file size: {formatFileSize(maxSize)}</p>
       {/if}
 
-      {#if maxFiles}
+      {#if validation.maxFiles !== undefined}
         <p class="text-sm text-gray-500">
-          Maximum {maxFiles} file{maxFiles === 1 ? '' : 's'}
+          Maximum {validation.maxFiles} file{validation.maxFiles === 1 ? '' : 's'}
         </p>
       {/if}
     </div>
@@ -219,7 +224,7 @@
 
   <!-- Validation Errors -->
   {#if $store.errors.length > 0}
-    <div class="mt-4 space-y-2">
+    <div role="alert" class="mt-4 space-y-2">
       {#each $store.errors as error, index (index)}
         <div
           class="flex items-center justify-between bg-red-50 border border-red-200 rounded-lg p-3"
@@ -239,6 +244,8 @@
       {/each}
     </div>
   {/if}
+
+  <p class="sr-only" role="status">{$store.files.length} files selected; {$store.files.filter(file => file.status === 'success').length} completed.</p>
 
   <!-- File List -->
   {#if $store.files.length > 0}
@@ -310,7 +317,7 @@
 
               <!-- Error Message -->
               {#if file.error}
-                <p class="text-xs text-red-600 mt-1">{file.error}</p>
+                <p role="alert" class="text-xs text-red-600 mt-1">{file.error}</p>
               {/if}
             </div>
 

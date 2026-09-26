@@ -1,0 +1,938 @@
+{
+  "evidenceKind": "browser-execution",
+  "overall": "PASS",
+  "fullSuite": true,
+  "executedAt": "2026-09-26T13:06:07.439Z",
+  "requestedCases": [
+    "standalone-push-to-talk",
+    "standalone-conversation",
+    "managed-parent-conversation"
+  ],
+  "casesNotRun": [],
+  "suiteError": null,
+  "suiteSafety": {
+    "deviceActivityOutsideCase": 0,
+    "lateGrantTracksStopped": 0,
+    "networkAttemptsOutsideCase": 0,
+    "finalForcedStops": 0,
+    "eventsAfterCaseClose": 0
+  },
+  "provenance": {
+    "status": "candidate-r3-core0.13.1-media0.5.0",
+    "packages": [
+      {
+        "name": "@composable-svelte/core",
+        "version": "0.13.1",
+        "path": "/private/tmp/companion-runtime-release/archives-r3/composable-svelte-core-0.13.1.tgz",
+        "sha256": "30e044e139e831033e06fdf626db979875efa2f7c29d72dece33a21db112d18b",
+        "integrity": "sha512-b+Il+IqyrK4A7oRN/F5Z16XItAwZ0JBZaBefukX95Hx5VbVf26UvjE0tKpsR+WDKcCL7pP1gqo3y677CgjW1vA=="
+      },
+      {
+        "name": "@composable-svelte/media",
+        "version": "0.5.0",
+        "path": "/private/tmp/companion-runtime-release/archives-r3/composable-svelte-media-0.5.0.tgz",
+        "sha256": "c0bfa6528fb6cd3dc68f2769237d3053514f76f79bc5197316b230eb07b78298",
+        "integrity": "sha512-p1xYL/9hkCfitPYkb5Ss5nYb60IOebLTzyFww43++alSW9yZc0fUMJqoTx8iduwEIvFMfaHQbS+9nkwF4ULeHg=="
+      }
+    ],
+    "lockSha256": "6a3281a8ded2b5f702031f90c87b6ebe34f5bb701576709385d6d577f2ce8d69",
+    "svelte": "5.55.3"
+  },
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "isSecureContext": true,
+    "nativeGetUserMedia": true,
+    "nativeMediaRecorder": true,
+    "nativeTrackStop": true,
+    "webdriver": false,
+    "installedCore": "0.13.1",
+    "installedMedia": "0.5.0",
+    "installedMatchesProvenance": true
+  },
+  "cases": [
+    {
+      "name": "standalone-push-to-talk",
+      "title": "Standalone store, push-to-talk",
+      "status": "PASS",
+      "failure": null,
+      "blocker": null,
+      "metrics": {
+        "gumCalls": 1,
+        "gumSuccesses": 1,
+        "gumErrors": 0,
+        "gumCallsAfterUnmount": 0,
+        "recordersCreated": 1,
+        "recordersCreatedAfterUnmount": 0,
+        "recorderStarts": 1,
+        "recorderStartsAfterUnmount": 0,
+        "recorderStopCalls": 1,
+        "dataavailable": 1,
+        "onstop": 1,
+        "recorderErrors": 0,
+        "untrackedTrackStops": 0,
+        "watchdogStops": 0,
+        "releaseActions": 1,
+        "transcribeCalls": 1,
+        "highFrequencyActions": 23,
+        "highFrequencyAfterUnmount": 0,
+        "errorActions": 0,
+        "errorStates": 0,
+        "consoleErrors": 0,
+        "consoleWarns": 0,
+        "windowErrors": 0,
+        "unhandledRejections": 0,
+        "networkAttempts": 0,
+        "tracksAcquired": 1,
+        "tracksEndedAtEvaluation": 1,
+        "tracksLiveAtEvaluation": 0,
+        "micOpenMs": 1251,
+        "blobSizeBytes": 19616,
+        "fakeLabelDetected": false,
+        "forcedCleanupStops": 0
+      },
+      "assertions": [
+        {
+          "id": "harness-completed",
+          "pass": true,
+          "expected": "no failure, timeout or error state",
+          "actual": "completed"
+        },
+        {
+          "id": "genuine-environment",
+          "pass": true,
+          "expected": "native gUM/MediaRecorder/track.stop, webdriver false, no fake-labelled track, installed core 0.13.1 / media 0.5.0",
+          "actual": "nativeGUM=true nativeMR=true nativeTrackStop=true webdriver=false fakeLabel=false core=0.13.1 media=0.5.0"
+        },
+        {
+          "id": "single-native-acquisition",
+          "pass": true,
+          "expected": "1 gUM call, 1 success, 0 errors, >=1 audio track, 0 untracked track stops",
+          "actual": "calls=1 successes=1 errors=0 tracks=1 untrackedStops=0"
+        },
+        {
+          "id": "accepted-stop-pending-at-unmount",
+          "pass": true,
+          "expected": "dispatch_begin(recording) < recorder.stop(inactive, 0 dataavailable, 0 onstop) < dispatch_end(processing, _activeStop) < unmount.begin; 1 stop call; no track.stop before unmount",
+          "actual": "seqs 13 < 15 < 16 < 17; recorder=inactive status=processing stopCalls=1 firstTrackStop=19"
+        },
+        {
+          "id": "unmount-release-ends-every-track",
+          "pass": true,
+          "expected": "unmount.begin < _releaseDevice < every track.stop (ended) < unmount.returned; every acquired track stopped",
+          "actual": "release=1@18 trackStops=1@[19..19] unmount=[17..20] distinct=1/1"
+        },
+        {
+          "id": "tracks-ended-before-native-delivery",
+          "pass": true,
+          "expected": "max(seq track.stop) < seq first dataavailable",
+          "actual": "lastTrackStop=19 firstDataavailable=21"
+        },
+        {
+          "id": "native-delivery-exactly-once",
+          "pass": true,
+          "expected": "1 dataavailable (size > 0) < 1 onstop, 0 recorder errors",
+          "actual": "dataavailable=1 size=19616 onstop=1 recorderErrors=0"
+        },
+        {
+          "id": "single-local-transcript-delivered",
+          "pass": true,
+          "expected": "1 stub transcribe of the delivered size; onstop < transcribe < 1 transcriptionCompleted",
+          "actual": "transcribe=1 sizes=[19616] completed=1 seqs 22 < 24 < 26"
+        },
+        {
+          "id": "no-restart-or-reacquire",
+          "pass": true,
+          "expected": "1 recorder created and started; 0 gUM / recorders / starts after unmount",
+          "actual": "created=1 started=1 afterUnmount: gum=0 created=0 started=0"
+        },
+        {
+          "id": "mic-open-window-bounded",
+          "pass": true,
+          "expected": "0 < gUM success -> last track ended <= 2000 ms, 0 watchdog stops",
+          "actual": "micOpenMs=1251 watchdogStops=0"
+        },
+        {
+          "id": "no-errors-or-network",
+          "pass": true,
+          "expected": "all 0",
+          "actual": "errorActions=0 errorStates=0 consoleErrors=0 windowErrors=0 unhandledRejections=0 network=0"
+        },
+        {
+          "id": "settled-after-quiet-period",
+          "pass": true,
+          "expected": "0 events during 750 ms quiet period; living store idle, mode null, no active stop/pending/manager/error",
+          "actual": "lateEvents=0 levelOrVadAfterUnmount=0 voice=status=idle mode=null activeStop=null pending=0 manager=null error=false"
+        },
+        {
+          "id": "no-forced-cleanup",
+          "pass": true,
+          "expected": "0 live tracks left for the harness to stop",
+          "actual": "forcedCleanupStops=0"
+        }
+      ],
+      "eventTimeline": [
+        {
+          "seq": 1,
+          "relMs": 8.8,
+          "event": "action.activatePushToTalk"
+        },
+        {
+          "seq": 2,
+          "relMs": 8.8,
+          "event": "action.startPushToTalkRecording"
+        },
+        {
+          "seq": 3,
+          "relMs": 9.5,
+          "event": "action._requestRecordingPermission"
+        },
+        {
+          "seq": 4,
+          "relMs": 9.7,
+          "event": "action._microphoneAllocated"
+        },
+        {
+          "seq": 5,
+          "relMs": 9.8,
+          "event": "gum.call"
+        },
+        {
+          "seq": 6,
+          "relMs": 133.7,
+          "event": "gum.success",
+          "details": {
+            "tracks": 1,
+            "audioTracks": 1
+          }
+        },
+        {
+          "seq": 7,
+          "relMs": 176.8,
+          "event": "action.microphonePermissionGranted"
+        },
+        {
+          "seq": 8,
+          "relMs": 177,
+          "event": "action.startPushToTalkRecording"
+        },
+        {
+          "seq": 9,
+          "relMs": 177.3,
+          "event": "recorder.created",
+          "details": {
+            "mimeType": "audio/webm;codecs=opus"
+          }
+        },
+        {
+          "seq": 10,
+          "relMs": 177.4,
+          "event": "recorder.start",
+          "details": {
+            "stateAfter": "recording"
+          }
+        },
+        {
+          "seq": 11,
+          "relMs": 177.4,
+          "event": "action._recordingStarted"
+        },
+        {
+          "seq": 12,
+          "relMs": 182.1,
+          "event": "capture.begin"
+        },
+        {
+          "seq": 13,
+          "relMs": 1383.7,
+          "event": "accepted_stop.dispatch_begin",
+          "details": {
+            "action": "stopPushToTalkRecording",
+            "statusBefore": "recording",
+            "modeBefore": "push-to-talk"
+          }
+        },
+        {
+          "seq": 14,
+          "relMs": 1383.8,
+          "event": "action.stopPushToTalkRecording"
+        },
+        {
+          "seq": 15,
+          "relMs": 1384.3,
+          "event": "recorder.stop",
+          "details": {
+            "stateAfter": "inactive",
+            "dataavailableSoFar": 0,
+            "onstopSoFar": 0
+          }
+        },
+        {
+          "seq": 16,
+          "relMs": 1384.3,
+          "event": "accepted_stop.dispatch_end",
+          "details": {
+            "statusAfter": "processing",
+            "activeStopIsNumber": true
+          }
+        },
+        {
+          "seq": 17,
+          "relMs": 1384.3,
+          "event": "unmount.begin"
+        },
+        {
+          "seq": 18,
+          "relMs": 1384.7,
+          "event": "action._releaseDevice"
+        },
+        {
+          "seq": 19,
+          "relMs": 1385,
+          "event": "track.stop",
+          "details": {
+            "kind": "audio",
+            "readyStateAfter": "ended",
+            "trackIndex": 0
+          }
+        },
+        {
+          "seq": 20,
+          "relMs": 1385.1,
+          "event": "unmount.returned"
+        },
+        {
+          "seq": 21,
+          "relMs": 1385.8,
+          "event": "recorder.dataavailable",
+          "details": {
+            "size": 19616
+          }
+        },
+        {
+          "seq": 22,
+          "relMs": 1385.8,
+          "event": "recorder.onstop"
+        },
+        {
+          "seq": 23,
+          "relMs": 1386.2,
+          "event": "action._audioStopped"
+        },
+        {
+          "seq": 24,
+          "relMs": 1386.3,
+          "event": "stub.transcribeAudio",
+          "details": {
+            "size": 19616
+          }
+        },
+        {
+          "seq": 25,
+          "relMs": 1386.3,
+          "event": "action._transcriptionResult"
+        },
+        {
+          "seq": 26,
+          "relMs": 1386.4,
+          "event": "action.transcriptionCompleted"
+        },
+        {
+          "seq": 27,
+          "relMs": 1405.8,
+          "event": "quiet.begin"
+        },
+        {
+          "seq": 28,
+          "relMs": 2157.1,
+          "event": "quiet.end"
+        }
+      ]
+    },
+    {
+      "name": "standalone-conversation",
+      "title": "Standalone store, conversation",
+      "status": "PASS",
+      "failure": null,
+      "blocker": null,
+      "metrics": {
+        "gumCalls": 1,
+        "gumSuccesses": 1,
+        "gumErrors": 0,
+        "gumCallsAfterUnmount": 0,
+        "recordersCreated": 1,
+        "recordersCreatedAfterUnmount": 0,
+        "recorderStarts": 1,
+        "recorderStartsAfterUnmount": 0,
+        "recorderStopCalls": 1,
+        "dataavailable": 1,
+        "onstop": 1,
+        "recorderErrors": 0,
+        "untrackedTrackStops": 0,
+        "watchdogStops": 0,
+        "releaseActions": 1,
+        "transcribeCalls": 1,
+        "highFrequencyActions": 34,
+        "highFrequencyAfterUnmount": 0,
+        "errorActions": 0,
+        "errorStates": 0,
+        "consoleErrors": 0,
+        "consoleWarns": 0,
+        "windowErrors": 0,
+        "unhandledRejections": 0,
+        "networkAttempts": 0,
+        "tracksAcquired": 1,
+        "tracksEndedAtEvaluation": 1,
+        "tracksLiveAtEvaluation": 0,
+        "micOpenMs": 1210,
+        "blobSizeBytes": 18650,
+        "fakeLabelDetected": false,
+        "forcedCleanupStops": 0
+      },
+      "assertions": [
+        {
+          "id": "harness-completed",
+          "pass": true,
+          "expected": "no failure, timeout or error state",
+          "actual": "completed"
+        },
+        {
+          "id": "genuine-environment",
+          "pass": true,
+          "expected": "native gUM/MediaRecorder/track.stop, webdriver false, no fake-labelled track, installed core 0.13.1 / media 0.5.0",
+          "actual": "nativeGUM=true nativeMR=true nativeTrackStop=true webdriver=false fakeLabel=false core=0.13.1 media=0.5.0"
+        },
+        {
+          "id": "single-native-acquisition",
+          "pass": true,
+          "expected": "1 gUM call, 1 success, 0 errors, >=1 audio track, 0 untracked track stops",
+          "actual": "calls=1 successes=1 errors=0 tracks=1 untrackedStops=0"
+        },
+        {
+          "id": "accepted-stop-pending-at-unmount",
+          "pass": true,
+          "expected": "dispatch_begin(recording) < recorder.stop(inactive, 0 dataavailable, 0 onstop) < dispatch_end(processing, _activeStop) < unmount.begin; 1 stop call; no track.stop before unmount",
+          "actual": "seqs 12 < 14 < 15 < 16; recorder=inactive status=processing stopCalls=1 firstTrackStop=18"
+        },
+        {
+          "id": "unmount-release-ends-every-track",
+          "pass": true,
+          "expected": "unmount.begin < _releaseDevice < every track.stop (ended) < unmount.returned; every acquired track stopped",
+          "actual": "release=1@17 trackStops=1@[18..18] unmount=[16..19] distinct=1/1"
+        },
+        {
+          "id": "tracks-ended-before-native-delivery",
+          "pass": true,
+          "expected": "max(seq track.stop) < seq first dataavailable",
+          "actual": "lastTrackStop=18 firstDataavailable=20"
+        },
+        {
+          "id": "native-delivery-exactly-once",
+          "pass": true,
+          "expected": "1 dataavailable (size > 0) < 1 onstop, 0 recorder errors",
+          "actual": "dataavailable=1 size=18650 onstop=1 recorderErrors=0"
+        },
+        {
+          "id": "single-local-transcript-delivered",
+          "pass": true,
+          "expected": "1 stub transcribe of the delivered size; onstop < transcribe < 1 transcriptionCompleted",
+          "actual": "transcribe=1 sizes=[18650] completed=1 seqs 21 < 23 < 25"
+        },
+        {
+          "id": "no-restart-or-reacquire",
+          "pass": true,
+          "expected": "1 recorder created and started; 0 gUM / recorders / starts after unmount",
+          "actual": "created=1 started=1 afterUnmount: gum=0 created=0 started=0"
+        },
+        {
+          "id": "mic-open-window-bounded",
+          "pass": true,
+          "expected": "0 < gUM success -> last track ended <= 2000 ms, 0 watchdog stops",
+          "actual": "micOpenMs=1210 watchdogStops=0"
+        },
+        {
+          "id": "no-errors-or-network",
+          "pass": true,
+          "expected": "all 0",
+          "actual": "errorActions=0 errorStates=0 consoleErrors=0 windowErrors=0 unhandledRejections=0 network=0"
+        },
+        {
+          "id": "settled-after-quiet-period",
+          "pass": true,
+          "expected": "0 events during 750 ms quiet period; living store idle, mode null, no active stop/pending/manager/error",
+          "actual": "lateEvents=0 levelOrVadAfterUnmount=0 voice=status=idle mode=null activeStop=null pending=0 manager=null error=false"
+        },
+        {
+          "id": "no-forced-cleanup",
+          "pass": true,
+          "expected": "0 live tracks left for the harness to stop",
+          "actual": "forcedCleanupStops=0"
+        }
+      ],
+      "eventTimeline": [
+        {
+          "seq": 1,
+          "relMs": 0.7,
+          "event": "action.activateConversationMode"
+        },
+        {
+          "seq": 2,
+          "relMs": 0.7,
+          "event": "action._requestRecordingPermission"
+        },
+        {
+          "seq": 3,
+          "relMs": 0.8,
+          "event": "action._microphoneAllocated"
+        },
+        {
+          "seq": 4,
+          "relMs": 0.8,
+          "event": "gum.call"
+        },
+        {
+          "seq": 5,
+          "relMs": 114.4,
+          "event": "gum.success",
+          "details": {
+            "tracks": 1,
+            "audioTracks": 1
+          }
+        },
+        {
+          "seq": 6,
+          "relMs": 114.7,
+          "event": "action.microphonePermissionGranted"
+        },
+        {
+          "seq": 7,
+          "relMs": 114.8,
+          "event": "action.activateConversationMode"
+        },
+        {
+          "seq": 8,
+          "relMs": 114.8,
+          "event": "recorder.created",
+          "details": {
+            "mimeType": "audio/webm;codecs=opus"
+          }
+        },
+        {
+          "seq": 9,
+          "relMs": 114.8,
+          "event": "recorder.start",
+          "details": {
+            "stateAfter": "recording"
+          }
+        },
+        {
+          "seq": 10,
+          "relMs": 114.9,
+          "event": "action._recordingStarted"
+        },
+        {
+          "seq": 11,
+          "relMs": 122.5,
+          "event": "capture.begin"
+        },
+        {
+          "seq": 12,
+          "relMs": 1323.5,
+          "event": "accepted_stop.dispatch_begin",
+          "details": {
+            "action": "manualSendRequested",
+            "statusBefore": "recording",
+            "modeBefore": "conversation"
+          }
+        },
+        {
+          "seq": 13,
+          "relMs": 1323.5,
+          "event": "action.manualSendRequested"
+        },
+        {
+          "seq": 14,
+          "relMs": 1323.8,
+          "event": "recorder.stop",
+          "details": {
+            "stateAfter": "inactive",
+            "dataavailableSoFar": 0,
+            "onstopSoFar": 0
+          }
+        },
+        {
+          "seq": 15,
+          "relMs": 1323.8,
+          "event": "accepted_stop.dispatch_end",
+          "details": {
+            "statusAfter": "processing",
+            "activeStopIsNumber": true
+          }
+        },
+        {
+          "seq": 16,
+          "relMs": 1323.8,
+          "event": "unmount.begin"
+        },
+        {
+          "seq": 17,
+          "relMs": 1324,
+          "event": "action._releaseDevice"
+        },
+        {
+          "seq": 18,
+          "relMs": 1324.2,
+          "event": "track.stop",
+          "details": {
+            "kind": "audio",
+            "readyStateAfter": "ended",
+            "trackIndex": 0
+          }
+        },
+        {
+          "seq": 19,
+          "relMs": 1324.4,
+          "event": "unmount.returned"
+        },
+        {
+          "seq": 20,
+          "relMs": 1324.4,
+          "event": "recorder.dataavailable",
+          "details": {
+            "size": 18650
+          }
+        },
+        {
+          "seq": 21,
+          "relMs": 1324.5,
+          "event": "recorder.onstop"
+        },
+        {
+          "seq": 22,
+          "relMs": 1324.6,
+          "event": "action._audioStopped"
+        },
+        {
+          "seq": 23,
+          "relMs": 1324.6,
+          "event": "stub.transcribeAudio",
+          "details": {
+            "size": 18650
+          }
+        },
+        {
+          "seq": 24,
+          "relMs": 1324.6,
+          "event": "action._transcriptionResult"
+        },
+        {
+          "seq": 25,
+          "relMs": 1324.6,
+          "event": "action.transcriptionCompleted"
+        },
+        {
+          "seq": 26,
+          "relMs": 1346.3,
+          "event": "quiet.begin"
+        },
+        {
+          "seq": 27,
+          "relMs": 2098.4,
+          "event": "quiet.end"
+        }
+      ]
+    },
+    {
+      "name": "managed-parent-conversation",
+      "title": "Living managed parent, conversation",
+      "status": "PASS",
+      "failure": null,
+      "blocker": null,
+      "metrics": {
+        "gumCalls": 1,
+        "gumSuccesses": 1,
+        "gumErrors": 0,
+        "gumCallsAfterUnmount": 0,
+        "recordersCreated": 1,
+        "recordersCreatedAfterUnmount": 0,
+        "recorderStarts": 1,
+        "recorderStartsAfterUnmount": 0,
+        "recorderStopCalls": 1,
+        "dataavailable": 1,
+        "onstop": 1,
+        "recorderErrors": 0,
+        "untrackedTrackStops": 0,
+        "watchdogStops": 0,
+        "releaseActions": 1,
+        "transcribeCalls": 1,
+        "highFrequencyActions": 34,
+        "highFrequencyAfterUnmount": 0,
+        "errorActions": 0,
+        "errorStates": 0,
+        "consoleErrors": 0,
+        "consoleWarns": 0,
+        "windowErrors": 0,
+        "unhandledRejections": 0,
+        "networkAttempts": 0,
+        "tracksAcquired": 1,
+        "tracksEndedAtEvaluation": 1,
+        "tracksLiveAtEvaluation": 0,
+        "micOpenMs": 1243,
+        "blobSizeBytes": 19616,
+        "fakeLabelDetected": false,
+        "forcedCleanupStops": 0
+      },
+      "assertions": [
+        {
+          "id": "harness-completed",
+          "pass": true,
+          "expected": "no failure, timeout or error state",
+          "actual": "completed"
+        },
+        {
+          "id": "genuine-environment",
+          "pass": true,
+          "expected": "native gUM/MediaRecorder/track.stop, webdriver false, no fake-labelled track, installed core 0.13.1 / media 0.5.0",
+          "actual": "nativeGUM=true nativeMR=true nativeTrackStop=true webdriver=false fakeLabel=false core=0.13.1 media=0.5.0"
+        },
+        {
+          "id": "single-native-acquisition",
+          "pass": true,
+          "expected": "1 gUM call, 1 success, 0 errors, >=1 audio track, 0 untracked track stops",
+          "actual": "calls=1 successes=1 errors=0 tracks=1 untrackedStops=0"
+        },
+        {
+          "id": "accepted-stop-pending-at-unmount",
+          "pass": true,
+          "expected": "dispatch_begin(recording) < recorder.stop(inactive, 0 dataavailable, 0 onstop) < dispatch_end(processing, _activeStop) < unmount.begin; 1 stop call; no track.stop before unmount",
+          "actual": "seqs 12 < 14 < 15 < 16; recorder=inactive status=processing stopCalls=1 firstTrackStop=18"
+        },
+        {
+          "id": "unmount-release-ends-every-track",
+          "pass": true,
+          "expected": "unmount.begin < _releaseDevice < every track.stop (ended) < unmount.returned; every acquired track stopped",
+          "actual": "release=1@17 trackStops=1@[18..18] unmount=[16..19] distinct=1/1"
+        },
+        {
+          "id": "tracks-ended-before-native-delivery",
+          "pass": true,
+          "expected": "max(seq track.stop) < seq first dataavailable",
+          "actual": "lastTrackStop=18 firstDataavailable=20"
+        },
+        {
+          "id": "native-delivery-exactly-once",
+          "pass": true,
+          "expected": "1 dataavailable (size > 0) < 1 onstop, 0 recorder errors",
+          "actual": "dataavailable=1 size=19616 onstop=1 recorderErrors=0"
+        },
+        {
+          "id": "single-local-transcript-delivered",
+          "pass": true,
+          "expected": "1 stub transcribe of the delivered size; onstop < transcribe < 1 transcriptionCompleted; parent drafts == [transcript]",
+          "actual": "transcribe=1 sizes=[19616] completed=1 seqs 21 < 23 < 25 drafts=1"
+        },
+        {
+          "id": "no-restart-or-reacquire",
+          "pass": true,
+          "expected": "1 recorder created and started; 0 gUM / recorders / starts after unmount",
+          "actual": "created=1 started=1 afterUnmount: gum=0 created=0 started=0"
+        },
+        {
+          "id": "mic-open-window-bounded",
+          "pass": true,
+          "expected": "0 < gUM success -> last track ended <= 2000 ms, 0 watchdog stops",
+          "actual": "micOpenMs=1243 watchdogStops=0"
+        },
+        {
+          "id": "no-errors-or-network",
+          "pass": true,
+          "expected": "all 0",
+          "actual": "errorActions=0 errorStates=0 consoleErrors=0 windowErrors=0 unhandledRejections=0 network=0"
+        },
+        {
+          "id": "settled-after-quiet-period",
+          "pass": true,
+          "expected": "0 events during 750 ms quiet period; living parent voice slot idle, mode null, no active stop/pending/manager/error",
+          "actual": "lateEvents=0 levelOrVadAfterUnmount=0 voice=status=idle mode=null activeStop=null pending=0 manager=null error=false"
+        },
+        {
+          "id": "no-forced-cleanup",
+          "pass": true,
+          "expected": "0 live tracks left for the harness to stop",
+          "actual": "forcedCleanupStops=0"
+        }
+      ],
+      "eventTimeline": [
+        {
+          "seq": 1,
+          "relMs": 5.5,
+          "event": "action.activateConversationMode"
+        },
+        {
+          "seq": 2,
+          "relMs": 6.5,
+          "event": "action._requestRecordingPermission"
+        },
+        {
+          "seq": 3,
+          "relMs": 7,
+          "event": "gum.call"
+        },
+        {
+          "seq": 4,
+          "relMs": 7.3,
+          "event": "action._microphoneAllocated"
+        },
+        {
+          "seq": 5,
+          "relMs": 122.1,
+          "event": "gum.success",
+          "details": {
+            "tracks": 1,
+            "audioTracks": 1
+          }
+        },
+        {
+          "seq": 6,
+          "relMs": 162.4,
+          "event": "action.microphonePermissionGranted"
+        },
+        {
+          "seq": 7,
+          "relMs": 162.5,
+          "event": "action.activateConversationMode"
+        },
+        {
+          "seq": 8,
+          "relMs": 162.8,
+          "event": "recorder.created",
+          "details": {
+            "mimeType": "audio/webm;codecs=opus"
+          }
+        },
+        {
+          "seq": 9,
+          "relMs": 162.8,
+          "event": "recorder.start",
+          "details": {
+            "stateAfter": "recording"
+          }
+        },
+        {
+          "seq": 10,
+          "relMs": 163,
+          "event": "action._recordingStarted"
+        },
+        {
+          "seq": 11,
+          "relMs": 163.5,
+          "event": "capture.begin"
+        },
+        {
+          "seq": 12,
+          "relMs": 1364.3,
+          "event": "accepted_stop.dispatch_begin",
+          "details": {
+            "action": "manualSendRequested",
+            "statusBefore": "recording",
+            "modeBefore": "conversation"
+          }
+        },
+        {
+          "seq": 13,
+          "relMs": 1364.4,
+          "event": "action.manualSendRequested"
+        },
+        {
+          "seq": 14,
+          "relMs": 1364.7,
+          "event": "recorder.stop",
+          "details": {
+            "stateAfter": "inactive",
+            "dataavailableSoFar": 0,
+            "onstopSoFar": 0
+          }
+        },
+        {
+          "seq": 15,
+          "relMs": 1364.7,
+          "event": "accepted_stop.dispatch_end",
+          "details": {
+            "statusAfter": "processing",
+            "activeStopIsNumber": true
+          }
+        },
+        {
+          "seq": 16,
+          "relMs": 1364.7,
+          "event": "unmount.begin"
+        },
+        {
+          "seq": 17,
+          "relMs": 1365,
+          "event": "action._releaseDevice"
+        },
+        {
+          "seq": 18,
+          "relMs": 1365.3,
+          "event": "track.stop",
+          "details": {
+            "kind": "audio",
+            "readyStateAfter": "ended",
+            "trackIndex": 0
+          }
+        },
+        {
+          "seq": 19,
+          "relMs": 1365.4,
+          "event": "unmount.returned"
+        },
+        {
+          "seq": 20,
+          "relMs": 1365.6,
+          "event": "recorder.dataavailable",
+          "details": {
+            "size": 19616
+          }
+        },
+        {
+          "seq": 21,
+          "relMs": 1365.6,
+          "event": "recorder.onstop"
+        },
+        {
+          "seq": 22,
+          "relMs": 1365.7,
+          "event": "action._audioStopped"
+        },
+        {
+          "seq": 23,
+          "relMs": 1365.7,
+          "event": "stub.transcribeAudio",
+          "details": {
+            "size": 19616
+          }
+        },
+        {
+          "seq": 24,
+          "relMs": 1365.9,
+          "event": "action._transcriptionResult"
+        },
+        {
+          "seq": 25,
+          "relMs": 1366.1,
+          "event": "action.transcriptionCompleted"
+        },
+        {
+          "seq": 26,
+          "relMs": 1387.3,
+          "event": "quiet.begin"
+        },
+        {
+          "seq": 27,
+          "relMs": 2138.5,
+          "event": "quiet.end"
+        }
+      ]
+    }
+  ]
+}

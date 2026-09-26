@@ -1,0 +1,16 @@
+review-receipts/gap-check/deps-variance.ts(10,87): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(slot: DestinationSlot<S, A, DestinationReducers, string>, policy?: (Omit<ChildPolicy<S, A, { readonly type: string; readonly state: any; }, { ...; }, ExtendedDeps>, "startup"> & { ...; }) | undefined): ManagedIntegrationBuilder<...>', gave the following error.
+    Argument of type 'OptionalSlot<S, A, AuthFeatureState, AuthFeatureAction, "auth">' is not assignable to parameter of type 'DestinationSlot<S, A, DestinationReducers, string>'.
+      Property 'case' is missing in type 'OptionalSlot<S, A, AuthFeatureState, AuthFeatureAction, "auth">' but required in type 'DestinationSlot<S, A, DestinationReducers, string>'.
+  Overload 2 of 2, '(slot: OptionalSlot<S, A, AuthFeatureState, AuthFeatureAction, "auth">, child: Reducer<AuthFeatureState, AuthFeatureAction, ExtendedDeps> | ManagedComposition<...>, policy?: ChildPolicy<...> | undefined): ManagedIntegrationBuilder<...>', gave the following error.
+    Argument of type 'ManagedComposition<AuthFeatureState, AuthFeatureAction, AuthFeatureDependencies, AuthFeatureCatalog>' is not assignable to parameter of type 'Reducer<AuthFeatureState, AuthFeatureAction, ExtendedDeps> | ManagedComposition<AuthFeatureState, AuthFeatureAction, ExtendedDeps, AuthFeatureCatalog>'.
+      Type 'ManagedComposition<AuthFeatureState, AuthFeatureAction, AuthFeatureDependencies, AuthFeatureCatalog>' is not assignable to type 'ManagedComposition<AuthFeatureState, AuthFeatureAction, ExtendedDeps, AuthFeatureCatalog>'.
+        The types of 'execution._reduce' are incompatible between these types.
+          Type 'ManagedReductionAdapter<AuthFeatureState, AuthFeatureAction, AuthFeatureDependencies> | undefined' is not assignable to type 'ManagedReductionAdapter<AuthFeatureState, AuthFeatureAction, ExtendedDeps> | undefined'.
+            Type 'ManagedReductionAdapter<AuthFeatureState, AuthFeatureAction, AuthFeatureDependencies>' is not assignable to type 'ManagedReductionAdapter<AuthFeatureState, AuthFeatureAction, ExtendedDeps>'.
+              Types of parameters 'input' and 'input' are incompatible.
+                Type 'ManagedReductionInput<AuthFeatureState, AuthFeatureAction, ExtendedDeps>' is not assignable to type 'ManagedReductionInput<AuthFeatureState, AuthFeatureAction, AuthFeatureDependencies>'.
+                  Types of property 'reducer' are incompatible.
+                    Type 'Reducer<AuthFeatureState, AuthFeatureAction, ExtendedDeps>' is not assignable to type 'Reducer<AuthFeatureState, AuthFeatureAction, AuthFeatureDependencies>'.
+                      Types of parameters 'dependencies' and 'dependencies' are incompatible.
+                        Property 'fetchActivity' is missing in type 'AuthFeatureDependencies' but required in type 'ExtendedDeps'.

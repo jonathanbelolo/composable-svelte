@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Server-side rendering example with Fastify and Composable Svelte",
   "scripts": {
-    "dev": "tsx watch src/server/index.ts",
+    "dev": "pnpm build && pnpm start",
     "build": "vite build && vite build --ssr",
     "typecheck": "tsc --noEmit",
     "build:client": "vite build",
@@ -16,7 +16,9 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
-    "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings"
+    "check": "svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings",
+    "test:contracts": "vite build --config vite.test.config.ts && node --test dist/tests/contracts.test.js",
+    "check:tests": "svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings"
   },
   "dependencies": {
     "@composable-svelte/core": "workspace:*",

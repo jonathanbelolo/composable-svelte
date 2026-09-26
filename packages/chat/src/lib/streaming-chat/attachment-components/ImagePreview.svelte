@@ -33,9 +33,10 @@
 	let naturalHeight = $state(0);
 
 	onMount(() => {
-		document.addEventListener('fullscreenchange', handleFullscreenChange);
+		const doc = containerRef?.ownerDocument ?? document;
+		doc.addEventListener('fullscreenchange', handleFullscreenChange);
 		return () => {
-			document.removeEventListener('fullscreenchange', handleFullscreenChange);
+			doc.removeEventListener('fullscreenchange', handleFullscreenChange);
 		};
 	});
 
@@ -111,12 +112,13 @@
 
 	async function toggleFullscreen() {
 		if (!containerRef || !allowFullscreen) return;
+		const doc = containerRef.ownerDocument ?? document;
 
 		try {
-			if (!isFullscreen) {
-				await containerRef.requestFullscreen();
+			if (doc.fullscreenElement === containerRef) {
+				await doc.exitFullscreen();
 			} else {
-				await document.exitFullscreen();
+				await containerRef.requestFullscreen();
 			}
 		} catch (err) {
 			console.error('Fullscreen error:', err);
@@ -124,7 +126,8 @@
 	}
 
 	function handleFullscreenChange() {
-		isFullscreen = !!document.fullscreenElement;
+		const doc = containerRef?.ownerDocument ?? document;
+		isFullscreen = !!containerRef && doc.fullscreenElement === containerRef;
 	}
 
 	function handleImageClick() {

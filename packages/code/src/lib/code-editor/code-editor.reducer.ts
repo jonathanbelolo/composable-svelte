@@ -16,6 +16,50 @@ import type {
 	CodeEditorDependencies
 } from './code-editor.types.js';
 
+/** Execute one write; report transport failure separately from dispatch failure. */
+const runSaveEffect = (
+	onSave: ((value: string, signal?: AbortSignal) => Promise<void>) | undefined,
+	snapshot: string,
+	attemptId: number
+) =>
+	Effect.run<CodeEditorAction>(async (dispatch, signal) => {
+		if (signal?.aborted) return;
+		let outcome: CodeEditorAction;
+		try {
+			if (onSave) {
+				await onSave(snapshot, signal);
+			}
+			outcome = { type: 'saved', value: snapshot, attemptId };
+		} catch (e) {
+			const error = e instanceof Error ? e.message : 'Save failed';
+			outcome = { type: 'saveFailed', error, attemptId };
+		}
+		if (!signal?.aborted) dispatch(outcome);
+	});
+
+/**
+ * Whether two values are the same editor document.
+ *
+ * CodeMirror splits on `\r\n`, `\r` and `\n` and reads back with `\n`, so a
+ * value written from state with Windows line breaks comes back from the editor
+ * with Unix ones. Treating those as different would reject every edit of such
+ * a document as stale. The exact comparison is tried first, and is the only
+ * cost on the common path.
+ */
+const sameDocument = (a: string, b: string): boolean =>
+	a === b || a.replace(/\r\n?/g, '\n') === b.replace(/\r\n?/g, '\n');
+
+/** The revision an accepted value write moves state to. */
+const nextRevision = (state: CodeEditorState): number => (state.valueRevision ?? 0) + 1;
+
+/** Whether an editor report was made before a write state has since accepted. */
+const isStaleReport = (
+	state: CodeEditorState,
+	report: Extract<CodeEditorAction, { type: 'valueChanged' }>
+): boolean =>
+	(report.baseValue !== undefined && !sameDocument(report.baseValue, state.value)) ||
+	(report.baseRevision !== undefined && report.baseRevision !== (state.valueRevision ?? 0));
+
 /**
  * CodeEditor Reducer
  *
@@ -41,10 +85,19 @@ export const codeEditorReducer: Reducer<
 	switch (action.type) {
 		// Content changes
 		case 'valueChanged':
+			// A report from the editor names the document and the revision it was
+			// edited from. If state has moved on since, a newer write was reduced
+			// first (a command's echo queued behind an external load, or the echo
+			// of the editor applying that load). Applying it would overwrite the
+			// newer value. The revision catches a newer write that restored the
+			// same text, which the document alone cannot. Reports without these
+			// fields are external writes and apply.
+			if (isStaleReport(state, action)) return [state, Effect.none()];
 			return [
 				{
 					...state,
 					value: action.value,
+					valueRevision: nextRevision(state),
 					cursorPosition: action.cursorPosition || state.cursorPosition,
 					hasUnsavedChanges: action.value !== state.lastSavedValue
 				},
@@ -125,72 +178,96 @@ export const codeEditorReducer: Reducer<
 		case 'blurred':
 			return [{ ...state, isFocused: false }, Effect.none()];
 
-		// Save
-		case 'save':
-			// Guard: don't save if no changes
-			if (!state.hasUnsavedChanges) {
+		// Saves are serialized. While one is active, retain only the latest explicit
+		// save request. Editing alone never queues persistence. readOnly changes
+		// editor input behavior, not previously requested writes or their outcomes.
+		case 'save': {
+			if (state.isSaving) {
+				// Even a reversion to the old baseline must follow an in-flight write.
+				return [{ ...state, queuedSaveValue: state.value }, Effect.none()];
+			}
+			if (!state.hasUnsavedChanges) return [state, Effect.none()];
+			const attemptId = (state.saveAttempt ?? 0) + 1;
+			return [
+				{ ...state, isSaving: true, saveAttempt: attemptId, queuedSaveValue: null, saveError: null },
+				runSaveEffect(deps.onSave, state.value, attemptId)
+			];
+		}
+
+		case 'saved': {
+			if (action.attemptId === undefined ? state.isSaving : !state.isSaving || action.attemptId !== (state.saveAttempt ?? 0)) {
 				return [state, Effect.none()];
 			}
-
+			const queued = state.queuedSaveValue ?? null;
+			const hasQueued = queued !== null && queued !== action.value;
+			const attemptId = (state.saveAttempt ?? 0) + (hasQueued ? 1 : 0);
 			return [
-				{ ...state, saveError: null },
-				Effect.run(async (dispatch) => {
-					try {
-						if (deps.onSave) {
-							await deps.onSave(state.value);
-						}
-						dispatch({ type: 'saved', value: state.value });
-					} catch (e) {
-						const error = e instanceof Error ? e.message : 'Save failed';
-						dispatch({ type: 'saveFailed', error });
-					}
-				})
+				{ ...state, lastSavedValue: action.value, hasUnsavedChanges: state.value !== action.value,
+					saveError: null, isSaving: hasQueued, saveAttempt: attemptId, queuedSaveValue: null },
+				hasQueued && queued !== null ? runSaveEffect(deps.onSave, queued, attemptId) : Effect.none()
 			];
+		}
 
-		case 'saved':
+		case 'saveFailed': {
+			if (action.attemptId === undefined ? state.isSaving : !state.isSaving || action.attemptId !== (state.saveAttempt ?? 0)) {
+				return [state, Effect.none()];
+			}
+			const queued = state.queuedSaveValue ?? null;
+			const hasQueued = queued !== null;
+			const attemptId = (state.saveAttempt ?? 0) + (hasQueued ? 1 : 0);
 			return [
-				{
-					...state,
-					lastSavedValue: action.value,
-					hasUnsavedChanges: false,
-					saveError: null
-				},
-				Effect.none()
+				{ ...state, saveError: hasQueued ? null : action.error, isSaving: hasQueued,
+					saveAttempt: attemptId, queuedSaveValue: null },
+				queued !== null ? runSaveEffect(deps.onSave, queued, attemptId) : Effect.none()
 			];
-
-		case 'saveFailed':
-			return [{ ...state, saveError: action.error }, Effect.none()];
+		}
 
 		// Format
-		case 'format':
+		//
+		// Latest request wins, and only over the text it was asked to format.
+		// Each request takes a new `formatAttempt`; its result carries that id
+		// and the input it formatted. A result is dropped if a newer request
+		// started (overlapping formats resolving out of order) or if the value
+		// changed while the formatter ran (an edit made during a format is
+		// newer than the format). Untagged results keep the old unconditional
+		// behaviour for code that dispatches `formatted` itself.
+		case 'format': {
 			// Guard: don't format if read-only
 			if (state.readOnly) {
 				return [state, Effect.none()];
 			}
-
+			const attemptId = (state.formatAttempt ?? 0) + 1;
+			const input = state.value;
+			const language = state.language;
 			return [
-				{ ...state, formatError: null },
-				Effect.run(async (dispatch) => {
+				{ ...state, formatError: null, formatAttempt: attemptId },
+				Effect.run<CodeEditorAction>(async (dispatch) => {
 					try {
 						if (deps.formatter) {
-							const formatted = await deps.formatter(state.value, state.language);
-							dispatch({ type: 'formatted', value: formatted });
+							const formatted = await deps.formatter(input, language);
+							dispatch({ type: 'formatted', value: formatted, attemptId, input });
 						} else {
-							// No formatter provided - just no-op
-							dispatch({ type: 'formatFailed', error: 'No formatter configured' });
+							dispatch({ type: 'formatFailed', error: 'No formatter configured', attemptId });
 						}
 					} catch (e) {
 						const error = e instanceof Error ? e.message : 'Format failed';
-						dispatch({ type: 'formatFailed', error });
+						dispatch({ type: 'formatFailed', error, attemptId });
 					}
 				})
 			];
+		}
 
 		case 'formatted':
+			if (action.attemptId !== undefined) {
+				const superseded = action.attemptId !== (state.formatAttempt ?? 0);
+				const edited = action.input !== undefined && action.input !== state.value;
+				if (superseded || edited) return [state, Effect.none()];
+			}
 			return [
 				{
 					...state,
 					value: action.value,
+					valueRevision: nextRevision(state),
 					hasUnsavedChanges: action.value !== state.lastSavedValue,
 					formatError: null
 				},
@@ -198,6 +275,9 @@ export const codeEditorReducer: Reducer<
 			];
 
 		case 'formatFailed':
+			if (action.attemptId !== undefined && action.attemptId !== (state.formatAttempt ?? 0)) {
+				return [state, Effect.none()];
+			}
 			return [{ ...state, formatError: action.error }, Effect.none()];
 
 		default:

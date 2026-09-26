@@ -1,0 +1,59 @@
+RUN /private/tmp/auth-oauth-min ['npm', 'install', '--ignore-scripts', '--offline', '--legacy-peer-deps', './composable-svelte-auth-0.2.1.tgz']
+
+changed 1 package, and audited 116 packages in 614ms
+
+11 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+RUN /private/tmp/auth-oauth-min ['npm', 'run', 'check']
+
+> check
+> svelte-check --tsconfig tsconfig.json --fail-on-warnings
+
+Loading svelte-check in workspace: /private/tmp/auth-oauth-min
+Getting Svelte diagnostics...
+
+svelte-check found 0 errors and 0 warnings
+RUN /private/tmp/auth-oauth-min ['npm', 'run', 'build']
+
+> build
+> vite build
+
+12:37:15 PM [vite-plugin-svelte] no Svelte config found at /private/tmp/auth-oauth-min - using default configuration.
+vite v6.4.1 building for production...
+transforming...
+node_modules/zod/v4/core/util.js (400:0): A comment
+
+"// Wrapped in a `@__PURE__` IIFE: esbuild never tree-shakes a top-level initializer that contains a member access on `Number`, so the bare object literal survived into every bundle."
+
+in "node_modules/zod/v4/core/util.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+node_modules/zod/v4/core/regexes.js (74:0): A comment
+
+"/** Anchors a pattern source. The interpolation lives here rather than at the call site because
+ * esbuild will not drop a `@__PURE__` call whose own argument interpolates a variable, but it
+ * will drop `anchor(dateSource)`. Keeping it inline pinned `date` into every bundle. */"
+
+in "node_modules/zod/v4/core/regexes.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+✓ 865 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.33 kB │ gzip:   0.25 kB
+dist/assets/index-CMBbK_F_.css   43.50 kB │ gzip:   3.90 kB
+dist/assets/index-CGQ6coL8.js   442.74 kB │ gzip: 119.74 kB
+✓ built in 2.16s
+RUN /private/tmp/auth-oauth-min ['npm', 'run', 'test:browser']
+
+> test:browser
+> node scripts/browser.mjs
+
+Installed nested browser proof passed
+RUN /private/tmp/auth-oauth-min ['npm', 'run', 'test:ssr']
+
+> test:ssr
+> node scripts/ssr.mjs
+
+12:37:25 PM [vite-plugin-svelte] no Svelte config found at /private/tmp/auth-oauth-min - using default configuration.
+12:37:25 PM [vite] (client) Forced re-optimization of dependencies
+Installed SSR render proof passed for two isolated roots
+PASS /private/tmp/auth-oauth-min
