@@ -1,0 +1,30 @@
+{
+  "approvals": [
+    {
+      "name": "@composable-svelte/code",
+      "version": "0.5.0",
+      "stageId": "0e4a7819-71f4-4baa-a969-58a392e33c66",
+      "at": "2026-09-26T16:55:33.371Z"
+    },
+    {
+      "name": "@composable-svelte/media",
+      "version": "0.5.0",
+      "stageId": "a945917e-f7b5-4842-9d07-2fbde143b736",
+      "at": "2026-09-26T16:56:05.207Z"
+    },
+    {
+      "name": "@composable-svelte/chat",
+      "version": "0.5.0",
+      "stageId": "cd040828-dad3-47b1-8f1b-481c9a3dbc7e",
+      "at": "2026-09-26T16:56:39.875Z"
+    }
+  ],
+  "promotions": [
+    {
+      "name": "@composable-svelte/core",
+      "version": "0.13.1",
+      "tag": "latest",
+      "at": "2026-09-26T16:57:55.300Z"
+    }
+  ]
+}

@@ -1,0 +1,217 @@
+{
+  "status": "PASSED",
+  "registry": "https://registry.npmjs.org",
+  "transport": "genuine registry downloads and npm exact-version installs",
+  "startedAt": "2026-09-26T16:56:42.023281+00:00",
+  "packages": [
+    {
+      "name": "@composable-svelte/core",
+      "version": "0.13.1",
+      "candidateArchive": "/private/tmp/companion-runtime-release/archives-r8-production/composable-svelte-core-0.13.1.tgz",
+      "registryArchive": "/private/tmp/composable-registry-verification-production/registry-archives/composable-svelte-core-0.13.1.tgz",
+      "sha256": "9e76c7a0b939cdc5b7d5a05202761a14b4186f4408837f1668fdf2b3869b0c51",
+      "integrity": "sha512-CDEer8YWiDuUJlNXtjPHpu3mObUSxFCbQK0D96VjYvE89GfHgJvVe1YjOZ61dsmpmVBhEkWdbspNjNkW+y+Wuw==",
+      "registryTarball": "https://registry.npmjs.org/@composable-svelte/core/-/core-0.13.1.tgz",
+      "temporaryTag": "upgrade1-candidate"
+    },
+    {
+      "name": "@composable-svelte/auth",
+      "version": "0.3.0",
+      "candidateArchive": "/private/tmp/companion-runtime-release/archives-r6/composable-svelte-auth-0.3.0.tgz",
+      "registryArchive": "/private/tmp/composable-registry-verification-production/registry-archives/composable-svelte-auth-0.3.0.tgz",
+      "sha256": "dbb2611bb01616e4e9ef86a54016724cf6271e0ec337b759b5cbcb21dae27112",
+      "integrity": "sha512-KplhZCaYI9yDCTr/JaKVb5DEv264M0dQ+rP3uLk1sp6v6RWxvxVNuitlAZOhrjZmrB2AyYHihkANvKnj5gDtBQ==",
+      "registryTarball": "https://registry.npmjs.org/@composable-svelte/auth/-/auth-0.3.0.tgz",
+      "temporaryTag": "upgrade1-candidate"
+    },
+    {
+      "name": "@composable-svelte/maps",
+      "version": "0.3.0",
+      "candidateArchive": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-maps-0.3.0.tgz",
+      "registryArchive": "/private/tmp/composable-registry-verification-production/registry-archives/composable-svelte-maps-0.3.0.tgz",
+      "sha256": "3730a67a93be13a631729d0538328b92bf6b85c5fc1f603ea0a8e4395aee7116",
+      "integrity": "sha512-B/MuvJcQEtrkaHtveC7tXaRZuNmf/3Lw15UMt+bN3DILScigCxPBmexMKAVHORkCLvoKk+pnkaedZMeQiPxEDg==",
+      "registryTarball": "https://registry.npmjs.org/@composable-svelte/maps/-/maps-0.3.0.tgz",
+      "temporaryTag": "upgrade1-candidate"
+    },
+    {
+      "name": "@composable-svelte/graphics",
+      "version": "0.3.0",
+      "candidateArchive": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-graphics-0.3.0.tgz",
+      "registryArchive": "/private/tmp/composable-registry-verification-production/registry-archives/composable-svelte-graphics-0.3.0.tgz",
+      "sha256": "366f918ae042bd510c263f124e247d3a4e3ac4a7a57e91a72d93131cf8c7857b",
+      "integrity": "sha512-wwR0ZLYAR8aOOaG4L/kC2Lfhxct2dQE/WceeVRM/P3jM6uspv+hYCOTLMZ2jpjOsZ2Q790JduzqEdSGYOmooFQ==",
+      "registryTarball": "https://registry.npmjs.org/@composable-svelte/graphics/-/graphics-0.3.0.tgz",
+      "temporaryTag": "upgrade1-candidate"
+    },
+    {
+      "name": "@composable-svelte/charts",
+      "version": "0.3.0",
+      "candidateArchive": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-charts-0.3.0.tgz",
+      "registryArchive": "/private/tmp/composable-registry-verification-production/registry-archives/composable-svelte-charts-0.3.0.tgz",
+      "sha256": "c36b7a06e5a293259cdbebd599a1698cd448c000eac343c66411c1282a73c21d",
+      "integrity": "sha512-1EjOkkdWX/tEjG89D+/OgtcByqraWFYqW+xLs+6WvFV3hy7KcSbiLGBxcN84tZcR3pHcDgeoZWKTdmS8B9Yudw==",
+      "registryTarball": "https://registry.npmjs.org/@composable-svelte/charts/-/charts-0.3.0.tgz",
+      "temporaryTag": "upgrade1-candidate"
+    },
+    {
+      "name": "@composable-svelte/code",
+      "version": "0.5.0",
+      "candidateArchive": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-code-0.5.0.tgz",
+      "registryArchive": "/private/tmp/composable-registry-verification-production/registry-archives/composable-svelte-code-0.5.0.tgz",
+      "sha256": "f85b945232c460edc45c0051dc69c4580f4a502b39a2988af38c62a2e3a37026",
+      "integrity": "sha512-P5KwTCAxc6uPof/lzjQoOIyjR+RHvh2IUk1Ywp5ln2OrMV073tM7+bcA63Ne7UPIdGpt+93q9HMkoSgRrBJD7g==",
+      "registryTarball": "https://registry.npmjs.org/@composable-svelte/code/-/code-0.5.0.tgz",
+      "temporaryTag": "upgrade1-candidate"
+    },
+    {
+      "name": "@composable-svelte/media",
+      "version": "0.5.0",
+      "candidateArchive": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-media-0.5.0.tgz",
+      "registryArchive": "/private/tmp/composable-registry-verification-production/registry-archives/composable-svelte-media-0.5.0.tgz",
+      "sha256": "c0bfa6528fb6cd3dc68f2769237d3053514f76f79bc5197316b230eb07b78298",
+      "integrity": "sha512-p1xYL/9hkCfitPYkb5Ss5nYb60IOebLTzyFww43++alSW9yZc0fUMJqoTx8iduwEIvFMfaHQbS+9nkwF4ULeHg==",
+      "registryTarball": "https://registry.npmjs.org/@composable-svelte/media/-/media-0.5.0.tgz",
+      "temporaryTag": "upgrade1-candidate"
+    },
+    {
+      "name": "@composable-svelte/chat",
+      "version": "0.5.0",
+      "candidateArchive": "/private/tmp/companion-runtime-release/archives-r5-chat/composable-svelte-chat-0.5.0.tgz",
+      "registryArchive": "/private/tmp/composable-registry-verification-production/registry-archives/composable-svelte-chat-0.5.0.tgz",
+      "sha256": "fe21f00f75385205073744bc45cba715e441914d38119d46fb7cf0bfdfe76aeb",
+      "integrity": "sha512-plE4BrpzXPGv9xGJA0GGB0zPtD7z4Cxs1D/reg9BgoYpwG6qI3a12bnLFyHJz9c1XM1q+oEUiyQeHkCqHIcG8Q==",
+      "registryTarball": "https://registry.npmjs.org/@composable-svelte/chat/-/chat-0.5.0.tgz",
+      "temporaryTag": "upgrade1-candidate"
+    },
+    {
+      "name": "@composable-svelte/architecture",
+      "version": "0.13.1",
+      "candidateArchive": "/private/tmp/companion-runtime-release/archives-r8-production/composable-svelte-architecture-0.13.1.tgz",
+      "registryArchive": "/private/tmp/composable-registry-verification-production/registry-archives/composable-svelte-architecture-0.13.1.tgz",
+      "sha256": "a11fc234b1638d45e709eec22c1a27cd96ded433cdae2aa4dc8545ef8d0949f3",
+      "integrity": "sha512-hudB2YvyTaE2g7bUsDpUQEZMYmjk1gPn7owvyfVoWzjD9qN7m/bmYqupSaWrNoINcSqR2ng770F04k+I7dHByA==",
+      "registryTarball": "https://registry.npmjs.org/@composable-svelte/architecture/-/architecture-0.13.1.tgz",
+      "temporaryTag": "upgrade1-candidate"
+    }
+  ],
+  "consumers": [
+    {
+      "name": "public-starter",
+      "project": "/private/tmp/composable-registry-verification-production/public-starter",
+      "scope": "unmodified shipped public starter check; checker intentionally absent",
+      "packages": [
+        {
+          "name": "@composable-svelte/core",
+          "version": "0.13.1",
+          "matchedFiles": 1258,
+          "unexpectedFiles": 0,
+          "packageSymlinks": 0,
+          "excludedNestedDependencyRoots": [],
+          "integrity": "sha512-CDEer8YWiDuUJlNXtjPHpu3mObUSxFCbQK0D96VjYvE89GfHgJvVe1YjOZ61dsmpmVBhEkWdbspNjNkW+y+Wuw==",
+          "resolved": "https://registry.npmjs.org/@composable-svelte/core/-/core-0.13.1.tgz"
+        }
+      ],
+      "checkerInstalled": false
+    },
+    {
+      "name": "all-companion-inventory",
+      "project": "/private/tmp/composable-registry-verification-production/all-companion-inventory",
+      "scope": "all-nine genuine registry package inventory plus core starter check; no companion API coverage claimed",
+      "packages": [
+        {
+          "name": "@composable-svelte/core",
+          "version": "0.13.1",
+          "matchedFiles": 1258,
+          "unexpectedFiles": 0,
+          "packageSymlinks": 0,
+          "excludedNestedDependencyRoots": [],
+          "integrity": "sha512-CDEer8YWiDuUJlNXtjPHpu3mObUSxFCbQK0D96VjYvE89GfHgJvVe1YjOZ61dsmpmVBhEkWdbspNjNkW+y+Wuw==",
+          "resolved": "https://registry.npmjs.org/@composable-svelte/core/-/core-0.13.1.tgz"
+        },
+        {
+          "name": "@composable-svelte/auth",
+          "version": "0.3.0",
+          "matchedFiles": 404,
+          "unexpectedFiles": 0,
+          "packageSymlinks": 0,
+          "excludedNestedDependencyRoots": [],
+          "integrity": "sha512-KplhZCaYI9yDCTr/JaKVb5DEv264M0dQ+rP3uLk1sp6v6RWxvxVNuitlAZOhrjZmrB2AyYHihkANvKnj5gDtBQ==",
+          "resolved": "https://registry.npmjs.org/@composable-svelte/auth/-/auth-0.3.0.tgz"
+        },
+        {
+          "name": "@composable-svelte/maps",
+          "version": "0.3.0",
+          "matchedFiles": 64,
+          "unexpectedFiles": 0,
+          "packageSymlinks": 0,
+          "excludedNestedDependencyRoots": [],
+          "integrity": "sha512-B/MuvJcQEtrkaHtveC7tXaRZuNmf/3Lw15UMt+bN3DILScigCxPBmexMKAVHORkCLvoKk+pnkaedZMeQiPxEDg==",
+          "resolved": "https://registry.npmjs.org/@composable-svelte/maps/-/maps-0.3.0.tgz"
+        },
+        {
+          "name": "@composable-svelte/graphics",
+          "version": "0.3.0",
+          "matchedFiles": 133,
+          "unexpectedFiles": 0,
+          "packageSymlinks": 0,
+          "excludedNestedDependencyRoots": [],
+          "integrity": "sha512-wwR0ZLYAR8aOOaG4L/kC2Lfhxct2dQE/WceeVRM/P3jM6uspv+hYCOTLMZ2jpjOsZ2Q790JduzqEdSGYOmooFQ==",
+          "resolved": "https://registry.npmjs.org/@composable-svelte/graphics/-/graphics-0.3.0.tgz"
+        },
+        {
+          "name": "@composable-svelte/charts",
+          "version": "0.3.0",
+          "matchedFiles": 53,
+          "unexpectedFiles": 0,
+          "packageSymlinks": 0,
+          "excludedNestedDependencyRoots": [],
+          "integrity": "sha512-1EjOkkdWX/tEjG89D+/OgtcByqraWFYqW+xLs+6WvFV3hy7KcSbiLGBxcN84tZcR3pHcDgeoZWKTdmS8B9Yudw==",
+          "resolved": "https://registry.npmjs.org/@composable-svelte/charts/-/charts-0.3.0.tgz"
+        },
+        {
+          "name": "@composable-svelte/code",
+          "version": "0.5.0",
+          "matchedFiles": 69,
+          "unexpectedFiles": 0,
+          "packageSymlinks": 0,
+          "excludedNestedDependencyRoots": [],
+          "integrity": "sha512-P5KwTCAxc6uPof/lzjQoOIyjR+RHvh2IUk1Ywp5ln2OrMV073tM7+bcA63Ne7UPIdGpt+93q9HMkoSgRrBJD7g==",
+          "resolved": "https://registry.npmjs.org/@composable-svelte/code/-/code-0.5.0.tgz"
+        },
+        {
+          "name": "@composable-svelte/media",
+          "version": "0.5.0",
+          "matchedFiles": 101,
+          "unexpectedFiles": 0,
+          "packageSymlinks": 0,
+          "excludedNestedDependencyRoots": [],
+          "integrity": "sha512-p1xYL/9hkCfitPYkb5Ss5nYb60IOebLTzyFww43++alSW9yZc0fUMJqoTx8iduwEIvFMfaHQbS+9nkwF4ULeHg==",
+          "resolved": "https://registry.npmjs.org/@composable-svelte/media/-/media-0.5.0.tgz"
+        },
+        {
+          "name": "@composable-svelte/chat",
+          "version": "0.5.0",
+          "matchedFiles": 157,
+          "unexpectedFiles": 0,
+          "packageSymlinks": 0,
+          "excludedNestedDependencyRoots": [],
+          "integrity": "sha512-plE4BrpzXPGv9xGJA0GGB0zPtD7z4Cxs1D/reg9BgoYpwG6qI3a12bnLFyHJz9c1XM1q+oEUiyQeHkCqHIcG8Q==",
+          "resolved": "https://registry.npmjs.org/@composable-svelte/chat/-/chat-0.5.0.tgz"
+        },
+        {
+          "name": "@composable-svelte/architecture",
+          "version": "0.13.1",
+          "matchedFiles": 40,
+          "unexpectedFiles": 0,
+          "packageSymlinks": 0,
+          "excludedNestedDependencyRoots": [],
+          "integrity": "sha512-hudB2YvyTaE2g7bUsDpUQEZMYmjk1gPn7owvyfVoWzjD9qN7m/bmYqupSaWrNoINcSqR2ng770F04k+I7dHByA==",
+          "resolved": "https://registry.npmjs.org/@composable-svelte/architecture/-/architecture-0.13.1.tgz"
+        }
+      ],
+      "optionalCheckerSmoke": "not run; checker optional, unreliable and discouraged per user; not release authority"
+    }
+  ],
+  "finishedAt": "2026-09-26T16:57:08.419095+00:00"
+}

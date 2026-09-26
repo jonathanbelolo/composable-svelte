@@ -1,0 +1,98 @@
+[
+  {
+    "name": "@composable-svelte/auth",
+    "version": "0.3.0",
+    "path": "/private/tmp/companion-runtime-release/archives-r6/composable-svelte-auth-0.3.0.tgz",
+    "sha256": "dbb2611bb01616e4e9ef86a54016724cf6271e0ec337b759b5cbcb21dae27112",
+    "integrity": "sha512-KplhZCaYI9yDCTr/JaKVb5DEv264M0dQ+rP3uLk1sp6v6RWxvxVNuitlAZOhrjZmrB2AyYHihkANvKnj5gDtBQ==",
+    "tag": "upgrade1-candidate",
+    "exitCode": 0,
+    "finishedAt": "2026-09-26T16:42:59.696023+00:00",
+    "status": "staged-not-public",
+    "listExitCode": 0
+  },
+  {
+    "name": "@composable-svelte/maps",
+    "version": "0.3.0",
+    "path": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-maps-0.3.0.tgz",
+    "sha256": "3730a67a93be13a631729d0538328b92bf6b85c5fc1f603ea0a8e4395aee7116",
+    "integrity": "sha512-B/MuvJcQEtrkaHtveC7tXaRZuNmf/3Lw15UMt+bN3DILScigCxPBmexMKAVHORkCLvoKk+pnkaedZMeQiPxEDg==",
+    "tag": "upgrade1-candidate",
+    "exitCode": 0,
+    "finishedAt": "2026-09-26T16:43:03.688981+00:00",
+    "status": "staged-not-public",
+    "listExitCode": 0
+  },
+  {
+    "name": "@composable-svelte/graphics",
+    "version": "0.3.0",
+    "path": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-graphics-0.3.0.tgz",
+    "sha256": "366f918ae042bd510c263f124e247d3a4e3ac4a7a57e91a72d93131cf8c7857b",
+    "integrity": "sha512-wwR0ZLYAR8aOOaG4L/kC2Lfhxct2dQE/WceeVRM/P3jM6uspv+hYCOTLMZ2jpjOsZ2Q790JduzqEdSGYOmooFQ==",
+    "tag": "upgrade1-candidate",
+    "exitCode": 0,
+    "finishedAt": "2026-09-26T16:43:07.252459+00:00",
+    "status": "staged-not-public",
+    "listExitCode": 0
+  },
+  {
+    "name": "@composable-svelte/charts",
+    "version": "0.3.0",
+    "path": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-charts-0.3.0.tgz",
+    "sha256": "c36b7a06e5a293259cdbebd599a1698cd448c000eac343c66411c1282a73c21d",
+    "integrity": "sha512-1EjOkkdWX/tEjG89D+/OgtcByqraWFYqW+xLs+6WvFV3hy7KcSbiLGBxcN84tZcR3pHcDgeoZWKTdmS8B9Yudw==",
+    "tag": "upgrade1-candidate",
+    "exitCode": 0,
+    "finishedAt": "2026-09-26T16:43:11.668257+00:00",
+    "status": "staged-not-public",
+    "listExitCode": 0
+  },
+  {
+    "name": "@composable-svelte/code",
+    "version": "0.5.0",
+    "path": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-code-0.5.0.tgz",
+    "sha256": "f85b945232c460edc45c0051dc69c4580f4a502b39a2988af38c62a2e3a37026",
+    "integrity": "sha512-P5KwTCAxc6uPof/lzjQoOIyjR+RHvh2IUk1Ywp5ln2OrMV073tM7+bcA63Ne7UPIdGpt+93q9HMkoSgRrBJD7g==",
+    "tag": "upgrade1-candidate",
+    "exitCode": 0,
+    "finishedAt": "2026-09-26T16:43:15.364173+00:00",
+    "status": "staged-not-public",
+    "listExitCode": 0
+  },
+  {
+    "name": "@composable-svelte/media",
+    "version": "0.5.0",
+    "path": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-media-0.5.0.tgz",
+    "sha256": "c0bfa6528fb6cd3dc68f2769237d3053514f76f79bc5197316b230eb07b78298",
+    "integrity": "sha512-p1xYL/9hkCfitPYkb5Ss5nYb60IOebLTzyFww43++alSW9yZc0fUMJqoTx8iduwEIvFMfaHQbS+9nkwF4ULeHg==",
+    "tag": "upgrade1-candidate",
+    "exitCode": 0,
+    "finishedAt": "2026-09-26T16:43:18.974587+00:00",
+    "status": "staged-not-public",
+    "listExitCode": 0
+  },
+  {
+    "name": "@composable-svelte/chat",
+    "version": "0.5.0",
+    "path": "/private/tmp/companion-runtime-release/archives-r5-chat/composable-svelte-chat-0.5.0.tgz",
+    "sha256": "fe21f00f75385205073744bc45cba715e441914d38119d46fb7cf0bfdfe76aeb",
+    "integrity": "sha512-plE4BrpzXPGv9xGJA0GGB0zPtD7z4Cxs1D/reg9BgoYpwG6qI3a12bnLFyHJz9c1XM1q+oEUiyQeHkCqHIcG8Q==",
+    "tag": "upgrade1-candidate",
+    "exitCode": 0,
+    "finishedAt": "2026-09-26T16:43:22.972404+00:00",
+    "status": "staged-not-public",
+    "listExitCode": 0
+  },
+  {
+    "name": "@composable-svelte/architecture",
+    "version": "0.13.1",
+    "path": "/private/tmp/companion-runtime-release/archives-r8-production/composable-svelte-architecture-0.13.1.tgz",
+    "sha256": "a11fc234b1638d45e709eec22c1a27cd96ded433cdae2aa4dc8545ef8d0949f3",
+    "integrity": "sha512-hudB2YvyTaE2g7bUsDpUQEZMYmjk1gPn7owvyfVoWzjD9qN7m/bmYqupSaWrNoINcSqR2ng770F04k+I7dHByA==",
+    "tag": "upgrade1-candidate",
+    "exitCode": 0,
+    "finishedAt": "2026-09-26T16:43:27.004368+00:00",
+    "status": "staged-not-public",
+    "listExitCode": 0
+  }
+]

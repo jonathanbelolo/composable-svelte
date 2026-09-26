@@ -1,5 +1,5 @@
 # Coordinated release status
 
-2026-09-26: user explicitly authorized immediate npm publication. All runtime qualification is complete. Initial PR #4 CI passed. Final checker scoped review is clear, but checker use is discouraged and is not an architectural acceptance or release requirement. Core starter no longer installs or runs it by default.
+2026-09-26: all nine exact versions are publicly available under upgrade1-candidate. Genuine registry tarballs match all final archive hashes. Both fresh registry consumer installs passed. Default latest-tag promotion is underway and requires npm authentication.
 
-Publication is in progress. Final archive identities and registry receipts will be recorded after npm confirms publication. No runtime changes were introduced by the final documentation update.
+PR #4 merged as 6d7aa6e44ca10dff3ee08440493191d9a757d301 after final CI passed. The architecture checker is optional and use is discouraged; the starter neither installs nor runs it by default. No runtime bytes changed in the final guidance update.
