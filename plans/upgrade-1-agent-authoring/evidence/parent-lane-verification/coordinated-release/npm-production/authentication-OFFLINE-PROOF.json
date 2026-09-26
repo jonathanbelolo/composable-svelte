@@ -1,0 +1,34 @@
+{
+  "networkRequests": 0,
+  "realCredentialsUsed": false,
+  "result": [
+    {
+      "npmVersion": "11.15.0",
+      "corrected": false,
+      "pollMethod": "PUT",
+      "pollBodyPresent": true,
+      "originalMutationUnchanged": true
+    },
+    {
+      "npmVersion": "11.15.0",
+      "corrected": true,
+      "pollMethod": "GET",
+      "pollBodyPresent": false,
+      "originalMutationUnchanged": true
+    },
+    {
+      "npmVersion": "11.20.0",
+      "corrected": false,
+      "pollMethod": "PUT",
+      "pollBodyPresent": true,
+      "originalMutationUnchanged": true
+    },
+    {
+      "npmVersion": "11.20.0",
+      "corrected": true,
+      "pollMethod": "GET",
+      "pollBodyPresent": false,
+      "originalMutationUnchanged": true
+    }
+  ]
+}

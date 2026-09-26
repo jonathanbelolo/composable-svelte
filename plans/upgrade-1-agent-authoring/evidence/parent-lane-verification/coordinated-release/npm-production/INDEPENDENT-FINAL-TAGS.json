@@ -1,0 +1,91 @@
+{
+  "checkedAt": "2026-09-26T17:34:50.854418+00:00",
+  "method": "Unauthenticated public-registry GET; independent of publishing process",
+  "status": "PASSED",
+  "packages": [
+    {
+      "name": "@composable-svelte/core",
+      "expectedVersion": "0.13.1",
+      "distTags": {
+        "next": "0.13.1",
+        "upgrade1": "0.13.0",
+        "latest": "0.13.1",
+        "upgrade1-candidate": "0.13.1"
+      },
+      "passed": true
+    },
+    {
+      "name": "@composable-svelte/auth",
+      "expectedVersion": "0.3.0",
+      "distTags": {
+        "latest": "0.3.0",
+        "upgrade1-candidate": "0.3.0"
+      },
+      "passed": true
+    },
+    {
+      "name": "@composable-svelte/maps",
+      "expectedVersion": "0.3.0",
+      "distTags": {
+        "latest": "0.3.0",
+        "upgrade1-candidate": "0.3.0"
+      },
+      "passed": true
+    },
+    {
+      "name": "@composable-svelte/graphics",
+      "expectedVersion": "0.3.0",
+      "distTags": {
+        "latest": "0.3.0",
+        "upgrade1-candidate": "0.3.0"
+      },
+      "passed": true
+    },
+    {
+      "name": "@composable-svelte/charts",
+      "expectedVersion": "0.3.0",
+      "distTags": {
+        "latest": "0.3.0",
+        "upgrade1-candidate": "0.3.0"
+      },
+      "passed": true
+    },
+    {
+      "name": "@composable-svelte/code",
+      "expectedVersion": "0.5.0",
+      "distTags": {
+        "latest": "0.5.0",
+        "upgrade1-candidate": "0.5.0"
+      },
+      "passed": true
+    },
+    {
+      "name": "@composable-svelte/media",
+      "expectedVersion": "0.5.0",
+      "distTags": {
+        "latest": "0.5.0",
+        "upgrade1-candidate": "0.5.0"
+      },
+      "passed": true
+    },
+    {
+      "name": "@composable-svelte/chat",
+      "expectedVersion": "0.5.0",
+      "distTags": {
+        "latest": "0.5.0",
+        "upgrade1-candidate": "0.5.0"
+      },
+      "passed": true
+    },
+    {
+      "name": "@composable-svelte/architecture",
+      "expectedVersion": "0.13.1",
+      "distTags": {
+        "upgrade1": "0.13.0",
+        "latest": "0.13.1",
+        "upgrade1-candidate": "0.13.1"
+      },
+      "passed": true
+    }
+  ]
+}

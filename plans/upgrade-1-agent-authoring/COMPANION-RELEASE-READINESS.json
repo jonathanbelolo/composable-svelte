@@ -1,7 +1,7 @@
 {
   "schema": "companion-release-readiness/v1",
-  "updatedAt": "2026-09-26T16:30:00.066210+00:00",
-  "status": "all-nine-published-and-registry-verified-default-tags-pending",
+  "updatedAt": "2026-09-26T17:35:24.524519+00:00",
+  "status": "complete-published-and-default-tags-verified",
   "registrySnapshot": "evidence/companion-release-preparation/registry-snapshot.json",
   "versions": [
     {
@@ -15,7 +15,8 @@
       "finalArchive": "/private/tmp/companion-runtime-release/archives-r8-production/composable-svelte-core-0.13.1.tgz",
       "finalSHA256": "9e76c7a0b939cdc5b7d5a05202761a14b4186f4408837f1668fdf2b3869b0c51",
       "registryVerified": true,
-      "archiveStatus": "Published exact archive verified from npm registry"
+      "archiveStatus": "Published exact archive and latest tag verified",
+      "latestVerified": true
     },
     {
       "package": "@composable-svelte/architecture",
@@ -28,7 +29,8 @@
       "finalArchive": "/private/tmp/companion-runtime-release/archives-r8-production/composable-svelte-architecture-0.13.1.tgz",
       "finalSHA256": "a11fc234b1638d45e709eec22c1a27cd96ded433cdae2aa4dc8545ef8d0949f3",
       "registryVerified": true,
-      "archiveStatus": "Published exact archive verified from npm registry"
+      "archiveStatus": "Published exact archive and latest tag verified",
+      "latestVerified": true
     },
     {
       "package": "@composable-svelte/auth",
@@ -41,7 +43,8 @@
       "finalArchive": "/private/tmp/companion-runtime-release/archives-r6/composable-svelte-auth-0.3.0.tgz",
       "finalSHA256": "dbb2611bb01616e4e9ef86a54016724cf6271e0ec337b759b5cbcb21dae27112",
       "registryVerified": true,
-      "archiveStatus": "Published exact archive verified from npm registry"
+      "archiveStatus": "Published exact archive and latest tag verified",
+      "latestVerified": true
     },
     {
       "package": "@composable-svelte/code",
@@ -54,7 +57,8 @@
       "finalArchive": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-code-0.5.0.tgz",
       "finalSHA256": "f85b945232c460edc45c0051dc69c4580f4a502b39a2988af38c62a2e3a37026",
       "registryVerified": true,
-      "archiveStatus": "Published exact archive verified from npm registry"
+      "archiveStatus": "Published exact archive and latest tag verified",
+      "latestVerified": true
     },
     {
       "package": "@composable-svelte/media",
@@ -67,7 +71,8 @@
       "finalArchive": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-media-0.5.0.tgz",
       "finalSHA256": "c0bfa6528fb6cd3dc68f2769237d3053514f76f79bc5197316b230eb07b78298",
       "registryVerified": true,
-      "archiveStatus": "Published exact archive verified from npm registry"
+      "archiveStatus": "Published exact archive and latest tag verified",
+      "latestVerified": true
     },
     {
       "package": "@composable-svelte/chat",
@@ -80,7 +85,8 @@
       "finalArchive": "/private/tmp/companion-runtime-release/archives-r5-chat/composable-svelte-chat-0.5.0.tgz",
       "finalSHA256": "fe21f00f75385205073744bc45cba715e441914d38119d46fb7cf0bfdfe76aeb",
       "registryVerified": true,
-      "archiveStatus": "Published exact archive verified from npm registry"
+      "archiveStatus": "Published exact archive and latest tag verified",
+      "latestVerified": true
     },
     {
       "package": "@composable-svelte/maps",
@@ -93,7 +99,8 @@
       "finalArchive": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-maps-0.3.0.tgz",
       "finalSHA256": "3730a67a93be13a631729d0538328b92bf6b85c5fc1f603ea0a8e4395aee7116",
       "registryVerified": true,
-      "archiveStatus": "Published exact archive verified from npm registry"
+      "archiveStatus": "Published exact archive and latest tag verified",
+      "latestVerified": true
     },
     {
       "package": "@composable-svelte/graphics",
@@ -106,7 +113,8 @@
       "finalArchive": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-graphics-0.3.0.tgz",
       "finalSHA256": "366f918ae042bd510c263f124e247d3a4e3ac4a7a57e91a72d93131cf8c7857b",
       "registryVerified": true,
-      "archiveStatus": "Published exact archive verified from npm registry"
+      "archiveStatus": "Published exact archive and latest tag verified",
+      "latestVerified": true
     },
     {
       "package": "@composable-svelte/charts",
@@ -119,7 +127,8 @@
       "finalArchive": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-charts-0.3.0.tgz",
       "finalSHA256": "c36b7a06e5a293259cdbebd599a1698cd448c000eac343c66411c1282a73c21d",
       "registryVerified": true,
-      "archiveStatus": "Published exact archive verified from npm registry"
+      "archiveStatus": "Published exact archive and latest tag verified",
+      "latestVerified": true
     }
   ],
   "profiles": [
@@ -209,11 +218,11 @@
     "finalArchiveQualification": "R6 all16 exact-archive runtime recipe cases PASS; final checker/profile/app scoped gates complete. Publication archive changes limited to warnings and removal of default starter checker dependency/command.",
     "isolatedAgentAuthoring": "AppA14unit/browser/SSR/build and AppB23unit/8browser/SSR/build passed; independent scoped reviews CLEAR. Final app checker controls complete, not architectural certification.",
     "mediaPhysicalMicrophone": "Complete: actual normal Chrome/macOS3case suite39assertions PASS after userpermission; capture windows1251/1210/1243ms, zero live tracks/errors/network/restarts. Exact executed Core/Media bytes equal R4. Full metadata-only receipt and fixture retained under coordinated-release/media-real-device.",
-    "publication": "All nine exact versions public; genuine registry archives and both consumer installs verified. Default-tag promotion pending.",
+    "publication": "Complete: all nine exact archives published and registry verified; all nine latest tags and Core next independently verified.",
     "sharedVerifier": "Independently reviewed immutable archive harness and legacy local-checker injection integrated. Parent36/36 selftests pass in installed checkout; dedicated CI step added. Narrow phase receipts remain explicitly narrow.",
     "authArchiveHygiene": "Complete: qualified 404-file archive contains no consumer node_modules/.vite/.svelte-kit/dist artifacts",
     "releaseCheckout": "PR4 merged as6d7aa6e44ca10dff3ee08440493191d9a757d301 after final CI SUCCESS.",
-    "npmAuthentication": "User renewed; final npm writes in progress.",
+    "npmAuthentication": "Completed; no pending requests.",
     "dependencyExtension": "Core generic typing repair reviewed and integrated; exact R6 installed matrix passes, runtime bytes unchanged."
   },
   "checkerPolicy": "Completely optional; use discouraged; practical reliability unestablished; not architectural acceptance or release requirement."

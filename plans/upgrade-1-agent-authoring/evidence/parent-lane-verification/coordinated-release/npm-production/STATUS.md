@@ -1,7 +1,11 @@
-# npm publication status
+# npm publication complete
 
-All nine target versions are publicly published under upgrade1-candidate. The genuine-registry verification receipt passes all nine archive identities and both consumer installs. Core latest is 0.13.1. Other latest tags and Core next have not yet been confirmed at the new versions.
+2026-09-26: all nine target versions are published and independently verified as latest. Core next also points to 0.13.1. No release actions or authentication approvals remain.
 
-Further authentication prompts were stopped after repeated browser approvals failed to complete the Auth default-tag update. Last CLI result: E429 for PUT Auth dist-tags/latest. No token or OTP is retained in these receipts. The remaining task is tag promotion; no source, checker, runtime or fresh-app work is pending.
+- Core and Architecture: 0.13.1
+- Auth, Maps, Graphics and Charts: 0.3.0
+- Code, Media and Chat: 0.5.0
 
-PR #4 merged after final CI success: 6d7aa6e44ca10dff3ee08440493191d9a757d301.
+Genuine registry archive hashes match the final release artifacts; both fresh consumer installations passed. The public starter does not install or run the architecture checker. Its shipped guidance discourages use and rejects its results as architectural approval.
+
+Source PR #4 merged after final CI success: 6d7aa6e44ca10dff3ee08440493191d9a757d301. FINAL-TAGS.json records the completed updates; INDEPENDENT-FINAL-TAGS.json confirms all defaults through unauthenticated registry reads. PARTIAL-TAG-PROMOTION.json is retained historical evidence and is superseded by these final receipts.
