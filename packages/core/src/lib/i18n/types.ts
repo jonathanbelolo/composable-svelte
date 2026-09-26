@@ -70,6 +70,11 @@ export interface I18nState {
  */
 export type I18nAction =
   | {
+      /** Restore a server snapshot through the same reducer as other locale changes. */
+      type: 'i18n/hydrate';
+      state: I18nState;
+    }
+  | {
       type: 'i18n/setLocale';
       locale: string;
       /** Optional: preload namespaces for new locale */

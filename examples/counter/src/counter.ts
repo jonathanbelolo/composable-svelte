@@ -5,10 +5,12 @@
  * - State type definition
  * - Action discriminated union
  * - Pure reducer function
- * - Effect.run() for async operations
+ * - Effect.cancellable() for cancellable async operations
+ * - Injected fact dependencies
  */
 
 import { Effect, type Reducer } from '@composable-svelte/core';
+import { type FactService } from './facts.js';
 
 // ============================================================================
 // State
@@ -40,41 +42,52 @@ export type CounterAction =
   | { type: 'factLoaded'; fact: string }
   | { type: 'factLoadFailed'; error: string };
 
+export interface CounterDependencies {
+  factService: FactService;
+}
+
+export const FACT_EFFECT_ID = 'counter/load-fact';
+
 // ============================================================================
 // Reducer
 // ============================================================================
 
-export const counterReducer: Reducer<CounterState, CounterAction> = (state, action) => {
+export const counterReducer: Reducer<CounterState, CounterAction, CounterDependencies> = (
+  state,
+  action,
+  deps
+) => {
   switch (action.type) {
     case 'incrementTapped':
       return [
-        { ...state, count: state.count + 1 },
-        Effect.none()
+        { ...state, count: state.count + 1, fact: null, error: null, isLoading: false },
+        Effect.cancel(FACT_EFFECT_ID)
       ];
 
     case 'decrementTapped':
       return [
-        { ...state, count: state.count - 1 },
-        Effect.none()
+        { ...state, count: state.count - 1, fact: null, error: null, isLoading: false },
+        Effect.cancel(FACT_EFFECT_ID)
       ];
 
     case 'resetTapped':
       return [
         { ...initialState },
-        Effect.none()
+        Effect.cancel(FACT_EFFECT_ID)
       ];
 
-    case 'loadFactTapped':
+    case 'loadFactTapped': {
+      const factService = deps.factService;
+      const count = state.count;
       return [
         { ...state, isLoading: true, error: null },
-        Effect.run(async (dispatch) => {
+        Effect.cancellable(FACT_EFFECT_ID, async (dispatch, signal) => {
           try {
-            const response = await fetch(
-              `http://numbersapi.com/${state.count}/trivia`
-            );
-            const fact = await response.text();
+            const fact = await factService.getFact(count, signal);
+            if (signal?.aborted) return;
             dispatch({ type: 'factLoaded', fact });
           } catch (error) {
+            if (signal?.aborted) return;
             const message = error instanceof Error
               ? error.message
               : 'Unknown error';
@@ -82,6 +95,7 @@ export const counterReducer: Reducer<CounterState, CounterAction> = (state, acti
           }
         })
       ];
+    }
 
     case 'factLoaded':
       return [

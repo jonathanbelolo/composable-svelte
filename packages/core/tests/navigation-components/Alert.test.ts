@@ -1,9 +1,11 @@
-import { render } from 'vitest-browser-svelte';
+import { flushSync, mount, unmount, type Component } from 'svelte';
 import { page, userEvent } from 'vitest/browser';
-import { describe, it, expect } from 'vitest';
+import { onTestFinished, describe, it, expect } from 'vitest';
 import Alert from '../../src/lib/navigation-components/Alert.svelte';
 import { createStore } from '../../src/lib/store.svelte.js';
-import { scopeToDestination } from '../../src/lib/navigation/scope-to-destination.js';
+import { ManagedIntegrationBuilder, optionalSlot, type PresentationView } from '../../src/lib/navigation/managed-integration.js';
+import type { Reducer, Store } from '../../src/lib/types.js';
+import type { PresentationAction } from '../../src/lib/navigation/types.js';
 import { Effect } from '../../src/lib/effect.js';
 import { resetBodyScroll } from '../helpers/body-scroll.js';
 
@@ -23,7 +25,46 @@ interface ParentState {
 
 type ParentAction =
   | { type: 'show' }
-  | { type: 'destination'; action: any };
+  | { type: 'destination'; action: PresentationAction<TestAction> };
+
+const destinationSlot = optionalSlot<ParentState, ParentAction>()('destination');
+const childReducer: Reducer<NonNullable<ParentState['destination']>, TestAction> = (state) => [state, Effect.none()];
+const presentationBinders = new WeakMap<object, () => PresentationView<NonNullable<ParentState['destination']>, TestAction> | undefined>();
+
+function createManagedStore(config: {
+  initialState: ParentState;
+  reducer: Reducer<ParentState, ParentAction>;
+}): Store<ParentState, ParentAction> {
+  const composition = new ManagedIntegrationBuilder<ParentState, ParentAction, undefined>(config.reducer)
+    .with(destinationSlot, childReducer)
+    .build();
+  const store = createStore({ initialState: config.initialState, ...composition });
+  presentationBinders.set(store, () => composition.bind(store, destinationSlot));
+  onTestFinished(() => store.destroy());
+  return store;
+}
+
+function bindPresentation(store: Store<ParentState, ParentAction>): PresentationView<NonNullable<ParentState['destination']>, TestAction> | undefined {
+  const bind = presentationBinders.get(store);
+  if (!bind) throw new Error('Expected a managed test store');
+  return bind();
+}
+
+function renderManaged<const Props extends Record<string, unknown>>(component: Component<Props>, props: Props) {
+  const target = document.createElement('div');
+  document.body.append(target);
+  const instance = mount(component, { target, props });
+  flushSync();
+  let disposed = false;
+  const cleanup = async () => {
+    if (disposed) return;
+    disposed = true;
+    await unmount(instance);
+    target.remove();
+  };
+  onTestFinished(cleanup);
+  return { unmount: cleanup };
+}
 
 // ============================================================================
 // Alert Component Tests
@@ -31,28 +72,23 @@ type ParentAction =
 
 describe('Alert Component', () => {
   it('shows when store is non-null', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
       reducer: (state) => [state, Effect.none()]
     });
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Alert, { store: scopedStore });
+    renderManaged(Alert, { store: scopedStore });
 
     const alert = page.getByRole('alertdialog');
     await expect.element(alert).toBeInTheDocument();
   });
 
-  it('hides when store is null', async () => {
-    render(Alert, { store: null });
+  it('hides when store is undefined', async () => {
+    renderManaged(Alert, { store: undefined });
 
     // Check that no alertdialog exists
     const alerts = page.getByRole('alertdialog').elements();
@@ -62,7 +98,7 @@ describe('Alert Component', () => {
   it('dismisses alert when Escape pressed', async () => {
     let dismissCalled = false;
 
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
@@ -78,14 +114,9 @@ describe('Alert Component', () => {
       }
     });
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Alert, { store: scopedStore });
+    renderManaged(Alert, { store: scopedStore });
 
     // Alert should be visible
     const alert = page.getByRole('alertdialog');
@@ -104,7 +135,7 @@ describe('Alert Component', () => {
   it('dismisses alert when clicking backdrop', async () => {
     let dismissCalled = false;
 
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
@@ -120,14 +151,9 @@ describe('Alert Component', () => {
       }
     });
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Alert, { store: scopedStore });
+    renderManaged(Alert, { store: scopedStore });
 
     // Alert should be visible
     const alert = page.getByRole('alertdialog');
@@ -149,7 +175,7 @@ describe('Alert Component', () => {
   });
 
   it('respects disableEscapeKey prop', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
@@ -164,14 +190,9 @@ describe('Alert Component', () => {
       }
     });
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Alert, { store: scopedStore, disableEscapeKey: true });
+    renderManaged(Alert, { store: scopedStore, disableEscapeKey: true });
 
     // Press Escape
     await userEvent.keyboard('{Escape}');
@@ -184,7 +205,7 @@ describe('Alert Component', () => {
   it('respects disableClickOutside prop', async () => {
     let dismissCalled = false;
 
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
@@ -200,14 +221,9 @@ describe('Alert Component', () => {
       }
     });
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Alert, { store: scopedStore, disableClickOutside: true });
+    renderManaged(Alert, { store: scopedStore, disableClickOutside: true });
 
     // Trigger pointerdown event on document
     const pointerEvent = new PointerEvent('pointerdown', {
@@ -227,21 +243,16 @@ describe('Alert Component', () => {
   });
 
   it('applies custom classes', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
       reducer: (state) => [state, Effect.none()]
     });
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Alert, {
+    renderManaged(Alert, {
         store: scopedStore,
         class: 'custom-alert-content',
         backdropClass: 'custom-backdrop'
@@ -252,21 +263,16 @@ describe('Alert Component', () => {
   });
 
   it('respects unstyled prop', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
       reducer: (state) => [state, Effect.none()]
     });
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Alert, { store: scopedStore, unstyled: true });
+    renderManaged(Alert, { store: scopedStore, unstyled: true });
 
     const alert = page.getByRole('alertdialog');
     const className = alert.element().className;
@@ -274,26 +280,21 @@ describe('Alert Component', () => {
   });
 
   it('prevents body scroll when visible', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
       reducer: (state) => [state, Effect.none()]
     });
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
     // Reset first: body.style is shared across every test in the worker, and
     // a lock leaked by an earlier test made the old form pass on its own.
     resetBodyScroll();
     expect(document.body.style.overflow).toBe('');
 
-    const screen = render(Alert, { store: scopedStore });
+    const screen = renderManaged(Alert, { store: scopedStore });
     expect(document.body.style.overflow).toBe('hidden');
 
     screen.unmount();
@@ -301,21 +302,16 @@ describe('Alert Component', () => {
   });
 
   it('uses max-w-md (smaller than modal)', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
       reducer: (state) => [state, Effect.none()]
     });
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Alert, { store: scopedStore });
+    renderManaged(Alert, { store: scopedStore });
 
     const alert = page.getByRole('alertdialog');
     await expect.element(alert).toHaveClass(/max-w-md/);

@@ -1,0 +1,51 @@
+import { it, expect } from 'vitest';
+import { createTestStore } from '@composable-svelte/core/test';
+import { createInitialAppState, composition, type AppAction } from '../src/lib/model.js';
+import { createControlledBackend } from '../src/lib/controlled-backend.js';
+const flush = async (n = 50) => { for (let i = 0; i < n; i++) await Promise.resolve(); };
+const login = (a: any): AppAction => ({ type: 'auth', action: { type: 'presented', action: { type: 'login', action: { type: 'presented', action: a } } } });
+const cp = (a: any): AppAction => ({ type: 'auth', action: { type: 'presented', action: { type: 'changePassword', action: { type: 'presented', action: a } } } });
+async function signIn(store: any, email = 'ada@example.com') {
+  await store.send({ type: 'auth', action: { type: 'presented', action: { type: 'openLogin' } } });
+  await store.send(login({ type: 'form', action: { type: 'fieldChanged', field: 'email', value: email } }));
+  await store.send(login({ type: 'form', action: { type: 'fieldChanged', field: 'password', value: 'ValidPassword123!' } }));
+  await store.send(login({ type: 'form', action: { type: 'submitTriggered' } }));
+  for (let i = 0; i < 50 && store.state.route !== 'dashboard'; i++) await flush();
+}
+function mk(backend = createControlledBackend()) {
+  const s = createTestStore({ initialState: createInitialAppState({ route: 'login' }), reducer: composition.reducer, execution: composition.execution, dependencies: backend });
+  s.exhaustivity = 'off';
+  return s;
+}
+it('P1 login flow after logout', async () => {
+  const store = mk(); await signIn(store); await flush();
+  expect(store.state.route).toBe('dashboard');
+  await store.send({ type: 'logout' }); await flush(200);
+  console.log('P1 after logout: route', store.state.route, 'session', store.state.auth?.session.status, 'login flow', store.state.auth?.login);
+});
+it('P2 rotated same-subject password change', async () => {
+  const backend = createControlledBackend(); const store = mk(backend); await signIn(store); await flush(200);
+  const before = store.state.accountData; console.log('P2 before', before?.subjectId, backend.counters.fetchAccountCalls);
+  backend.changePassword = async () => ({ subject_id: 'sub-ada-1', display_name: 'Ada Lovelace', roles: ['member'] });
+  await store.send({ type: 'chart', action: { type: 'presented', action: { type: 'selectPoint', data: store.state.chart!.data[0], index: 0 } } });
+  await store.send({ type: 'openChangePassword' }); await flush();
+  await store.send(cp({ type: 'form', action: { type: 'fieldChanged', field: 'password', value: 'NewPassword123!' } }));
+  await store.send(cp({ type: 'form', action: { type: 'fieldChanged', field: 'confirmPassword', value: 'NewPassword123!' } }));
+  await store.send(cp({ type: 'form', action: { type: 'submitTriggered' } }));
+  const seen: any[] = [];
+  for (let i = 0; i < 100; i++) { await Promise.resolve(); seen.push({ acct: store.state.accountData === null ? 'null' : 'set', loading: store.state.accountLoading, sel: store.state.selectedMetric?.date ?? null }); }
+  console.log('P2 fetchAccountCalls', backend.counters.fetchAccountCalls, 'msg', store.state.passwordChangeMessage, 'distinct states', JSON.stringify([...new Set(seen.map(s => JSON.stringify(s)))]));
+});
+it('P3 delayed account load resolved after logout', async () => {
+  const backend = createControlledBackend(); backend.setDelayAccountLoad(true); const store = mk(backend); await signIn(store); await flush();
+  console.log('P3 loading', store.state.accountLoading, 'calls', backend.counters.fetchAccountCalls);
+  await store.send({ type: 'logout' }); await flush(100);
+  backend.resolveDelayedAccountLoad(); await flush(100);
+  console.log('P3 after late resolve: route', store.state.route, 'acct', store.state.accountData, 'chart', store.state.chart);
+});
+it('P4 same subject ABA: old load lands during newer load', async () => {
+  const backend = createControlledBackend(); backend.setDelayAccountLoad(true); const store = mk(backend); await signIn(store); await flush();
+  await store.send({ type: 'logout' }); await flush(100);
+  await signIn(store); await flush();
+  console.log('P4 route', store.state.route, 'login flow', store.state.auth?.login ? 'open' : 'null', 'loading', store.state.accountLoading, 'calls', backend.counters.fetchAccountCalls);
+});

@@ -237,6 +237,15 @@ function requiresAPIKey(provider: TileProvider): boolean
 
 ## Components
 
+Each component accepts a standalone `Store<MapState, MapAction>` or a managed
+`ChildView<MapState, MapAction>`. Its actual prop uses only the structural
+`state`, `dispatch`, and `subscribe` members of the view. The `MapBinding`
+alias below is documentation shorthand, not a package export:
+
+```typescript
+type MapBinding = Pick<ChildView<MapState, MapAction>, 'state' | 'dispatch' | 'subscribe'>;
+```
+
 ### `<Map>`
 
 High-level map component with responsive sizing.
@@ -244,7 +253,7 @@ High-level map component with responsive sizing.
 **Props:**
 ```typescript
 {
-  store: Store<MapState, MapAction>;
+  store: MapBinding;
   width?: string | number;    // Default: '100%'
   height?: string | number;   // Default: '600px'
   onMapClick?: (lngLat: LngLat) => void;
@@ -268,7 +277,7 @@ Renders GeoJSON data on the map.
 **Props:**
 ```typescript
 {
-  store: Store<MapState, MapAction>;
+  store: MapBinding;
   id: string;
   data: GeoJSON | string;
   visible?: boolean;          // Default: true
@@ -303,7 +312,7 @@ Renders a heatmap visualization.
 **Props:**
 ```typescript
 {
-  store: Store<MapState, MapAction>;
+  store: MapBinding;
   id: string;
   data: GeoJSON | string;
   visible?: boolean;          // Default: true
@@ -335,11 +344,13 @@ Renders a heatmap visualization.
 ### `<MapPopup>`
 
 Standalone popup component.
+`isOpen` and `position` are live props. Child markup is copied as HTML when the
+native popup opens; later child changes and event handlers are not mirrored.
 
 **Props:**
 ```typescript
 {
-  store: Store<MapState, MapAction>;
+  store: MapBinding;
   id: string;
   position: LngLat;
   isOpen?: boolean;           // Default: true
@@ -373,7 +384,7 @@ UI control for switching tile providers.
 **Props:**
 ```typescript
 {
-  store: Store<MapState, MapAction>;
+  store: MapBinding;
   position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';  // Default: 'top-right'
   class?: string;
 }
@@ -503,5 +514,5 @@ $: if ($mapStore.error) {
 ## See Also
 
 - [README.md](./README.md) - Getting started guide
-- [Phase 12 Plan](../../plans/phase-12/PHASE-12-PLAN.md) - Roadmap and features
+- [Managed integration](./MANAGED.md) - Ownership, runnable recipe and supported limits
 - [Maplibre GL Docs](https://maplibre.org/maplibre-gl-js/docs/) - Underlying map library

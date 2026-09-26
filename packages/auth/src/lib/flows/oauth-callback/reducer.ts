@@ -1,8 +1,8 @@
-import { createStore, Effect, type Store } from '@composable-svelte/core';
+import { createStore, Effect, type Reducer, type Store } from '@composable-svelte/core';
 
 import { toAuthError } from '../../errors/helpers.js';
 import type { AuthError } from '../../errors/types.js';
-import type { PendingOAuth } from '../oauth-pending.js';
+import { normaliseReturnTo, type PendingOAuth } from '../oauth-pending.js';
 import type {
 	OAuthCallbackAction,
 	OAuthCallbackDependencies,
@@ -102,14 +102,27 @@ function stateMismatch(): AuthError {
 }
 
 export function createInitialOAuthCallbackState(): OAuthCallbackState {
-	return { status: 'idle', error: null, intent: null, session: null, returnTo: null };
+	return { status: 'idle', error: null, intent: null, session: null, returnTo: null, settled: null };
 }
 
-export function oauthCallbackReducer(
-	state: OAuthCallbackState,
-	action: OAuthCallbackAction,
-	deps: OAuthCallbackDependencies
-): readonly [OAuthCallbackState, Effect<OAuthCallbackAction>] {
+/**
+ * `settled` lasts one reduction: cleared before every action, and set again
+ * only by the arm that accepts an exchange result while `exchanging`. Identical
+ * state when it was already `null`, so an action that changes nothing still
+ * returns the same object.
+ */
+export const oauthCallbackReducer: Reducer<
+	OAuthCallbackState,
+	OAuthCallbackAction,
+	OAuthCallbackDependencies
+> = (state, action, deps) =>
+	reduceCallback(state.settled === null ? state : { ...state, settled: null }, action, deps);
+
+const reduceCallback: Reducer<
+	OAuthCallbackState,
+	OAuthCallbackAction,
+	OAuthCallbackDependencies
+> = (state, action, deps) => {
 	switch (action.type) {
 		case 'callbackReceived': {
 			// **Total**, unlike `email-verification`'s equivalent. That flow must
@@ -215,7 +228,7 @@ export function oauthCallbackReducer(
 									type: 'exchangeSucceeded',
 									intent: 'link',
 									session: null,
-									returnTo: pending.returnTo
+									returnTo: normaliseReturnTo(pending.returnTo)
 								});
 							} catch (error) {
 								dispatch({ type: 'exchangeFailed', error: toAuthError(error), intent: 'link' });
@@ -237,7 +250,7 @@ export function oauthCallbackReducer(
 								type: 'exchangeSucceeded',
 								intent: 'signIn',
 								session,
-								returnTo: pending.returnTo
+								returnTo: normaliseReturnTo(pending.returnTo)
 							});
 						} catch (error) {
 							dispatch({
@@ -252,6 +265,13 @@ export function oauthCallbackReducer(
 		}
 
 		case 'exchangeSucceeded': {
+			// Only the exchange this flow is running settles it. A result arriving
+			// in any other status — a replay after it settled, or one dispatched
+			// before `callbackReceived` — must not complete a flow that never
+			// exchanged, nor overwrite a terminal verdict.
+			if (state.status !== 'exchanging') {
+				return [state, Effect.none()];
+			}
 			return [
 				{
 					...state,
@@ -259,18 +279,26 @@ export function oauthCallbackReducer(
 					error: null,
 					intent: action.intent,
 					session: action.session,
-					returnTo: action.returnTo
+					returnTo: normaliseReturnTo(action.returnTo),
+					settled: 'succeeded'
 				},
 				Effect.none()
 			];
 		}
 
 		case 'exchangeFailed': {
+			if (state.status !== 'exchanging') {
+				return [state, Effect.none()];
+			}
 			return [
-				{ ...state, status: 'failed', error: action.error, intent: action.intent },
+				{ ...state, status: 'failed', error: action.error, intent: action.intent, settled: 'failed' },
 				Effect.none()
 			];
 		}
+
+		case 'startOverRequested':
+			// A route out, not a transition: see the action.
+			return [state, Effect.none()];
 
 		default: {
 			const _exhaustive: never = action;

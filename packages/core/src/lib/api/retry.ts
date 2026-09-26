@@ -123,7 +123,8 @@ function calculateBackoff(attempt: number, config: ResolvedRetryConfig): number 
 
 /**
  * Parse Retry-After header from response.
- * Supports both delay-seconds (number) and HTTP-date (ISO string).
+ * Supports integer delay-seconds, all three HTTP-date forms, and ISO dates.
+ * ISO date-times require an explicit Z or numeric timezone; date-only is UTC.
  *
  * Exported because it is the only correct implementation of this in the
  * repository and a second one would drift. `@composable-svelte/auth` reads it
@@ -133,28 +134,83 @@ function calculateBackoff(attempt: number, config: ResolvedRetryConfig): number 
  * @returns Delay in **milliseconds**, or null if header is missing/invalid
  */
 export function parseRetryAfter(headers: Record<string, string>): number | null {
-  const retryAfter = headers['retry-after'] || headers['Retry-After'];
-
-  if (!retryAfter) {
-    return null;
+  const key = Object.keys(headers).find(name => name.toLowerCase() === 'retry-after');
+  const retryAfter = key === undefined ? undefined : headers[key];
+  if (typeof retryAfter !== 'string') return null;
+  const value = retryAfter.trim();
+  if (/^\d+$/.test(value)) {
+    const seconds = Number(value);
+    return Number.isSafeInteger(seconds) ? seconds * 1000 : null;
   }
 
-  // Try parsing as delay-seconds (number)
-  const delaySeconds = parseInt(retryAfter, 10);
-  if (!isNaN(delaySeconds)) {
-    return delaySeconds * 1000;
+  const now = Date.now();
+  const timestamp = parseRetryDate(value, now);
+  return timestamp !== null && timestamp > now ? timestamp - now : null;
+}
+
+const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** Recognize HTTP-date's three wire grammars and the documented ISO extension.
+ * Validate the calendar before accepting a timestamp: Date.parse alone rolls
+ * invalid days into the following month and accepts implementation-specific text.
+ */
+function parseRetryDate(value: string, now: number): number | null {
+  const iso = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(Z|[+-]\d{2}:\d{2}))?$/.exec(value);
+  if (iso) {
+    const [, year, month, day, hour = '0', minute = '0', second = '0', fraction = '', zone = 'Z'] = iso;
+    const local = calendarTime(+year!, +month! - 1, +day!, +hour, +minute, +second);
+    if (local === null) return null;
+    let offset = 0;
+    if (zone !== 'Z') {
+      const hours = Number(zone.slice(1, 3));
+      const minutes = Number(zone.slice(4, 6));
+      if (hours > 23 || minutes > 59) return null;
+      offset = (hours * 60 + minutes) * 60000 * (zone[0] === '+' ? 1 : -1);
+    }
+    return local + Number(fraction.slice(0, 3).padEnd(3, '0')) - offset;
   }
 
-  // Try parsing as HTTP-date
-  try {
-    const date = new Date(retryAfter);
-    const now = new Date();
-    const delay = date.getTime() - now.getTime();
-
-    return delay > 0 ? delay : null;
-  } catch {
-    return null;
+  const imf = /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), (\d{2}) ([A-Z][a-z]{2}) (\d{4}) (\d{2}):(\d{2}):(\d{2}) GMT$/.exec(value);
+  const obsolete = /^(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday), (\d{2})-([A-Z][a-z]{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2}) GMT$/.exec(value);
+  const ascii = /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) ([A-Z][a-z]{2}) ( \d|\d{2}) (\d{2}):(\d{2}):(\d{2}) (\d{4})$/.exec(value);
+  const match = imf ?? obsolete;
+  if (match) {
+    const [, day, month, rawYear, hour, minute, second] = match;
+    let year = Number(rawYear);
+    if (obsolete) {
+      const current = new Date(now);
+      const threshold = new Date(now);
+      threshold.setUTCFullYear(current.getUTCFullYear() + 50);
+      // Select the latest matching year at or before the fifty-year horizon,
+      // including when that horizon is in the next century.
+      year += Math.floor(threshold.getUTCFullYear() / 100) * 100;
+      const candidate = httpCalendarTime(year, months.indexOf(month!), +day!, +hour!, +minute!, +second!);
+      if (candidate !== null && candidate > threshold.getTime()) year -= 100;
+    }
+    return httpCalendarTime(year, months.indexOf(month!), +day!, +hour!, +minute!, +second!);
   }
+  if (ascii) {
+    const [, month, day, hour, minute, second, year] = ascii;
+    return httpCalendarTime(+year!, months.indexOf(month!), +day!, +hour!, +minute!, +second!);
+  }
+  return null;
+}
+
+// JavaScript timestamps do not represent leap seconds. HTTP permits :60;
+// normalize it to the next representable second after validating its date.
+function httpCalendarTime(year: number, month: number, day: number, hour: number, minute: number, second: number): number | null {
+  if (second > 60) return null;
+  const timestamp = calendarTime(year, month, day, hour, minute, Math.min(second, 59));
+  return timestamp === null ? null : timestamp + (second === 60 ? 1000 : 0);
+}
+
+function calendarTime(year: number, month: number, day: number, hour: number, minute: number, second: number): number | null {
+  if (month < 0 || month > 11 || day < 1 || day > 31 || hour > 23 || minute > 59 || second > 59) return null;
+  const date = new Date(0);
+  date.setUTCFullYear(year, month, day);
+  date.setUTCHours(hour, minute, second, 0);
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month && date.getUTCDate() === day
+    ? date.getTime() : null;
 }
 
 /**

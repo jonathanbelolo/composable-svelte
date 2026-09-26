@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Store } from '@composable-svelte/core';
   import type { AppState, AppAction } from './types';
-  import { destinationURL } from './routing';
+  import { destinationURL, formatLocalizedURL } from './routing';
 
   interface Props {
     store: Store<AppState, AppAction>;
@@ -24,9 +24,8 @@
   };
 
   // Get the URL for a given locale
-  // Prefixes the base path with the locale (except for English which has no prefix)
   function getLocaleURL(locale: string): string {
-    return locale === 'en' ? basePath : `/${locale}${basePath}`;
+    return formatLocalizedURL(basePath, locale);
   }
 </script>
 

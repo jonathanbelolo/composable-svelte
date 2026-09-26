@@ -1,0 +1,948 @@
+--- a/src/lib/model.ts
++++ b/src/lib/model.ts
+@@ -7,6 +7,7 @@
+ } from '@composable-svelte/core/application';
+ import {
+   createAuthFeature,
++  type AuthChangePasswordOutcome,
+   type AuthFeature,
+   type AuthFeatureAction,
+   type AuthFeatureDependencies,
+@@ -54,6 +55,10 @@
+   route: AppRoute;
+   auth: AuthFeatureState | null;
+   chart: ChartState<AccountActivityRow> | null;
++  /** Subject whose account view is loaded or loading; null when no account is shown. */
++  accountSubjectId: string | null;
++  /** Acceptance epoch for account loads: only the latest request's result is accepted. */
++  accountRequest: number;
+   accountData: AccountData | null;
+   accountLoading: boolean;
+   accountError: string | null;
+@@ -66,9 +71,9 @@
+   | { type: 'navigate'; route: AppRoute }
+   | { type: 'auth'; action: PresentationAction<AuthFeatureAction> }
+   | { type: 'chart'; action: PresentationAction<ChartAction<AccountActivityRow>> }
+-  | { type: 'loadAccount'; subjectId: string }
+-  | { type: 'accountLoaded'; data: AccountData }
+-  | { type: 'accountLoadFailed'; error: string }
++  | { type: 'loadAccount' }
++  | { type: 'accountLoaded'; request: number; data: AccountData }
++  | { type: 'accountLoadFailed'; request: number; error: string }
+   | { type: 'openChangePassword' }
+   | { type: 'closeChangePassword' }
+   | { type: 'logout' };
+@@ -80,198 +85,161 @@
+ export const authSlot = optionalSlot<AppState, AppAction>()('auth');
+ export const chartSlot = optionalSlot<AppState, AppAction>()('chart');
+ 
++type AuthenticatedSubject = Extract<AuthFeatureState['session']['subject'], { kind: 'authenticated' }>;
++
++const ACCOUNT_LOAD = 'account-load';
++
++function authenticatedSubject(state: AppState): AuthenticatedSubject | null {
++  const subject = state.auth?.session.subject;
++  return subject?.kind === 'authenticated' ? subject : null;
++}
++
++const openLogin = (): Effect<AppAction> =>
++  Effect.run<AppAction>(async (dispatch) => {
++    dispatch({ type: 'auth', action: { type: 'presented', action: { type: 'openLogin' } } });
++  });
++
++/** Start loading the account view for `subject`, replacing any former account's view and load. */
++function startAccountLoad(
++  state: AppState,
++  subject: AuthenticatedSubject,
++  deps: AppDependencies
++): [AppState, Effect<AppAction>] {
++  const request = state.accountRequest + 1;
++  const subjectId = subject.id;
++  const roles = subject.attributes['roles'];
++  return [
++    {
++      ...state,
++      accountSubjectId: subjectId,
++      accountRequest: request,
++      accountLoading: true,
++      accountError: null,
++      accountData: null,
++      chart: null,
++      selectedMetric: null,
++      passwordChangeMessage: null
++    },
++    Effect.cancellable<AppAction>(ACCOUNT_LOAD, async (dispatch, signal) => {
++      try {
++        const snapshot = await deps.fetchAccount(signal);
++        const data: AccountData = {
++          subjectId,
++          email: snapshot.email,
++          displayName: String(subject.attributes['display_name'] ?? subjectId),
++          role: Array.isArray(roles) && roles.includes('admin') ? 'Administrator' : 'Member',
++          metrics: buildActivityMetrics(subjectId)
++        };
++        dispatch({ type: 'accountLoaded', request, data });
++      } catch (err: unknown) {
++        const message = err instanceof Error ? err.message : String(err);
++        dispatch({ type: 'accountLoadFailed', request, error: message });
++      }
++    })
++  ];
++}
++
++/** Remove the former account's views and retire its pending load. */
++function retireAccount(state: AppState): [AppState, Effect<AppAction>] {
++  return [
++    {
++      ...state,
++      route: 'login',
++      accountSubjectId: null,
++      accountRequest: state.accountRequest + 1,
++      accountData: null,
++      accountLoading: false,
++      accountError: null,
++      chart: null,
++      selectedMetric: null,
++      passwordChangeMessage: null
++    },
++    Effect.cancel(ACCOUNT_LOAD)
++  ];
++}
++
++function passwordChangeMessage(outcome: AuthChangePasswordOutcome): string {
++  switch (outcome.kind) {
++    case 'changed':
++      return 'Password successfully changed.';
++    case 'reauthenticationRequired':
++      return 'Re-authentication required to change password.';
++    case 'rejected':
++      return `Password change rejected: ${outcome.reason}`;
++  }
++}
++
+ export const appReducer: Reducer<AppState, AppAction, AppDependencies> = (state, action, deps) => {
+   if (action.type === 'navigate') {
+-    const isAuthenticated = state.auth?.session?.subject?.kind === 'authenticated';
+-    // Business rule: dashboard is accessible only to authenticated accounts
+-    if (action.route === 'dashboard' && !isAuthenticated) {
+-      return [state, Effect.none()];
+-    }
++    const isAuthenticated = authenticatedSubject(state) !== null;
++    // Business rule: the dashboard is for authenticated accounts, and a signed-in
++    // account has no sign-in page to return to (it must log out).
++    if (action.route === 'dashboard' && !isAuthenticated) return [state, Effect.none()];
++    if (action.route === 'login' && isAuthenticated && state.route === 'dashboard') return [state, Effect.none()];
+     if (state.route === action.route) return [state, Effect.none()];
+     return [{ ...state, route: action.route }, Effect.none()];
+   }
+ 
+   if (action.type === 'auth') {
+     if (action.action.type !== 'presented') return [state, Effect.none()];
+-    const authFeature = state.auth;
++    // Child-first reduction: `state.auth` already holds this reduction's
++    // one-reduction outputs (`handoff`, `changePasswordOutcome`).
++    const feature = state.auth;
++    const subject = authenticatedSubject(state);
+     let next = state;
+     const effects: Effect<AppAction>[] = [];
+ 
+-    // 1. Accepted sign-in changes app route; rejected/stale results do not
+-    // Documented acceptance contract: read handoff.kind === 'accepted'
+-    if (authFeature?.handoff?.kind === 'accepted') {
+-      const session = authFeature.handoff.session;
+-      next = {
+-        ...next,
+-        route: 'dashboard',
+-        accountLoading: true,
+-        accountError: null,
+-        accountData: null,
+-        chart: null,
+-        selectedMetric: null,
+-        passwordChangeMessage: null
+-      };
+-      effects.push(
+-        Effect.run<AppAction>(async (dispatch, signal) => {
+-          try {
+-            const snapshot = await deps.fetchAccount(signal);
+-            const data: AccountData = {
+-              subjectId: session.subject_id,
+-              email: snapshot.email,
+-              displayName: session.display_name ?? session.subject_id,
+-              role: Array.isArray(session.roles) && session.roles.includes('admin') ? 'Administrator' : 'Member',
+-              metrics: buildActivityMetrics(session.subject_id)
+-            };
+-            dispatch({ type: 'accountLoaded', data });
+-          } catch (err: unknown) {
+-            if (signal?.aborted) return;
+-            const message = err instanceof Error ? err.message : String(err);
+-            dispatch({ type: 'accountLoadFailed', error: message });
+-          }
+-        })
+-      );
+-    }
+-
+-    // 2. Password change follows documented acceptance rather than inferred object identity
+-    if (authFeature?.changePasswordOutcome?.kind === 'changed') {
+-      next = {
+-        ...next,
+-        passwordChangeMessage: 'Password successfully changed.'
+-      };
+-    } else if (authFeature?.changePasswordOutcome?.kind === 'reauthenticationRequired') {
+-      next = {
+-        ...next,
+-        passwordChangeMessage: 'Re-authentication required to change password.'
+-      };
+-    } else if (authFeature?.changePasswordOutcome?.kind === 'rejected') {
+-      next = {
+-        ...next,
+-        passwordChangeMessage: `Password change rejected: ${authFeature.changePasswordOutcome.reason}`
+-      };
++    if (subject === null) {
++      // Logout or expiry: the former account's views and pending load go with it.
++      if (state.accountSubjectId !== null || state.route !== 'login') {
++        const [retired, cancel] = retireAccount(state);
++        next = retired;
++        effects.push(cancel, openLogin());
++      }
++    } else {
++      // Documented acceptance: only an accepted handoff moves to the dashboard.
++      if (feature?.handoff?.kind === 'accepted') next = { ...next, route: 'dashboard' };
++      // The account view belongs to one subject. A same-subject handoff (such as a
++      // rotated password session) keeps it; a different subject replaces it.
++      if (
++        next.route === 'dashboard' &&
++        next.accountSubjectId !== subject.id
++      ) {
++        const [loading, load] = startAccountLoad(next, subject, deps);
++        next = loading;
++        effects.push(load);
++      }
+     }
+ 
+-    // 3. Logout or subject change removes the former account's views and pending work
+-    const currentSubject = authFeature?.session?.subject;
+-    const isAnonymous =
+-      authFeature?.session?.status === 'anonymous' || currentSubject?.kind === 'anonymous';
++    // A refused handoff finished the sign-in flow without a session; offer sign-in again.
++    if (feature?.handoff?.kind === 'refused') effects.push(openLogin());
+ 
+-    if (isAnonymous) {
+-      if (next.accountData !== null || next.chart !== null || next.route !== 'login' || next.accountLoading) {
+-        next = {
+-          ...next,
+-          route: 'login',
+-          accountData: null,
+-          accountLoading: false,
+-          accountError: null,
+-          chart: null,
+-          selectedMetric: null,
+-          passwordChangeMessage: null
+-        };
+-      }
+-    } else if (
+-      currentSubject?.kind === 'authenticated' &&
+-      next.accountData !== null &&
+-      next.accountData.subjectId !== currentSubject.id
+-    ) {
+-      // Subject changed to another user: clear former account's views and load new account
+-      const newSubjectId = currentSubject.id;
+-      next = {
+-        ...next,
+-        accountData: null,
+-        accountLoading: true,
+-        accountError: null,
+-        chart: null,
+-        selectedMetric: null,
+-        passwordChangeMessage: null
+-      };
+-      effects.push(
+-        Effect.run<AppAction>(async (dispatch, signal) => {
+-          try {
+-            const snapshot = await deps.fetchAccount(signal);
+-            const data: AccountData = {
+-              subjectId: newSubjectId,
+-              email: snapshot.email,
+-              displayName: String(currentSubject.attributes['display_name'] ?? newSubjectId),
+-              role: Array.isArray(currentSubject.attributes['roles']) && currentSubject.attributes['roles'].includes('admin')
+-                ? 'Administrator'
+-                : 'Member',
+-              metrics: buildActivityMetrics(newSubjectId)
+-            };
+-            dispatch({ type: 'accountLoaded', data });
+-          } catch (err: unknown) {
+-            if (signal?.aborted) return;
+-            const message = err instanceof Error ? err.message : String(err);
+-            dispatch({ type: 'accountLoadFailed', error: message });
+-          }
+-        })
+-      );
+-    }
++    const outcome = feature?.changePasswordOutcome;
++    if (outcome) next = { ...next, passwordChangeMessage: passwordChangeMessage(outcome) };
+ 
+     return [next, effects.length === 0 ? Effect.none() : Effect.batch(...effects)];
+   }
+ 
+-  // 4. Typed chart interactions route through the owning feature
++  // Typed chart interactions route through the owning feature. Child-first
++  // reduction means `state.chart` already holds the chart reducer's selection.
+   if (action.type === 'chart') {
+     if (action.action.type !== 'presented') return [state, Effect.none()];
+-    const child = action.action.action;
+-    if (child.type === 'selectPoint') {
+-      return [{ ...state, selectedMetric: child.data }, Effect.none()];
+-    }
+-    if (child.type === 'selectPoints') {
+-      const firstIndex = child.indices[0];
+-      const item =
+-        firstIndex !== undefined && state.chart ? state.chart.filteredData[firstIndex] : null;
+-      return [{ ...state, selectedMetric: item ?? null }, Effect.none()];
+-    }
+-    if (child.type === 'clearSelection') {
+-      return [{ ...state, selectedMetric: null }, Effect.none()];
+-    }
+-    return [state, Effect.none()];
++    const selected = state.chart?.selection.selectedData[0] ?? null;
++    if (selected === state.selectedMetric) return [state, Effect.none()];
++    return [{ ...state, selectedMetric: selected }, Effect.none()];
+   }
+ 
+   if (action.type === 'loadAccount') {
+-    if (state.auth?.session?.subject?.kind !== 'authenticated') {
+-      return [state, Effect.none()];
+-    }
+-    const subject = state.auth.session.subject;
+-    const subjectId = action.subjectId;
+-    const nextState: AppState = {
+-      ...state,
+-      accountLoading: true,
+-      accountError: null
+-    };
+-    return [
+-      nextState,
+-      Effect.run<AppAction>(async (dispatch, signal) => {
+-        try {
+-          const snapshot = await deps.fetchAccount(signal);
+-          const data: AccountData = {
+-            subjectId,
+-            email: snapshot.email,
+-            displayName: String(subject.attributes['display_name'] ?? subjectId),
+-            role: Array.isArray(subject.attributes['roles']) && subject.attributes['roles'].includes('admin')
+-              ? 'Administrator'
+-              : 'Member',
+-            metrics: buildActivityMetrics(subjectId)
+-          };
+-          dispatch({ type: 'accountLoaded', data });
+-        } catch (err: unknown) {
+-          if (signal?.aborted) return;
+-          const message = err instanceof Error ? err.message : String(err);
+-          dispatch({ type: 'accountLoadFailed', error: message });
+-        }
+-      })
+-    ];
++    const subject = authenticatedSubject(state);
++    if (subject === null || state.accountLoading) return [state, Effect.none()];
++    if (state.accountSubjectId === subject.id && state.accountData !== null) return [state, Effect.none()];
++    return startAccountLoad(state, subject, deps);
+   }
+ 
+   if (action.type === 'accountLoaded') {
+-    // If the account was retired or subject switched while loading, safely drop the delayed response
+-    if (
+-      state.auth?.session?.subject?.kind !== 'authenticated' ||
+-      state.auth.session.subject.id !== action.data.subjectId
+-    ) {
+-      return [state, Effect.none()];
+-    }
++    // Only the latest request for the current account is accepted; a result that
++    // outlived logout, a subject change or a newer load is dropped.
++    if (action.request !== state.accountRequest || !state.accountLoading) return [state, Effect.none()];
+     return [
+       {
+         ...state,
+@@ -285,21 +253,12 @@
+   }
+ 
+   if (action.type === 'accountLoadFailed') {
+-    if (state.auth?.session?.subject?.kind !== 'authenticated') {
+-      return [state, Effect.none()];
+-    }
+-    return [
+-      {
+-        ...state,
+-        accountLoading: false,
+-        accountError: action.error
+-      },
+-      Effect.none()
+-    ];
++    if (action.request !== state.accountRequest || !state.accountLoading) return [state, Effect.none()];
++    return [{ ...state, accountLoading: false, accountError: action.error }, Effect.none()];
+   }
+ 
+   if (action.type === 'openChangePassword') {
+-    if (state.auth?.session?.subject?.kind !== 'authenticated') return [state, Effect.none()];
++    if (authenticatedSubject(state) === null) return [state, Effect.none()];
+     return [
+       state,
+       Effect.run<AppAction>(async (dispatch) => {
+@@ -324,24 +283,21 @@
+   }
+ 
+   if (action.type === 'logout') {
+-    const nextState: AppState = {
+-      ...state,
+-      route: 'login',
+-      accountData: null,
+-      accountLoading: false,
+-      accountError: null,
+-      chart: null,
+-      selectedMetric: null,
+-      passwordChangeMessage: null
+-    };
++    // Remove the former account's views immediately; the auth feature's logout
++    // retires its own flows and pending requests. Sign-in is then offered anew.
++    const [retired, cancel] = retireAccount(state);
+     return [
+-      nextState,
+-      Effect.run<AppAction>(async (dispatch) => {
+-        dispatch({
+-          type: 'auth',
+-          action: { type: 'presented', action: { type: 'session', action: { type: 'logout' } } }
+-        });
+-      })
++      retired,
++      Effect.batch(
++        cancel,
++        Effect.run<AppAction>(async (dispatch) => {
++          dispatch({
++            type: 'auth',
++            action: { type: 'presented', action: { type: 'session', action: { type: 'logout' } } }
++          });
++          dispatch({ type: 'auth', action: { type: 'presented', action: { type: 'openLogin' } } });
++        })
++      )
+     ];
+   }
+ 
+@@ -367,6 +323,8 @@
+     chart: input?.initialData
+       ? createInitialChartState<AccountActivityRow>({ data: input.initialData.metrics })
+       : null,
++    accountSubjectId: input?.initialData?.subjectId ?? null,
++    accountRequest: 0,
+     accountData: input?.initialData ?? null,
+     accountLoading: false,
+     accountError: null,
+@@ -381,7 +339,7 @@
+     // If authenticated without loaded account, initiate loading
+     if (state.auth?.session?.subject?.kind === 'authenticated') {
+       if (state.accountData === null && !state.accountLoading) {
+-        return { type: 'loadAccount', subjectId: state.auth.session.subject.id };
++        return { type: 'loadAccount' };
+       }
+       return undefined;
+     }
+--- a/src/App.svelte
++++ b/src/App.svelte
+@@ -81,78 +81,81 @@
+                 <FeatureOutlet view={views.auth} />
+               </div>
+ 
+-              <!-- Dashboard Feature Views -->
+-              {#if state.route === 'dashboard'}
+-                <div class="dashboard-container" data-testid="dashboard-container">
+-                  {#if state.accountLoading}
+-                    <div class="alert alert-info" data-testid="loading-indicator">
+-                      Loading account data…
++              <!-- Dashboard Feature Views. The container stays mounted so the chart
++                   outlet is placed exactly once for the whole layout lifetime; the
++                   outlet renders nothing while the chart slot is null. -->
++              <div
++                class="dashboard-container"
++                class:hidden={state.route !== 'dashboard'}
++                data-testid="dashboard-container"
++              >
++                {#if state.route === 'dashboard' && state.accountLoading}
++                  <div class="alert alert-info" data-testid="loading-indicator">
++                    Loading account data…
++                  </div>
++                {/if}
++
++                {#if state.route === 'dashboard' && state.accountError}
++                  <div class="alert alert-error" data-testid="account-error" role="alert">
++                    {state.accountError}
++                  </div>
++                {/if}
++
++                {#if state.route === 'dashboard' && state.accountData}
++                  <section class="account-card" data-testid="account-card">
++                    <h2>Welcome back, {state.accountData.displayName}</h2>
++                    <div class="account-details">
++                      <p><strong>Email:</strong> <span data-testid="account-email">{state.accountData.email}</span></p>
++                      <p><strong>Role:</strong> <span data-testid="account-role">{state.accountData.role}</span></p>
++                      <p><strong>Subject ID:</strong> <span data-testid="account-subject-id">{state.accountData.subjectId}</span></p>
+                     </div>
++                  </section>
++                {/if}
++
++                <section class="chart-section" class:hidden={!state.chart} data-testid="chart-section">
++                  {#if state.chart}
++                    <h3>Recent Login Activity</h3>
+                   {/if}
++                  <!-- Chart Feature Outlet: renders ChartView with real AccountActivityRow typing -->
++                  <FeatureOutlet view={views.chart} />
+ 
+-                  {#if state.accountError}
+-                    <div class="alert alert-error" data-testid="account-error" role="alert">
+-                      {state.accountError}
++                  {#if state.selectedMetric}
++                    <div class="selected-metric-banner" data-testid="selected-metric">
++                      Selected Activity: <strong>{state.selectedMetric.date}</strong> —
++                      <strong>{state.selectedMetric.logins} logins</strong> via {state.selectedMetric.service}
+                     </div>
+                   {/if}
++                </section>
+ 
+-                  {#if state.accountData}
+-                    <section class="account-card" data-testid="account-card">
+-                      <h2>Welcome back, {state.accountData.displayName}</h2>
+-                      <div class="account-details">
+-                        <p><strong>Email:</strong> <span data-testid="account-email">{state.accountData.email}</span></p>
+-                        <p><strong>Role:</strong> <span data-testid="account-role">{state.accountData.role}</span></p>
+-                        <p><strong>Subject ID:</strong> <span data-testid="account-subject-id">{state.accountData.subjectId}</span></p>
++                {#if state.route === 'dashboard' && state.accountData}
++                  <section class="security-section" data-testid="security-section">
++                    <h3>Account Security</h3>
++                    {#if state.passwordChangeMessage}
++                      <div class="alert alert-success" data-testid="password-message" role="status">
++                        {state.passwordChangeMessage}
+                       </div>
+-                    </section>
++                    {/if}
+ 
+-                    <section class="chart-section" data-testid="chart-section">
+-                      <h3>Recent Login Activity</h3>
+-                      <!-- Chart Feature Outlet: renders ChartView with real AccountActivityRow typing -->
+-                      <FeatureOutlet view={views.chart} />
+-
+-                      {#if state.selectedMetric}
+-                        <div class="selected-metric-banner" data-testid="selected-metric">
+-                          Selected Activity: <strong>{state.selectedMetric.date}</strong> — 
+-                          <strong>{state.selectedMetric.logins} logins</strong> via {state.selectedMetric.service}
+-                        </div>
+-                      {/if}
+-                    </section>
+-
+-                    <section class="security-section" data-testid="security-section">
+-                      <h3>Account Security</h3>
+-                      {#if state.passwordChangeMessage}
+-                        <div class="alert alert-success" data-testid="password-message" role="status">
+-                          {state.passwordChangeMessage}
+-                        </div>
+-                      {/if}
+-
+-                      {#if !state.auth?.changePassword}
+-                        <button
+-                          class="btn btn-secondary"
+-                          data-testid="open-change-password-button"
+-                          onclick={() => app.store.dispatch({ type: 'openChangePassword' })}
+-                        >
+-                          Change password
+-                        </button>
+-                      {:else}
+-                        <button
+-                          class="btn btn-secondary"
+-                          data-testid="cancel-change-password-button"
+-                          onclick={() => app.store.dispatch({ type: 'closeChangePassword' })}
+-                        >
+-                          Cancel password change
+-                        </button>
+-                      {/if}
+-                    </section>
+-                  {/if}
+-                </div>
+-              {:else}
+-                <!-- When on login route, chart is placed but renders nothing because state.chart is null -->
+-                <div class="hidden-chart" style="display: none;">
+-                  <FeatureOutlet view={views.chart} />
+-                </div>
+-              {/if}
++                    {#if !state.auth?.changePassword}
++                      <button
++                        class="btn btn-secondary"
++                        data-testid="open-change-password-button"
++                        onclick={() => app.store.dispatch({ type: 'openChangePassword' })}
++                      >
++                        Change password
++                      </button>
++                    {:else}
++                      <button
++                        class="btn btn-secondary"
++                        data-testid="cancel-change-password-button"
++                        onclick={() => app.store.dispatch({ type: 'closeChangePassword' })}
++                      >
++                        Cancel password change
++                      </button>
++                    {/if}
++                  </section>
++                {/if}
++              </div>
+             </main>
+           </div>
+         {/snippet}
+--- a/src/lib/components/ChartView.svelte
++++ b/src/lib/components/ChartView.svelte
+@@ -7,22 +7,9 @@
+ </script>
+ 
+ <div use:surface data-testid="chart-feature-view" class="chart-container">
+-  <Chart
+-    {store}
+-    x="date"
+-    y="logins"
+-    type="bar"
+-    height={280}
+-    onSelectionChange={(selected) => {
+-      if (selected.length > 0) {
+-        const item = selected[0];
+-        const index = store.state?.filteredData.indexOf(item) ?? 0;
+-        store.dispatch({ type: 'selectPoint', data: item, index });
+-      } else {
+-        store.dispatch({ type: 'clearSelection' });
+-      }
+-    }}
+-  />
++  <!-- Chart gestures and keys dispatch typed ChartAction<AccountActivityRow> through
++       this genuine child view; the parent reducer handles the routed actions. -->
++  <Chart {store} x="date" y="logins" type="bar" height={280} />
+ </div>
+ 
+ <style>
+--- a/tests/dashboard.test.ts
++++ b/tests/dashboard.test.ts
+@@ -7,9 +7,11 @@
+   auth,
+   type AppState,
+   type AppAction,
+-  type AccountActivityRow
++  type AccountActivityRow,
++  type AccountData
+ } from '../src/lib/model.js';
+ import { createControlledBackend } from '../src/lib/controlled-backend.js';
++import type { AccountSnapshot, SessionSnapshot } from '@composable-svelte/auth';
+ 
+ const flush = async () => {
+   for (let i = 0; i < 20; i++) await Promise.resolve();
+@@ -808,6 +810,164 @@
+     expect(store.state.auth?.changePassword).toBeNull();
+     expect(store.state.passwordChangeMessage).toBeNull();
+     expect(store.state.route).toBe('login');
++    expect(store.state.accountData).toBeNull();
++  });
++
++  // ---- Review additions (OPUS-APP-REVIEW.md R2–R6) ----
++
++  function deferred<T>() {
++    let resolve!: (value: T) => void;
++    const promise = new Promise<T>((yes) => { resolve = yes; });
++    return { promise, resolve };
++  }
++  const loginAction = (action: unknown): AppAction =>
++    ({ type: 'auth', action: { type: 'presented', action: { type: 'login', action: { type: 'presented', action } } } }) as AppAction;
++  const passwordAction = (action: unknown): AppAction =>
++    ({ type: 'auth', action: { type: 'presented', action: { type: 'changePassword', action: { type: 'presented', action } } } }) as AppAction;
++  async function until(check: () => boolean, label: string) {
++    for (let i = 0; i < 50 && !check(); i++) await flush();
++    if (!check()) throw new Error(`Timeout waiting for ${label}`);
++  }
++  function makeStore(backend = createControlledBackend()) {
++    const store = createTestStore({
++      initialState: createInitialAppState({ route: 'login' }),
++      reducer: composition.reducer,
++      execution: composition.execution,
++      dependencies: backend
++    });
++    store.exhaustivity = 'off';
++    return store;
++  }
++  async function signInThroughForm(store: ReturnType<typeof makeStore>, email: string) {
++    await store.send({ type: 'auth', action: { type: 'presented', action: { type: 'openLogin' } } });
++    await store.send(loginAction({ type: 'form', action: { type: 'fieldChanged', field: 'email', value: email } }));
++    await store.send(loginAction({ type: 'form', action: { type: 'fieldChanged', field: 'password', value: 'ValidPassword123!' } }));
++    await store.send(loginAction({ type: 'form', action: { type: 'submitTriggered' } }));
++    await until(() => store.state.route === 'dashboard', 'dashboard route');
++  }
++
++  it('logout offers a fresh sign-in so a different subject can sign in', async () => {
++    const store = makeStore();
++    await signInThroughForm(store, 'ada@example.com');
++    await until(() => store.state.accountData !== null, 'account');
++    await store.send({ type: 'logout' });
++    await until(() => store.state.auth?.session.status === 'anonymous', 'anonymous session');
++    // Without the app's explicit decision the login route would have no form.
++    expect(store.state.auth?.login).not.toBeNull();
++    expect(store.state.route).toBe('login');
++    expect(store.state.accountSubjectId).toBeNull();
++    // A former account's view does not survive into the next subject.
++    await store.send(loginAction({ type: 'form', action: { type: 'fieldChanged', field: 'email', value: 'mfa@example.com' } }));
++    await store.send(loginAction({ type: 'form', action: { type: 'fieldChanged', field: 'password', value: 'ValidPassword123!' } }));
++    await store.send(loginAction({ type: 'form', action: { type: 'submitTriggered' } }));
++    await until(() => store.state.auth?.mfa != null, 'mfa challenge');
++    expect(store.state.route).toBe('login');
++    expect(store.state.accountData).toBeNull();
++  });
++
++  it('a same-subject rotated password session keeps the account view; the outcome is read from changePasswordOutcome', async () => {
++    const backend = createControlledBackend();
++    const store = makeStore(backend);
++    await signInThroughForm(store, 'ada@example.com');
++    await until(() => store.state.accountData !== null, 'account');
++    const account = store.state.accountData;
++    const selected = store.state.chart!.data[1]!;
++    await store.send({ type: 'chart', action: { type: 'presented', action: { type: 'selectPoint', data: selected, index: 1 } } });
++    const rotated: SessionSnapshot = { subject_id: 'sub-ada-1', display_name: 'Ada Lovelace', roles: ['member'] };
++    backend.changePassword = async () => rotated;
++    await store.send({ type: 'openChangePassword' });
++    await until(() => store.state.auth?.changePassword != null, 'change password flow');
++    await store.send(passwordAction({ type: 'form', action: { type: 'fieldChanged', field: 'password', value: 'RotatedPassword123!' } }));
++    await store.send(passwordAction({ type: 'form', action: { type: 'fieldChanged', field: 'confirmPassword', value: 'RotatedPassword123!' } }));
++    await store.send(passwordAction({ type: 'form', action: { type: 'submitTriggered' } }));
++    await until(() => store.state.passwordChangeMessage !== null, 'password outcome');
++    expect(store.state.passwordChangeMessage).toBe('Password successfully changed.');
++    // The accepted handoff (source changePassword) is not a new sign-in: same subject, same view.
++    expect(backend.counters.fetchAccountCalls).toBe(1);
++    expect(store.state.accountData).toBe(account);
++    expect(store.state.selectedMetric).toBe(selected);
++    expect(store.state.route).toBe('dashboard');
++  });
++
++  it.each([true, false])('delayed account load resolved after logout is dropped (logout=%s negative control)', async (logout) => {
++    const backend = createControlledBackend();
++    const calls: { signal: AbortSignal | undefined; work: ReturnType<typeof deferred<AccountSnapshot>> }[] = [];
++    // Deliberately ignores abort, so only managed retirement and the reducer gate can drop it.
++    backend.fetchAccount = (signal) => {
++      const work = deferred<AccountSnapshot>();
++      calls.push({ signal, work });
++      return work.promise;
++    };
++    const store = makeStore(backend);
++    await signInThroughForm(store, 'ada@example.com');
++    expect(store.state.accountLoading).toBe(true);
++    expect(calls).toHaveLength(1);
++    if (logout) {
++      await store.send({ type: 'logout' });
++      expect(calls[0]!.signal?.aborted).toBe(true);
++    }
++    calls[0]!.work.resolve({ email: 'ada@example.com', emailVerified: true, hasPassword: true, mfaEnabled: false, providers: [], pendingEmail: null });
++    await flush();
++    await flush();
++    if (logout) {
++      expect(store.state.route).toBe('login');
++      expect(store.state.accountData).toBeNull();
++      expect(store.state.chart).toBeNull();
++      expect(store.state.accountLoading).toBe(false);
++    } else {
++      expect(store.state.route).toBe('dashboard');
++      expect(store.state.accountData?.subjectId).toBe('sub-ada-1');
++      expect(store.state.chart).not.toBeNull();
++    }
++  });
++
++  it('an account result from before logout is rejected after the same subject signs in again', async () => {
++    const backend = createControlledBackend();
++    const calls: ReturnType<typeof deferred<AccountSnapshot>>[] = [];
++    backend.fetchAccount = () => {
++      const work = deferred<AccountSnapshot>();
++      calls.push(work);
++      return work.promise;
++    };
++    const store = makeStore(backend);
++    await signInThroughForm(store, 'ada@example.com');
++    const firstRequest = store.state.accountRequest;
++    await store.send({ type: 'logout' });
++    await until(() => store.state.auth?.login != null, 'fresh sign-in');
++    await signInThroughForm(store, 'ada@example.com');
++    expect(store.state.accountRequest).toBeGreaterThan(firstRequest);
++    // Public/queued result of the retired request (same subject, older epoch).
++    const stale: AccountData = { subjectId: 'sub-ada-1', email: 'stale@example.com', displayName: 'Stale', role: 'Member', metrics: [] };
++    await store.send({ type: 'accountLoaded', request: firstRequest, data: stale });
+     expect(store.state.accountData).toBeNull();
++    expect(store.state.accountLoading).toBe(true);
++    calls[1]!.resolve({ email: 'ada@example.com', emailVerified: true, hasPassword: true, mfaEnabled: false, providers: [], pendingEmail: null });
++    await until(() => store.state.accountData !== null, 'fresh account');
++    expect(store.state.accountData?.email).toBe('ada@example.com');
+   });
++
++  it('typed multi-row and keyboard selections route through the owning chart feature', async () => {
++    const rows: AccountActivityRow[] = [
++      { date: '2026-09-20', logins: 45, service: 'Security' },
++      { date: '2026-09-21', logins: 52, service: 'Settings' }
++    ];
++    const store = createTestStore({
++      initialState: createInitialAppState({
++        route: 'dashboard',
++        initialData: { subjectId: 'sub-ada-1', email: 'ada@example.com', displayName: 'Ada', role: 'Member', metrics: rows }
++      }),
++      reducer: composition.reducer,
++      execution: composition.execution,
++      dependencies: createControlledBackend()
++    });
++    store.exhaustivity = 'off';
++    await store.send({ type: 'chart', action: { type: 'presented', action: { type: 'selectPoints', indices: [0, 1] } } }, (state) => {
++      expect(state.chart?.selection.selectedData).toEqual(rows);
++      expect(state.selectedMetric).toBe(state.chart?.data[0]);
++    });
++    await store.send({ type: 'chart', action: { type: 'presented', action: { type: 'focusLast' } } });
++    await store.send({ type: 'chart', action: { type: 'presented', action: { type: 'selectFocused' } } }, (state) => {
++      expect(state.selectedMetric).toEqual(rows[1]);
++    });
++  });
+ });
+--- a/package.json
++++ b/package.json
+@@ -6,7 +6,8 @@
+     "check": "svelte-check --tsconfig tsconfig.json",
+     "build": "vite build",
+     "test": "vitest run",
+-    "test:ssr": "node scripts/ssr.mjs"
++    "test:ssr": "node scripts/ssr.mjs",
++    "test:browser": "playwright test"
+   },
+   "dependencies": {
+     "@composable-svelte/core": "file:/private/tmp/composable-final-authoring/artifacts-b/composable-svelte-core-0.13.1.tgz",
+--- /dev/null
++++ b/playwright.config.ts
+@@ -0,0 +1,20 @@
++import { defineConfig, devices } from '@playwright/test';
++
++const port = 5191;
++
++export default defineConfig({
++  testDir: './tests/browser',
++  testMatch: '**/*.pw.ts',
++  fullyParallel: false,
++  workers: 1,
++  retries: 0,
++  reporter: [['list']],
++  use: { baseURL: `http://127.0.0.1:${port}`, trace: 'off' },
++  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
++  webServer: {
++    command: `npx vite --host 127.0.0.1 --port ${port} --strictPort`,
++    url: `http://127.0.0.1:${port}/login`,
++    reuseExistingServer: false,
++    timeout: 60_000
++  }
++});
+--- /dev/null
++++ b/tests/browser/dashboard.pw.ts
+@@ -0,0 +1,110 @@
++import { test, expect, type Page } from '@playwright/test';
++
++async function signIn(page: Page, email: string, password = 'ValidPassword123!') {
++  const form = page.locator('form.login-form, [data-testid="login-view-wrapper"]').first();
++  await expect(form.locator('input[name="email"]')).toBeVisible();
++  await form.locator('input[name="email"]').fill(email);
++  await form.locator('input[name="password"]').fill(password);
++  await form.getByRole('button', { name: 'Sign in' }).click();
++}
++
++test('accepted sign-in changes the route; rejected sign-in does not', async ({ page }) => {
++  await page.goto('/login');
++  await signIn(page, 'ada@example.com', 'WrongPassword123!');
++  await expect(page.getByRole('alert').first()).toBeVisible();
++  await expect(page).toHaveURL(/\/login$/);
++  await expect(page.getByTestId('account-card')).toHaveCount(0);
++
++  await page.locator('input[name="password"]').fill('ValidPassword123!');
++  await page.getByRole('button', { name: 'Sign in' }).click();
++  await expect(page).toHaveURL(/\/dashboard$/);
++  await expect(page.getByTestId('account-subject-id')).toHaveText('sub-ada-1');
++  await expect(page.getByTestId('chart-feature-view').locator('svg').first()).toBeVisible();
++});
++
++test('unauthenticated /dashboard request is vetoed to /login', async ({ page }) => {
++  await page.goto('/dashboard');
++  await expect(page).toHaveURL(/\/login$/);
++  await expect(page.locator('input[name="email"]')).toBeVisible();
++  await expect(page.getByTestId('dashboard-container')).toBeHidden();
++  await expect(page.getByTestId('account-card')).toHaveCount(0);
++});
++
++test('MFA challenge then dashboard for the MFA subject', async ({ page }) => {
++  await page.goto('/login');
++  await signIn(page, 'mfa@example.com');
++  const code = page.locator('input[name="code"]');
++  await expect(code).toBeVisible();
++  await expect(page).toHaveURL(/\/login$/);
++  await code.fill('123456');
++  await page.getByRole('button', { name: 'Verify' }).click();
++  await expect(page).toHaveURL(/\/dashboard$/);
++  await expect(page.getByTestId('account-subject-id')).toHaveText('sub-mfa-1');
++});
++
++test('keyboard chart selection reaches the owning feature as a typed row', async ({ page }) => {
++  await page.goto('/login');
++  await signIn(page, 'ada@example.com');
++  await expect(page).toHaveURL(/\/dashboard$/);
++  const chart = page.getByTestId('chart-feature-view').locator('[role="application"]');
++  await expect(chart).toBeVisible();
++  await chart.focus();
++  await page.keyboard.press('Home');
++  await page.keyboard.press('Enter');
++  await expect(page.getByTestId('selected-metric')).toContainText('2026-09-20');
++  await expect(page.getByTestId('selected-metric')).toContainText('4 logins');
++  await page.keyboard.press('Escape');
++  await expect(page.getByTestId('selected-metric')).toHaveCount(0);
++});
++
++test('password change keeps the account view and reports documented outcome', async ({ page }) => {
++  await page.goto('/login');
++  await signIn(page, 'ada@example.com');
++  await expect(page.getByTestId('account-card')).toBeVisible();
++  await page.getByTestId('open-change-password-button').click();
++  const wrapper = page.getByTestId('change-password-wrapper');
++  await wrapper.locator('input[name="password"]').fill('BrandNewPassword123!');
++  await wrapper.locator('input[name="confirmPassword"]').fill('BrandNewPassword123!');
++  await wrapper.locator('button[type="submit"]').click();
++  await expect(page.getByTestId('password-message')).toHaveText('Password successfully changed.');
++  await expect(page.getByTestId('account-subject-id')).toHaveText('sub-ada-1');
++});
++
++test('logout removes the former account and lets a different subject sign in', async ({ page }) => {
++  await page.goto('/login');
++  await signIn(page, 'ada@example.com');
++  await expect(page.getByTestId('account-subject-id')).toHaveText('sub-ada-1');
++  await page.getByTestId('logout-button').click();
++  await expect(page).toHaveURL(/\/login$/);
++  await expect(page.getByTestId('account-card')).toHaveCount(0);
++  await expect(page.getByTestId('chart-feature-view')).toHaveCount(0);
++  await expect(page.getByText('Ada Lovelace')).toHaveCount(0);
++  // The login route must offer a usable sign-in form again.
++  await signIn(page, 'mfa@example.com');
++  await page.locator('input[name="code"]').fill('123456');
++  await page.getByRole('button', { name: 'Verify' }).click();
++  await expect(page).toHaveURL(/\/dashboard$/);
++  await expect(page.getByTestId('account-subject-id')).toHaveText('sub-mfa-1');
++});
++
++test('browser Back after sign-in does not strand the signed-in account on an empty sign-in page', async ({ page }) => {
++  await page.goto('/login');
++  await signIn(page, 'ada@example.com');
++  await expect(page).toHaveURL(/\/dashboard$/);
++  await expect(page.getByTestId('account-card')).toBeVisible();
++  await page.goBack();
++  await expect(page).toHaveURL(/\/dashboard$/);
++  await expect(page.getByTestId('account-card')).toBeVisible();
++});
++
++test('no uncaught page errors or framework layout errors across the main journey', async ({ page }) => {
++  const problems: string[] = [];
++  page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
++  page.on('console', (m) => { if (m.type() === 'error') problems.push(`console: ${m.text()}`); });
++  await page.goto('/login');
++  await signIn(page, 'ada@example.com');
++  await expect(page.getByTestId('account-card')).toBeVisible();
++  await page.getByTestId('logout-button').click();
++  await expect(page.locator('input[name="email"]')).toBeVisible();
++  expect(problems).toEqual([]);
++});

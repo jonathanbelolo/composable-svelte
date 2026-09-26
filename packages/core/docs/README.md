@@ -5,10 +5,22 @@ Welcome to the complete documentation for **@composable-svelte/core** - a Compos
 ## 📚 Documentation Index
 
 ### Getting Started
+- **[Application authoring contract](./application-contract.md)** - Read first: architecture rules for application authors and AI agents
+- **[Agent authoring patterns](./agent-patterns.md)** - Factoring and explicit ownership
+- **[Executable agent examples](./examples/agent-patterns/README.md)** - Runnable reference code and tests
+- **[Testing owned work](./testing-owned-work.md)** - Deterministic async and cancellation checks
+- **[Agent entry guide](./agent-entry.md)** - Installed-package instructions and capability-gap reporting
 - **[Consumer guide](./consumer.md)** - Supported toolchain, lifecycle and integration boundaries
 - **[Import catalog](./components.md)** - All public package entry points
 - **[Runnable starter](../consumer/README.md)** - An application you can copy from npm
 - **[Getting Started](./getting-started.md)** - Installation, first app, and core concepts
+
+### Managed Applications
+- **[Application presentation](./application-presentation.md)** - Genuine presentation views and the explicit animated-exit compatibility path
+- **[Application motion](./application-motion.md)** - Single-target and grouped recipes, reduced motion and managed cleanup
+- **[Application ownership](./application-ownership.md)** - Declarative Root lifetime and typed contextual lookup
+- **[Application routing](./application-routing.md)** - Pure route decisions, SSR handoff and framework-owned browser attachment
+- **[Application views](./application-views.md)** - Typed view declarations, feature outlets and the framework-supplied presentation surface
 
 ### Core Concepts
 - **[Store and Reducers](./core-concepts/store-and-reducers.md)** - State management fundamentals
@@ -53,7 +65,7 @@ Welcome to the complete documentation for **@composable-svelte/core** - a Compos
 ### By Use Case
 
 **Building a Simple App?**
-→ Start with [Getting Started](./getting-started.md)
+→ Start with the [application authoring contract](./application-contract.md) and [consumer guide](./consumer.md)
 
 **Adding Navigation?**
 → Check [Tree-Based Navigation](./navigation/tree-based.md) and [Navigation Components](./navigation/components.md)
@@ -234,8 +246,9 @@ ifLet(/* lenses */)(state, action, deps)
 createDestination({ addItem, editItem }).reducer   // createDestinationReducer is deprecated
 ```
 
-Components, each taking a scoped `store` prop: `<Modal>`, `<Sheet>`, `<Drawer>`,
-`<Alert>`, `<NavigationStack>`.
+Managed presentation components (`<Modal>`, `<Sheet>`, `<Drawer>`, `<Alert>`,
+`<Popover>`, and `<Sidebar>`) take a framework-minted `PresentationView`. Legacy scoped stores remain
+available for state reads and action dispatch outside these presentation boundaries.
 
 ### DSL
 

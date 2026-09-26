@@ -19,8 +19,6 @@
     "noFallthroughCasesInSwitch": true,
 
     "paths": {
-      "@composable-svelte/core": ["../../packages/core/src"],
-      "@composable-svelte/core/*": ["../../packages/core/src/*"],
       "$lib": ["../../packages/core/src/lib"],
       "$lib/*": ["../../packages/core/src/lib/*"]
     }

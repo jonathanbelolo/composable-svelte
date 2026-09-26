@@ -10,7 +10,7 @@ export { createInitialGraphicsState } from './core/initial-state.js';
 // The scene sync, and the renderer surface it drives. Exported because it is
 // the seam a second backend would implement and the one a test can substitute.
 export { syncScene, initialBaseline } from './core/scene-sync.js';
-export type { SceneAdapter, SceneBaseline } from './core/scene-sync.js';
+export type { SceneAdapter, SceneBaseline, GraphicsAdapter } from './core/scene-sync.js';
 
 // Components
 export { default as Scene } from './components/Scene.svelte';
@@ -20,6 +20,7 @@ export { default as Light } from './components/Light.svelte';
 
 // WebGL Overlay
 export { default as WebGLOverlay } from './lib/overlay/WebGLOverlay.svelte';
+export { attachOverlayToOwner } from './lib/overlay/webgl-overlay.js';
 // Named rather than `export type *`, because that also exported four types no
 // consumer could obtain: `OverlayContextAPI` and `OverlayInit` are produced only
 // by `createOverlay`, which is not exported, and `TextureCreationOptions` /

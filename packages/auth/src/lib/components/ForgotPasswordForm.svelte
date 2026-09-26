@@ -14,6 +14,7 @@
 	 */
 	import { Form, FormField } from '@composable-svelte/core/components/form';
 	import type { FormAction, FormState } from '@composable-svelte/core/components/form';
+	import type { PresentationView } from '@composable-svelte/core/application';
 	import type { Snippet } from 'svelte';
 
 	import type {
@@ -22,7 +23,8 @@
 	} from '../flows/forgot-password/types.js';
 	import type { ForgotPasswordFields } from '../flows/forgot-password/schema.js';
 
-	interface Props {
+	interface StandaloneBinding {
+		mode?: 'standalone' | undefined;
 		flowStore: {
 			readonly state: ForgotPasswordState;
 			dispatch(action: ForgotPasswordAction): void;
@@ -30,24 +32,37 @@
 		};
 		/** Called each time the backend accepts a request, with the address given. */
 		onSent?: ((email: string) => void) | undefined;
-		/** Offered beside the form — "back to sign in". */
+	}
+
+	interface ManagedBinding {
+		mode: 'managed';
+		flowStore: PresentationView<ForgotPasswordState, ForgotPasswordAction>;
+		onSent?: never;
+	}
+
+	interface PresentationProps {
+		/** Replaces the managed default sign-in action when supplied. */
 		footer?: Snippet | undefined;
 		header?: Snippet | undefined;
 		submitLabel?: string | undefined;
+		/** Managed default navigation label, used when no custom footer is supplied. */
+		signInLabel?: string | undefined;
 		headingLevel?: 1 | 2 | 3 | 4 | undefined;
 		emailLabel?: string | undefined;
 		class?: string | undefined;
 	}
 
+	type Props = PresentationProps & (StandaloneBinding | ManagedBinding);
+
 	let {
-		flowStore,
-		onSent,
 		footer,
 		header,
 		submitLabel = 'Send reset link',
+		signInLabel = 'Back to sign in',
 		headingLevel = 2,
 		emailLabel = 'Email',
-		class: className = ''
+		class: className = '',
+		...binding
 	}: Props = $props();
 
 	const uid = $props.id();
@@ -59,29 +74,61 @@
 	const listeners = new Set<(state: FormState<ForgotPasswordFields>) => void>();
 
 	$effect(() => {
-		return flowStore.subscribe((state) => {
+		if (binding.mode === 'managed') return;
+		return binding.flowStore.subscribe((state) => {
 			for (const listener of listeners) listener(state.form);
 		});
 	});
 
+	const flow: ForgotPasswordState | undefined = $derived(binding.flowStore.state);
+
+	function standaloneForm(): FormState<ForgotPasswordFields> {
+		const state = binding.flowStore.state;
+		if (state === undefined) throw new Error('ForgotPasswordForm: no live flow');
+		return state.form;
+	}
+
 	const formStore = {
 		get state(): FormState<ForgotPasswordFields> {
-			return flowStore.state.form;
+			return standaloneForm();
 		},
 		dispatch(action: FormAction<ForgotPasswordFields>) {
-			flowStore.dispatch({ type: 'form', action });
+			binding.flowStore.dispatch({ type: 'form', action });
 		},
 		subscribe(listener: (state: FormState<ForgotPasswordFields>) => void) {
 			listeners.add(listener);
-			listener(flowStore.state.form);
+			listener(standaloneForm());
 			return () => listeners.delete(listener);
 		}
 	};
 
-	const error = $derived(flowStore.state.error);
-	const status = $derived(flowStore.state.status);
+	function managedFormStore(view: PresentationView<ForgotPasswordState, ForgotPasswordAction>) {
+		let last: FormState<ForgotPasswordFields> | undefined;
+		function current(): FormState<ForgotPasswordFields> {
+			const state = view.state;
+			if (state !== undefined) last = state.form;
+			if (last === undefined) throw new Error('ForgotPasswordForm: no live flow');
+			return last;
+		}
+		return {
+			get state() { return current(); },
+			dispatch(action: FormAction<ForgotPasswordFields>) { view.dispatch({ type: 'form', action }); },
+			subscribe(listener: (state: FormState<ForgotPasswordFields>) => void) {
+				const unsubscribe = view.subscribe((state) => {
+					if (state !== undefined) { last = state.form; listener(state.form); }
+				});
+				listener(current());
+				return unsubscribe;
+			}
+		};
+	}
+	const formOwner = $derived(binding.mode === 'managed' ? binding.flowStore : null);
+	const activeFormStore = $derived(binding.mode === 'managed' ? managedFormStore(binding.flowStore) : formStore);
+
+	const error = $derived(flow?.error ?? null);
+	const status = $derived(flow?.status);
 	const isSubmitting = $derived(status === 'submitting');
-	const requestedFor = $derived(flowStore.state.requestedFor);
+	const requestedFor = $derived(flow?.requestedFor ?? null);
 
 	/**
 	 * Whether this acceptance has been reported.
@@ -99,17 +146,19 @@
 	let reported = false;
 
 	$effect(() => {
-		const state = flowStore.state;
+		if (binding.mode === 'managed') return;
+		const state = binding.flowStore.state;
 		if (state.status !== 'sent') {
 			reported = false;
 			return;
 		}
 		if (reported || state.requestedFor === null) return;
 		reported = true;
-		onSent?.(state.requestedFor);
+		binding.onSent?.(state.requestedFor);
 	});
 </script>
 
+{#if flow}
 <div class="forgot-form {className}">
 	{#if header}
 		{@render header()}
@@ -138,7 +187,8 @@
 		</div>
 	{/if}
 
-	<Form store={formStore} class="forgot-form__form">
+	{#key formOwner}
+	<Form store={activeFormStore} class="forgot-form__form">
 		<FormField name="email">
 			{#snippet children({ field, send })}
 				<div class="forgot-form__field">
@@ -174,11 +224,17 @@
 			{isSubmitting ? 'Sending…' : submitLabel}
 		</button>
 	</Form>
+	{/key}
 
 	{#if footer}
 		<div class="forgot-form__footer">{@render footer()}</div>
+	{:else if binding.mode === 'managed'}
+		<div class="forgot-form__footer">
+			<button type="button" class="forgot-form__back" onclick={() => binding.flowStore.dispatch({ type: 'signInRequested' })}>{signInLabel}</button>
+		</div>
 	{/if}
 </div>
+{/if}
 
 <style>
 	/* Scoped CSS over core's theme tokens — see `LoginForm` for why not Tailwind. */
@@ -302,6 +358,22 @@
 	}
 
 	.forgot-form__submit:focus-visible {
+		outline: 2px solid hsl(var(--ring, 222.2 84% 4.9%));
+		outline-offset: 2px;
+	}
+
+	.forgot-form__back {
+		font: inherit;
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: hsl(var(--primary, 222.2 47.4% 11.2%));
+		background: transparent;
+		border: 0;
+		padding: 0;
+		cursor: pointer;
+	}
+
+	.forgot-form__back:focus-visible {
 		outline: 2px solid hsl(var(--ring, 222.2 84% 4.9%));
 		outline-offset: 2px;
 	}

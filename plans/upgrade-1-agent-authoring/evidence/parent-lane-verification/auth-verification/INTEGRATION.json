@@ -1,0 +1,17 @@
+{
+  "integratedAt": "2026-09-25T14:15:17.466217+00:00",
+  "base": "ab625bf69eb9e9591474d714446d3bf6403b88af",
+  "through": "16f983e706731f634b5bea6805b836b3bea3d506",
+  "patchSHA256": "b7d67275909dcd78e1644ab4af8427c4739dba5c23278057a386f7ad50ed2e77",
+  "candidateSHA256": "e2377f887f42c83a02d8684df746877d9711d9ee93ee39ca1eb06b5fbe704908",
+  "paths": 26,
+  "verification": {
+    "affectedBrowser": "89/89 passed after integration",
+    "SSR": "38/38 passed after integration",
+    "build": "passed",
+    "typecheck": "passed",
+    "svelteCheck": "0 errors 0 warnings",
+    "sourceEquality": "All26 integrated paths byte-equal to frozen16f983e7 commit"
+  },
+  "review": "Opus CLEAR TO LAND, lesser proof/documentation corrections completed"
+}

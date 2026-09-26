@@ -15,23 +15,27 @@
 	 * - Keyboard shortcuts
 	 */
 
-	import type { Store } from '@composable-svelte/core';
 	import { Tooltip } from '@composable-svelte/core';
 	import type { AudioPlayerState, AudioPlayerAction } from './types.js';
 	import { nextLoopMode } from './types.js';
-	import { getAudioManager, deleteAudioManager } from './audio-manager.js';
-	import { onMount } from 'svelte';
+	import { createAudioEngine, type AudioEngine } from './audio-engine.js';
+	import type { ViewStore } from '../internal/view-store.js';
+	import { untrack } from 'svelte';
 
 	interface Props {
-		/** Store containing audio player state */
-		store: Store<AudioPlayerState, AudioPlayerAction>;
+		/** A standalone store, or the managed feature view (`FeatureViewProps.store`) */
+		store: ViewStore<AudioPlayerState, AudioPlayerAction>;
 		/** Optional CSS class */
 		class?: string | undefined;
 		/** Show expand button (default: true) */
 		showExpandButton?: boolean | undefined;
 		/** Show playlist info (default: true) */
 		showPlaylistInfo?: boolean | undefined;
-		/** Unique ID for this player instance */
+		/**
+		 * Optional registry name, captured when the player binds. Each player owns
+		 * its own audio element either way; a name another mounted player holds
+		 * moves to this one, with a warning, and never shares an element.
+		 */
 		id?: string | undefined;
 	}
 
@@ -40,19 +44,18 @@
 		class: className = '',
 		showExpandButton = true,
 		showPlaylistInfo = true,
-		id = 'full-audio-player'
+		id
 	}: Props = $props();
 
-	const playerState = $derived($store);
+	// `undefined` once a managed view's owner retires; the player then renders nothing.
+	const playerState: AudioPlayerState | undefined = $derived($store);
+	const live = $derived(playerState !== undefined);
+	const duration = () => playerState?.duration ?? 0;
 
-	// Audio manager
-	let audioManager: ReturnType<typeof getAudioManager> | null = null;
+	let engine = $state.raw<AudioEngine | null>(null);
 
 	// Seeking state (local to component)
 	let isSeeking = $state(false);
-
-	// Track the currently loaded URL to avoid unnecessary reloads
-	let loadedTrackUrl = $state<string | null>(null);
 
 	// Cleanup function for drag event listeners
 	let cleanupDrag: (() => void) | null = null;
@@ -73,16 +76,14 @@
 	}
 
 	// Get display time (current or seek position)
-	const displayTime = $derived(playerState.seekPosition ?? playerState.currentTime);
+	const displayTime = $derived(playerState ? (playerState.seekPosition ?? playerState.currentTime) : 0);
 
 	// Progress percentage
-	const progressPercent = $derived(
-		playerState.duration > 0 ? (displayTime / playerState.duration) * 100 : 0
-	);
+	const progressPercent = $derived(duration() > 0 ? (displayTime / duration()) * 100 : 0);
 
 	// Buffered percentage
 	const bufferedPercent = $derived(
-		playerState.duration > 0 ? (playerState.buffered / playerState.duration) * 100 : 0
+		playerState && duration() > 0 ? (playerState.buffered / duration()) * 100 : 0
 	);
 
 	// Handle play/pause toggle
@@ -96,7 +97,7 @@
 		const rect = target.getBoundingClientRect();
 		const x = event.clientX - rect.left;
 		const percent = x / rect.width;
-		const time = percent * playerState.duration;
+		const time = percent * duration();
 
 		store.dispatch({ type: 'seekTo', time });
 	}
@@ -114,14 +115,14 @@
 		const rect = target.getBoundingClientRect();
 		const x = event.clientX - rect.left;
 		const percent = x / rect.width;
-		const time = percent * playerState.duration;
+		const time = percent * duration();
 
 		store.dispatch({ type: 'seekStarted', position: time });
 
 		function handleMouseMove(e: MouseEvent) {
 			const x = e.clientX - rect.left;
 			const percent = Math.max(0, Math.min(1, x / rect.width));
-			const time = percent * playerState.duration;
+			const time = percent * duration();
 
 			store.dispatch({ type: 'seekUpdated', position: time });
 		}
@@ -129,7 +130,7 @@
 		function handleMouseUp(e: MouseEvent) {
 			const x = e.clientX - rect.left;
 			const percent = Math.max(0, Math.min(1, x / rect.width));
-			const time = percent * playerState.duration;
+			const time = percent * duration();
 
 			store.dispatch({ type: 'seekEnded', position: time });
 
@@ -168,12 +169,14 @@
 
 	// Handle loop mode toggle
 	function toggleLoopMode() {
+		if (!playerState) return;
 		store.dispatch({ type: 'loopModeChanged', mode: nextLoopMode(playerState.loopMode) });
 	}
 
 	// Get loop mode icon
 	const loopModeIcon = $derived(() => {
-		switch (playerState.loopMode) {
+		switch (playerState?.loopMode) {
+			case undefined:
 			case 'none':
 				return '↻';
 			case 'one':
@@ -185,10 +188,13 @@
 
 	// Keyboard shortcuts
 	function handleKeyDown(event: KeyboardEvent) {
-		// Don't handle if user is typing in an input
-		if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
-			return;
-		}
+		if (!playerState) return;
+		if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+		const target = event.target;
+		if (!(target instanceof HTMLElement)) return;
+		if (target.isContentEditable || target.closest('input, textarea, select, [role="slider"]')) return;
+		// Preserve native activation; the button's click handler owns its action.
+		if (target.closest('button, a[href]') && (event.key === ' ' || event.key === 'Enter')) return;
 
 		switch (event.key) {
 			case ' ':
@@ -249,74 +255,41 @@
 
 			case 'End':
 				event.preventDefault();
-				store.dispatch({ type: 'seekTo', time: playerState.duration });
+				store.dispatch({ type: 'seekTo', time: duration() });
 				break;
 		}
 	}
 
-	// Sync audio manager with state
+	// One engine per bound store, for as long as that store has state. A managed
+	// view's state becomes `undefined` when its owner retires, so the element is
+	// released then — not only at unmount — and a manually bound player never
+	// keeps playing for an owner that is gone. A different `store` gets a fresh
+	// engine; element callbacks never reach the store they were not created for.
 	$effect(() => {
-		if (!audioManager) return;
-
-		// Update audio element based on state changes
-		const track = playerState.currentTrack;
-
-		// Load track only if URL changed
-		if (track && track.url !== loadedTrackUrl) {
-			audioManager.loadTrack(track);
-			loadedTrackUrl = track.url;
-		} else if (!track && loadedTrackUrl !== null) {
-			loadedTrackUrl = null;
-		}
-
-		if (playerState.isPlaying && audioManager.getAudioElement().paused) {
-			audioManager.play();
-		} else if (!playerState.isPlaying && !audioManager.getAudioElement().paused) {
-			audioManager.pause();
-		}
-
-		audioManager.setVolume(playerState.volume);
-		audioManager.setPlaybackSpeed(playerState.playbackSpeed);
-
-		// Seek if needed (and not currently seeking)
-		if (!isSeeking && Math.abs(audioManager.getAudioElement().currentTime - playerState.currentTime) > 0.5) {
-			audioManager.seek(playerState.currentTime);
-		}
+		const view = store;
+		if (!live) return;
+		return untrack(() => {
+			const bound = createAudioEngine({
+				dispatch: (action) => view.dispatch(action),
+				id,
+				component: 'FullAudioPlayer'
+			});
+			engine = bound;
+			// Ask for the user's saved volume and speed. `loadVolume`/`loadSpeed` are
+			// optional dependencies, and this is what makes them reachable.
+			view.dispatch({ type: 'restorePreferences' });
+			return () => {
+				cleanupDrag?.();
+				bound.dispose();
+				engine = null;
+			};
+		});
 	});
 
-	// Initialize audio manager on mount
-	onMount(() => {
-		// Ask for the user's saved volume and speed. `loadVolume`/`loadSpeed` are
-		// optional dependencies, and this is what makes them reachable — every
-		// change was persisted and nothing ever read it back.
-		store.dispatch({ type: 'restorePreferences' });
-
-		audioManager = getAudioManager(id, {
-			onAction: (action) => {
-				store.dispatch(action);
-			}
-		});
-
-		// Load initial track if available
-		if (playerState.currentTrack) {
-			audioManager.loadTrack(playerState.currentTrack);
-			loadedTrackUrl = playerState.currentTrack.url;
-		}
-
-		// Add keyboard shortcuts
-		window.addEventListener('keydown', handleKeyDown);
-
-		return () => {
-			// Clean up drag listeners if still active
-			if (cleanupDrag) {
-				cleanupDrag();
-			}
-
-			deleteAudioManager(id);
-			audioManager = null;
-			loadedTrackUrl = null;
-			window.removeEventListener('keydown', handleKeyDown);
-		};
+	// Drive the element from state: track, play/pause, volume, speed, position.
+	$effect(() => {
+		const state = playerState;
+		if (engine && state) engine.sync(state, isSeeking);
 	});
 
 	const SEEK_STEP_SECONDS = 5;
@@ -327,7 +300,7 @@
 	 * and does not clamp — the reducer already does, in one place.
 	 */
 	function handleProgressKeyDown(event: KeyboardEvent) {
-		if (playerState.duration <= 0) return;
+		if (!playerState || playerState.duration <= 0) return;
 
 		let time: number;
 		switch (event.key) {
@@ -365,7 +338,10 @@
 	}
 </script>
 
-<div class="full-audio-player {className}" role="region" aria-label="Audio player">
+{#if playerState}
+<!-- The labeled region is the explicit keyboard-shortcut target; native child controls keep their own semantics. -->
+<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+<div class="full-audio-player {className}" role="region" aria-label="Audio player" tabindex="0" onkeydown={handleKeyDown}>
 	<!-- Track info header -->
 	{#if playerState.currentTrack}
 		<div class="track-header">
@@ -623,6 +599,7 @@
 		<div class="buffering-indicator">Buffering...</div>
 	{/if}
 </div>
+{/if}
 
 <style>
 	.full-audio-player {
@@ -636,6 +613,11 @@
 		font-family: system-ui, -apple-system, sans-serif;
 		max-width: 600px;
 		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+	}
+
+	.full-audio-player:focus-visible {
+		outline: 2px solid currentColor;
+		outline-offset: 2px;
 	}
 
 	.track-header {

@@ -15,7 +15,7 @@ A comprehensive example demonstrating the TreeView component with a file system 
 - **Selection State**: Click or press Enter to select files/folders
 - **Lazy Loading**: The "composable-svelte" folder demonstrates async loading with spinner
 - **Callback Handlers**: `onSelect`, `onExpand`, `onCollapse` callbacks log activity
-- **Custom Data Payload**: Each node carries type and size information
+- **Custom Data Payload**: Each node carries file size information
 
 ## Running the Example
 
@@ -37,11 +37,10 @@ Then open your browser to the URL shown in the terminal (typically http://localh
 The example uses a nested `TreeNode` structure with custom data:
 
 ```typescript
-const fileNodes: TreeNode<{ type: 'file' | 'folder'; size?: string }>[] = [
+const fileNodes: TreeNode[] = [
   {
     id: 'root',
     label: '📁 My Documents',
-    data: { type: 'folder' },
     children: [
       // ... nested children
     ]
@@ -54,7 +53,7 @@ const fileNodes: TreeNode<{ type: 'file' | 'folder'; size?: string }>[] = [
 The `loadChildren` prop enables async loading for nodes marked with `lazy: true`:
 
 ```typescript
-async function loadChildren(nodeId: string, node: TreeNode<...>): Promise<TreeNode<...>[]> {
+async function loadChildren(nodeId: string, node: TreeNode): Promise<TreeNode[]> {
   await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
 
   if (nodeId === 'composable-svelte') {
@@ -72,9 +71,9 @@ async function loadChildren(nodeId: string, node: TreeNode<...>): Promise<TreeNo
 Callbacks demonstrate how to observe user interactions:
 
 ```typescript
-function handleSelect(nodeId: string, node: TreeNode<...>) {
+function handleSelect(nodeId: string, node: TreeNode) {
   selectedFile = node.label;
-  selectedSize = node.data?.size ?? null;
+  selectedSize = node.data ?? null;
   log = [`Selected: ${node.label}`, ...log].slice(0, 5);
 }
 ```
@@ -83,7 +82,7 @@ function handleSelect(nodeId: string, node: TreeNode<...>) {
 
 This example follows the Composable Architecture pattern:
 
-- **Pure Component**: TreeView is a stateless component that renders based on props
+- **Framework-owned interaction**: TreeView owns its internal store, keyboard navigation, expansion and loading lifetimes; this demo supplies nodes and rendering callbacks.
 - **Callback Props**: Parent component receives notifications via callbacks
 - **Local State**: Parent manages selection and log state using Svelte 5 `$state`
 - **Reactive Updates**: UI automatically updates when state changes
@@ -114,3 +113,9 @@ Try extending this example:
 
 See the [TreeView prop types](../../packages/core/src/lib/components/ui/tree-view/tree-view.types.ts)
 for the full API. There is no prose guide for it yet.
+
+## Styling and validation
+
+The application entry imports the published framework globals. PostCSS runs Tailwind 3 with the published preset and `contentGlob`, so package components receive their utility styles and theme tokens. Keep the package content scan when changing local content paths.
+
+Run `pnpm check`, `pnpm build`, and `pnpm test` from this directory. Browser tests require Chromium (`pnpm exec playwright install chromium`). They load styles through the real application entry and verify keyboard highlight, selection, expanded chevrons, and the lazy-loading spinner using native computed styles.

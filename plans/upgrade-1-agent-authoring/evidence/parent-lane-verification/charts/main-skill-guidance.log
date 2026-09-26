@@ -1,0 +1,13 @@
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core
+
+ ✓ tests/repo/skill-examples.test.ts (7 tests) 23ms
+ ✓ tests/repo/doc-typecheck.test.ts (10 tests) 507ms
+     ✓ still reports a documented option that the type does not have  340ms
+
+ Test Files  2 passed (2)
+      Tests  17 passed (17)
+   Start at  13:24:46
+   Duration  2.88s (transform 149ms, setup 50ms, collect 2.27s, tests 530ms, environment 0ms, prepare 9ms)
+

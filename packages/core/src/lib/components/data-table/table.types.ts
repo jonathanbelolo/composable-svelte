@@ -76,7 +76,7 @@ export interface Pagination {
 	pageSize: number;
 
 	/**
-	 * Total number of items (for server-side pagination).
+	 * Filtered dataset row count in client mode; server total when supplied, otherwise legacy page-length fallback.
 	 */
 	total: number;
 }
@@ -87,6 +87,17 @@ export interface Pagination {
  * @template T - The row data type
  */
 export interface TableState<T> {
+	/** Internal monotonic refresh/query revision; stale effect results cannot overwrite newer state. */
+	requestVersion?: number | undefined;
+
+	/** Server query needs an explicit refresh. Query changes clear previous-query rows.
+	 * Also true after a failed fetch: this is status, not an automatic retry instruction.
+	 * Dispatch refreshTriggered explicitly; automatic retries require a bounded retry policy. */
+	needsRefresh?: boolean | undefined;
+
+	/** Internal flag indicating a corrective fetch for a clamped server page is pending. */
+	correctionPending?: boolean | undefined;
+
 	/**
 	 * Table data rows.
 	 */
@@ -123,9 +134,14 @@ export interface TableState<T> {
 	isLoading: boolean;
 
 	/**
-	 * Error state (if data loading failed).
+	 * Error state (if data loading failed or page out of range).
 	 */
 	error: string | null;
+
+	/**
+	 * Typed reason for the current error state.
+	 */
+	errorReason?: 'page-out-of-range' | 'load-failed' | null | undefined;
 }
 
 /**
@@ -135,8 +151,15 @@ export interface TableState<T> {
  */
 export type TableAction<T> =
 	// Data actions
-	| { type: 'dataLoaded'; data: T[] }
-	| { type: 'dataLoadFailed'; error: string }
+	| {
+			type: 'dataLoaded';
+			data: T[];
+			/** Server-reported count; client mode computes its filtered dataset total. */
+			total?: number | undefined;
+			/** Framework refresh correlation. Omit for an authoritative externally supplied dataset. */
+			requestVersion?: number | undefined;
+	  }
+	| { type: 'dataLoadFailed'; error: string; requestVersion?: number | undefined }
 	| { type: 'refreshTriggered' }
 
 	// Sorting actions
@@ -165,9 +188,16 @@ export type TableAction<T> =
  */
 export interface TableConfig<T> {
 	/**
-	 * Initial data (for client-side tables).
+	 * Initial data (for client-side tables or initial server page).
 	 */
 	initialData?: T[];
+
+	/** Server-reported total for an initial server page. Ignored in client mode. */
+	initialTotal?: number | undefined;
+
+	/** Initial page index (0-indexed, default: 0). Clamped to valid page range based on total and pageSize.
+	 * Server pages beyond the initial rows require initialTotal. */
+	initialPage?: number | undefined;
 
 	/**
 	 * Row ID accessor function (default: uses 'id' field).
@@ -175,7 +205,7 @@ export interface TableConfig<T> {
 	getRowId?: (row: T) => string;
 
 	/**
-	 * Initial page size (default: 10).
+	 * Initial positive integer page size (default: 10; invalid values use the default).
 	 */
 	pageSize?: number;
 
@@ -190,7 +220,17 @@ export interface TableConfig<T> {
 	serverSide?: boolean;
 
 	/**
-	 * Data fetcher for server-side tables.
+	 * Configurable error message or pure presentation generator when a requested page is out of range.
+	 * The generator runs during reduction and must be deterministic and side-effect free.
 	 */
-	fetchData?: (state: TableState<T>) => Promise<{ data: T[]; total: number }>;
+	pageOutOfRangeMessage?: string | ((state: TableState<T>) => string) | undefined;
+
+	/**
+	 * Data fetcher. Newer refreshes and server query changes supersede older results.
+	 * Client query changes retain the pending full dataset request.
+	 * A shrinking server total clamps the page and refetches the corrected page.
+	 * The optional signal ends with the owning effect/store; supersession gates results
+	 * but does not promise transport cancellation. Ordinary query actions do not auto-fetch.
+	 */
+	fetchData?: (state: TableState<T>, signal?: AbortSignal) => Promise<{ data: T[]; total: number }>;
 }

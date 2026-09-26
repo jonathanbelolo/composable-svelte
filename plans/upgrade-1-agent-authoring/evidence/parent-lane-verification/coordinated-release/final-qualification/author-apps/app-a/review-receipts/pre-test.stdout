@@ -1,0 +1,15 @@
+
+> test
+> vitest run
+
+
+ RUN  v4.0.7 /private/tmp/composable-final-authoring/app-a
+
+ ✓ tests/workspace.test.ts (7 tests) 9ms
+ ✓ tests/component.test.ts (6 tests) 740ms
+
+ Test Files  2 passed (2)
+      Tests  13 passed (13)
+   Start at  15:00:47
+   Duration  3.75s (transform 3.96s, setup 0ms, collect 4.88s, tests 748ms, environment 926ms, prepare 6ms)
+

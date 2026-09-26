@@ -30,9 +30,9 @@ export interface ScriptedRoute {
 	headers?: Record<string, string>;
 	/** An object is sent as JSON with `content-type: application/json`; a string as-is. */
 	body?: unknown;
-	/** Resolve after this many ms; honours `init.signal` in the meantime. */
+	/** Resolve after this many ms; honours the selected Request/init signal in the meantime. */
 	delayMs?: number;
-	/** Resolve when this settles; honours `init.signal` in the meantime. A rejection is the fetch's. */
+	/** Resolve when this settles; honours the selected Request/init signal in the meantime. A rejection is the fetch's. */
 	until?: Promise<unknown>;
 }
 
@@ -72,6 +72,7 @@ function abortError(): Error {
 /** `promise`, or an AbortError as soon as `signal` aborts. */
 function untilOrAbort(promise: Promise<unknown>, signal: AbortSignal | null | undefined): Promise<unknown> {
 	if (!signal) return promise;
+	if (signal.aborted) return Promise.reject(abortError());
 	return new Promise((resolve, reject) => {
 		const onAbort = () => reject(abortError());
 		signal.addEventListener('abort', onAbort, { once: true });
@@ -109,17 +110,33 @@ export function scriptFetch(routes: ScriptedRoute[]): ScriptedFetch {
 		const route = routes.find((r) => (typeof r.match === 'string' ? url.includes(r.match) : r.match.test(url)));
 		if (!route) throw new TypeError(`scripted fetch: no route matches ${url}`);
 
-		if (init?.signal?.aborted) throw abortError();
+		// Observe a scripted gate as soon as this route owns the request. The
+		// delay/abort path must not orphan a gate rejection before awaiting it.
+		const until = route.until;
+		void until?.catch(() => {});
+		const requestSignal = typeof Request !== 'undefined' && input instanceof Request ? input.signal : undefined;
+		const overrideSignal = init?.signal;
+		// Undefined inherits, while explicit null deliberately disables cancellation.
+		const signal = overrideSignal === undefined ? requestSignal : overrideSignal;
+
+		if (signal?.aborted) throw abortError();
 		if (route.delayMs) {
 			await new Promise<void>((resolve, reject) => {
-				const timer = setTimeout(resolve, route.delayMs);
-				init?.signal?.addEventListener('abort', () => {
+				const onAbort = () => {
 					clearTimeout(timer);
+					signal?.removeEventListener('abort', onAbort);
 					reject(abortError());
-				});
+				};
+				const timer = setTimeout(() => {
+					signal?.removeEventListener('abort', onAbort);
+					resolve();
+				}, route.delayMs);
+				signal?.addEventListener('abort', onAbort, { once: true });
 			});
 		}
-		if (route.until) await untilOrAbort(route.until, init?.signal);
+		if (until) await untilOrAbort(until, signal);
+		// Cancellation may arrive after either wait settles, before this continuation.
+		if (signal?.aborted) throw abortError();
 
 		const isJson = route.body !== undefined && typeof route.body !== 'string';
 		const headers = {

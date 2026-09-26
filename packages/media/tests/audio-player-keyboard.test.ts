@@ -8,6 +8,7 @@
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import { mount, unmount, flushSync } from 'svelte';
 import { createStore } from '@composable-svelte/core';
 import { audioPlayerReducer } from '../src/lib/audio-player/reducer.js';
@@ -151,18 +152,17 @@ describe('playlist rows', () => {
 		expect(dispatched).toContainEqual({ type: 'trackSelected', index: 1 });
 	});
 
-	it('selects a track on Enter — it is a real button', () => {
+	it('selects a track on native Enter activation', async () => {
 		const { target, dispatched } = mountPlaylist();
 		const button = target.querySelectorAll<HTMLButtonElement>('.playlist-item__select')[1]!;
 
 		// A <button> activates on Enter natively; a <div onclick> never did.
 		button.focus();
 		expect(document.activeElement).toBe(button);
-		button.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-		button.click();
+		await userEvent.keyboard('{Enter}');
 		flushSync();
 
-		expect(dispatched).toContainEqual({ type: 'trackSelected', index: 1 });
+		expect(dispatched.filter(action => action.type === 'trackSelected')).toEqual([{ type: 'trackSelected', index: 1 }]);
 	});
 
 	it('keeps the row draggable with the select button inside it', () => {

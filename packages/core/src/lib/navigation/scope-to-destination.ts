@@ -54,7 +54,8 @@ export interface ScopedDestinationStore<State, Action> {
    * </script>
    *
    * {#if scopedStore.state}
-   *   <Modal store={scopedStore} />
+   *   <p>{scopedStore.state.item}</p>
+   *   <button onclick={() => scopedStore.dispatch({ type: 'saveButtonTapped' })}>Save</button>
    * {/if}
    * ```
    */
@@ -75,13 +76,6 @@ export interface ScopedDestinationStore<State, Action> {
    * ```
    */
   dispatch(action: Action): void;
-
-  /**
-   * Dispatch a dismiss action.
-   *
-   * Convenience method equivalent to dispatching PresentationAction.dismiss()
-   */
-  dismiss(): void;
 }
 
 /**
@@ -159,24 +153,9 @@ export function scopeToDestination<DestState, DestAction, ParentState = any, Par
     parentStore.dispatch(parentAction);
   };
 
-  // Create dismiss function
-  const dismiss = (): void => {
-    const presentationAction: PresentationAction<DestAction> = {
-      type: 'dismiss' as const
-    };
-
-    const parentAction: ParentAction = {
-      type: actionField,
-      action: presentationAction
-    } as any;
-
-    parentStore.dispatch(parentAction);
-  };
-
   return {
     state,
-    dispatch,
-    dismiss
+    dispatch
   };
 }
 
@@ -253,23 +232,8 @@ export function scopeToOptional<ChildState, ChildAction, ParentState = any, Pare
     parentStore.dispatch(parentAction);
   };
 
-  // Create dismiss function
-  const dismiss = (): void => {
-    const presentationAction: PresentationAction<ChildAction> = {
-      type: 'dismiss' as const
-    };
-
-    const parentAction: ParentAction = {
-      type: actionField,
-      action: presentationAction
-    } as any;
-
-    parentStore.dispatch(parentAction);
-  };
-
   return {
     state,
-    dispatch,
-    dismiss
+    dispatch
   };
 }

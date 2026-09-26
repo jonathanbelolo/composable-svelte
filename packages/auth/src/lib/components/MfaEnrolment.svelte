@@ -16,9 +16,16 @@
 	 * backend-rendered image.
 	 *
 	 * One store, not two: enrolling changes nothing about who you are.
+	 *
+	 * **Managed** (`mode="managed"` with the `mfaEnrolment` view from
+	 * `createAuthFeature`): acknowledging the recovery codes dispatches
+	 * `recoveryCodesAcknowledged` to the view that rendered them instead of
+	 * calling `onDone`. The feature reports it as `mfaOutcome` only while that
+	 * owner is `enrolled`; nothing is acknowledged or retired on the user's behalf.
 	 */
 	import { Form, FormField } from '@composable-svelte/core/components/form';
 	import type { FormAction, FormState } from '@composable-svelte/core/components/form';
+	import type { PresentationView } from '@composable-svelte/core/application';
 	import type { Snippet } from 'svelte';
 
 	import OneTimeCodeInput from './OneTimeCodeInput.svelte';
@@ -29,19 +36,13 @@
 	/** How long a copy button confirms for. Long enough to read, short enough to retry. */
 	const COPIED_FOR_MS = 2000;
 
-	interface Props {
+	interface StandaloneBinding {
+		mode?: 'standalone' | undefined;
 		flowStore: {
 			readonly state: MfaEnrolmentState;
 			dispatch(action: MfaEnrolmentAction): void;
 			subscribe(listener: (state: MfaEnrolmentState) => void): () => void;
 		};
-		/**
-		 * Renders the `otpauth://` URI however the consumer likes — usually a QR.
-		 *
-		 * Absent is a supported configuration, not a degraded one: the secret is
-		 * shown for manual entry either way.
-		 */
-		qr?: Snippet<[{ otpauthUri: string; secret: string }]> | undefined;
 		/**
 		 * Called once, when the user acknowledges the recovery codes.
 		 *
@@ -50,18 +51,35 @@
 		 * decision to make, not a transition to fire on their behalf.
 		 */
 		onDone?: (() => void) | undefined;
+	}
+
+	interface ManagedBinding {
+		mode: 'managed';
+		flowStore: PresentationView<MfaEnrolmentState, MfaEnrolmentAction>;
+		onDone?: never;
+	}
+
+	interface PresentationProps {
+		/**
+		 * Renders the `otpauth://` URI however the consumer likes — usually a QR.
+		 *
+		 * Absent is a supported configuration, not a degraded one: the secret is
+		 * shown for manual entry either way.
+		 */
+		qr?: Snippet<[{ otpauthUri: string; secret: string }]> | undefined;
 		headingLevel?: 1 | 2 | 3 | 4 | undefined;
 		submitLabel?: string | undefined;
 		class?: string | undefined;
 	}
 
+	type Props = PresentationProps & (StandaloneBinding | ManagedBinding);
+
 	let {
-		flowStore,
 		qr,
-		onDone,
 		headingLevel = 2,
 		submitLabel = 'Turn on authentication',
-		class: className = ''
+		class: className = '',
+		...binding
 	}: Props = $props();
 
 	const uid = $props.id();
@@ -69,60 +87,152 @@
 	const codeErrorId = `${uid}-code-error`;
 	const secretId = `${uid}-secret`;
 
+	/** `undefined` only for a managed view whose owner has retired. See `LoginForm`. */
+	const flow: MfaEnrolmentState | undefined = $derived(binding.flowStore.state);
+
+	// A stable fan-out re-pointed by an effect, so replacing a standalone
+	// `flowStore` does not silently detach the field. Managed subtrees subscribe
+	// to their own view instead — see `SignupForm`.
 	const listeners = new Set<(state: FormState<MfaCodeFields>) => void>();
 
 	$effect(() => {
-		return flowStore.subscribe((state) => {
+		if (binding.mode === 'managed') return;
+		return binding.flowStore.subscribe((state) => {
 			for (const listener of listeners) listener(state.form);
 		});
 	});
 
+	/** The standalone store's form slice; standalone state is never absent. */
+	function standaloneForm(): FormState<MfaCodeFields> {
+		const state = binding.flowStore.state;
+		if (state === undefined) throw new Error('MfaEnrolment: the form rendered without a flow');
+		return state.form;
+	}
+
 	const formStore = {
 		get state(): FormState<MfaCodeFields> {
-			return flowStore.state.form;
+			return standaloneForm();
 		},
 		dispatch(action: FormAction<MfaCodeFields>) {
-			flowStore.dispatch({ type: 'form', action });
+			binding.flowStore.dispatch({ type: 'form', action });
 		},
 		subscribe(listener: (state: FormState<MfaCodeFields>) => void) {
 			listeners.add(listener);
-			listener(flowStore.state.form);
+			listener(standaloneForm());
 			return () => listeners.delete(listener);
 		}
 	};
 
-	const status = $derived(flowStore.state.status);
-	const error = $derived(flowStore.state.error);
-	const secret = $derived(flowStore.state.secret);
-	const otpauthUri = $derived(flowStore.state.otpauthUri);
-	const recoveryCodes = $derived(flowStore.state.recoveryCodes);
+	/** A keyed managed subtree keeps state, dispatch and subscription on its own view. */
+	function managedFormStore(view: PresentationView<MfaEnrolmentState, MfaEnrolmentAction>) {
+		let last: FormState<MfaCodeFields> | undefined;
+		function current(): FormState<MfaCodeFields> {
+			const state = view.state;
+			if (state !== undefined) last = state.form;
+			// Unreachable: the subtree first renders under `{#if flow}`.
+			if (last === undefined) throw new Error('MfaEnrolment: the form rendered without a flow');
+			return last;
+		}
+		return {
+			get state() {
+				return current();
+			},
+			dispatch(action: FormAction<MfaCodeFields>) {
+				view.dispatch({ type: 'form', action });
+			},
+			subscribe(listener: (state: FormState<MfaCodeFields>) => void) {
+				const unsubscribe = view.subscribe((state) => {
+					if (state !== undefined) {
+						last = state.form;
+						listener(state.form);
+					}
+				});
+				listener(current());
+				return unsubscribe;
+			}
+		};
+	}
+
+	/**
+	 * Whose enrolment `started` records, and what keys the rendered subtree.
+	 *
+	 * Managed: the view itself — a restarted owner is a fresh flow, owed its own
+	 * start and its own DOM, and each subtree dispatches to the view it was
+	 * rendered for, so an old subtree's click cannot reach a new owner.
+	 * Standalone: one owner for the component's life, whatever wrapper identity
+	 * the consumer passes, as in `EmailVerification`.
+	 */
+	type Owner = symbol | PresentationView<MfaEnrolmentState, MfaEnrolmentAction>;
+	const standaloneOwner = Symbol('standalone');
+	const owner: Owner = $derived(binding.mode === 'managed' ? binding.flowStore : standaloneOwner);
+	const viewOf = (key: Owner) => (typeof key === 'symbol' ? binding.flowStore : key);
+
+	/**
+	 * The form store for one keyed subtree, captured from its own key rather
+	 * than from the current binding. During the flush that swaps owners the old
+	 * subtree is still mounted; a field event it emits then must reach the view
+	 * it was rendered for (retired, so dropped), never the new one.
+	 */
+	const formStoreFor = (key: Owner) => (typeof key === 'symbol' ? formStore : managedFormStore(key));
+
+	const status = $derived(flow?.status);
+	const error = $derived(flow?.error ?? null);
+	const secret = $derived(flow?.secret ?? null);
+	const otpauthUri = $derived(flow?.otpauthUri ?? null);
+	const recoveryCodes = $derived(flow?.recoveryCodes ?? null);
 	const isSubmitting = $derived(status === 'submitting');
 
 	/**
-	 * Whether the mount effect has already asked for an enrolment.
+	 * Whether the mount effect has already asked for an enrolment, for the
+	 * current owner.
 	 *
 	 * The same shape as `EmailVerification`'s guard and for the same reason: this
 	 * dispatches from an effect, and an effect re-runs for reasons unrelated to
 	 * its subject. A second start issues a new secret and silently invalidates
 	 * the one already on screen. The reducer refuses too; both are wanted.
 	 *
-	 * **Never reset.** An earlier version had the retry button clear it, and that
-	 * worked only because `started ||` short-circuits before the status read: a
-	 * settled effect stops tracking status, so it cannot fire again. A guard held
-	 * up by the order of two clauses. Reorder them and the effect keeps tracking;
-	 * every failing retry then costs a second request nobody asked for, against a
-	 * backend already refusing. Retrying dispatches directly instead — the reducer
-	 * accepts it whenever the flow is idle — and this flag records only what the
-	 * mount effect did.
+	 * **Never reset for the same owner.** An earlier version had the retry button
+	 * clear it, and that worked only because `started ||` short-circuits before
+	 * the status read: a settled effect stops tracking status, so it cannot fire
+	 * again. A guard held up by the order of two clauses. Reorder them and the
+	 * effect keeps tracking; every failing retry then costs a second request
+	 * nobody asked for, against a backend already refusing. Retrying dispatches
+	 * directly instead — the reducer accepts it whenever the flow is idle — and
+	 * this flag records only what the mount effect did. A new managed owner is a
+	 * new enrolment, and is the only thing that resets it.
 	 */
 	let started = false;
+	let startedOwner: Owner | null = null;
 
 	$effect(() => {
+		const key = owner;
+		if (key !== startedOwner) {
+			startedOwner = key;
+			started = false;
+		}
 		if (started) return;
-		if (flowStore.state.status !== 'idle') return;
+		const view = viewOf(key);
+		if (view.state === undefined || view.state.status !== 'idle') return;
 		started = true;
-		flowStore.dispatch({ type: 'enrolmentRequested' });
+		view.dispatch({ type: 'enrolmentRequested' });
 	});
+
+	/**
+	 * What the recovery panel's "I have saved them" does, if it is offered.
+	 *
+	 * `RecoveryCodes` renders that button only when given a handler, so the
+	 * absence of one is how "no button" is said. Standalone passes `onDone`
+	 * through untouched — absent means no button, exactly as before. Managed
+	 * dispatches to the view this subtree belongs to until the feature has
+	 * accepted it, then offers nothing: the acknowledgement is once-only, and the
+	 * codes stay on screen until the parent closes the enrolment.
+	 */
+	function acknowledgement(key: Owner): (() => void) | undefined {
+		if (binding.mode !== 'managed') return binding.onDone;
+		if (flow?.acknowledged) return undefined;
+		const view = viewOf(key);
+		return () => view.dispatch({ type: 'recoveryCodesAcknowledged' });
+	}
 
 	/**
 	 * What was last copied, if anything.
@@ -164,9 +274,16 @@
 	});
 </script>
 
+{#if flow}
+{#each [owner] as key (key)}
+{@const keyedFormStore = formStoreFor(key)}
 <div class="mfa-enrolment {className}">
 	{#if status === 'enrolled' && recoveryCodes !== null}
-		<RecoveryCodes codes={recoveryCodes} {headingLevel} onAcknowledged={onDone}>
+		<RecoveryCodes
+			codes={recoveryCodes}
+			{headingLevel}
+			onAcknowledged={acknowledgement(key)}
+		>
 			{#snippet intro()}
 				<p class="mfa-enrolment__body">
 					Authentication is on. These codes are the only way back in if you lose your device,
@@ -192,7 +309,7 @@
 		<button
 			type="button"
 			class="mfa-enrolment__action"
-			onclick={() => flowStore.dispatch({ type: 'enrolmentRequested' })}
+			onclick={() => viewOf(key).dispatch({ type: 'enrolmentRequested' })}
 		>
 			Try again
 		</button>
@@ -230,7 +347,7 @@
 			</div>
 		{/if}
 
-		<Form store={formStore} class="mfa-enrolment__form">
+		<Form store={keyedFormStore} class="mfa-enrolment__form">
 			<FormField name="code">
 				{#snippet children({ field, send })}
 					<div class="mfa-enrolment__field">
@@ -266,6 +383,8 @@
 		</Form>
 	{/if}
 </div>
+{/each}
+{/if}
 
 <style>
 	/* Scoped CSS over core's theme tokens — see `LoginForm` for why not Tailwind. */

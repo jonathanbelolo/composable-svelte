@@ -21,7 +21,7 @@
 import type { SessionSnapshot } from '../subject/types.js';
 import type { SessionDependencies } from './types.js';
 import { authErrorFromResponse } from '../http/errors.js';
-import { send } from '../http/transport.js';
+import { send, readResponseJson, isCancellation } from '../http/transport.js';
 
 /**
  * A 2xx auth response carried a body that is not a valid session snapshot.
@@ -49,7 +49,7 @@ export class MalformedSessionError extends Error {
  * `subject_id` MUST be a string; `roles`, when present, MUST be an array
  * (`subjectFromSession` defaults an absent `roles` to `[]`).
  */
-export async function decodeSessionSnapshot(response: Response): Promise<SessionSnapshot> {
+export async function decodeSessionSnapshot(response: Response, signal?: AbortSignal): Promise<SessionSnapshot> {
 	// The decode belongs inside the guarantee, not before it. `await
 	// response.json()` used to sit at the call sites, so a 200 carrying a
 	// non-JSON body — an HTML proxy error page, an SPA index.html fallback:
@@ -59,8 +59,9 @@ export async function decodeSessionSnapshot(response: Response): Promise<Session
 	// silently missed exactly that case.
 	let payload: unknown;
 	try {
-		payload = await response.json();
-	} catch {
+		payload = await readResponseJson(response, signal);
+	} catch (error) {
+		if (isCancellation(error, signal) || !(error instanceof SyntaxError)) throw error;
 		throw new MalformedSessionError('body is not JSON');
 	}
 	return parseSessionSnapshot(payload);
@@ -85,6 +86,10 @@ function parseSessionSnapshot(payload: unknown): SessionSnapshot {
 	return payload as SessionSnapshot;
 }
 
+export interface HttpSessionOptions {
+	fetch?: typeof fetch | undefined;
+}
+
 /**
  * Build HTTP session dependencies against `baseUrl` (default: same origin).
  *
@@ -94,15 +99,20 @@ function parseSessionSnapshot(payload: unknown): SessionSnapshot {
  * default same-origin `''`, or a same-site host (e.g. an API subdomain of
  * the app's registrable domain) fronted appropriately.
  */
-export function createHttpSessionDeps(baseUrl: string = ''): SessionDependencies {
+
+export function createHttpSessionDeps(
+	baseUrl: string = '',
+	options?: HttpSessionOptions
+): SessionDependencies {
 	// Normalize once at construction: strip trailing slash(es) so
 	// `https://api.example.com/` + `/auth/login` never yields `//auth/login`.
 	const base = baseUrl.replace(/\/+$/, '');
 	const url = (path: string): string => `${base}${path}`;
+	const request = (target: string, init: RequestInit) => send(target, init, options?.fetch);
 
 	return {
 		async fetchLogin(seededUserId: string, signal?: AbortSignal): Promise<SessionSnapshot> {
-			const response = await send(url('/auth/login'), {
+			const response = await request(url('/auth/login'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -116,24 +126,24 @@ export function createHttpSessionDeps(baseUrl: string = ''): SessionDependencies
 				// with the body discarded — and the fix reached the flow surface and
 				// stopped there. A 401 here is `invalid_credentials`, which is the
 				// whole point of the union.
-				throw await authErrorFromResponse(response, 'Sign-in failed.');
+				throw await authErrorFromResponse(response, 'Sign-in failed.', signal);
 			}
-			return decodeSessionSnapshot(response);
+			return decodeSessionSnapshot(response, signal);
 		},
 
 		async fetchLogout(signal?: AbortSignal): Promise<void> {
-			const response = await send(url('/auth/logout'), {
+			const response = await request(url('/auth/logout'), {
 				method: 'POST',
 				credentials: 'include',
 				...(signal !== undefined && { signal })
 			});
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'Sign-out failed.');
+				throw await authErrorFromResponse(response, 'Sign-out failed.', signal);
 			}
 		},
 
 		async fetchSession(signal?: AbortSignal): Promise<SessionSnapshot | null> {
-			const response = await send(url('/auth/session'), {
+			const response = await request(url('/auth/session'), {
 				method: 'GET',
 				credentials: 'include',
 				...(signal !== undefined && { signal })
@@ -143,9 +153,9 @@ export function createHttpSessionDeps(baseUrl: string = ''): SessionDependencies
 				return null;
 			}
 			if (!response.ok) {
-				throw await authErrorFromResponse(response, 'Could not check your session.');
+				throw await authErrorFromResponse(response, 'Could not check your session.', signal);
 			}
-			return decodeSessionSnapshot(response);
+			return decodeSessionSnapshot(response, signal);
 		}
 	};
 }

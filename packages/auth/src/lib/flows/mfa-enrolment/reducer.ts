@@ -22,6 +22,7 @@ import {
 import type { Reducer, Store } from '@composable-svelte/core';
 
 import { toAuthError } from '../../errors/helpers.js';
+import { completesSubmissionInFlight } from '../submission-feedback.js';
 import {
 	emptyMfaCodeFields,
 	mfaCodeSchema,
@@ -54,7 +55,8 @@ export function createInitialMfaEnrolmentState(): MfaEnrolmentState {
 		secret: null,
 		otpauthUri: null,
 		recoveryCodes: null,
-		error: null
+		error: null,
+		acknowledged: false
 	};
 }
 
@@ -129,7 +131,15 @@ export const mfaEnrolmentReducer: Reducer<
 					? { ...withForm, error: null }
 					: withForm;
 
-			if (action.action.type !== 'submissionSucceeded') {
+			// Only the result of a submission in flight (see `submission-feedback.ts`),
+			// and only while the secret is being confirmed. `submitting` is included
+			// so a second code still supersedes the first. Not `enrolled`: confirming
+			// a finished enrolment again fails, and a failure returns the flow to
+			// `confirming` — off the recovery codes, which are shown once.
+			if (
+				!completesSubmissionInFlight(state.form, withForm.form, action.action) ||
+				(state.status !== 'confirming' && state.status !== 'submitting')
+			) {
 				return [cleared, formEffect];
 			}
 
@@ -184,6 +194,14 @@ export const mfaEnrolmentReducer: Reducer<
 
 		case 'errorDismissed': {
 			return [state.error === null ? state : { ...state, error: null }, Effect.none()];
+		}
+
+		case 'recoveryCodesAcknowledged': {
+			// Routing only. The codes are not cleared: acknowledging is the user's
+			// word, not proof, and the panel stays until its owner is removed.
+			// `acknowledged` is deliberately not set here — `createAuthFeature`
+			// admits the action against the value before it (see the type).
+			return [state, Effect.none()];
 		}
 
 		default: {

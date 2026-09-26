@@ -30,9 +30,48 @@ const R = 8;
 const P = 1;
 const KEY_LENGTH = 32;
 
-function derive(password: string, salt: Buffer): Promise<Buffer> {
+/**
+ * Strict bounds for scrypt parameters to prevent attacker-controlled resource exhaustion.
+ *
+ * - N must be a power of 2: 2 <= N <= 2**15 (32,768)
+ * - r: 1 <= r <= 16
+ * - p: 1 <= p <= 4
+ * - Main buffer ceiling: 128 * N * r <= 16 MiB; Node maxmem hard limit 32 MiB
+ * - Work ceiling: N * r * p <= 262,144
+ */
+const SCRYPT_LIMITS = {
+	minN: 2,
+	maxN: 32_768,
+	minR: 1,
+	maxR: 16,
+	minP: 1,
+	maxP: 4,
+	maxMemoryBytes: 16 * 1024 * 1024,
+	maxWork: 262_144
+} as const;
+
+interface ScryptParams {
+	N: number;
+	r: number;
+	p: number;
+}
+
+const BASE64_PATTERN = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/;
+const DECIMAL_INT_PATTERN = /^[1-9]\d*$/;
+
+function isCanonicalBase64(s: string): boolean {
+	if (s.length === 0 || s.length % 4 !== 0) return false;
+	return BASE64_PATTERN.test(s);
+}
+
+function derive(
+	password: string,
+	salt: Buffer,
+	params: ScryptParams = { N, r: R, p: P },
+	keyLength = KEY_LENGTH
+): Promise<Buffer> {
 	return new Promise((resolve, reject) => {
-		scrypt(password, salt, KEY_LENGTH, { N, r: R, p: P }, (error, key) => {
+		scrypt(password, salt, keyLength, { N: params.N, r: params.r, p: params.p, maxmem: SCRYPT_LIMITS.maxMemoryBytes * 2 }, (error, key) => {
 			if (error) reject(error);
 			else resolve(key);
 		});
@@ -41,32 +80,66 @@ function derive(password: string, salt: Buffer): Promise<Buffer> {
 
 /** `scrypt$N$r$p$salt$hash`, both tails base64. */
 export async function hashPassword(password: string): Promise<string> {
-	const salt = randomBytes(16);
-	const key = await derive(password, salt);
-	return `scrypt$${N}$${R}$${P}$${salt.toString('base64')}$${key.toString('base64')}`;
+  const salt = randomBytes(16);
+  const key = await derive(password, salt);
+  return `scrypt$${N}$${R}$${P}$${salt.toString('base64')}$${key.toString('base64')}`;
 }
 
 /**
  * Constant-time verify.
  *
- * Returns `false` rather than throwing for every malformed stored value: a
- * fixture whose seed data is wrong should fail the login it is asked about, not
- * crash the request with a 500 that reads as a server bug.
+ * Validates scrypt parameters against strict bounded memory/work ceilings,
+ * rejects malformed encodings before derivation, and performs constant-time comparison.
  */
 export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+	// Bound decoding work before processing persisted input.
+	if (stored.length > 180) return false;
 	const parts = stored.split('$');
 	if (parts.length !== 6 || parts[0] !== 'scrypt') return false;
 
-	const saltPart = parts[4];
-	const hashPart = parts[5];
-	if (saltPart === undefined || hashPart === undefined) return false;
+	const [, nStr, rStr, pStr, saltPart, hashPart] = parts;
+	if (!nStr || !rStr || !pStr || !saltPart || !hashPart) return false;
+
+	if (
+		!DECIMAL_INT_PATTERN.test(nStr) ||
+		!DECIMAL_INT_PATTERN.test(rStr) ||
+		!DECIMAL_INT_PATTERN.test(pStr)
+	) {
+		return false;
+	}
+
+	const costN = Number(nStr);
+	const costR = Number(rStr);
+	const costP = Number(pStr);
+
+	if (
+		!Number.isSafeInteger(costN) ||
+		!Number.isSafeInteger(costR) ||
+		!Number.isSafeInteger(costP)
+	) {
+		return false;
+	}
+
+	if (costN < SCRYPT_LIMITS.minN || costN > SCRYPT_LIMITS.maxN || (costN & (costN - 1)) !== 0) {
+		return false;
+	}
+	if (costR < SCRYPT_LIMITS.minR || costR > SCRYPT_LIMITS.maxR) return false;
+	if (costP < SCRYPT_LIMITS.minP || costP > SCRYPT_LIMITS.maxP) return false;
+	if (128 * costN * costR > SCRYPT_LIMITS.maxMemoryBytes) return false;
+	if (costN * costR * costP > SCRYPT_LIMITS.maxWork) return false;
+
+	if (saltPart.length > 88 || hashPart.length !== 44) return false;
+	if (!isCanonicalBase64(saltPart) || !isCanonicalBase64(hashPart)) return false;
 
 	const salt = Buffer.from(saltPart, 'base64');
 	const expected = Buffer.from(hashPart, 'base64');
+	if (salt.length < 16 || salt.length > 64) return false;
+	if (salt.toString('base64') !== saltPart || expected.toString('base64') !== hashPart) return false;
+	if (expected.length !== KEY_LENGTH) return false;
 
 	let actual: Buffer;
 	try {
-		actual = await derive(password, salt);
+		actual = await derive(password, salt, { N: costN, r: costR, p: costP }, expected.length);
 	} catch {
 		return false;
 	}

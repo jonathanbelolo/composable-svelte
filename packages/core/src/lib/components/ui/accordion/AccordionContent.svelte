@@ -100,9 +100,9 @@
 
 <div
 	bind:this={contentElement}
-	id={`accordion-content-${itemContext.id}`}
+	id={itemContext.contentId}
 	role="region"
-	aria-labelledby={`accordion-trigger-${itemContext.id}`}
+	aria-labelledby={itemContext.triggerId}
 	class={cn('text-sm', className)}
 	style:height={initialContentStyle.height}
 	style:overflow={initialContentStyle.overflow}

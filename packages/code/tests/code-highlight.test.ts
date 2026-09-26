@@ -1,16 +1,29 @@
 /**
  * CodeHighlight component tests
  *
- * Tests use TestStore for pure reducer testing - no component mounting needed
+ * Production-store reducer/effect tests await actual terminal actions; no fixed delays.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { createStore } from '@composable-svelte/core';
 import {
 	codeHighlightReducer,
 	createInitialState,
 	type CodeHighlightDependencies
 } from '../src/lib/code-highlight/index';
+
+import type { Store } from '@composable-svelte/core';
+import type { CodeHighlightAction, CodeHighlightState } from '../src/lib/code-highlight/code-highlight.types';
+const dispose: Array<()=>void> = [];
+afterEach(()=>{dispose.splice(0).forEach(fn=>fn());vi.clearAllMocks();});
+function terminal(store: Store<CodeHighlightState,CodeHighlightAction>, type: 'highlighted'|'highlightFailed') {
+ dispose.push(()=>store.destroy());
+ return new Promise<CodeHighlightAction>(resolve=>{
+  const unsubscribe=store.subscribeToActions?.(action=>{if(action.type===type){unsubscribe?.();resolve(action);}});
+  if(!unsubscribe)throw new Error('Production store must expose action observation');
+  dispose.push(unsubscribe);
+ });
+}
 
 describe('CodeHighlight Reducer', () => {
 	const mockHighlightCode = vi.fn(async (code: string) => `<span>${code}</span>`);
@@ -51,11 +64,11 @@ describe('CodeHighlight Reducer', () => {
 			dependencies
 		});
 
-		// Dispatch init
+		const completed=terminal(store,'highlighted');
 		store.dispatch({ type: 'init' });
 
 		// Wait for async highlighting to complete
-		await new Promise((resolve) => setTimeout(resolve, 10));
+		expect(await completed).toEqual({type:'highlighted',html:'<span>const x = 5;</span>',code:'const x = 5;',language:'typescript'});
 
 		expect(store.state.isHighlighting).toBe(false);
 		expect(store.state.highlightedCode).toBe('<span>const x = 5;</span>');
@@ -69,13 +82,14 @@ describe('CodeHighlight Reducer', () => {
 			dependencies
 		});
 
+		const completed=terminal(store,'highlighted');
 		store.dispatch({ type: 'codeChanged', code: 'let y = 10;' });
 
 		expect(store.state.code).toBe('let y = 10;');
 		expect(store.state.isHighlighting).toBe(true);
 
 		// Wait for highlighting
-		await new Promise((resolve) => setTimeout(resolve, 10));
+		expect(await completed).toEqual({type:'highlighted',html:'<span>let y = 10;</span>',code:'let y = 10;',language:'typescript'});
 
 		expect(store.state.isHighlighting).toBe(false);
 		expect(store.state.highlightedCode).toContain('<span>');
@@ -88,12 +102,13 @@ describe('CodeHighlight Reducer', () => {
 			dependencies
 		});
 
+		const completed=terminal(store,'highlighted');
 		store.dispatch({ type: 'languageChanged', language: 'python' });
 
 		expect(store.state.language).toBe('python');
 		expect(store.state.isHighlighting).toBe(true);
 
-		await new Promise((resolve) => setTimeout(resolve, 10));
+		expect(await completed).toEqual({type:'highlighted',html:'<span>print("hello")</span>',code:'print("hello")',language:'python'});
 
 		expect(store.state.isHighlighting).toBe(false);
 		expect(mockHighlightCode).toHaveBeenCalledWith('print("hello")', 'python');
@@ -150,9 +165,10 @@ describe('CodeHighlight Reducer', () => {
 			dependencies: errorDeps
 		});
 
+		const completed=terminal(store,'highlightFailed');
 		store.dispatch({ type: 'init' });
 
-		await new Promise((resolve) => setTimeout(resolve, 10));
+		expect(await completed).toEqual({type:'highlightFailed',error:'Highlighting failed',code:'test',language:'typescript'});
 
 		expect(store.state.error).toBe('Highlighting failed');
 		expect(store.state.isHighlighting).toBe(false);

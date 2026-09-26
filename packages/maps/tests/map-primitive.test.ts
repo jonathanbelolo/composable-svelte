@@ -105,7 +105,7 @@ describe('it listens for what the map reports', () => {
 		const events = adapter.callsTo('on').map((c) => c.args[0]);
 		expect(events.length).toBeGreaterThan(0);
 		expect(new Set(events)).toEqual(
-			new Set(['load', 'error', 'moveend', 'zoomend', 'dragstart', 'dragend'])
+			new Set(['load', 'style.load', 'error', 'moveend', 'zoomend', 'dragstart', 'dragend', 'click'])
 		);
 	});
 

@@ -8,13 +8,7 @@ afterEach(() => {
 
 /** A 200 whose body is not JSON at all — an HTML proxy page or SPA fallback. */
 function htmlResponse(): Response {
-	return {
-		ok: true,
-		status: 200,
-		json: async () => {
-			throw new SyntaxError('Unexpected token < in JSON at position 0');
-		}
-	} as unknown as Response;
+	return new Response('<html>Proxy error</html>', { status: 200, headers: { 'content-type': 'text/html' } });
 }
 
 describe('a 2xx carrying a non-JSON body', () => {

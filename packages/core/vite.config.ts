@@ -2,16 +2,11 @@ import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { resolve } from 'path';
 import { playwright } from '@vitest/browser-playwright';
-import dts from 'vite-plugin-dts';
 
 export default defineConfig({
-  plugins: [
-    svelte(),
-    dts({
-      include: ['src/**/*.ts', 'src/**/*.svelte.ts'],
-      exclude: ['src/**/*.test.ts', 'src/**/*.spec.ts']
-    })
-  ],
+  // Package artifacts are produced exclusively by `pnpm build` (svelte-package).
+  // This configuration serves the browser test runner.
+  plugins: [svelte()],
 
   // ============================================================================
   // Browser Mode Configuration (Vitest 4)
@@ -31,23 +26,72 @@ export default defineConfig({
     },
 
     // Test file patterns
-    include: ['tests/**/*.{test,spec}.{js,ts}'],
+    include: ['tests/**/*.{test,spec}.{js,ts}', 'tests/**/*.test.svelte.ts'],
     exclude: [
+      // Lifecycle unit/SSR suites belong to the Node runner, never browser dependency scanning.
+      'tests/motion-binding-policy.test.ts',
+      'tests/motion-group-lifecycle.test.ts',
+      'tests/motion-public-lifecycle.test.ts',
+      'tests/motion-public-lifecycle-planning.test.ts',
+      'tests/ssr/motion-public-lifecycle.test.ts',
+      'tests/ssr/motion-group.test.ts',
+      'tests/ssr/document-focus.test.ts',
+      'tests/transform-mix.test.ts',
+      'tests/motion-playback-plan.test.ts',
+      'tests/pure-motion.test.ts',
+      'tests/motion-arbitration.test.ts',
+      'tests/motion-run.test.ts',
+      'tests/motion-capability.test.ts',
+      'tests/motion-playback.test.ts',
+      'tests/motion-playback-execution.test.ts',
+      'tests/motion-playback-reentrancy.test.ts',
+      'tests/application-basic.test.ts',
+      'tests/application-routing.test.ts',
+      'tests/ssr/application-routing.test.ts',
+      'tests/ssr/application-basic.test.ts',
+      'tests/ssr/application-owner.test.ts',
+      'tests/ssr/application-scoping.test.ts',
+      'tests/ssr/feature-views.test.ts',
+      'tests/ssr/presentation-placement.test.ts',
+      'tests/repo/mutation-report.test.ts',
+      'tests/theme-reactivity.test.ts',
+      'tests/styles/theme-reactivity.test.ts',
       // Node-environment tests: they read files from disk, which browser mode
       // cannot do. Run by vitest.node.config.ts instead.
+      'tests/reduced-motion-source.test.ts',
+      'tests/test-store-cleanup-hooks.test.ts',
       'tests/ssr/ssg.test.ts',
       'tests/ssr/ssg-fs.test.ts',
       'tests/ssr/render.test.ts',
       'tests/ssr/serializer.test.ts',
       'tests/ssr/animated-initial-state.test.ts',
       'tests/ssr/content-initial-state.test.ts',
+      'tests/ssr/disclosure-identities.test.ts',
+      'tests/ssr/command-group-identities.test.ts',
+      'tests/ssr/alert-registration.test.ts',
+      'tests/ssr/dismissal-authority.test.ts',
+      'tests/ssr/alert-composition.test.ts',
+      'tests/ssr/tabs-identities.test.ts',
+      'tests/ssr/host0b.test.ts',
+      'tests/startup-initial.test.ts',
+      'tests/startup-decision.test.ts',
+      'tests/ssr/startup-decision.test.ts',
+      'tests/ssr/startup-initial.test.ts',
+      'tests/ssr/routing-managed.test.ts',
+      'tests/ssr/root-route.test.ts',
+      'tests/ssr/input-initial-value.test.ts',
+      'tests/ssr/execution-managed.test.ts',
       'tests/styles/**',
       // Reaches isomorphic-dompurify, which needs its Node (jsdom) build.
       'tests/ssr/middleware.test.ts',
+      'tests/ssr/sanitize-data-uri.test.ts',
+      'tests/ssr/sanitize-peer-equivalence.test.ts',
+      'tests/ssr/sanitize-return-modes.test.ts',
       // Drives a real Fastify instance; Node only.
       'tests/ssr/middleware-fastify.test.ts',
       // Walks built dist from disk; browser mode cannot read files.
       'tests/ssr/entry-graph.test.ts',
+      'tests/ssr/utils-node.test.ts',
       // Reads every workspace's package.json from disk; same reason.
       'tests/repo/check-coverage.test.ts',
       'tests/repo/component-coverage.test.ts',
@@ -57,6 +101,7 @@ export default defineConfig({
       'tests/repo/side-effects.test.ts',
       'tests/repo/animation-policy.test.ts',
       'tests/repo/dist-freshness.test.ts',
+      'tests/repo/rune-class-field-output.test.ts',
       'tests/repo/peer-ranges.test.ts',
       'tests/repo/published-files.test.ts',
       'tests/repo/export-surface.test.ts',
@@ -73,6 +118,7 @@ export default defineConfig({
       'tests/repo/front-door.test.ts',
 			'tests/repo/demo-headings.test.ts',
       'tests/repo/flat-barrel.test.ts',
+      'tests/repo/presentation-public-surface.test.ts',
       'tests/repo/skill-examples.test.ts',
       // Spawns a child Node process; same reason.
       'tests/repo/dist-import.test.ts',
@@ -100,29 +146,6 @@ export default defineConfig({
     }
   },
 
-  // ============================================================================
-  // Build Configuration
-  // ============================================================================
-  build: {
-    lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
-      formats: ['es'],
-      fileName: 'index'
-    },
-    target: 'es2020',
-    minify: 'esbuild',
-    sourcemap: true,
-    rollupOptions: {
-      // Externalize all Svelte imports (peer dependency)
-      // This ensures Svelte is not bundled, preventing duplicate runtime issues
-      external: (id) => {
-        return id === 'svelte' || id.startsWith('svelte/');
-      },
-      output: {
-        preserveModules: false
-      }
-    }
-  },
   resolve: {
     alias: {
       '$lib': resolve(__dirname, 'src')

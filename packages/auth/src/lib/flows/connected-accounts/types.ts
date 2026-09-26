@@ -58,6 +58,16 @@ export interface ConnectedAccountsState {
 	 */
 	unlinked: readonly string[];
 	error: AuthError | null;
+	/**
+	 * The unlink operation whose result the last reduction accepted, or `null`.
+	 *
+	 * A one-reduction output: set by the arm that accepts an unlink success or
+	 * failure, and cleared by every other action — including a refused result,
+	 * such as a result for a provider not currently unlinking or a replay of the
+	 * same action. `createAuthFeature` reports `connectedAccountsOutcome` from
+	 * it, so an outcome follows only a transition that actually happened.
+	 */
+	settled: 'unlink' | null;
 }
 
 export type ConnectedAccountsAction =

@@ -1,0 +1,26 @@
+{
+  "status": "CLEAR TO LAND independent Opus review",
+  "review": "../FINAL-CI-REPAIR-REVIEW.md",
+  "files": [
+    {
+      "path": "packages/maps/tsconfig.test.json",
+      "beforeSHA256": "188418207d6e7acbb0ba1216a065e06a106c33a9d6f9da1bde6133e27b22101e",
+      "afterSHA256": "a7c73938af5148e099d38ec9c9a7133f582108239dc2ccb3ad3e7703180dc0b3"
+    },
+    {
+      "path": "packages/charts/tsconfig.test.json",
+      "beforeSHA256": "efdd0e366b1d4c5b3f55aa38bed807606d7daa475f695e60f1aee43dd65d7c1e",
+      "afterSHA256": "933f0c72ea81e87cc69e55baa3924bd5a1869c5ff5c65e8ed8404216d5e0ade1"
+    },
+    {
+      "path": "packages/graphics/tsconfig.test.json",
+      "beforeSHA256": "efdd0e366b1d4c5b3f55aa38bed807606d7daa475f695e60f1aee43dd65d7c1e",
+      "afterSHA256": "44afb681b165322fe4b224604fb744716e01202299261b5e2339c2b9dbf51762"
+    },
+    {
+      "path": "examples/styleguide/src/lib/components/demos/SidebarDemo.svelte",
+      "beforeSHA256": "018db771f9583fd8c9852b7cfabc30aa1702d56284cc712c58b95089265b1b92",
+      "afterSHA256": "39e8d72f56afc5ae504ceb493946b246505b6bd648ae2da52290c7a03e64d915"
+    }
+  ]
+}

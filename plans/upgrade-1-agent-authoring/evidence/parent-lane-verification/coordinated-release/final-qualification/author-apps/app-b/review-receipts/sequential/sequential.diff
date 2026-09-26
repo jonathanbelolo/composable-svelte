@@ -1,0 +1,79 @@
+--- a/src/lib/model.ts
++++ b/src/lib/model.ts
+@@ -115,10 +115,10 @@
+     },
+     Effect.cancellable<AppAction>(ACCOUNT_LOAD, async (dispatch, signal) => {
+       try {
+-        const [snapshot, activity] = await Promise.all([
+-          deps.fetchAccount(signal),
+-          deps.fetchActivity(subjectId, signal)
+-        ]);
++        // Sequential within this one owned effect: the account first, then the
++        // activity for that account. A failed account never requests activity.
++        const snapshot = await deps.fetchAccount(signal);
++        const activity = await deps.fetchActivity(subjectId, signal);
+         const data: AccountData = {
+           subjectId,
+           email: snapshot.email,
+--- a/tests/dashboard.test.ts
++++ b/tests/dashboard.test.ts
+@@ -1114,4 +1114,59 @@
+     expect(store.state.chart).toBeNull();
+     expect(store.state.route).toBe('dashboard');
+   });
++
++  // ---- Sequential account → activity loading within the one owned effect ----
++
++  it('requests activity only after the account resolves, for that account’s subject', async () => {
++    const backend = createControlledBackend();
++    const account = deferred<AccountSnapshot>();
++    backend.fetchAccount = () => account.promise;
++    const store = makeStore(backend);
++    await signInThroughForm(store, 'ada@example.com');
++    await flush();
++    expect(store.state.accountLoading).toBe(true);
++    expect(backend.counters.fetchActivityCalls).toBe(0);
++    account.resolve({ email: 'ada@example.com', emailVerified: true, hasPassword: true, mfaEnabled: false, providers: [], pendingEmail: null });
++    await until(() => store.state.accountData !== null, 'account with activity');
++    expect(backend.counters.fetchActivityCalls).toBe(1);
++    // The activity request carries the same owned signal as the account request.
++    expect(backend.activitySignals[0]?.aborted).toBe(false);
++    expect(store.state.chart?.data).toHaveLength(7);
++  });
++
++  it.each(['failed', 'retired'] as const)('a %s account load cannot obtain activity', async (outcome) => {
++    const backend = createControlledBackend();
++    const account = deferred<AccountSnapshot>();
++    let rejectAccount!: (reason: unknown) => void;
++    const pending = new Promise<AccountSnapshot>((resolve, reject) => {
++      rejectAccount = reject;
++      void account.promise.then(resolve);
++    });
++    // Ignores abort: only the owned effect decides whether activity follows.
++    backend.fetchAccount = () => pending;
++    const store = makeStore(backend);
++    await signInThroughForm(store, 'ada@example.com');
++    if (outcome === 'failed') {
++      rejectAccount(new Error('Account service unavailable'));
++      await until(() => !store.state.accountLoading, 'load settled');
++      expect(store.state.accountError).toBe('Account service unavailable');
++    } else {
++      await store.send({ type: 'logout' });
++      account.resolve({ email: 'ada@example.com', emailVerified: true, hasPassword: true, mfaEnabled: false, providers: [], pendingEmail: null });
++      await flush();
++      await flush();
++      expect(store.state.route).toBe('login');
++      expect(store.state.accountLoading).toBe(false);
++    }
++    if (outcome === 'failed') {
++      // A failed account never requests activity.
++      expect(backend.counters.fetchActivityCalls).toBe(0);
++    } else {
++      // Retirement drops the effect's dispatches; any follow-up request carries the
++      // owned, already-aborted signal, which the service refuses.
++      expect(backend.activitySignals.every((signal) => signal?.aborted === true)).toBe(true);
++    }
++    expect(store.state.accountData).toBeNull();
++    expect(store.state.chart).toBeNull();
++  });
+ });

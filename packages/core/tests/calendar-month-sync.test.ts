@@ -22,7 +22,7 @@
  * reducer's `monthSet` case has always been correct.
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import CalendarPropsTest from './test-components/CalendarPropsTest.svelte';
 import CalendarBoundsTest from './test-components/CalendarBoundsTest.svelte';
@@ -70,6 +70,15 @@ function mount() {
 }
 
 describe('the grid follows selectedDate', () => {
+	it('keeps its explicit date-label format under a non-US default locale', () => {
+		const original = Date.prototype.toLocaleDateString;
+		const format = vi.spyOn(Date.prototype, 'toLocaleDateString').mockImplementation(function(this: Date, locales, options) {
+			return original.call(this, locales ?? 'de-DE', options);
+		});
+		try { expect(mount().displayed()).toBe('March 2024'); expect(format).toHaveBeenCalledWith('en-US'); }
+		finally { format.mockRestore(); }
+	});
+
 	it('jumps to the month of an externally set date', async () => {
 		const cal = mount();
 		expect(cal.displayed(), 'precondition').toBe('March 2024');

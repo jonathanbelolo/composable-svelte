@@ -13,9 +13,8 @@
  * />
  */
 
-import { onMount, onDestroy } from 'svelte';
-import type { Store } from '@composable-svelte/core';
-import type { MapState, MapAction, GeoJSON, LayerStyle } from '../types/map.types.js';
+import { onMount, onDestroy, untrack } from 'svelte';
+import type { MapStore, GeoJSON, LayerStyle } from '../types/map.types.js';
 
 // Props
 let {
@@ -28,7 +27,7 @@ let {
   radius,
   colorGradient
 }: {
-  store: Store<MapState, MapAction>;
+  store: MapStore;
   id: string;
   data: GeoJSON | string;
   visible?: boolean | undefined;
@@ -45,8 +44,14 @@ const style = $derived<LayerStyle>({
   colorGradient
 });
 
+let active = store.state !== undefined;
+
 // Add layer on mount
 onMount(() => {
+  const unsubscribe = store.subscribe((state) => {
+    if (state === undefined) active = false;
+  });
+  if (!active) return unsubscribe;
   store.dispatch({
     type: 'addLayer',
     layer: {
@@ -58,28 +63,22 @@ onMount(() => {
       interactive
     }
   });
+  return unsubscribe;
 });
 
 // Track if layer has been mounted
-let mounted = $state(false);
-
-// Update layer when props change
+// Read props reactively; dispatch must not subscribe this binding to store state.
 $effect(() => {
-  if (!mounted) {
-    mounted = true;
-    return;
-  }
-
-  store.dispatch({
-    type: 'updateLayerStyle',
-    id,
-    style
+  const updates = { style, visible, data, interactive };
+  const layerId = id;
+  untrack(() => {
+    if (active) store.dispatch({ type: 'updateLayer', id: layerId, updates });
   });
 });
 
 // Remove layer on unmount
 onDestroy(() => {
-  store.dispatch({
+  if (active) store.dispatch({
     type: 'removeLayer',
     id
   });

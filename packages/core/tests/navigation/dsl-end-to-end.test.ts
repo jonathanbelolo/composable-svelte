@@ -9,14 +9,14 @@
  * reducer expected a second one and read `action.action.action` — so a child
  * reducer received `undefined` (N1). The same reducer returned the child's
  * effect unmapped, so an async child's result never came back to it (N2).
- * `.case().dismiss()` named the case, which `ifLetPresentation` does not
- * recognise, so the field was never cleared. AUDIT-2026-09-03-FINDINGS N1, N2.
+ * Legacy scoped stores deliberately expose state and dispatch only; managed
+ * presentation views own dismissal authority.
  *
  * `TestStore` has no `Store` surface for `scopeTo`, so this uses `createStore`
  * and `vi.waitFor`, as store.test.ts does.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { onTestFinished, describe, it, expect, vi } from 'vitest';
 import { createStore } from '../../src/lib/store.svelte.js';
 import { Effect } from '../../src/lib/effect.js';
 import type { Reducer } from '../../src/lib/types.js';
@@ -126,11 +126,13 @@ const core: Reducer<AppState, AppAction> = (state, action) => {
 const reducer = integrate(core).with('destination', Destination.reducer).with('modal', modalReducer).build();
 
 function makeStore() {
-	return createStore<AppState, AppAction>({
+	const store = createStore<AppState, AppAction>({
 		initialState: { destination: null, modal: { open: false }, observed: [] },
 		reducer,
 		dependencies: {}
 	});
+	onTestFinished(() => store.destroy());
+	return store;
 }
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
@@ -149,13 +151,12 @@ describe('the navigation DSL end to end', () => {
 		expect(store.state.destination).toEqual({ type: 'addItem', state: { name: 'Milk', saved: false } });
 	});
 
-	it('.dismiss() clears the field', () => {
+	it('legacy case scoping exposes no dismissal capability', () => {
 		const store = makeStore();
 		store.dispatch({ type: 'addButtonTapped' });
 
-		scopeTo(store).into('destination').case('addItem')!.dismiss();
-
-		expect(store.state.destination).toBeNull();
+		const scoped = scopeTo(store).into('destination').case('addItem');
+		expect(scoped).not.toHaveProperty('dismiss');
 	});
 
 	it("a child effect's dispatch lands back in the child", async () => {
@@ -183,16 +184,24 @@ describe('the navigation DSL end to end', () => {
 		expect(store.state.destination).toEqual({ type: 'editItem', state: { id: '1', savedCount: 0 } });
 	});
 
-	it('the parent observes the child action through Destination.is on action.action', () => {
+	it('the parent observes the child action through Destination.is on action.action', async () => {
 		const store = makeStore();
-		store.dispatch({ type: 'addButtonTapped' });
-		const scoped = scopeTo(store).into('destination').case('addItem')!;
+		try {
+			store.dispatch({ type: 'addButtonTapped' });
+			const scoped = scopeTo(store).into('destination').case('addItem')!;
 
-		scoped.dispatch({ type: 'nameChanged', value: 'Milk' });
-		scoped.dispatch({ type: 'saveButtonTapped' });
-		releaseSave();
+			scoped.dispatch({ type: 'nameChanged', value: 'Milk' });
+			scoped.dispatch({ type: 'saveButtonTapped' });
+			releaseSave();
 
-		expect(store.state.observed).toEqual([true, false]);
+			await vi.waitFor(() => {
+				expect(Destination.extract(store.state.destination, 'addItem')?.saved).toBe(true);
+			});
+
+			expect(store.state.observed).toEqual([true, false, false]);
+		} finally {
+			store.destroy();
+		}
 	});
 
 	it('positive control: the same path through .optional() with a plain child', () => {
@@ -203,8 +212,8 @@ describe('the navigation DSL end to end', () => {
 		scopeTo(store).into('modal').optional()!.dispatch({ type: 'toggled' });
 		expect(store.state.modal).toEqual({ open: true });
 
-		scopeTo(store).into('modal').optional()!.dismiss();
-		expect(store.state.modal).toBeNull();
+		const optional = scopeTo(store).into('modal').optional()!;
+		expect(optional).not.toHaveProperty('dismiss');
 	});
 });
 
@@ -246,6 +255,7 @@ describe('dismissal cancels the presentation (N8, C6)', () => {
 			reducer: integrate(closing).with('destination', Destination.reducer).build(),
 			dependencies: {}
 		});
+		onTestFinished(() => store.destroy());
 		store.dispatch({ type: 'addButtonTapped' });
 		store.dispatch({ type: 'destination', action: { type: 'presented', action: { type: 'addItem', action: { type: 'saveButtonTapped' } } } });
 		const release = releaseSave;
@@ -290,6 +300,7 @@ describe('dismissal cancels the presentation (N8, C6)', () => {
 			reducer: integrate<S, A>().with('child', child).build(),
 			dependencies: {}
 		});
+		onTestFinished(() => store.destroy());
 		store.dispatch({ type: 'child', action: { type: 'presented', action: { type: 'go' } } });
 		await tick();
 		expect(store.state.child?.hits).toBe(1); // the plain run landed
@@ -312,6 +323,7 @@ describe('dismissal cancels the presentation (N8, C6)', () => {
 			reducer: integrate<S, A>().with('child', child).build(),
 			dependencies: {}
 		});
+		onTestFinished(() => store.destroy());
 		store.dispatch({ type: 'child', action: { type: 'presented', action: { type: 'listen' } } });
 		expect(cleanup).not.toHaveBeenCalled();
 		store.dispatch({ type: 'child', action: { type: 'dismiss' } });
@@ -322,37 +334,38 @@ describe('dismissal cancels the presentation (N8, C6)', () => {
 	it("a nested presentation's effects sit beneath the outer one: dismissing the outer cancels the inner", async () => {
 		type Inner = { n: number };
 		type InnerAction = { type: 'go' } | { type: 'done' };
-		let release: () => void = () => {};
-		const inner: Reducer<Inner, InnerAction> = (state, action) =>
-			action.type === 'go'
-				? [
-						state,
-						Effect.run<InnerAction>(async (dispatch) => {
-							await new Promise<void>((r) => {
-								release = r;
-							});
-							dispatch({ type: 'done' });
-						})
-					]
-				: [{ n: state.n + 1 }, Effect.none()];
+		const runs: Array<{ release: () => void; signal: AbortSignal }> = [];
+		const inner: Reducer<Inner, InnerAction> = (state, action) => action.type === 'go'
+			? [state, Effect.run<InnerAction>(async (dispatch, signal) => {
+				await new Promise<void>(release => { expect(signal).toBeDefined(); runs.push({ release, signal: signal! }); });
+				dispatch({ type: 'done' });
+			})]
+			: [{ n: state.n + 1 }, Effect.none()];
 		type Features = { destination: Inner | null };
 		type FeaturesAction = { type: 'destination'; action: PresentationAction<InnerAction> };
 		const features = integrate<Features, FeaturesAction>().with('destination', inner).build();
 		type S = { features: Features | null };
-		type A = { type: 'features'; action: PresentationAction<FeaturesAction> } | { type: 'closeFeatures' };
-		const root: Reducer<S, A> = (state, action) => (action.type === 'closeFeatures' ? [{ features: null }, Effect.none()] : [state, Effect.none()]);
-		const store = createStore<S, A>({
-			initialState: { features: { destination: { n: 0 } } },
-			reducer: integrate(root).with('features', features).build(),
-			dependencies: {}
-		});
-
-		store.dispatch({ type: 'features', action: { type: 'presented', action: { type: 'destination', action: { type: 'presented', action: { type: 'go' } } } } });
+		type A = { type: 'features'; action: PresentationAction<FeaturesAction> } | { type: 'closeFeatures' } | { type: 'openFeatures' };
+		const root: Reducer<S, A> = (state, action) => action.type === 'closeFeatures'
+			? [{ features: null }, Effect.none()]
+			: action.type === 'openFeatures' ? [{ features: { destination: { n: 0 } } }, Effect.none()] : [state, Effect.none()];
+		const store = createStore<S, A>({ initialState: { features: { destination: { n: 0 } } }, reducer: integrate(root).with('features', features).build(), dependencies: {} });
+		onTestFinished(() => store.destroy());
+		const go: A = { type: 'features', action: { type: 'presented', action: { type: 'destination', action: { type: 'presented', action: { type: 'go' } } } } };
+		store.dispatch(go);
+		expect(runs).toHaveLength(1);
 		store.dispatch({ type: 'closeFeatures' });
-		store.dispatch({ type: 'features', action: { type: 'presented', action: { type: 'destination', action: { type: 'presented', action: { type: 'go' } } } } });
-		release();
+		expect(runs[0]!.signal.aborted).toBe(true);
+		store.dispatch({ type: 'openFeatures' });
+		store.dispatch(go);
+		expect(runs).toHaveLength(2);
+		expect(runs[1]!.signal.aborted).toBe(false);
+		runs[0]!.release();
 		await tick();
-		expect(store.state.features).toBeNull();
+		expect(store.state.features?.destination?.n).toBe(0);
+		runs[1]!.release();
+		await tick();
+		expect(store.state.features?.destination?.n).toBe(1);
 		store.destroy();
 	});
 
@@ -385,6 +398,7 @@ describe('dismissal cancels the presentation (N8, C6)', () => {
 			)(state, action, undefined);
 		};
 		const store = createStore<S, A>({ initialState: { child: { saved: false } }, reducer, dependencies: {} });
+		onTestFinished(() => store.destroy());
 		store.dispatch({ type: 'child', action: { type: 'presented', action: { type: 'save' } } });
 		store.dispatch({ type: 'child', action: { type: 'dismiss' } });
 		store.dispatch({ type: 'open' });

@@ -677,7 +677,7 @@ class WebGLOverlay implements OverlayContextAPI {
 	 * Get WebGL context
 	 */
 	getContext(): WebGLRenderingContext | null {
-		return this.gl;
+		return this.contextManager.getContext();
 	}
 
 	/**
@@ -1182,6 +1182,7 @@ class WebGLOverlay implements OverlayContextAPI {
 	 * Recreate resources after context loss
 	 */
 	private recreateResources(): void {
+		this.gl = this.contextManager.getContext();
 		if (!this.gl) return;
 
 		this.log('[WebGLOverlay] Recreating resources after context restore');
@@ -1253,4 +1254,39 @@ class WebGLOverlay implements OverlayContextAPI {
 
 		this.log('[WebGLOverlay] Resources recreated');
 	}
+}
+
+/**
+ * Attach an overlay instance to a managed owner or ChildView.
+ * When the owner is retired (`state` becomes undefined), the overlay is immediately stopped and destroyed.
+ * Returns a detach function to cancel the observation early if needed.
+ */
+export function attachOverlayToOwner(
+	overlay: OverlayContextAPI,
+	owner: { readonly state: unknown | undefined; subscribe(listener: (state: unknown | undefined) => void): () => void }
+): () => void {
+	if (owner.state === undefined) {
+		overlay.stop();
+		overlay.destroy();
+		return () => {};
+	}
+	let active = true;
+	let unsubscribe: (() => void) | undefined;
+	let stopAfterSubscribe = false;
+	unsubscribe = owner.subscribe((state) => {
+		if (!active) return;
+		if (state === undefined) {
+			active = false;
+			if (unsubscribe) unsubscribe();
+			else stopAfterSubscribe = true;
+			overlay.stop();
+			overlay.destroy();
+		}
+	});
+	if (stopAfterSubscribe) unsubscribe();
+	return () => {
+		if (!active) return;
+		active = false;
+		unsubscribe();
+	};
 }

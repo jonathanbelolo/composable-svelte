@@ -195,7 +195,9 @@ export function currentAccount(
 export function proofMethods(account: Account): string[] {
 	return [
 		...(account.passwordHash !== null ? ['password'] : []),
-		...(account.mfaEnabled ? ['totp', 'recovery_code'] : [])
+		...(account.mfaEnabled
+			? ['totp', ...(account.recoveryCodes.length > 0 ? ['recovery_code'] : [])]
+			: [])
 	];
 }
 

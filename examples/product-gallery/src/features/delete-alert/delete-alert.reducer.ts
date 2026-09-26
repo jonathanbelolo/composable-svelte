@@ -6,10 +6,7 @@ import type { DeleteAlertState, DeleteAlertAction } from './delete-alert.types.j
 // Dependencies
 // ============================================================================
 
-export interface DeleteAlertDependencies {
-  dismiss: () => void;
-  onConfirm?: () => void;
-}
+export type DeleteAlertDependencies = Record<never, never>;
 
 // ============================================================================
 // DeleteAlert Reducer
@@ -19,17 +16,24 @@ export const deleteAlertReducer: Reducer<
   DeleteAlertState,
   DeleteAlertAction,
   DeleteAlertDependencies
-> = (state, action, deps) => {
+> = (state, action, _deps) => {
   switch (action.type) {
-    case 'confirmButtonTapped':
-      if (deps.onConfirm) {
-        return [
-          state,
-          Effect.run((dispatch) => {
-            deps.onConfirm!();
-          })
-        ];
+    case 'confirmButtonTapped': {
+      const isValidProductId =
+        typeof state?.productId === 'string' && state.productId.trim().length > 0;
+
+      if (!isValidProductId) {
+        return [state, Effect.none()];
       }
+
+      const { productId } = state;
+      return [
+        state,
+        Effect.run((dispatch) => dispatch({ type: 'deleteConfirmed', productId }))
+      ];
+    }
+
+    case 'deleteConfirmed':
       return [state, Effect.none()];
 
     case 'cancelButtonTapped':

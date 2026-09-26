@@ -18,7 +18,7 @@
 		createInitialAudioPlayerState,
 		type AudioTrack
 	} from '@composable-svelte/media';
-	import { Modal } from '@composable-svelte/core/navigation-components';
+	import ManagedAudioPlayerModal from './ManagedAudioPlayerModal.svelte';
 
 	// Sample audio tracks (using free Creative Commons music)
 	const sampleTracks: AudioTrack[] = [
@@ -147,19 +147,6 @@
 	// Derived state for modal
 	const isExpanded = $derived($fullStore.isExpanded);
 
-	// Modal takes a scoped destination store (null = hidden), not isOpen/onClose.
-	// Same wrapper shape as ModalDemo.
-	const expandedStore = $derived(
-		isExpanded
-			? {
-					...fullStore,
-					state: $fullStore,
-					dispatch: fullStore.dispatch,
-					dismiss: () => fullStore.dispatch({ type: 'setExpanded', expanded: false })
-				}
-			: null
-	);
-
 	// Demo controls
 	let activeTab = $state<'minimal' | 'full' | 'playlist'>('minimal');
 
@@ -236,7 +223,7 @@ import {
   MinimalAudioPlayer,
   audioPlayerReducer,
   createInitialAudioPlayerState
-} from '@composable-svelte/code';
+} from '@composable-svelte/media';
 
 const store = createStore({
   initialState: {
@@ -313,7 +300,7 @@ import {
   FullAudioPlayer,
   audioPlayerReducer,
   createInitialAudioPlayerState
-} from '@composable-svelte/code';
+} from '@composable-svelte/media';
 
 const store = createStore({
   initialState: {
@@ -369,7 +356,7 @@ const store = createStore({
 
 				<details class="code-example">
 					<summary>Show code example</summary>
-					<pre><code>{`import { PlaylistView } from '@composable-svelte/code';
+					<pre><code>{`import { PlaylistView } from '@composable-svelte/media';
 
 <PlaylistView
   store={store}
@@ -407,7 +394,10 @@ const store = createStore({
 </div>
 
 <!-- Modal for expanded view -->
-<Modal store={expandedStore}>
+<ManagedAudioPlayerModal
+	expanded={isExpanded}
+	onDismiss={() => fullStore.dispatch({ type: 'setExpanded', expanded: false })}
+>
 	{#snippet children()}
 		<h2 class="text-xl font-semibold mb-4">Audio Player</h2>
 		<FullAudioPlayer store={fullStore} id="full-modal" showExpandButton={false} />
@@ -415,7 +405,7 @@ const store = createStore({
 			<PlaylistView store={fullStore} />
 		</div>
 	{/snippet}
-</Modal>
+</ManagedAudioPlayerModal>
 
 <style>
 	.demo-container {

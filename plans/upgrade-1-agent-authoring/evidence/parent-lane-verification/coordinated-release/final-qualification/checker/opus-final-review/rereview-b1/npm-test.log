@@ -1,0 +1,12 @@
+✔ produces identical output Maps and iteration orders regardless of input shuffle (0.166958ms)
+✔ validates input and throws TypeError on unknown nodes, duplicates, and invalid zones (0.296833ms)
+✔ operates immutably with deep frozen inputs (0.102541ms)
+✔ accepts exactly the six fixed zone names (0.105375ms)
+ℹ tests 555
+ℹ suites 1
+ℹ pass 555
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 19609.336583

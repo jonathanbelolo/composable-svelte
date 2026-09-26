@@ -16,7 +16,8 @@ import type {
   GeometryConfig,
   GraphicsState,
   LightConfig,
-  MeshConfig
+  MeshConfig,
+  RendererCapabilities
 } from './types.js';
 
 /**
@@ -36,6 +37,16 @@ export interface SceneAdapter {
   updateLight(id: string, config: LightConfig): void;
   removeLight(id: string): void;
   setBackgroundColor(color: string): void;
+}
+
+/**
+ * Extended adapter interface for 3D graphics engines.
+ * BabylonAdapter implements this interface; custom adapters or test spies
+ * can provide mock implementations for deterministic testing.
+ */
+export interface GraphicsAdapter extends SceneAdapter {
+  initialize(canvas: HTMLCanvasElement): Promise<{ renderer: 'webgl'; capabilities: RendererCapabilities }>;
+  dispose(): void;
 }
 
 /**

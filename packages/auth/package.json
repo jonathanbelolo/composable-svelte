@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/auth",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Session store, subject helpers, and auth guard components for Composable Svelte - Client half of the DDD identity substrate",
   "type": "module",
   "main": "./dist/index.js",
@@ -42,6 +42,11 @@
       "svelte": "./dist/session/index.js",
       "default": "./dist/session/index.js"
     },
+    "./application": {
+      "types": "./dist/application/index.d.ts",
+      "svelte": "./dist/application/index.js",
+      "default": "./dist/application/index.js"
+    },
     "./components": {
       "types": "./dist/components/index.d.ts",
       "svelte": "./dist/components/index.js",
@@ -55,10 +60,20 @@
     "README.md",
     "CHANGELOG.md",
     "LICENSE",
-    "docs"
+    "docs",
+    "consumer",
+    "!consumer/node_modules",
+    "!consumer/node_modules/**",
+    "!consumer/dist",
+    "!consumer/dist/**",
+    "!consumer/.vite",
+    "!consumer/.vite/**",
+    "!consumer/.svelte-kit",
+    "!consumer/.svelte-kit/**",
+    "!consumer/*.tgz"
   ],
   "scripts": {
-    "build": "svelte-package -o dist",
+    "build": "svelte-package -o dist && node ../../scripts/emit-svelte-declaration-bridges.mjs dist",
     "typecheck": "tsc --noEmit",
     "check": "svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings",
     "test": "vitest run && vitest run --config vitest.ssr.config.ts",
@@ -92,8 +107,8 @@
     "url": "https://github.com/jonathanbelolo/composable-svelte/issues"
   },
   "peerDependencies": {
-    "@composable-svelte/core": "^0.12.0",
-    "svelte": "^5.0.0"
+    "@composable-svelte/core": "^0.13.1",
+    "svelte": "^5.20.0"
   },
   "devDependencies": {
     "@composable-svelte/core": "workspace:*",

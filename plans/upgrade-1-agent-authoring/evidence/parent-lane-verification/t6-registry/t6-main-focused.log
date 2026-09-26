@@ -1,0 +1,20 @@
+✔ loadBundledStarterPolicy loads genuine pinned policy (22.881541ms)
+✔ validateBundledPolicyBytes validates shipped bytes against schema, catalog, core and rules (4.793292ms)
+✔ altered bytes fail hash with policy null before parse (0.833125ms)
+✔ production registry contains only the byte-exact pinned starter (3.519375ms)
+✔ loader selects two test-only names with distinct pinned bytes (10.219ms)
+✔ each name is bound to its own pin; swapped or tampered bytes fail before parse (23.146459ms)
+✔ selector resolves own, frozen, well-formed entries only (5.64175ms)
+✔ bundled guidance is pinned but cannot grant independent qualification (66.287167ms)
+✔ CLI requires external policy pins and canonical exact core identity (13.327292ms)
+✔ every bundled: argument is a registry selector and never an external path (11.907417ms)
+✔ external policies keep their independent pin and are never promoted to bundled (29.798875ms)
+✔ verdict envelope requires independent pins, complete catalog and complete analysis (5.442791ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1835.729083

@@ -106,8 +106,9 @@ export class ShaderCompiler {
 		const gl = this.gl;
 		const typeName = getShaderTypeName(gl, type);
 
-		// Validate shader source
-		const validation = validateShaderSource(source, typeName as 'vertex' | 'fragment');
+		// Normalize optional precision before validation; keep empty-source diagnostics.
+		const finalSource = source.trim() ? ensurePrecision(source) : source;
+		const validation = validateShaderSource(finalSource, typeName as 'vertex' | 'fragment');
 		if (!validation.valid) {
 			return {
 				error: OverlayError.shaderCompilationFailed(
@@ -118,8 +119,6 @@ export class ShaderCompiler {
 			};
 		}
 
-		// Ensure precision qualifier
-		const finalSource = ensurePrecision(source);
 
 		// Create shader
 		const shader = gl.createShader(type);

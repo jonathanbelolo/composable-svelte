@@ -1,0 +1,37 @@
+{
+  "status": "independent-focused-review-CLEAR",
+  "files": [
+    {
+      "path": "packages/architecture/CHANGELOG.md",
+      "before": "be7d8954cf50d414cec2d31facf439a05b815cd3b2c6f8e70f452e3cd5298ec6",
+      "after": "b4f2d12f490987d623ca68545322f1c8282588a99f15354c0763fec6d9048c1e"
+    },
+    {
+      "path": "packages/architecture/README.md",
+      "before": "f986d23a61fa435906662d595abb8781ef7fbc069d2e61e30533b8c63788e33f",
+      "after": "5903232d68f865c693a92b79c9fa12bb1ac6b866e3e3b56716dab69109ec746e"
+    },
+    {
+      "path": "packages/architecture/src/semantic-context.mjs",
+      "before": "8cdcdef380ad18e17c48517f0869168c7a0e4e761fdb8acf7740a45cd2fe03aa",
+      "after": "f231bc6974bd35dd3fe9661711486fd63988ca1257e5b7bb7e41f98ad051a432"
+    },
+    {
+      "path": "packages/architecture/src/semantic-flow.mjs",
+      "before": "b58997fb0af0e7fe8a5cfb96497a1c9031ed3294f283f3bb1121e9cfa7d11e7b",
+      "after": "64118c57457afaf195f615745c69b2ffb1cf50561a46ced3598309ce3434cb57"
+    },
+    {
+      "path": "packages/architecture/src/template-binding-default.test.mjs",
+      "before": "9a91ba491889bae6891fcfad6e0e217d1c18030bb27cfe5b7a4e562cb3ef9776",
+      "after": "c3515bb7c88ef07c32bd1280303a4c706af155dacae9b8325512562393388319"
+    },
+    {
+      "path": "packages/architecture/src/template-binding-values.test.mjs",
+      "before": null,
+      "after": "4dabc1dec4ae19e50715224c52b0fb00df75a49d621ba88aba54badf41a942a0"
+    }
+  ],
+  "review": "/private/tmp/composable-final-checker/opus-final-review/FOCUSED-B2-REREVIEW.md",
+  "acceptance": "source-clear; final packed-byte controls pending"
+}

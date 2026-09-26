@@ -1,0 +1,28 @@
+=== mutant m6 (full suite)
+     × requests activity only after the account resolves, for that account’s subject 4ms
+     × a failed account load cannot obtain activity 1ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  2 failed | 21 passed (23)
+=== mutant m7 (full suite)
+     × a delayed fetchActivity response is cancelled and rejected after logout (logout=true negative control) 3ms
+     × a delayed fetchActivity response is cancelled and rejected after logout (logout=false negative control) 1ms
+     × a superseded fetchActivity response is rejected after the same subject signs in again 1ms
+     × requests activity only after the account resolves, for that account’s subject 1ms
+     × a retired account load cannot obtain activity 2ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  5 failed | 18 passed (23)
+m6 = previous Promise.all model (review-receipts/sequential/pre/model.ts.txt); m7 = sequential, fetchActivity called without the owned signal. Source restored (cmp verified).
+=== after test follow-up: mutant m6 (full suite)
+     × requests activity only after the account resolves, for that account’s subject 4ms
+     × a failed account load cannot obtain activity 1ms
+     × a retired account load cannot obtain activity 1ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  3 failed | 20 passed (23)
+=== after test follow-up: mutant m7 (full suite)
+     × a delayed fetchActivity response is cancelled and rejected after logout (logout=true negative control) 3ms
+     × a delayed fetchActivity response is cancelled and rejected after logout (logout=false negative control) 1ms
+     × a superseded fetchActivity response is rejected after the same subject signs in again 1ms
+     × requests activity only after the account resolves, for that account’s subject 1ms
+     × a retired account load cannot obtain activity 1ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  5 failed | 18 passed (23)

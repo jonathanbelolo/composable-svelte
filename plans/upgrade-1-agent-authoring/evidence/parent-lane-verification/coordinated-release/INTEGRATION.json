@@ -1,0 +1,342 @@
+{
+  "integratedAt": "2026-09-26T12:44:09.650511+00:00",
+  "status": "reviewed source integrated; final release qualification pending",
+  "files": [
+    {
+      "path": "packages/auth/CHANGELOG.md",
+      "beforeSHA256": "0e3001348832ebf693751f9cd08c842759c6373bf9c8507601b6566793fa31dc",
+      "afterSHA256": "cd3644cf324254bc8bfeba17dfeecf001b83ea7f3cf383b2d1a7f973a03df61f",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/auth/consumer/README.md",
+      "beforeSHA256": "ebe931141a66a3d61be2291c9e7e4e90b4419a438db8274386d2339b84394289",
+      "afterSHA256": "ef90f340ff1799ee9cf8fab4528b30f01902ee210e8246ccfd67e3baeb5658c4",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/auth/consumer/package.json",
+      "beforeSHA256": "5e997d7ebfa51ecd53a976dc92165a2325163f7e4b888ea97b97ed8cfc63e2ab",
+      "afterSHA256": "61e81d645c5bac2ba6ad2cbff55b3202249b5fb1e9d41ce2ca737f50498c32e1",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/auth/package.json",
+      "beforeSHA256": "69e62b10f0b022a83643fc83bf028d4c3fd6c2afe8d5ee97569249fef9720cdd",
+      "afterSHA256": "b743269486f083509e05fcfc53dcca7738a58c02d5baf3c537677ba2325e7250",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/charts/CHANGELOG.md",
+      "beforeSHA256": "ea6a08b43626452f976beb4fe38095e8e55fb566213b63650a1b1a5eec90bbe4",
+      "afterSHA256": "a3995f74e28c959ffbbf516837cc477e5540d683eee9fa5965f9752fec3ce02e",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/charts/INTEGRATION.md",
+      "beforeSHA256": "270dc3fe9619cfc5ce990e56206b91c351bcbdf3b569b1622ef6d2246d331143",
+      "afterSHA256": "017e32c872ae5c2572e4b470fc5c113da26b8bd3b85772460324f3050e67bb2f",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/charts/MANAGED.md",
+      "beforeSHA256": "022f6ef85656e2db2af8bac921d24829df58542849f5ac091150a05a8e9522e5",
+      "afterSHA256": "95453f7e1c9420c0728665d8f7d8d1d039933b2569557a1b5aa18bd37aa5e387",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/charts/README.md",
+      "beforeSHA256": "5e96bc42e9275c5ee9ec8456ec9dd4b3f3211feb42e3f44fbfe6f827626693ac",
+      "afterSHA256": "75cfc5d37356df382f0c707e1ea8329957ce92177e8349ccd5e28ceed9a565b6",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/charts/fixtures/installed-consumer/README.md",
+      "beforeSHA256": "b43c1cae2527f7d18346313c072c0a4f121cf26932fe8c772fa863f11e67c83d",
+      "afterSHA256": "262c57b114c1601049de6e0bf48056707ad0c079792033052098513f47f8fa4f",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/charts/fixtures/installed-consumer/package.json",
+      "beforeSHA256": "10a3d3c0baa028dd003134320d60ce7138c319549ded4559e3aaef2206dc9618",
+      "afterSHA256": "b86c491d39096163267ad24ff9cc31d4b69146714539c967cf1238fc10f54d14",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/charts/fixtures/installed-consumer/verify.mjs",
+      "beforeSHA256": "6b05253810f2e7b82822893551f883767299eb048e5e146472754dc5cc69e7b9",
+      "afterSHA256": "70aa89707df3488458a4f03ec03e73426da6ce8988d307a59d3200bb4be8c568",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/charts/package.json",
+      "beforeSHA256": "2439a98334d2ea15753378a27fc4e9cc44938dabfcf40ed52586e015ee2ef200",
+      "afterSHA256": "3b6851f4a0d987d8d6baebd63f1bbce60c4807f1489eec4f85567e0559e8a243",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/chat/CHANGELOG.md",
+      "beforeSHA256": "9bffccf51dbb7ecc36831019c7ddd38d9217ef1bdf54548bcd33442d9987ae9a",
+      "afterSHA256": "f181714f0e0faf645773b1286a748942ceab5bef5eed5b78d1a697d8f3b7e610",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/chat/package.json",
+      "beforeSHA256": "4e15bf4609f0a61b370cbf6d384810dcaa857cf7be0b5f64744c50942ecbdad2",
+      "afterSHA256": "27c6a061a77faeb413fe995adcbed9025fd347fc5d71eb84060146e80c3f7a97",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/chat/recipes/managed/README.md",
+      "beforeSHA256": "d059da6ca47dbc0c977de696e6f9a3a6099f7d34d9641e39cc025d6ca71c4adb",
+      "afterSHA256": "48e4bf9816c0cb7fcfb48f4ae9d0b85306e4e27b3c7a1234a64cbe06924db4fa",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/code/CHANGELOG.md",
+      "beforeSHA256": "280c85a4aac83e6e6b2a100a0a1e41c7f05190671673242f93a4551f421a61ee",
+      "afterSHA256": "607bd090c1e0248437ed199f4ab4937e747f1486a913df698485b0fd85fd376c",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/code/README.md",
+      "beforeSHA256": "568060770aac606dd352f7b6d32754f93f576d7bb348a6624ad7e12c2e5960dc",
+      "afterSHA256": "024b79325b529003cbbcd4834948a5746a8f1dabae93d10229e423a16d8064e8",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/code/package.json",
+      "beforeSHA256": "102c1af34a72ab3dddc9056a1eb7fcbe5132d94b993d7a801d4106d11273a2ca",
+      "afterSHA256": "b77a9343135c15ea10b1337d3c0efb254d47c1f07a07bea0abe1f2b936967d8f",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/code/recipes/managed/README.md",
+      "beforeSHA256": "3f8b322d0838bc4a0f4a3c41caef5143726be48744b8aea08689a300f2afd300",
+      "afterSHA256": "94ce4aecfb74abf3d2b417e778f9d210ebed79a7db986ce9f65dff4fa3b545dd",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/core/CHANGELOG.md",
+      "beforeSHA256": "dad553ef4e2b0190f52dc39312fbffc7bd2a52bb72048068951160447c0a60d4",
+      "afterSHA256": "27b8e21ca2949cf58b65ad662cd8da3c553660ceb8d4e8482194864df3c3d316",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/core/README.md",
+      "beforeSHA256": "d64fa52150ac7f7bb2732da60348f130842e10aeaaa9d985d425a21c084af3e7",
+      "afterSHA256": "9d0f087d78f81d2720af9e59469338923689d0173d7590931d3ec130f142674c",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/core/consumer/package.json",
+      "beforeSHA256": "d8561c7ac2ae7fd8521bacbedf82f4f4691a70fada6345af97554ed456e162bc",
+      "afterSHA256": "f54301eff6ad4a3c301a2618702dbabe56ad798b00a50ca709d101d4095fd22f",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/core/docs/consumer.md",
+      "beforeSHA256": "ceb09204bf46c9d2e86eccf366be3cbc41e2b0d05381444ba1c90939e1ff7215",
+      "afterSHA256": "56d387f93e4ddb68eb09a5a6de4a875ec8c3538581b1cee137b1b9bab396a6c3",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/core/docs/examples/agent-patterns/README.md",
+      "beforeSHA256": "95d5e567cdc4a57106744648f4a4f60a74a454f23f28cd9f32fe475eb9a013a2",
+      "afterSHA256": "8b7ae1afc2e7521cb55425f4967eabb24c9bd83965c1566582d8977dddb7005c",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/core/docs/examples/agent-patterns/package.json",
+      "beforeSHA256": "f00c54344123a108b91065a3cea177da07b956a3cb6afebdb3b8347b4bba0715",
+      "afterSHA256": "5920e2492d759c5a31775fcca72ca83c43386c6c3a72ae1fb5b3aa2564550e42",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/core/docs/prerelease.md",
+      "beforeSHA256": "cf3e0b67b42d18ca597e5d16c37027b62a30d22ed4f81d4dadbeea8c4c3c87ca",
+      "afterSHA256": "218705f846659c13b7c34a3dfef2aee1903f323c63d7003bf3bf06eed116b377",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/core/package.json",
+      "beforeSHA256": "750d88fa84aaa070d075c5d7c038fbc22909346a7e54674f842e086c545933b2",
+      "afterSHA256": "073a8ebc6feec0364eaa281a180027f834b69d5d6564a162cc671a4a2dd4d460",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/graphics/CHANGELOG.md",
+      "beforeSHA256": "828fbc34058e42eec4b100030dfd4229cae98242ff1e18f9066e83da11335db2",
+      "afterSHA256": "19163d2bac0eb681d8b3ebd95639263580e4125cd6016d5845157e1a64096abf",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/graphics/MANAGED.md",
+      "beforeSHA256": "e1d5941b6d9843274841bb6d353b27c704bb9d7c7589ed9a5b20c772ef1681e8",
+      "afterSHA256": "e699932159568593e2d3d329a7c6df9da0b5928b05bf52e11bc0b403d3c9a71e",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/graphics/fixtures/installed-consumer/README.md",
+      "beforeSHA256": "03f574775bdbdf4b79303fb301d807f9a0bc26f30044480c59c2c561d7575114",
+      "afterSHA256": "4b21e9fa0f9bd73640844b0c1fd3f3f5b3111781db053ce797c07adea337c1df",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/graphics/fixtures/installed-consumer/package.json",
+      "beforeSHA256": "1fba75ad3efdac1a234a804e035ce3c346b9ec5b7681020a61142341719ba540",
+      "afterSHA256": "fe7aa0b66d1c7f4fee05f7d80b45633a6bc4d0425848f6875d41852f64110bc2",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/graphics/fixtures/installed-consumer/verify.mjs",
+      "beforeSHA256": "f6be6d249ad44c4ae1ae874d38dd2fbbad30993c36d5aefe03b67dcc00ee9773",
+      "afterSHA256": "dd8e4e141fafdc2f1fc3e2611ac1c11e9523dd2105ca6f3011e9bd8a0b2ada3e",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/graphics/package.json",
+      "beforeSHA256": "f08fe21a8869e9250723a0e4be856954b9832ddc74e937ef805a23991d0e157c",
+      "afterSHA256": "48b67dd43a1e77bba75201b54b551ea160306e532d0075ad96ab181996b4a4f2",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/maps/CHANGELOG.md",
+      "beforeSHA256": "73ecc01b0dfbfc25441229edf7d1e461749de3a450bfa9db2b137ab0da9f9e39",
+      "afterSHA256": "6f21cdba90dc619a8bf59cd2a80016f87f5e5635de4bd70ad536777a040fd634",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/maps/MANAGED.md",
+      "beforeSHA256": "618e36344090276c09192a01a9792729153b8e07efcd55c96de123e8418ede29",
+      "afterSHA256": "1ad9e35491f3173917a330bb2d2f4a612d07e3764805b4f6508c3c39d52ceafe",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/maps/README.md",
+      "beforeSHA256": "804848060531387671c511d341afe0589b16d39fb9b1138b0fe4e01499b1c7ca",
+      "afterSHA256": "6ee54ef0ea5fc0a6f1e0016b0e8f63eae365339495f35ea1cf4001f5e0d085cf",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/maps/fixtures/installed-consumer/README.md",
+      "beforeSHA256": "b86afe37ef56bf5961cb6bb9a3d188e921cfde257337783a7db1d33fc53c6292",
+      "afterSHA256": "de93becbeb868f34a9dc7bc59cac516a320e849a533889765a847846300c74b2",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/maps/fixtures/installed-consumer/package.json",
+      "beforeSHA256": "49b5a46567797c3edbac88ddd605dbe14494fdfbe1bd9b8410a50a840991040b",
+      "afterSHA256": "88996686b1241c78ff06a62696dabc74c2ca3a07815e22cd2cfe7f38a54545a7",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/maps/fixtures/installed-consumer/verify.mjs",
+      "beforeSHA256": "a9986f2176f54e119f2c333e0bedd2cc304be1dc88eb76045c1a0ed8f7d58aff",
+      "afterSHA256": "9ddca1dc8701b0191f7b93a4d517d74f7b7e84178ddf4538b8fd89fbd7a9e28a",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/maps/package.json",
+      "beforeSHA256": "52eaf6d9012db04c2d41baf680fdd6750d7717630619c73d050f5ea3ef798e88",
+      "afterSHA256": "e00d11fb21376cb6bb8755d9ff6c73a6180fe3342c7fc9e2b5bfa8dd0ac8f318",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/media/CHANGELOG.md",
+      "beforeSHA256": "b3818763cea01823072c987d847c9e0e7b0f2235126c63d4d6c34b6bc1df60c5",
+      "afterSHA256": "116947667a3565abf4a295dadb32df9ef78ea30efbdd55f89865c361e7323ae5",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/media/package.json",
+      "beforeSHA256": "476180248b2f3ff1dc652d71df6d142b25c79ae90227db04693676eda49ef355",
+      "afterSHA256": "ad4e3957723dabf9e8592284a9373c629aea772d0e2868eb376ce0b10994735f",
+      "handoff": "runtime-source-handoff"
+    },
+    {
+      "path": "packages/maps/tsconfig.test.json",
+      "beforeSHA256": "eecbf3acee4ef38e4951ebed050d43d6aa8042f268552900254a687f4d82fdea",
+      "afterSHA256": "188418207d6e7acbb0ba1216a065e06a106c33a9d6f9da1bde6133e27b22101e",
+      "handoff": "ci-source-handoff"
+    },
+    {
+      "path": "packages/chat/tsconfig.test.json",
+      "beforeSHA256": "d8e7952a11085d0007f8f5b5012f7c8c47458098463d2593c09ff5c15a7c377b",
+      "afterSHA256": "446ed5c68455f809fc1281827de5edf50e0a261dfe0dea051b2dcb42f4815a9a",
+      "handoff": "ci-source-handoff"
+    },
+    {
+      "path": "packages/code/tsconfig.test.json",
+      "beforeSHA256": "d8e7952a11085d0007f8f5b5012f7c8c47458098463d2593c09ff5c15a7c377b",
+      "afterSHA256": "446ed5c68455f809fc1281827de5edf50e0a261dfe0dea051b2dcb42f4815a9a",
+      "handoff": "ci-source-handoff"
+    },
+    {
+      "path": "packages/charts/tsconfig.test.json",
+      "beforeSHA256": "d8e7952a11085d0007f8f5b5012f7c8c47458098463d2593c09ff5c15a7c377b",
+      "afterSHA256": "efdd0e366b1d4c5b3f55aa38bed807606d7daa475f695e60f1aee43dd65d7c1e",
+      "handoff": "ci-source-handoff"
+    },
+    {
+      "path": "packages/graphics/tsconfig.test.json",
+      "beforeSHA256": "d8e7952a11085d0007f8f5b5012f7c8c47458098463d2593c09ff5c15a7c377b",
+      "afterSHA256": "efdd0e366b1d4c5b3f55aa38bed807606d7daa475f695e60f1aee43dd65d7c1e",
+      "handoff": "ci-source-handoff"
+    },
+    {
+      "path": "packages/media/tsconfig.test.json",
+      "beforeSHA256": "d8e7952a11085d0007f8f5b5012f7c8c47458098463d2593c09ff5c15a7c377b",
+      "afterSHA256": "446ed5c68455f809fc1281827de5edf50e0a261dfe0dea051b2dcb42f4815a9a",
+      "handoff": "ci-source-handoff"
+    },
+    {
+      "path": "packages/code/tests/proof/command-queue.managed.test.ts",
+      "beforeSHA256": "a11254c8610f338615b89f9726e1416c47d3c06e0f2a4a1d4a0781771dc19001",
+      "afterSHA256": "479d57aeb2e5fef6638e50b788cb85bc3e86b59255233d2328416fb424bd2de1",
+      "handoff": "ci-source-handoff"
+    },
+    {
+      "path": "packages/core/tests/repo/optional-props.test.ts",
+      "beforeSHA256": "1180fef10fd52202e948dd24b2847075bf354eb9c5a4342f1feb043407766932",
+      "afterSHA256": "7620c939ebbd4711b69cc9da88bc2b7cc01da7d4e865ce993c1826ba638921b6",
+      "handoff": "ci-source-handoff"
+    },
+    {
+      "path": "packages/core/tests/repo/peer-ranges.test.ts",
+      "beforeSHA256": "f40c09902210732ad11a225e22da76d042b245cec45a3771f0efa41b67235298",
+      "afterSHA256": "685515d919cb0025841bc3d308dc2fc9a7a969f08fd2620b8f7d5a5edcfa544f",
+      "handoff": "ci-source-handoff"
+    },
+    {
+      "path": "examples/product-gallery/tests/gallery-owner-lifecycle.browser.test.ts",
+      "beforeSHA256": "77655547880f0735bd864de6818803f1b1f14ef94deefc94536c106831391142",
+      "afterSHA256": "d4d20c2f1ab8e90428e9acb464d654a30488e91a815026c157afda95aecba7f1",
+      "handoff": "ci-source-handoff"
+    },
+    {
+      "path": "examples/styleguide/tests/overlay-demos.test.ts",
+      "beforeSHA256": "3f2891540999f075b7e85d5de2c4062cad3f78ca75732a652de74008a328ce9a",
+      "afterSHA256": "f5c50551f9490d6258e6912eb3d6fcd227c48a0a25054029a099c5816b31589c",
+      "handoff": "ci-source-handoff"
+    },
+    {
+      "path": "examples/styleguide/src/lib/components/demos/SidebarDemo.svelte",
+      "beforeSHA256": "e0ce8b867164a40a62c7846ce9ee4915f1754dcee1dacf28b5f57a8a6688c963",
+      "afterSHA256": "018db771f9583fd8c9852b7cfabc30aa1702d56284cc712c58b95089265b1b92",
+      "handoff": "ci-source-handoff"
+    },
+    {
+      "path": "README.md",
+      "beforeSHA256": "84769b591791c711446a343b06def57cfb6e363e68982c9e66e10015b4da1fa6",
+      "afterSHA256": "6f8a781838a9ffe09bb319667eb659ffda0602d70d7d1fb5021f3252218974c0",
+      "handoff": "ci-source-handoff"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "beforeSHA256": "f5a85c91c0c09eb05057c0a98a6eeff67fde152aa25da168d1da091abbb672bc",
+      "afterSHA256": "3c3fcaf22d3f335ed35a76bb9c6533bd3c18e6898c6f8647b9e2a91861eaf375",
+      "handoff": "ci-source-handoff"
+    }
+  ]
+}

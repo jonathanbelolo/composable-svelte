@@ -101,13 +101,13 @@
 	let contentElement: HTMLDivElement | undefined = $state();
 
 	// Format timestamp
-	const timeString = $derived(() => {
+	const timeString = $derived.by(() => {
 		const date = new Date(message.timestamp);
 		return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 	});
 
 	// Render markdown for assistant messages
-	const renderedContent = $derived(() => {
+	const renderedContent = $derived.by(() => {
 		if (message.role === 'assistant') {
 			return renderMarkdown(message.content, isStreaming);
 		}
@@ -115,7 +115,7 @@
 	});
 
 	// Extract images from markdown (only for completed assistant messages)
-	const images = $derived(() => {
+	const images = $derived.by(() => {
 		if (message.role === 'assistant' && !isStreaming) {
 			return extractImagesFromMarkdown(message.content);
 		}
@@ -123,16 +123,22 @@
 	});
 
 	// Extract videos from markdown (only for completed assistant messages)
-	const videos = $derived(() => {
+	const videos = $derived.by(() => {
+		void VideoEmbed;
 		if (message.role === 'assistant' && !isStreaming) {
 			return extractVideosFromMarkdown(message.content);
 		}
 		return [];
 	});
 
+	// Copy-button attachment reparents pre nodes. Replace their containing block
+	// as a unit so Svelte never reconciles through those renderer-owned wrappers.
+	const markdownBlock = $derived({ html: renderedContent, isStreaming });
+
 	// Attach copy buttons to code blocks after content is rendered
 	$effect(() => {
 		if (!contentElement || message.role !== 'assistant' || isStreaming) return;
+		void renderedContent;
 		return attachCopyButtons(contentElement);
 	});
 </script>
@@ -150,7 +156,7 @@
 			<span class="chat-message__role">
 				{avatarLabel}
 			</span>
-			<span class="chat-message__time">{timeString()}</span>
+			<span class="chat-message__time">{timeString}</span>
 		</div>
 
 		<!-- Optional header actions (e.g., action buttons) -->
@@ -160,10 +166,14 @@
 			</div>
 		{/if}
 	</div>
-	<div class="chat-message__content" bind:this={contentElement}>
+	<div class="chat-message__content">
 		{#if message.role === 'assistant'}
-			<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-			{@html renderedContent()}
+			{#key markdownBlock}
+				<div class="chat-message__markdown" bind:this={contentElement}>
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+					{@html renderedContent}
+				</div>
+			{/key}
 			{#if isStreaming}
 				<span class="chat-message__cursor">▊</span>
 			{/if}
@@ -176,11 +186,11 @@
 			{/if}
 
 			<!-- Image gallery for detected images -->
-			{#if images().length > 0}
+			{#if images.length > 0}
 				<div class="chat-message__gallery">
 					<ImageGallery
-						images={images()}
-						columns={images().length === 1 ? 1 : 2}
+						images={images}
+						columns={images.length === 1 ? 1 : 2}
 						gap={12}
 						aspectRatio="16:9"
 					/>
@@ -188,9 +198,9 @@
 			{/if}
 
 			<!-- Video embeds for detected videos -->
-			{#if videos().length > 0 && VideoEmbed}
+			{#if videos.length > 0 && VideoEmbed}
 				<div class="chat-message__videos">
-					{#each videos() as video (video.url)}
+					{#each videos as video (video.url)}
 						<VideoEmbed {video} />
 					{/each}
 				</div>

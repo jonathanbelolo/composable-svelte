@@ -64,17 +64,53 @@ describe('Select', () => {
 		});
 
 		it('ignores disabled option', async () => {
+			const selectedValues: any[] = [];
+
+			const store = createTestStore({
+				initialState: createInitialSelectState(options),
+				reducer: selectReducer,
+				dependencies: {
+					onChange: (value) => selectedValues.push(value)
+				}
+			});
+
+			await store.send({ type: 'opened' }, (state) => {
+				expect(state.isOpen).toBe(true);
+			});
+
+			const before = store.state;
+			// Disabled selection must retain all current presentation state.
+			await store.send({ type: 'optionSelected', value: 'grape' }, (state) => {
+				expect(state.selected).toBe(null);
+				expect(state.isOpen).toBe(true);
+			});
+
+			expect(store.state).toBe(before);
+			await store.finish();
+			expect(selectedValues).toEqual([]);
+
+			// Enabled control: selecting enabled option works and closes dropdown
+			await store.send({ type: 'optionSelected', value: 'banana' }, (state) => {
+				expect(state.selected).toBe('banana');
+				expect(state.isOpen).toBe(false);
+			});
+
+			await store.finish();
+			expect(selectedValues).toEqual(['banana']);
+		});
+
+		it('preserves unsupported value selection compatibility', async () => {
 			const store = createTestStore({
 				initialState: createInitialSelectState(options),
 				reducer: selectReducer
 			});
 
-			// Try to select disabled option
-			await store.send({ type: 'optionSelected', value: 'grape' }, (state) => {
-				expect(state.selected).toBe('grape'); // Actually gets set (no guard)
+			await store.send({ type: 'optionSelected', value: 'custom-fruit' }, (state) => {
+				expect(state.selected).toBe('custom-fruit');
+				expect(state.isOpen).toBe(false);
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 		});
 
 		it('clears selection', async () => {
@@ -154,6 +190,42 @@ describe('Select', () => {
 			});
 
 			store.assertNoPendingActions();
+		});
+
+		it('ignores disabled option on toggle', async () => {
+			const selectedValues: any[] = [];
+
+			const store = createTestStore({
+				initialState: createInitialSelectState(options, [], true),
+				reducer: selectReducer,
+				dependencies: {
+					onChange: (value) => selectedValues.push([...value])
+				}
+			});
+
+			await store.send({ type: 'opened' }, (state) => {
+				expect(state.isOpen).toBe(true);
+			});
+
+			const before = store.state;
+			// Disabled toggle must retain all current presentation state.
+			await store.send({ type: 'optionToggled', value: 'grape' }, (state) => {
+				expect(state.selected).toEqual([]);
+				expect(state.isOpen).toBe(true);
+			});
+
+			expect(store.state).toBe(before);
+			await store.finish();
+			expect(selectedValues).toEqual([]);
+
+			// Enabled control: toggling enabled option works
+			await store.send({ type: 'optionToggled', value: 'apple' }, (state) => {
+				expect(state.selected).toEqual(['apple']);
+				expect(state.isOpen).toBe(true);
+			});
+
+			await store.finish();
+			expect(selectedValues).toEqual([['apple']]);
 		});
 	});
 

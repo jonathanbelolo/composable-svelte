@@ -2,7 +2,7 @@
 	import { cn } from '../../../utils.js';
 	import { animateTooltipIn, animateTooltipOut } from '../../../animation/animate.js';
 	import type { PresentationState } from '../../../navigation/types.js';
-	import type { Snippet } from 'svelte';
+	import { untrack, type Snippet } from 'svelte';
 
 	/**
 	 * TooltipPrimitive - Animation-driven tooltip display
@@ -54,7 +54,8 @@
 	}: TooltipPrimitiveProps = $props();
 
 	let tooltipElement: HTMLElement | null = $state(null);
-	let tooltipStyle = $state<string>('');
+	let tooltipTop = $state(0);
+	let tooltipLeft = $state(0);
 
 	// Calculate dynamic position based on trigger element's bounding rect
 	function updateTooltipPosition() {
@@ -94,27 +95,34 @@
 		top = Math.max(padding, Math.min(top, window.innerHeight - tooltipRect.height - padding));
 		left = Math.max(padding, Math.min(left, window.innerWidth - tooltipRect.width - padding));
 
-		tooltipStyle = `top: ${top}px; left: ${left}px;`;
+		tooltipTop = top;
+		tooltipLeft = left;
 	}
 
-	// Watch presentation state and trigger animations
+	const animationPhase = $derived(presentation.status);
+
+	// Watch phase changes, not caller callback identities or positioning props.
 	$effect(() => {
 		if (!tooltipElement) return;
+		let active = true;
+		const presented = untrack(() => onPresentationComplete);
+		const dismissed = untrack(() => onDismissalComplete);
 
-		if (presentation.status === 'presenting') {
+		if (animationPhase === 'presenting') {
 			// Calculate position before animating in
-			updateTooltipPosition();
+			untrack(updateTooltipPosition);
 
 			// Animate in
 			animateTooltipIn(tooltipElement).then(() => {
-				onPresentationComplete?.();
+				if (active) presented?.();
 			});
-		} else if (presentation.status === 'dismissing') {
+		} else if (animationPhase === 'dismissing') {
 			// Animate out
 			animateTooltipOut(tooltipElement).then(() => {
-				onDismissalComplete?.();
+				if (active) dismissed?.();
 			});
 		}
+		return () => { active = false; };
 	});
 
 	// Update position when trigger element changes or window resizes
@@ -154,6 +162,7 @@
 </script>
 
 {#if shouldShow}
+	<!-- Keep the opacity attribute static: position updates must preserve Motion-owned styles. -->
 	<div
 		bind:this={tooltipElement}
 		class={cn(
@@ -164,7 +173,10 @@
 			className
 		)}
 		role="tooltip"
-		style="{tooltipStyle} opacity: 0;"
+		data-state={presentation.status}
+		style="opacity: 0;"
+		style:top={`${tooltipTop}px`}
+		style:left={`${tooltipLeft}px`}
 	>
 		{content}
 

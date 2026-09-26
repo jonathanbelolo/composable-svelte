@@ -33,6 +33,7 @@ describe('Accordion - Toggle Tests', () => {
 		await store.send({ type: 'itemToggled', id: '1' }, (state) => {
 			expect(state.expandedIds).toEqual(['1']);
 		});
+		await store.finish();
 	});
 
 	it('should toggle item from expanded to collapsed', async () => {
@@ -53,6 +54,7 @@ describe('Accordion - Toggle Tests', () => {
 		await store.send({ type: 'itemToggled', id: '1' }, (state) => {
 			expect(state.expandedIds).toEqual([]);
 		});
+		await store.finish();
 	});
 
 	it('should not toggle disabled item', async () => {
@@ -69,6 +71,7 @@ describe('Accordion - Toggle Tests', () => {
 		await store.send({ type: 'itemToggled', id: '1' }, (state) => {
 			expect(state.expandedIds).toEqual([]);
 		});
+		await store.finish();
 	});
 
 	it('should update expanded state correctly on toggle', async () => {
@@ -93,6 +96,7 @@ describe('Accordion - Toggle Tests', () => {
 		await store.send({ type: 'itemToggled', id: '1' }, (state) => {
 			expect(state.expandedIds).toEqual([]);
 		});
+		await store.finish();
 	});
 
 	it('should handle toggle of non-existent item gracefully', async () => {
@@ -108,6 +112,7 @@ describe('Accordion - Toggle Tests', () => {
 		await store.send({ type: 'itemToggled', id: 'non-existent' }, (state) => {
 			expect(state.expandedIds).toEqual([]);
 		});
+		await store.finish();
 	});
 });
 
@@ -135,6 +140,7 @@ describe('Accordion - Single vs Multiple Mode Tests', () => {
 		await store.send({ type: 'itemToggled', id: '3' }, (state) => {
 			expect(state.expandedIds).toEqual(['1', '2', '3']);
 		});
+		await store.finish();
 	});
 
 	it('should collapse others when expanding in single mode', async () => {
@@ -158,6 +164,7 @@ describe('Accordion - Single vs Multiple Mode Tests', () => {
 		await store.send({ type: 'itemToggled', id: '3' }, (state) => {
 			expect(state.expandedIds).toEqual(['3']);
 		});
+		await store.finish();
 	});
 
 	it('should maintain only one expanded item in single mode', async () => {
@@ -178,6 +185,7 @@ describe('Accordion - Single vs Multiple Mode Tests', () => {
 		await store.send({ type: 'itemToggled', id: '2' }, (state) => {
 			expect(state.expandedIds).toEqual(['2']);
 		});
+		await store.finish();
 	});
 
 	it('should allow collapsing current item in single mode', async () => {
@@ -194,6 +202,7 @@ describe('Accordion - Single vs Multiple Mode Tests', () => {
 		await store.send({ type: 'itemToggled', id: '1' }, (state) => {
 			expect(state.expandedIds).toEqual([]);
 		});
+		await store.finish();
 	});
 });
 
@@ -212,6 +221,7 @@ describe('Accordion - Collapsible Tests', () => {
 		await store.send({ type: 'itemToggled', id: '1' }, (state) => {
 			expect(state.expandedIds).toEqual([]);
 		});
+		await store.finish();
 	});
 
 	it('should prevent collapsing last item in non-collapsible mode', async () => {
@@ -230,6 +240,7 @@ describe('Accordion - Collapsible Tests', () => {
 			// Should remain expanded
 			expect(state.expandedIds).toEqual(['1']);
 		});
+		await store.finish();
 	});
 
 	it('should maintain at least one expanded in non-collapsible mode', async () => {
@@ -252,6 +263,7 @@ describe('Accordion - Collapsible Tests', () => {
 		await store.send({ type: 'itemToggled', id: '2' }, (state) => {
 			expect(state.expandedIds).toEqual(['2']);
 		});
+		await store.finish();
 	});
 
 	it('should enforce non-collapsible with itemCollapsed action', async () => {
@@ -268,6 +280,7 @@ describe('Accordion - Collapsible Tests', () => {
 			// Should remain expanded
 			expect(state.expandedIds).toEqual(['1']);
 		});
+		await store.finish();
 	});
 });
 
@@ -286,6 +299,7 @@ describe('Accordion - Explicit Expand/Collapse Tests', () => {
 		await store.send({ type: 'itemExpanded', id: '1' }, (state) => {
 			expect(state.expandedIds).toEqual(['1']);
 		});
+		await store.finish();
 	});
 
 	it('should do nothing if item already expanded', async () => {
@@ -301,6 +315,7 @@ describe('Accordion - Explicit Expand/Collapse Tests', () => {
 		await store.send({ type: 'itemExpanded', id: '1' }, (state) => {
 			expect(state.expandedIds).toEqual(['1']);
 		});
+		await store.finish();
 	});
 
 	it('should collapse item with itemCollapsed action', async () => {
@@ -316,6 +331,7 @@ describe('Accordion - Explicit Expand/Collapse Tests', () => {
 		await store.send({ type: 'itemCollapsed', id: '1' }, (state) => {
 			expect(state.expandedIds).toEqual([]);
 		});
+		await store.finish();
 	});
 
 	it('should do nothing if item already collapsed', async () => {
@@ -331,6 +347,7 @@ describe('Accordion - Explicit Expand/Collapse Tests', () => {
 		await store.send({ type: 'itemCollapsed', id: '1' }, (state) => {
 			expect(state.expandedIds).toEqual([]);
 		});
+		await store.finish();
 	});
 
 	it('should respect disabled state on explicit expand', async () => {
@@ -346,6 +363,7 @@ describe('Accordion - Explicit Expand/Collapse Tests', () => {
 		await store.send({ type: 'itemExpanded', id: '1' }, (state) => {
 			expect(state.expandedIds).toEqual([]);
 		});
+		await store.finish();
 	});
 
 	it('should respect disabled state on explicit collapse', async () => {
@@ -362,6 +380,7 @@ describe('Accordion - Explicit Expand/Collapse Tests', () => {
 			// Should remain expanded because it's disabled
 			expect(state.expandedIds).toEqual(['1']);
 		});
+		await store.finish();
 	});
 });
 
@@ -381,6 +400,7 @@ describe('Accordion - All Expand/Collapse Tests', () => {
 		await store.send({ type: 'allExpanded' }, (state) => {
 			expect(state.expandedIds).toEqual(['1', '2', '3']);
 		});
+		await store.finish();
 	});
 
 	it('should skip disabled items when expanding all', async () => {
@@ -398,6 +418,7 @@ describe('Accordion - All Expand/Collapse Tests', () => {
 		await store.send({ type: 'allExpanded' }, (state) => {
 			expect(state.expandedIds).toEqual(['1', '3']);
 		});
+		await store.finish();
 	});
 
 	it('should collapse all items in collapsible mode', async () => {
@@ -414,6 +435,7 @@ describe('Accordion - All Expand/Collapse Tests', () => {
 		await store.send({ type: 'allCollapsed' }, (state) => {
 			expect(state.expandedIds).toEqual([]);
 		});
+		await store.finish();
 	});
 
 	it('should not allow collapse all in non-collapsible mode', async () => {
@@ -431,6 +453,7 @@ describe('Accordion - All Expand/Collapse Tests', () => {
 			// Should remain unchanged
 			expect(state.expandedIds).toEqual(['1', '2']);
 		});
+		await store.finish();
 	});
 
 	it('should not expand all in single mode', async () => {
@@ -448,6 +471,7 @@ describe('Accordion - All Expand/Collapse Tests', () => {
 			// Should remain empty in single mode
 			expect(state.expandedIds).toEqual([]);
 		});
+		await store.finish();
 	});
 });
 
@@ -466,8 +490,7 @@ describe('Accordion - Callback Tests', () => {
 
 		await store.send({ type: 'itemToggled', id: '1' });
 
-		// Wait for effect to execute
-		await new Promise(resolve => setTimeout(resolve, 0));
+		await store.finish();
 
 		expect(onExpand).toHaveBeenCalledWith('1');
 	});
@@ -486,8 +509,7 @@ describe('Accordion - Callback Tests', () => {
 
 		await store.send({ type: 'itemToggled', id: '1' });
 
-		// Wait for effect to execute
-		await new Promise(resolve => setTimeout(resolve, 0));
+		await store.finish();
 
 		expect(onCollapse).toHaveBeenCalledWith('1');
 	});
@@ -507,8 +529,7 @@ describe('Accordion - Callback Tests', () => {
 
 		await store.send({ type: 'allExpanded' });
 
-		// Wait for effects to execute
-		await new Promise(resolve => setTimeout(resolve, 10));
+		await store.finish();
 
 		expect(onExpand).toHaveBeenCalledTimes(2);
 		expect(onExpand).toHaveBeenCalledWith('1');
@@ -530,8 +551,7 @@ describe('Accordion - Callback Tests', () => {
 
 		await store.send({ type: 'allCollapsed' });
 
-		// Wait for effects to execute
-		await new Promise(resolve => setTimeout(resolve, 10));
+		await store.finish();
 
 		expect(onCollapse).toHaveBeenCalledTimes(2);
 		expect(onCollapse).toHaveBeenCalledWith('1');
@@ -559,6 +579,7 @@ describe('Accordion - Items Change Tests', () => {
 			expect(state.items).toEqual(newItems);
 			expect(state.items.length).toBe(2);
 		});
+		await store.finish();
 	});
 
 	it('should preserve existing expanded state when items change', async () => {
@@ -583,6 +604,7 @@ describe('Accordion - Items Change Tests', () => {
 			// Should preserve expanded state for items 1 and 2
 			expect(state.expandedIds).toEqual(['1', '2']);
 		});
+		await store.finish();
 	});
 
 	it('should remove expanded IDs for items that no longer exist', async () => {
@@ -607,5 +629,6 @@ describe('Accordion - Items Change Tests', () => {
 			// Should remove '2' from expandedIds
 			expect(state.expandedIds).toEqual(['1', '3']);
 		});
+		await store.finish();
 	});
 });

@@ -85,7 +85,7 @@ describe('Input', () => {
 	it('dispatches its action on input', async () => {
 		const dispatched: unknown[] = [];
 		const container = await mountIn(Input, {
-			action: (v: string) => ({ type: 'changed', value: v }),
+			action: { type: 'changed', value: 'stale' },
 			dispatch: (a: unknown) => dispatched.push(a)
 		});
 
@@ -94,7 +94,11 @@ describe('Input', () => {
 		input.dispatchEvent(new Event('input', { bubbles: true }));
 		await settle();
 
-		expect(dispatched.length).toBeGreaterThan(0);
+		expect(dispatched).toEqual([{ type: 'changed', value: 'typed' }]);
+		input.value = '';
+		input.dispatchEvent(new Event('input', { bubbles: true }));
+		await settle();
+		expect(dispatched).toEqual([{ type: 'changed', value: 'typed' }, { type: 'changed', value: '' }]);
 	});
 });
 

@@ -1,0 +1,83 @@
+{
+  "checkedAt": "2026-09-26T13:21:44.160Z",
+  "archives": [
+    {
+      "name": "@composable-svelte/core",
+      "version": "0.13.1",
+      "bytesMatch": true,
+      "sha256Match": true,
+      "integrityMatch": true
+    },
+    {
+      "name": "@composable-svelte/auth",
+      "version": "0.3.0",
+      "bytesMatch": true,
+      "sha256Match": true,
+      "integrityMatch": true
+    },
+    {
+      "name": "@composable-svelte/charts",
+      "version": "0.3.0",
+      "bytesMatch": true,
+      "sha256Match": true,
+      "integrityMatch": true
+    }
+  ],
+  "installed": [
+    {
+      "name": "@composable-svelte/core",
+      "files": 1258,
+      "mismatchedOrMissing": 0,
+      "extraFiles": 0
+    },
+    {
+      "name": "@composable-svelte/auth",
+      "files": 404,
+      "mismatchedOrMissing": 0,
+      "extraFiles": 0
+    },
+    {
+      "name": "@composable-svelte/charts",
+      "files": 53,
+      "mismatchedOrMissing": 0,
+      "extraFiles": 0
+    }
+  ],
+  "lock": {
+    "core": {
+      "version": "0.13.1",
+      "resolved": "file:../artifacts-b/composable-svelte-core-0.13.1.tgz",
+      "integrity": "sha512-b+Il+IqyrK4A7oRN/F5Z16XItAwZ0JBZaBefukX95Hx5VbVf26UvjE0tKpsR+WDKcCL7pP1gqo3y677CgjW1vA=="
+    },
+    "auth": {
+      "version": "0.3.0",
+      "resolved": "file:../artifacts-b/composable-svelte-auth-0.3.0.tgz",
+      "integrity": "sha512-XklpQBWFa+66759L6B2acDWCS7xtZHDL+E879rweOKm7LjrbwvWlIFYl0dyjru9bBRcSY0XxCSNwcqXQUOLb7g=="
+    },
+    "charts": {
+      "version": "0.3.0",
+      "resolved": "file:../artifacts-b/composable-svelte-charts-0.3.0.tgz",
+      "integrity": "sha512-1EjOkkdWX/tEjG89D+/OgtcByqraWFYqW+xLs+6WvFV3hy7KcSbiLGBxcN84tZcR3pHcDgeoZWKTdmS8B9Yudw=="
+    }
+  },
+  "lockSha256": "1ab83d85b7d632597dbe97fbfa75cecdeee34b350f6214660a836cc78cda84f6",
+  "lockUnchangedFromPreReview": true,
+  "ancestorNodeModules": [
+    {
+      "p": "/private/tmp/node_modules",
+      "exists": false
+    },
+    {
+      "p": "/private/node_modules",
+      "exists": false
+    },
+    {
+      "p": "/node_modules",
+      "exists": false
+    },
+    {
+      "p": "/private/tmp/composable-final-authoring/node_modules",
+      "exists": false
+    }
+  ]
+}

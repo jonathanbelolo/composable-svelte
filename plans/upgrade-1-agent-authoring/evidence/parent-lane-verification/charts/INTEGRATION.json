@@ -1,0 +1,219 @@
+{
+  "archiveSha256": "b201cdb7696d2fae29760c50b471e3edc2e31522c4bb4c7ca5a4850ce11d21e3",
+  "manifestSha256": "1c1878dc6cc4f2d2914f14eef5270bd80fc9e9b273a52f1e70fa3e790d944d3b",
+  "tarSha256": "4a32006c2e674940a4df31c39e3c3823e1b9192fd24de290425e130401c8fe98",
+  "changes": [
+    {
+      "path": "packages/charts/CHANGELOG.md",
+      "before": "4b0dc30223ab0c4cc6f241f1c36c3eab9c78c72884e99ba6fd3d3795e75b3b07",
+      "after": "c57935ab128f21b0fd211b90597e2a23e2aa9e2af934dfca40c8e6aeb9f65ec3"
+    },
+    {
+      "path": "packages/charts/INTEGRATION.md",
+      "before": "e95a1b85759f5b8b9f0648c07f6bef90994b72126444eb2dc9ff85989d1cc6ec",
+      "after": "22e198c0a385bfb8042e27afb0579aedeae4669264d79ee44ae93e68385a3ca7"
+    },
+    {
+      "path": "packages/charts/README.md",
+      "before": "93a93cc4174c86b3201d053009d17d071bf062965d0f41890f2686eecc077e08",
+      "after": "383af38852d7fe531e794ac9afc53454979777eb9bf5dc8babccf8135078ad31"
+    },
+    {
+      "path": "packages/charts/fixtures/installed-consumer/README.md",
+      "before": null,
+      "after": "64815db6a8f479daf4c1b2100c299224fe57bfe6d8d8def965ff237d2cc1c7d1"
+    },
+    {
+      "path": "packages/charts/fixtures/installed-consumer/browser.config.mjs",
+      "before": null,
+      "after": "896ffd29b84bea083f5034314bdf98dfc06a455ce54af3acc2eb493363decd77"
+    },
+    {
+      "path": "packages/charts/fixtures/installed-consumer/index.html",
+      "before": null,
+      "after": "a81e2c48d3668c60ee4aeed2a0807b0e75a27b62b7e472c0ad983b4413597b47"
+    },
+    {
+      "path": "packages/charts/fixtures/installed-consumer/src/App.svelte",
+      "before": null,
+      "after": "877f95a25282e011f94fe3496b61e7345ef08259c64378491e9c401fed52714b"
+    },
+    {
+      "path": "packages/charts/fixtures/installed-consumer/src/ChartFeature.svelte",
+      "before": null,
+      "after": "7da8de01c54e0669dc5bd2f292ce1b40edf451888cf4ec4cc4c65d8a428be524"
+    },
+    {
+      "path": "packages/charts/fixtures/installed-consumer/src/StandaloneTypes.ts",
+      "before": null,
+      "after": "3bce815a964f727d9e4a5fb88ea1891dadebb87ab7ba11bbc4e493b93486610f"
+    },
+    {
+      "path": "packages/charts/fixtures/installed-consumer/src/installed.browser.test.ts",
+      "before": null,
+      "after": "c0e63c18186beb72c0632d450ee61e33069dd68d056079946313e18bfd46576b"
+    },
+    {
+      "path": "packages/charts/fixtures/installed-consumer/src/main.ts",
+      "before": null,
+      "after": "b302b5df854e4feac0b9dc7963c1b9d39fa444bc940608df2512ac5cb691d38e"
+    },
+    {
+      "path": "packages/charts/fixtures/installed-consumer/src/model.ts",
+      "before": null,
+      "after": "89250b231835ba709ebc839814c4176e0693dbcf00f9f57562da836b2316faf9"
+    },
+    {
+      "path": "packages/charts/fixtures/installed-consumer/ssr.mjs",
+      "before": null,
+      "after": "04ffc3975c95cc1b9ed6db1ff2af0a51b9fa362c17563d04c672fe9faa095f87"
+    },
+    {
+      "path": "packages/charts/fixtures/installed-consumer/tsconfig.json",
+      "before": null,
+      "after": "94aa9491a13b10b7f8d9151b4fe4dc648af9c39cd75494aadd609cebe6cd7e4d"
+    },
+    {
+      "path": "packages/charts/fixtures/installed-consumer/tsconfig.nodenext.json",
+      "before": null,
+      "after": "89d23be363526b2fbc0b78d3155dbfbb3b059f7206646d128c1960ce5d6498a0"
+    },
+    {
+      "path": "packages/charts/fixtures/installed-consumer/verify.mjs",
+      "before": null,
+      "after": "6b05253810f2e7b82822893551f883767299eb048e5e146472754dc5cc69e7b9"
+    },
+    {
+      "path": "packages/charts/fixtures/installed-consumer/vite.config.mjs",
+      "before": null,
+      "after": "ee012d79f58ca88e9b8e0b0eb2d931d8a2b9fff77af8e4ce9c1249bd7d6871e2"
+    },
+    {
+      "path": "packages/charts/src/lib/components/Chart.svelte",
+      "before": "e77c84b632af42976f0bb7cdea215366c4127273c15c022f9d3cd15014bf9018",
+      "after": "5e0b1fb41abe773e341454c2e40fcd0f8780a685c2a51b49ee963a48c978ceb4"
+    },
+    {
+      "path": "packages/charts/src/lib/components/ChartPrimitive.svelte",
+      "before": "a09a9e401f226bc3bd9a2049062bc42d74423ee9fb7dd8de53f7356360e6d90c",
+      "after": "da3cfc773b58cb77b7eed0ab6717eab33e00474a2e145f2809ec0b56336359f1"
+    },
+    {
+      "path": "packages/charts/src/lib/index.ts",
+      "before": "702ceb9f31a0a9d726aea9aa7c2d45d8c3362be9bc30efbf2fc724aa760d286c",
+      "after": "aef385629824fc45a2b682ac0d4fa0be6d87a5368cdab7a73bdd8ca936520e28"
+    },
+    {
+      "path": "packages/charts/src/lib/reducers/chart.reducer.ts",
+      "before": "bdbbb61937753bcc2e7ba29678a95aa8a8ff12bea3e78990dc1b1a57494610e2",
+      "after": "965693d48ed5f162a5d0afb61bebae15bfa4709bd99e887350f46bfda5c9777b"
+    },
+    {
+      "path": "packages/charts/src/lib/types/chart.types.ts",
+      "before": "11e7b17fe83e0b5ea4986b4851a74d5920f03549d4a70146cc6ca041f09217c2",
+      "after": "c8763bab45e8a4c76cd3cecccf87b9a0647b76bcfd6840f32438fb43640397f8"
+    },
+    {
+      "path": "packages/charts/src/lib/utils/plot-builder.ts",
+      "before": "35b2624c2490c5fb11dc8f6a82498c9bb18b3f7954c35a79fe81fde018395513",
+      "after": "bc79a7e76cb0706d609be62ec324275e8ecc7c9e3a372552232d1d042c61a06d"
+    },
+    {
+      "path": "packages/charts/tests/chart-managed-proof.test.svelte.ts",
+      "before": null,
+      "after": "8de3c3beb823cf39b656921b6007992f5181ffa5407d25ad36cc313e5310f2e4"
+    },
+    {
+      "path": "packages/charts/tests/doc-examples/keyboard-chart.svelte",
+      "before": "77c5866178d6356bb5ea0d61cc5217f58ca8caa3199b397b0bad388f4868c718",
+      "after": "340be340ff87b9a3592ea5182b765fb9181162e541b8006ee8f331492f6ac779"
+    },
+    {
+      "path": "packages/charts/tests/fixtures/ManagedChartFeatureHost.svelte",
+      "before": null,
+      "after": "f7f1721bfa3af9f18ccb1aa3078319451b0e83b684f07826bb159ba2f2667ae7"
+    },
+    {
+      "path": "packages/charts/tests/fixtures/ManagedChartRecipeApp.svelte",
+      "before": null,
+      "after": "ff807ca4c7c8b1cdf719d3a5637fbf2bbca0c165b574455084d9c443a51cba04"
+    },
+    {
+      "path": "packages/charts/tests/fixtures/SidebarChartFeatureHost.svelte",
+      "before": null,
+      "after": "8ca74b9a39ae51e8c4d7227ed5b350e146cb09379d6217b21348e72cc7e3d62e"
+    },
+    {
+      "path": "packages/charts/tests/fixtures/StandaloneChartHost.svelte",
+      "before": null,
+      "after": "60ae76a225f23884587966fe6e5069d904d12dae99b16d0917b00e7b28e94d68"
+    },
+    {
+      "path": "packages/charts/tests/fixtures/StandalonePrimitiveHost.svelte",
+      "before": null,
+      "after": "d73c4d8da44b01501eb2ff12c00f5e437411ab83eeb31886eafbae06891bb651"
+    },
+    {
+      "path": "packages/charts/tests/fixtures/chart-type-contract.ts",
+      "before": null,
+      "after": "8701ba31ab9768edac6f6d669c7f0328803d9cec4bc1085357005fb014b1cc31"
+    },
+    {
+      "path": "packages/charts/tests/fixtures/managed-chart-recipe-model.ts",
+      "before": null,
+      "after": "6876691219fade25f8830617d1d45d8b95097db19e1108c218b27bd2f40bff70"
+    },
+    {
+      "path": "packages/charts/tests/fixtures/managed-chart-recipe-views.ts",
+      "before": null,
+      "after": "cafc54d0cd968b7288c7d2e8725c364f946c91451f47d8def039e115a5df5c89"
+    },
+    {
+      "path": "packages/charts/tests/test-components/SkillExamples.svelte",
+      "before": "56dce4bde35e25f660b8d0dbbb437c29e244607f238aeccf885349679b0f78cb",
+      "after": "04a1262f273b010a6550681cbba516397be4390d915edc1428233551ee4355a8"
+    },
+    {
+      "path": "packages/charts/vitest.config.ts",
+      "before": "f54df5665b21cbb415ebcca661c5115a83c24fbed0b0715c6f219d82f31754d5",
+      "after": "08b54f0803cd7d14b8da798ed408597d9c8b25b8085a98d290072b202b131601"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/EVIDENCE-CHARTS.md",
+      "before": null,
+      "after": "c82e66251c09e5514bdd1e1120d4be5239f95377fdd4e94dddb71115a65426c9"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/OPUS-REVIEW-CHARTS-B.md",
+      "before": null,
+      "after": "13f83d7c62a6eb8225e57e98a94cc3d029235372dcbd4749c1e39eb483a88c56"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/OPUS-REVIEW-CHARTS-C.md",
+      "before": null,
+      "after": "cf3980620dec932e71dd8c32bae2df3307cf8b0dc5696121358db75f67461548"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/OPUS-REVIEW-CHARTS.md",
+      "before": null,
+      "after": "868ad6794074ca07bf8d8a00f2cb20e58a7a10a13fcba4079931eefe03a36e1d"
+    }
+  ],
+  "mainVerification": {
+    "build": "pass",
+    "typecheck": "pass",
+    "svelteCheck": "0 errors, 0 warnings",
+    "serialJsdomTests": 246,
+    "repoGuidanceChecks": 17
+  },
+  "rootFollowups": [
+    "final versions/peers",
+    "T5 and mount-build follow-up",
+    "final installed browser verification",
+    "shared checker profiles"
+  ],
+  "rootCompleted": [
+    "Chart skill row generic sweep",
+    "CI installed chart native browser step"
+  ]
+}

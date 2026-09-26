@@ -1,3 +1,5 @@
+import { readResponseJson, isCancellation } from './transport.js';
+
 /**
  * Turning an HTTP failure into an {@link AuthError}.
  *
@@ -102,17 +104,18 @@ function headerRecord(headers: Headers): Record<string, string> {
  *
  * A failing response very often is not JSON at all — an HTML error page from a
  * proxy, an empty body, a plain-text stack trace. None of that should turn a
- * clean `invalid_credentials` into a parse exception, so anything unreadable is
- * simply absent.
+ * clean `invalid_credentials` into a parse exception, so malformed JSON is simply absent. Stream failures and cancellations
+ * retain their transport meaning.
  */
-async function readErrorBody(response: Response): Promise<AuthErrorBody['error']> {
+async function readErrorBody(response: Response, signal?: AbortSignal): Promise<AuthErrorBody['error']> {
 	try {
-		const parsed: unknown = await response.json();
+		const parsed: unknown = await readResponseJson(response, signal);
 		if (typeof parsed !== 'object' || parsed === null) return undefined;
 
 		const body = parsed as AuthErrorBody;
 		return typeof body.error === 'object' && body.error !== null ? body.error : undefined;
-	} catch {
+	} catch (error) {
+		if (isCancellation(error, signal) || !(error instanceof SyntaxError)) throw error;
 		return undefined;
 	}
 }
@@ -125,9 +128,10 @@ async function readErrorBody(response: Response): Promise<AuthErrorBody['error']
  */
 export async function authErrorFromResponse(
 	response: Response,
-	fallbackMessage: string
+	fallbackMessage: string,
+	signal?: AbortSignal
 ): Promise<AuthError> {
-	const body = await readErrorBody(response);
+	const body = await readErrorBody(response, signal);
 	const headers = headerRecord(response.headers);
 
 	const code: AuthErrorCode =
@@ -135,17 +139,18 @@ export async function authErrorFromResponse(
 			? (body.code as AuthErrorCode)
 			: fromStatus(response.status);
 
-	const message = body?.message ?? fallbackMessage;
+	const message = typeof body?.message === 'string' && body.message.length > 0 ? body.message : fallbackMessage;
 
 	switch (code) {
 		case 'mfa_required': {
 			// Without a challenge id there is nothing to submit a code against, so
 			// this is not a usable MFA challenge however the backend labelled it.
-			if (body?.challenge_id === undefined) {
+			if (typeof body?.challenge_id !== 'string') {
 				return { code: 'unknown', message, status: response.status };
 			}
 
-			const methods = (body.methods ?? ['totp']).filter((m) => KNOWN_METHODS.has(m));
+			const rawMethods = Array.isArray(body?.methods) ? body.methods : ['totp'];
+			const methods = rawMethods.filter((m) => KNOWN_METHODS.has(m));
 
 			return {
 				code: 'mfa_required',
@@ -162,7 +167,11 @@ export async function authErrorFromResponse(
 			// delay-seconds and HTTP-date forms and answers in milliseconds.
 			const headerMs = parseRetryAfter(headers);
 			const seconds =
-				headerMs !== null ? Math.ceil(headerMs / 1000) : body?.retry_after_seconds;
+				headerMs !== null
+					? Math.ceil(headerMs / 1000)
+					: typeof body?.retry_after_seconds === 'number' && Number.isFinite(body.retry_after_seconds)
+						? body.retry_after_seconds
+						: undefined;
 
 			return {
 				code: 'rate_limited',
@@ -175,21 +184,21 @@ export async function authErrorFromResponse(
 			return {
 				code: 'account_locked',
 				message,
-				...(body?.locked_until !== undefined && { until: body.locked_until })
+				...(typeof body?.locked_until === 'string' && { until: body.locked_until })
 			};
 
 		case 'email_unverified':
 			return {
 				code: 'email_unverified',
 				message,
-				...(body?.email !== undefined && { email: body.email })
+				...(typeof body?.email === 'string' && { email: body.email })
 			};
 
 		case 'email_taken':
 			return {
 				code: 'email_taken',
 				message,
-				...(body?.email !== undefined && { email: body.email })
+				...(typeof body?.email === 'string' && { email: body.email })
 			};
 
 		case 'reauthentication_required': {
@@ -198,7 +207,8 @@ export async function authErrorFromResponse(
 			// carrying no way to satisfy it would strand the user on a prompt with
 			// nothing to answer. Falls back to a password challenge, the only
 			// method every backend can offer.
-			const methods = (body?.methods ?? ['password']).filter((m) =>
+			const rawMethods = Array.isArray(body?.methods) ? body.methods : ['password'];
+			const methods = rawMethods.filter((m) =>
 				REAUTH_METHODS.has(m)
 			) as ReauthenticationRequiredError['methods'];
 
@@ -213,7 +223,7 @@ export async function authErrorFromResponse(
 			return {
 				code: 'oauth_denied',
 				message,
-				...(body?.provider !== undefined && { provider: body.provider })
+				...(typeof body?.provider === 'string' && { provider: body.provider })
 			};
 
 		// `oauth_state_mismatch` needs no arm: it carries nothing beyond

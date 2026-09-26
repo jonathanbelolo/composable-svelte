@@ -23,9 +23,10 @@
     product: Product;
     viewMode: 'grid' | 'list';
     onclick?: () => void;
+    onFavoriteToggle?: ((productId: string) => void) | undefined;
   }
 
-  let { product, viewMode, onclick }: ProductCardProps = $props();
+  let { product, viewMode, onclick, onFavoriteToggle }: ProductCardProps = $props();
 
   // ============================================================================
   // Helpers
@@ -62,7 +63,7 @@
       {#if product.isFavorite}
         <Tooltip content="Remove from favorites" delay={300}>
           {#snippet children()}
-            <Button variant="ghost" size="icon" class="h-10 w-10 rounded-full bg-background/90 backdrop-blur-sm hover:bg-background shadow-lg hover:shadow-xl">
+            <Button onclick={() => onFavoriteToggle?.(product.id)} aria-label={product.isFavorite ? "Remove from favorites" : "Add to favorites"} variant="ghost" size="icon" class="h-10 w-10 rounded-full bg-background/90 backdrop-blur-sm hover:bg-background shadow-lg hover:shadow-xl">
               <span class="text-xl">❤️</span>
             </Button>
           {/snippet}
@@ -70,7 +71,7 @@
       {:else}
         <Tooltip content="Add to favorites" delay={300}>
           {#snippet children()}
-            <Button variant="ghost" size="icon" class="h-10 w-10 rounded-full bg-background/90 backdrop-blur-sm hover:bg-background shadow-lg hover:shadow-xl">
+            <Button onclick={() => onFavoriteToggle?.(product.id)} aria-label={product.isFavorite ? "Remove from favorites" : "Add to favorites"} variant="ghost" size="icon" class="h-10 w-10 rounded-full bg-background/90 backdrop-blur-sm hover:bg-background shadow-lg hover:shadow-xl">
               <span class="text-xl">🤍</span>
             </Button>
           {/snippet}
@@ -135,7 +136,7 @@
       {#if product.isFavorite}
         <Tooltip content="Remove from favorites" delay={300}>
           {#snippet children()}
-            <Button variant="ghost" size="icon" class="h-10 w-10 rounded-full shadow-lg hover:shadow-xl">
+            <Button onclick={() => onFavoriteToggle?.(product.id)} aria-label={product.isFavorite ? "Remove from favorites" : "Add to favorites"} variant="ghost" size="icon" class="h-10 w-10 rounded-full shadow-lg hover:shadow-xl">
               <span class="text-xl">❤️</span>
             </Button>
           {/snippet}
@@ -143,7 +144,7 @@
       {:else}
         <Tooltip content="Add to favorites" delay={300}>
           {#snippet children()}
-            <Button variant="ghost" size="icon" class="h-10 w-10 rounded-full shadow-lg hover:shadow-xl">
+            <Button onclick={() => onFavoriteToggle?.(product.id)} aria-label={product.isFavorite ? "Remove from favorites" : "Add to favorites"} variant="ghost" size="icon" class="h-10 w-10 rounded-full shadow-lg hover:shadow-xl">
               <span class="text-xl">🤍</span>
             </Button>
           {/snippet}

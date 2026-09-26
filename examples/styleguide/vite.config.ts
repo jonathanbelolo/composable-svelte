@@ -5,6 +5,8 @@ import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [svelte()],
+  // Compile Svelte icons normally; discover the graph dependency before browser tests start.
+  optimizeDeps: { exclude: ['lucide-svelte'], include: ['@xyflow/svelte'] },
   resolve: {
     alias: {
       // No alias for @composable-svelte/core: it resolves through the workspace

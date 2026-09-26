@@ -1,0 +1,40 @@
+app-a check exit=0
+app-a test exit=0
+app-a test:ssr exit=0
+app-a build exit=0
+app-a test:browser exit=0
+ok   app-a POSITIVE exact registered chat-code-media bytes supplied externally exit=0 pass=true 
+ok   app-a DEVFEEDBACK bundled:chat-code-media analysis-only exit=0 pass=false 
+ok   app-a NEG bundled:chat-code-media qualification refused exit=22 pass=false 
+ok   app-a NEG wrong --policy-sha256 exit=21 pass=false policy-pin-mismatch
+ok   app-a NEG wrong expected core 0.13.0 exit=21 pass=false core-version-mismatch
+ok   app-a NEG envelope expects checker 0.13.0 exit=0 pass=false 
+ok   app-a NEG envelope expects another policy pin exit=0 pass=false 
+ok   app-a NEG policy app-a-chat-only exit=21 pass=false unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import
+ok   app-a NEG policy app-a-chat-0.5.1 exit=21 pass=false unresolved-package-import,unresolved-package-import
+ok   app-a NEG policy app-a-code-0.5.1 exit=21 pass=false unresolved-package-import,unresolved-package-import
+ok   app-a NEG policy app-a-media-0.5.1 exit=21 pass=false unresolved-package-import,unresolved-package-import,unresolved-package-import
+ok   app-a NEG policy app-a-core-0.13.2 exit=21 pass=false unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import
+ok   app-a NEG policy app-a-svelte-5.57.0 exit=21 pass=false unresolved-package-import
+ok   app-a NEG policy app-a-missing-root exit=21 pass=false missing-root
+ok   app-a NEG starter approvals only (exact bundled starter bytes) exit=21 pass=false unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import
+ok   app-a NEG labeled copy: unapproved package import exit=21 pass=false unresolved-package-import
+ok   app-a NEG labeled copy: installed core 0.13.2 exit=21 pass=false unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import
+ok   app-a INFO original in-place app (file: specs, local transport) is not registry-shaped exit=21 pass=false unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import
+ok   app-b POSITIVE external Auth+Charts policy (never bundled) exit=0 pass=true 
+ok   app-b NEG wrong --policy-sha256 exit=21 pass=false policy-pin-mismatch
+ok   app-b NEG wrong expected core 0.13.0 exit=21 pass=false core-version-mismatch
+ok   app-b NEG envelope expects checker 0.13.0 exit=0 pass=false 
+ok   app-b NEG envelope expects another policy pin exit=0 pass=false 
+ok   app-b NEG exact bundled Auth-only bytes (Charts unapproved) exit=21 pass=false unresolved-package-import,unresolved-package-import
+ok   app-b NEG policy app-b-charts-0.3.1 exit=21 pass=false unresolved-package-import,unresolved-package-import
+ok   app-b NEG policy app-b-auth-0.3.1 exit=21 pass=false unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import
+ok   app-b NEG policy app-b-core-0.13.2 exit=21 pass=false unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import
+ok   app-b NEG policy app-b-svelte-5.57.0 exit=21 pass=false unresolved-package-import
+ok   app-b NEG policy app-b-missing-root exit=21 pass=false missing-root
+ok   app-b DEVFEEDBACK bundled:auth analysis-only rejects (Charts unapproved; no Auth+Charts profile) exit=21 pass=false unresolved-package-import,unresolved-package-import
+ok   app-b DEVFEEDBACK bundled:charts analysis-only rejects (Auth unapproved) exit=21 pass=false unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import
+ok   app-b NEG bundled:auth qualification refused exit=22 pass=false 
+ok   app-b NEG labeled copy: unapproved package import exit=21 pass=false unresolved-package-import
+ok   app-b INFO original in-place app (file: specs, read-only run) is not registry-shaped exit=21 pass=false unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import
+receipt /private/tmp/composable-final-checker/opus-final-review/app-gate/FINAL-APP-GATE-RECEIPT-6095ae2f.json sha256 a12dcdb9dd30db4a49f821020677a9b81310bc538f6e1f03634c71eea3e51b39 ALL_EXPECTATIONS_MET

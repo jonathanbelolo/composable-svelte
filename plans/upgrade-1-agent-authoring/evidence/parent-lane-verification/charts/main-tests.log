@@ -1,0 +1,45 @@
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/charts
+
+1:24:25 PM [vite-plugin-svelte] tests/chart-managed-proof.test.svelte.ts:129:18 This reference only captures the initial value of `config`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally
+ ✓ tests/chart-managed-proof.test.svelte.ts (17 tests) 1331ms
+ ✓ tests/selection-callback.test.ts (9 tests) 6847ms
+     ✓ reports a selection  508ms
+     ✓ reports a cleared selection  757ms
+     ✓ stays silent through unrelated dispatches  781ms
+     ✓ stays silent when a selection is re-made identically  1260ms
+     ✓ stays silent when clearing an already-empty selection  1006ms
+     ✓ stays silent when a range is re-selected identically  1259ms
+     ✓ still reports a genuinely different range  757ms
+ ✓ tests/documented-options.test.ts (12 tests) 1914ms
+     ✓ animateZoomTransition honours the duration it is given  1369ms
+     ✓ enableAnimations={false} jumps straight to the target  511ms
+ ✓ tests/render-reaches-canvas.test.ts (3 tests) 1783ms
+     ✓ a resize changes the rendered SVG size  515ms
+     ✓ re-sorting the same rows redraws  505ms
+     ✓ moving the selection redraws  762ms
+ ✓ tests/keyboard.test.ts (14 tests) 1004ms
+ ✓ tests/brush-install.test.ts (3 tests) 765ms
+ ✓ tests/data-table.test.ts (12 tests) 708ms
+ ✓ tests/wcag-conformance.test.ts (8 tests) 667ms
+ ✓ tests/prop-changes.test.ts (1 test) 519ms
+     ✓ changing the y accessor redraws  518ms
+ ✓ tests/accessibility-markup.test.ts (5 tests) 338ms
+ ✓ tests/remaining-boundaries.test.ts (20 tests) 116ms
+ ✓ tests/selection-render.test.ts (19 tests) 51ms
+ ✓ tests/focus-mark.test.ts (15 tests) 45ms
+ ✓ tests/bar-category-order.test.ts (3 tests) 23ms
+ ✓ tests/binning-regression.test.ts (15 tests) 14ms
+ ✓ tests/chart.integration.test.ts (20 tests) 5ms
+ ✓ tests/focus.reducer.test.ts (33 tests) 3ms
+ ✓ tests/chart.reducer.test.ts (11 tests) 3ms
+ ✓ tests/brush-selection.test.ts (10 tests) 2ms
+ ✓ tests/contrast.test.ts (10 tests) 2ms
+ ✓ tests/pan.test.ts (6 tests) 2ms
+
+ Test Files  21 passed (21)
+      Tests  246 passed (246)
+   Start at  13:24:24
+   Duration  33.63s (transform 4.09s, setup 0ms, collect 11.06s, tests 16.14s, environment 4.68s, prepare 100ms)
+

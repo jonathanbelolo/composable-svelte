@@ -1,0 +1,4 @@
+
+> @composable-svelte/code@0.4.1 typecheck /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code
+> tsc --noEmit
+

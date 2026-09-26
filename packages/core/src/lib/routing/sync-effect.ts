@@ -33,6 +33,8 @@ function normalizeQueryString(query: string): string {
 	return query.split('&').sort().join('&');
 }
 
+
+
 /**
  * Options for URL sync effect.
  */
@@ -66,8 +68,14 @@ export interface URLSyncOptions {
  * Compares current URL with expected URL (from state).
  * If different, updates URL using history.pushState or history.replaceState.
  *
- * The effect includes metadata to prevent infinite loops when
- * browser navigation triggers actions that update state.
+ * Browser reads and resources are deferred to execution. Store destruction,
+ * a replacement sync, or browser traversal retires a pending debounced write.
+ * Replacement preserves history state; new entries start with null state.
+ * Existing fragments are preserved at settlement unless the target includes one.
+ * A factory is one cancellation channel per store, including scoped children.
+ * Use separate factories for independent channels; they still share the browser URL.
+ * Canonicalizing traversal responses must use replace:true until managed routing
+ * captures traversal provenance; pushing corrections can trap the Back button.
  *
  * @param serialize - Function to serialize state to URL path
  * @param options - URL sync options (replace, debounce)
@@ -103,58 +111,52 @@ export function createURLSyncEffect<State, Action>(
 	serialize: (state: State) => string,
 	options: URLSyncOptions = {}
 ): (state: State) => EffectType<Action> {
-	// Shared timeout ID for debouncing
-	let pendingTimeout: number | undefined;
-
-	return (state: State): EffectType<Action> => {
-		const expectedPath = serialize(state);
-		const currentPath = window.location.pathname;
-
-		// Serialize query params if provided
-		const expectedQuery = options.serializeQuery ? options.serializeQuery(state) : '';
-		const currentQuery = window.location.search.startsWith('?')
-			? window.location.search.slice(1)
-			: window.location.search;
-
-		// Normalize query strings for comparison (order-independent)
-		const expectedQueryNormalized = normalizeQueryString(expectedQuery);
-		const currentQueryNormalized = normalizeQueryString(currentQuery);
-
-		// Build full URLs for comparison
-		const expectedURL = expectedQueryNormalized
-			? `${expectedPath}?${expectedQueryNormalized}`
-			: expectedPath;
-		const currentURL = currentQueryNormalized ? `${currentPath}?${currentQueryNormalized}` : currentPath;
-
-		// No change needed
-		if (expectedURL === currentURL) {
-			return Effect.none();
-		}
-
-		// URL needs to be updated
-		return Effect.fireAndForget(() => {
-			// Metadata to prevent infinite loops
-			// Browser history sync will check this flag
-			const stateMetadata = { composableSvelteSync: true };
-
-			// Build URL to push (using original query order, not normalized)
-			const urlToPush = expectedQuery ? `${expectedPath}?${expectedQuery}` : expectedPath;
-
-			if (options.debounceMs) {
-				// Debounced update
-				if (pendingTimeout !== undefined) {
-					clearTimeout(pendingTimeout);
-				}
-				pendingTimeout = window.setTimeout(() => {
-					const method = options.replace ? 'replaceState' : 'pushState';
-					history[method](stateMetadata, '', urlToPush);
-					pendingTimeout = undefined;
-				}, options.debounceMs);
-			} else {
-				// Immediate update
-				const method = options.replace ? 'replaceState' : 'pushState';
-				history[method](stateMetadata, '', urlToPush);
+	// Identity is factory-local; resource ownership lives in each executing store.
+	const delay = options.debounceMs ?? 0;
+	if (typeof delay !== 'number' || !Number.isFinite(delay) || delay < 0) {
+		throw new TypeError('debounceMs must be a finite non-negative number');
+	}
+	// Factory allocation metadata survives independent module instances without a registry.
+	const identity = globalThis.crypto.getRandomValues(new Uint32Array(4));
+	const effectId = `composable-url-sync-${Array.from(identity, n => n.toString(16).padStart(8, '0')).join('')}`;
+	return (state) => {
+		const serializedPath = serialize(state);
+		const hashIndex = serializedPath.indexOf('#');
+		const expectedPath = hashIndex < 0 ? serializedPath : serializedPath.slice(0, hashIndex);
+		const explicitHash = hashIndex < 0 ? undefined : serializedPath.slice(hashIndex);
+		const expectedQuery = options.serializeQuery?.(state) ?? '';
+		const url = (expectedQuery ? `${expectedPath}?${expectedQuery}` : expectedPath) + (explicitHash ?? '');
+		return Effect.cancellable<Action>(effectId, async (_dispatch, signal) => {
+			if (signal?.aborted || typeof window === 'undefined') return;
+			const matches = () => window.location.pathname === expectedPath &&
+				normalizeQueryString(window.location.search.slice(1)) === normalizeQueryString(expectedQuery) &&
+				(explicitHash === undefined || window.location.hash === explicitHash);
+			// Even a matching target crosses the cancellation boundary, retiring a stale write.
+			if (matches()) return;
+			if (delay > 0) {
+				const interrupted = await new Promise<boolean>((resolve) => {
+					let settled = false;
+					const finish = (cancelled: boolean) => {
+						if (settled) return;
+						settled = true;
+						window.clearTimeout(timer);
+						window.removeEventListener('popstate', interrupt);
+						signal?.removeEventListener('abort', interrupt);
+						resolve(cancelled);
+					};
+					const interrupt = () => finish(true);
+					const timer = window.setTimeout(() => finish(false), delay);
+					window.addEventListener('popstate', interrupt);
+					signal?.addEventListener('abort', interrupt, { once: true });
+					if (signal?.aborted) interrupt();
+				});
+				if (interrupted || signal?.aborted) return;
 			}
+			if (signal?.aborted || matches()) return;
+			// pushState/replaceState do not emit popstate; no marker or history patch is needed.
+			const method = options.replace ? 'replaceState' : 'pushState';
+			const target = url.includes('#') ? url : url + window.location.hash;
+			window.history[method](options.replace ? window.history.state : null, '', target);
 		});
 	};
 }

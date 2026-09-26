@@ -1,0 +1,23 @@
+
+> @composable-svelte/maps@0.2.1 test:browser /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/maps
+> vitest run --config maps.browser.config.ts
+
+failed to load config from /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/maps/maps.browser.config.ts
+
+⎯⎯⎯⎯⎯⎯⎯ Startup Error ⎯⎯⎯⎯⎯⎯⎯⎯
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@vitest/browser-playwright' imported from /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/maps/node_modules/.vite-temp/maps.browser.config.ts.timestamp-1790329146216-c02354897e8428.mjs
+Did you mean to import "@vitest/browser-playwright/dist/index.js"?
+    at Object.getPackageJSONURL (node:internal/modules/package_json_reader:316:9)
+    at packageResolve (node:internal/modules/esm/resolve:768:81)
+    at moduleResolve (node:internal/modules/esm/resolve:858:18)
+    at defaultResolve (node:internal/modules/esm/resolve:990:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:757:20)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:734:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:317:38)
+    at #link (node:internal/modules/esm/module_job:208:49) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+
+
+
+ ELIFECYCLE  Command failed with exit code 1.

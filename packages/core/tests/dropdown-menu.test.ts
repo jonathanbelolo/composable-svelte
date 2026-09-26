@@ -33,7 +33,7 @@ describe('DropdownMenu', () => {
 				expect(state.highlightedIndex).toBe(-1);
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 		});
 
 		it('closes menu on second toggle', async () => {
@@ -50,7 +50,7 @@ describe('DropdownMenu', () => {
 				expect(state.isOpen).toBe(false);
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 		});
 
 		it('opens menu explicitly', async () => {
@@ -64,7 +64,7 @@ describe('DropdownMenu', () => {
 				expect(state.highlightedIndex).toBe(-1);
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 		});
 
 		it('closes menu explicitly', async () => {
@@ -78,7 +78,7 @@ describe('DropdownMenu', () => {
 				expect(state.highlightedIndex).toBe(-1);
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 		});
 
 		it('closes menu on escape', async () => {
@@ -92,7 +92,7 @@ describe('DropdownMenu', () => {
 				expect(state.highlightedIndex).toBe(-1);
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 		});
 	});
 
@@ -107,7 +107,7 @@ describe('DropdownMenu', () => {
 				expect(state.highlightedIndex).toBe(0); // First item (Edit)
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 		});
 
 		it('highlights last item on arrow up when nothing highlighted', async () => {
@@ -120,7 +120,7 @@ describe('DropdownMenu', () => {
 				expect(state.highlightedIndex).toBe(3); // Last enabled item (Archive)
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 		});
 
 		it('skips disabled items when navigating down', async () => {
@@ -138,7 +138,7 @@ describe('DropdownMenu', () => {
 				expect(state.highlightedIndex).toBe(0);
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 		});
 
 		it('skips separator items when navigating down', async () => {
@@ -156,7 +156,7 @@ describe('DropdownMenu', () => {
 				expect(state.highlightedIndex).toBe(3);
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 		});
 
 		it('skips separator items when navigating up', async () => {
@@ -174,7 +174,7 @@ describe('DropdownMenu', () => {
 				expect(state.highlightedIndex).toBe(1);
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 		});
 
 		it('navigates to first item on Home key', async () => {
@@ -191,7 +191,7 @@ describe('DropdownMenu', () => {
 				expect(state.highlightedIndex).toBe(0); // Edit
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 		});
 
 		it('navigates to last item on End key', async () => {
@@ -208,7 +208,7 @@ describe('DropdownMenu', () => {
 				expect(state.highlightedIndex).toBe(3); // Archive (last enabled)
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 		});
 
 		it('does nothing on arrow keys when menu is closed', async () => {
@@ -222,7 +222,7 @@ describe('DropdownMenu', () => {
 				expect(state.highlightedIndex).toBe(-1);
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 		});
 	});
 
@@ -237,7 +237,7 @@ describe('DropdownMenu', () => {
 				expect(state.highlightedIndex).toBe(1);
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 		});
 
 		it('ignores highlight on disabled item', async () => {
@@ -251,7 +251,7 @@ describe('DropdownMenu', () => {
 				expect(state.highlightedIndex).toBe(-1);
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 		});
 
 		it('ignores highlight on separator', async () => {
@@ -265,7 +265,7 @@ describe('DropdownMenu', () => {
 				expect(state.highlightedIndex).toBe(-1);
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 		});
 	});
 
@@ -291,7 +291,7 @@ describe('DropdownMenu', () => {
 			});
 
 			// Wait for effect to execute
-			store.assertNoPendingActions();
+			await store.finish();
 
 			expect(selectedItems).toHaveLength(1);
 			expect(selectedItems[0]!.id).toBe('1');
@@ -314,7 +314,7 @@ describe('DropdownMenu', () => {
 				expect(state.isOpen).toBe(true);
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 
 			// onSelect should not have been called
 			expect(selectedItems).toHaveLength(0);
@@ -336,7 +336,7 @@ describe('DropdownMenu', () => {
 				expect(state.isOpen).toBe(true);
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 
 			// onSelect should not have been called
 			expect(selectedItems).toHaveLength(0);
@@ -357,7 +357,7 @@ describe('DropdownMenu', () => {
 				expect(state.isOpen).toBe(false);
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 		});
 	});
 
@@ -398,7 +398,7 @@ describe('DropdownMenu', () => {
 				expect(state.isOpen).toBe(false);
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 
 			expect(selectedItems).toHaveLength(1);
 			expect(selectedItems[0]!.label).toBe('Archive');
@@ -430,7 +430,7 @@ describe('DropdownMenu', () => {
 				expect(state.isOpen).toBe(false);
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 
 			expect(selectedItems).toHaveLength(1);
 			expect(selectedItems[0]!.label).toBe('Duplicate');
@@ -458,7 +458,7 @@ describe('DropdownMenu', () => {
 				expect(state.highlightedIndex).toBe(-1);
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 		});
 	});
 
@@ -477,7 +477,7 @@ describe('DropdownMenu', () => {
 				expect(state.highlightedIndex).toBe(-1); // No items to highlight
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 		});
 
 		it('handles all disabled items', async () => {
@@ -495,7 +495,7 @@ describe('DropdownMenu', () => {
 				expect(state.highlightedIndex).toBe(-1); // No enabled items
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 		});
 
 		it('handles all separators', async () => {
@@ -513,7 +513,7 @@ describe('DropdownMenu', () => {
 				expect(state.highlightedIndex).toBe(-1); // No selectable items
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 		});
 
 		it('handles single enabled item', async () => {
@@ -533,7 +533,7 @@ describe('DropdownMenu', () => {
 				expect(state.highlightedIndex).toBe(0);
 			});
 
-			store.assertNoPendingActions();
+			await store.finish();
 		});
 	});
 });

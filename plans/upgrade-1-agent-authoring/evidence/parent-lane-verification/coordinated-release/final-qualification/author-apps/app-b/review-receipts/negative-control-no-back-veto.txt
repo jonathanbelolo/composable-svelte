@@ -1,0 +1,5 @@
+  ✘  1 [chromium] › tests/browser/dashboard.pw.ts:90:1 › browser Back after sign-in does not strand the signed-in account on an empty sign-in page (5.3s)
+    Error: [2mexpect([22m[31mpage[39m[2m).[22mtoHaveURL[2m([22m[32mexpected[39m[2m)[22m failed
+    Expected pattern: [32m/\/dashboard$/[39m
+    Received string:  [31m"http://127.0.0.1:5191/login"[39m
+  1 failed

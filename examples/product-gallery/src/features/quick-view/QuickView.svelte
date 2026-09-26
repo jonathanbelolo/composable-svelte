@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ScopedDestinationStore } from '@composable-svelte/core';
+  import type { PresentationView } from '@composable-svelte/core/application';
   import type { QuickViewState, QuickViewAction } from './quick-view.types.js';
   import type { Product } from '../../models/product.js';
   import { formatPrice } from '../../models/product.js';
@@ -9,7 +9,7 @@
   // ============================================================================
 
   interface QuickViewProps {
-    store: ScopedDestinationStore<QuickViewState, QuickViewAction>;
+    store: PresentationView<QuickViewState, QuickViewAction>;
     product: Product;
   }
 

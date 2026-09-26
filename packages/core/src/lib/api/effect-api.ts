@@ -11,6 +11,20 @@ import type { APIClient, APIRequest, APIResponse, InferResponse } from './types.
 // Effect.api() Implementation
 // ============================================================================
 
+function toAPIError(error: unknown): APIError {
+  if (error instanceof APIError) {
+    return error;
+  }
+  if (error instanceof Error) {
+    const normalized = new APIError(error.message, null, null, {}, false);
+    // Preserve the original name, stack and nested cause without changing the
+    // established APIError shape or making diagnostics enumerable payload data.
+    Object.defineProperty(normalized, 'cause', { value: error, configurable: true, writable: true });
+    return normalized;
+  }
+  return new APIError(String(error), null, null, {}, false);
+}
+
 /**
  * Create an effect for making an API call with success/failure handling.
  *
@@ -44,39 +58,22 @@ export function api<Request extends APIRequest<any>, SuccessAction, FailureActio
   onFailure: (error: APIError) => FailureAction
 ): EffectType<SuccessAction | FailureAction> {
   return Effect.run(async (dispatch) => {
+    let response: APIResponse<InferResponse<Request>>;
     try {
-      const response = await client.request<InferResponse<Request>>(request);
-      dispatch(onSuccess(response));
+      response = await client.request<InferResponse<Request>>(request);
     } catch (error: unknown) {
-      // Convert to APIError if needed
-      if (error instanceof APIError) {
-        dispatch(onFailure(error));
-      } else if (error instanceof Error) {
-        // Wrap unexpected errors
-        dispatch(onFailure(new APIError(
-          error.message,
-          null,
-          null,
-          {},
-          false
-        )));
-      } else {
-        // Unknown error type
-        dispatch(onFailure(new APIError(
-          String(error),
-          null,
-          null,
-          {},
-          false
-        )));
-      }
+      dispatch(onFailure(toAPIError(error)));
+      return;
     }
+
+    dispatch(onSuccess(response));
   });
 }
 
 /**
  * Create an effect for making an API call with only success handling.
- * Errors are ignored (fire-and-forget pattern).
+ * Request failures are ignored (fire-and-forget pattern).
+ * Success mapper and dispatch failures propagate to the effect executor.
  *
  * @param client - API client to use
  * @param request - API request to execute
@@ -97,17 +94,22 @@ export function apiFireAndForget<Request extends APIRequest<any>, SuccessAction>
   onSuccess: (response: APIResponse<InferResponse<Request>>) => SuccessAction
 ): EffectType<SuccessAction> {
   return Effect.run(async (dispatch) => {
+    let response: APIResponse<InferResponse<Request>>;
     try {
-      const response = await client.request<InferResponse<Request>>(request);
-      dispatch(onSuccess(response));
+      response = await client.request<InferResponse<Request>>(request);
     } catch {
-      // Ignore errors
+      return;
     }
+
+    dispatch(onSuccess(response));
   });
 }
 
 /**
  * Create an effect for making multiple API calls in parallel.
+ * Starts every request and reports the first settled rejection, like Promise.all.
+ * Other requests remain observed; failure does not abort caller-owned requests.
+ * Request cancellation remains governed by each request's signal.
  *
  * @param client - API client to use
  * @param requests - Array of API requests to execute
@@ -140,19 +142,18 @@ export function apiAll<Requests extends readonly APIRequest<any>[], SuccessActio
   onFailure: (error: APIError) => FailureAction
 ): EffectType<SuccessAction | FailureAction> {
   return Effect.run(async (dispatch) => {
+    let responses: {
+      [K in keyof Requests]: APIResponse<InferResponse<Requests[K]>>
+    };
     try {
-      const promises = requests.map(req => client.request(req));
-      const responses = await Promise.all(promises);
-      dispatch(onSuccess(responses as any));
+      const promises = requests.map(async req => client.request(req));
+      responses = (await Promise.all(promises)) as any;
     } catch (error: unknown) {
-      if (error instanceof APIError) {
-        dispatch(onFailure(error));
-      } else if (error instanceof Error) {
-        dispatch(onFailure(new APIError(error.message, null, null, {}, false)));
-      } else {
-        dispatch(onFailure(new APIError(String(error), null, null, {}, false)));
-      }
+      dispatch(onFailure(toAPIError(error)));
+      return;
     }
+
+    dispatch(onSuccess(responses));
   });
 }
 
@@ -174,6 +175,9 @@ declare module '../effect.js' {
 
     /**
      * Create an effect for making multiple API calls in parallel.
+ * Starts every request and reports the first settled rejection, like Promise.all.
+ * Other requests remain observed; failure does not abort caller-owned requests.
+ * Request cancellation remains governed by each request's signal.
      */
     apiAll: typeof apiAll;
   }

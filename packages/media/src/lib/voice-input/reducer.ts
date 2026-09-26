@@ -1,7 +1,7 @@
 import type { Reducer, EffectType } from '@composable-svelte/core';
 import type { VoiceInputState, VoiceInputAction, VoiceInputDependencies } from './types.js';
 import { Effect } from '@composable-svelte/core';
-import { createAudioManager } from './audio/audio-manager-registry.js';
+import { createAudioManager, deleteAudioManager, getAudioManager as getRegisteredAudioManager } from './audio/audio-manager-registry.js';
 
 /**
  * Voice Input Reducer
@@ -30,19 +30,14 @@ const VAD_SUBSCRIPTION = 'voice-input-vad';
  */
 const LEVEL_SUBSCRIPTION = 'voice-input-level';
 
-/**
- * Monotonic, not `Date.now()`.
- *
- * Two `requestMicrophonePermission` dispatches inside the same millisecond
- * produced the same id — reachable, since `activateConversationMode` dispatches
- * it from its ungranted branch with nothing debouncing. `createAudioManager`
- * overwrites the registry entry, so the first `AudioManager` was orphaned
- * holding a live `MediaStream` that nothing could ever reach to `cleanup()`.
- * Two `VoiceInput` instances mounting in one tick collided the same way, and
- * then one unmounting killed the other's microphone.
- */
-let _managerSeq = 0;
-
+// Resource identity allocation belongs to effect execution, never reduction.
+let managerSequence = 0;
+const SESSION_WORK = 'voice-input-session-work';
+function nextGeneration(value = 0): number {
+	if (!Number.isSafeInteger(value) || value < 0 || value === Number.MAX_SAFE_INTEGER)
+		throw new RangeError('Voice input generation exhausted or invalid');
+	return value + 1;
+}
 /** How often the VAD loop samples the analyser, in milliseconds. */
 const VAD_PERIOD_MS = 100;
 
@@ -62,19 +57,19 @@ interface RecordingDevice {
 	detectVoiceActivity(threshold?: number): boolean;
 }
 
-/** Start the recorder, reporting a failure as an action rather than throwing. */
-const startRecording = <A extends VoiceInputAction>(device: RecordingDevice): EffectType<A> =>
-	Effect.run<A>(async (dispatch) => {
+/** Device work and wall-clock sampling happen only when the effect executes. */
+const startRecording = (device: RecordingDevice & { stopRecording(): Promise<Blob> }, generation: number, stopPrevious = false): EffectType<VoiceInputAction> =>
+	Effect.inGroup(Effect.cancellable('voice-input-start', async (dispatch, signal) => {
 		try {
+			if (stopPrevious) await device.stopRecording();
+			if (signal?.aborted) return;
 			device.startRecording();
+			dispatch({ type: '_recordingStarted', generation, timestamp: Date.now() });
 		} catch (error) {
-			dispatch({
-				type: 'audioProcessingFailed',
-				error: error instanceof Error ? error.message : 'Recording failed'
-			} as A);
+			if (!signal?.aborted) dispatch({ type: '_operationFailed', generation, error: message(error, 'Recording failed') });
 		}
-	});
-
+	}), SESSION_WORK);
+function message(error: unknown, fallback: string): string { return error instanceof Error ? error.message : fallback; }
 /**
  * Own the level-meter interval.
  *
@@ -113,540 +108,213 @@ const vadMonitoring = <A extends VoiceInputAction>(device: RecordingDevice): Eff
 		return () => clearInterval(timer);
 	});
 
-export const voiceInputReducer: Reducer<
-	VoiceInputState,
-	VoiceInputAction,
-	VoiceInputDependencies
-> = (state, action, deps) => {
-	switch (action.type) {
-		// === Microphone Permission === //
+/** The microphone resource owns permission work as well as the acquired device. */
+const MICROPHONE_RESOURCE = 'voice-input-microphone';
 
-		case 'requestMicrophonePermission': {
-			_managerSeq += 1;
-			const managerId = `voice-input-${_managerSeq}`;
+/** Devices already released. A stop in flight at release keeps its segment but never restarts one. */
+const releasedDevices = new WeakSet<object>();
 
-			return [
-				{
-					...state,
-					status: 'requesting-permission',
-					_audioManagerId: managerId
-				},
-				Effect.run(async (dispatch) => {
-					try {
-						// Through the dependency, not the module import: acquiring a
-						// microphone is a device side effect, and this is the seam that
-						// lets a test drive the permission path at all.
-						const create = deps.createAudioManager ?? createAudioManager;
-						const manager = create(managerId);
-						await manager.requestMicrophone();
-						dispatch({
-							type: 'microphonePermissionGranted',
-							managerId
-						});
-					} catch (error) {
-						dispatch({
-							type: 'microphonePermissionDenied',
-							error: error instanceof Error ? error.message : 'Permission denied'
-						});
-					}
-				})
-			];
-		}
-
-	case 'microphonePermissionGranted': {
-		// If we're in push-to-talk mode, automatically start recording
-		// (user was holding button waiting for permission)
-		if (state.mode === 'push-to-talk') {
-			return [
-				{
-					...state,
-					permission: 'granted',
-					_audioManagerId: action.managerId
-				},
-				Effect.run(async (dispatch) => {
-					// Automatically start recording now that we have permission
-					dispatch({ type: 'startPushToTalkRecording' });
-				})
-			];
-		}
-
-		// The same handoff for conversation mode, which was missing entirely.
-		//
-		// `activateConversationMode` returns early when permission has not been
-		// granted yet — which is always true on a cold start — so without this the
-		// panel rendered, said "Listening…", and nothing was ever recording. The
-		// user saw a live-looking feature that did nothing.
-		if (state.mode === 'conversation') {
-			return [
-				{
-					...state,
-					permission: 'granted',
-					_audioManagerId: action.managerId
-				},
-				Effect.run(async (dispatch) => {
-					dispatch({ type: 'activateConversationMode' });
-				})
-			];
-		}
-
-		return [
-			{
-				...state,
-				status: 'ready',
-				permission: 'granted',
-				_audioManagerId: action.managerId
-			},
-			Effect.none()
-		];
+function releaseAudioManager(deps: VoiceInputDependencies, id: string, captured = deps.getAudioManager(id)): void {
+	if (!captured) return;
+	releasedDevices.add(captured);
+	if (getRegisteredAudioManager(id) === captured) {
+		deleteAudioManager(id);
+	} else if (deps.getAudioManager(id) === captured && deps.deleteAudioManager) {
+		deps.deleteAudioManager(id);
+	} else {
+		// An injected factory may not expose registry deletion. A late acquisition
+		// may also have been removed already: its newly acquired tracks still need
+		// cleanup through the captured device, independently of registry lookup.
+		captured.cleanup();
 	}
+}
 
-		case 'microphonePermissionDenied': {
-			return [
-				{
-					...state,
-					status: 'error',
-					permission: 'denied',
-					errorMessage: action.error
-				},
-				Effect.none()
-			];
-		}
-
-		// === Push-to-Talk Mode === //
-
-		case 'activatePushToTalk': {
-			return [
-				{
-					...state,
-					mode: 'push-to-talk'
-				},
-				Effect.none()
-			];
-		}
-
-		case 'startPushToTalkRecording': {
-			// Check if permission is granted
-			if (state.permission !== 'granted') {
-				return [
-					{ ...state, mode: 'push-to-talk' },
-					Effect.run(async (dispatch) => {
-						dispatch({ type: 'requestMicrophonePermission' });
-					})
-				];
-			}
-
-			const audioManager = deps.getAudioManager(state._audioManagerId!);
-			if (!audioManager) {
-				return [
-					{
-						...state,
-						status: 'error',
-						errorMessage: 'Audio manager not initialized'
-					},
-					Effect.none()
-				];
-			}
-
-			return [
-				{
-					...state,
-					mode: 'push-to-talk',
-					status: 'recording',
-					recordingStartTime: Date.now(),
-					audioLevel: 0,
-					// Push-to-talk is also an *escape* from conversation recording: the
-					// mic button is live while a conversation is running. Leaving the
-					// VAD state behind let auto-send keep firing while nominally in
-					// push-to-talk.
-					vadState: null,
-					// A new attempt clears the last one's error. Nothing else on any
-					// push-to-talk path cleared it, so a single failed transcription
-					// left the alert on screen for the rest of the session.
-					errorMessage: null
-				},
-				Effect.batch(
-					Effect.cancel(VAD_SUBSCRIPTION),
-					// Monitoring before recording, deliberately — see the same ordering
-					// note in `activateConversationMode`.
-					levelMonitoring(audioManager),
-					startRecording(audioManager)
-				)
-			];
-		}
-
-		case 'stopPushToTalkRecording': {
-			const audioManager = deps.getAudioManager(state._audioManagerId!);
-			if (!audioManager) {
-				return [state, Effect.none()];
-			}
-
-			return [
-				{
-					...state,
-					status: 'processing',
-					recordingStartTime: null
-				},
-				Effect.run(async (dispatch) => {
-					try {
-						const audioBlob = await audioManager.stopRecording();
-						dispatch({
-							type: 'audioProcessingComplete',
-							audioBlob
-						});
-					} catch (error) {
-						dispatch({
-							type: 'audioProcessingFailed',
-							error: error instanceof Error ? error.message : 'Processing failed'
-						});
-					}
-				})
-			];
-		}
-
-		case 'cancelPushToTalkRecording': {
-			// The `stopRecording()` call that used to sit here ran in the reducer
-			// body, outside any effect — the same purity violation the other two
-			// sites had, missed because this case was edited for `vadState` without
-			// looking six lines up. It is an effect now.
-			const audioManagerId = state._audioManagerId;
-
-			return [
-				{
-					...state,
-					status: 'idle',
-					mode: null,
-					recordingStartTime: null,
-					audioLevel: 0,
-					// Clearing this is what breaks the loop. Leaving it intact let
-					// silence keep accumulating to the auto-send threshold, which
-					// re-triggered the very failure being handled — a self-sustaining
-					// error cycle at roughly 1.5s.
-					vadState: null,
-					errorMessage: null
-				},
-				Effect.batch(
-					Effect.cancel(VAD_SUBSCRIPTION),
-					Effect.cancel(LEVEL_SUBSCRIPTION),
-					// Stop the recorder, but do *not* `cleanup()` the manager: cancelling
-					// an utterance must not release the microphone, or the next press
-					// re-prompts for permission. Only the explicit teardown does that.
-					Effect.run(async () => {
-						await deps.getAudioManager(audioManagerId!)?.stopRecording();
-					})
-				)
-			];
-		}
-
-		case 'audioLevelUpdated': {
-			return [
-				{
-					...state,
-					audioLevel: action.level
-				},
-				Effect.none()
-			];
-		}
-
-		case 'audioProcessingComplete': {
-			// This case was written for push-to-talk, where finishing an utterance
-			// ends the session. `autoSendTriggered` then routed conversation mode
-			// through it too — and conversation mode is a *continuing* session whose
-			// recorder that effect has already restarted.
-			//
-			// Resetting to `mode: null` there unmounted the panel (VoiceInput gates
-			// on `status === 'recording' || mode === 'conversation'`) while the
-			// microphone stayed live, `vadState` stayed populated and the VAD loop
-			// kept polling — so auto-send re-fired every 1.5s, one transcription
-			// round-trip and one bill each, with no UI left to stop it and the
-			// transcript history wiped by the mode change. The feature was unusable
-			// past its first sentence, and this batch is what made that path
-			// reachable by fixing the activation.
-			const continuing = state.mode === 'conversation';
-
-			return [
-				continuing
-					? {
-							...state,
-							// The recorder is already running again; reflect that rather
-							// than claiming idle.
-							status: 'recording',
-							audioLevel: 0,
-							errorMessage: null,
-							vadState: state.vadState
-								? { ...state.vadState, isSpeaking: false, silenceDuration: 0 }
-								: null
-						}
-					: {
-							...state,
-							status: 'idle',
-							mode: null,
-							recordingStartTime: null,
-							audioLevel: 0,
-							errorMessage: null,
-							vadState: null
-						},
-				Effect.batch(
-					// Push-to-talk is done with the device loops; conversation is not.
-					continuing ? Effect.none() : Effect.cancel(VAD_SUBSCRIPTION),
-					continuing ? Effect.none() : Effect.cancel(LEVEL_SUBSCRIPTION),
-					Effect.run(async (dispatch) => {
-						try {
-							// Transcribed here and only here. `autoSendTriggered` used to
-							// transcribe the same blob first and pass the result along,
-							// which this case then discarded in favour of its own second
-							// round-trip.
-							const transcript = await deps.transcribeAudio(action.audioBlob);
-							dispatch({ type: 'transcriptionCompleted', transcript });
-						} catch (error) {
-							dispatch({
-								type: 'audioProcessingFailed',
-								error: error instanceof Error ? error.message : 'Transcription failed'
-							});
-						}
-					})
-				)
-			];
-		}
-
-		case 'transcriptionCompleted': {
-			// Component will receive this action and call onTranscript(transcript)
-			return [state, Effect.none()];
-		}
-
-		case 'audioProcessingFailed': {
-			return [
-				{
-					...state,
-					status: 'error',
-					errorMessage: action.error,
-					mode: null,
-					recordingStartTime: null,
-					audioLevel: 0,
-					// Clearing this is what breaks the loop. Left intact, silence kept
-					// accumulating to the auto-send threshold and re-triggered the very
-					// failure being handled — a self-sustaining cycle at ~1.5s.
-					vadState: null
-				},
-				// Stop both device loops, but do NOT tear down the audio device: a
-				// failed transcription is transient and the user may retry. Only the
-				// two explicit teardown actions release the microphone.
-				Effect.batch(Effect.cancel(VAD_SUBSCRIPTION), Effect.cancel(LEVEL_SUBSCRIPTION))
-			];
-		}
-
-	// === Conversation Mode === //
-
-	case 'activateConversationMode': {
-		// Already running. Without this guard every dispatch started another
-		// recording, another level monitor and another VAD interval on top of the
-		// live ones.
-		if (state.mode === 'conversation' && state.status === 'recording') {
-			return [state, Effect.none()];
-		}
-
-		// Check if permission is granted
-		if (state.permission !== 'granted') {
-			return [
-				{
-					...state,
-					mode: 'conversation'
-				},
-				Effect.run(async (dispatch) => {
-					dispatch({ type: 'requestMicrophonePermission' });
-				})
-			];
-		}
-
-		const audioManager = deps.getAudioManager(state._audioManagerId!);
-		if (!audioManager) {
-			return [
-				{
-					...state,
-					status: 'error',
-					errorMessage: 'Audio manager not initialized'
-				},
-				Effect.none()
-			];
-		}
-
-		// Start continuous recording with VAD monitoring
-		return [
-			{
-				...state,
-				mode: 'conversation',
-				status: 'recording',
-				recordingStartTime: Date.now(),
-				vadState: {
-					isSpeaking: false,
-					silenceDuration: 0,
-					autoSendThreshold: 1500
+function microphoneResource(deps: VoiceInputDependencies, generation: number): EffectType<VoiceInputAction> {
+	return Effect.subscription(MICROPHONE_RESOURCE, dispatch => {
+		managerSequence = nextGeneration(managerSequence);
+		const managerId = `voice-input-${managerSequence}`;
+		dispatch({ type: '_microphoneAllocated', generation, managerId });
+		let live = true;
+		let manager: ReturnType<NonNullable<VoiceInputDependencies['createAudioManager']>> | undefined;
+		const dispose = () => { if (manager) releaseAudioManager(deps, managerId, manager); };
+		const acquire = async () => {
+			try {
+				manager = (deps.createAudioManager ?? createAudioManager)(managerId);
+				await manager.requestMicrophone();
+				if (!live) { dispose(); return; }
+				if (deps.getAudioManager(managerId) !== manager) {
+					throw new Error('Audio manager not initialized');
 				}
-			},
-			// Order is load-bearing, and it is the reverse of what reads naturally.
-			//
-			// `Effect.batch` runs its members in order, synchronously, and an
-			// `Effect.run` body executes up to its first `await` inside that loop —
-			// so a throwing `startRecording()` dispatches `audioProcessingFailed`
-			// *re-entrantly*, before later members have run. With recording first,
-			// that action's `Effect.cancel` found an empty subscription table, did
-			// nothing, and the batch then installed the very intervals it had just
-			// tried to cancel: a leak with no remaining handle, which is exactly the
-			// failure this subscription rewrite exists to prevent.
-			//
-			// Installing the subscriptions first means the cancel always has
-			// something to find.
-			Effect.batch(
-				levelMonitoring(audioManager),
-				vadMonitoring(audioManager),
-				startRecording(audioManager)
-			)
-		];
-	}
-
-	case 'conversationModeToggled': {
-		if (action.enabled) {
-			// Turn on conversation mode
-			return [state, Effect.run(async (dispatch) => {
-				dispatch({ type: 'activateConversationMode' });
-			})];
-		} else {
-			// Turn off conversation mode
-			return [state, Effect.run(async (dispatch) => {
-				dispatch({ type: 'deactivateVoiceInput' });
-			})];
-		}
-	}
-
-	case 'speechDetected': {
-		if (!state.vadState) return [state, Effect.none()];
-
-		// User started speaking - reset silence duration
-		return [
-			{
-				...state,
-				vadState: {
-					...state.vadState,
-					isSpeaking: true,
-					silenceDuration: 0
-				}
-			},
-			Effect.none()
-		];
-	}
-
-	case 'silenceDetected': {
-		if (!state.vadState) return [state, Effect.none()];
-
-		// `action.duration`, not a second hardcoded 100. The interval reports the
-		// period it actually observed; browsers throttle background-tab timers to
-		// >= 1s, so a hardcoded increment made a backgrounded conversation
-		// accumulate 100ms of "silence" per real second and stretched the 1.5s
-		// auto-send threshold to 15s.
-		const newSilenceDuration = state.vadState.silenceDuration + action.duration;
-
-		// Check if we've hit the threshold
-		if (newSilenceDuration >= state.vadState.autoSendThreshold) {
-			// Trigger auto-send
-			return [
-				{
-					...state,
-					vadState: {
-						...state.vadState,
-						isSpeaking: false,
-						silenceDuration: 0
-					}
-				},
-				Effect.run(async (dispatch) => {
-					dispatch({ type: 'autoSendTriggered' });
-				})
-			];
-		}
-
-		// Update silence duration
-		return [
-			{
-				...state,
-				vadState: {
-					...state.vadState,
-					isSpeaking: false,
-					silenceDuration: newSilenceDuration
-				}
-			},
-			Effect.none()
-		];
-	}
-
-	case 'autoSendTriggered':
-	case 'manualSendRequested': {
-		const audioManager = deps.getAudioManager(state._audioManagerId!);
-		if (!audioManager) {
-			return [state, Effect.none()];
-		}
-
-		// Stop current recording, send audio, restart recording
-		return [
-			{
-				...state,
-				status: 'processing'
-			},
-			Effect.run(async (dispatch) => {
+				// A custom factory may reuse an object from a prior session. This
+				// successful acquisition gives it a new live lease.
+				releasedDevices.delete(manager);
+				dispatch({ type: 'microphonePermissionGranted', managerId });
+			} catch (error) {
+				if (!live) { dispose(); return; }
+				// A custom factory may fail synchronously, before the subscription
+				// setup returns. Release directly and clear ownership before reporting
+				// denial, so cancellation cannot double-dispose the failed device.
+				const failedManager = manager;
+				manager = undefined;
 				try {
-					// Stop recording and get audio blob
-					const audioBlob = await audioManager.stopRecording();
-
-					// Restart recording immediately
-					audioManager.startRecording();
-
-					// Transcription happens in `audioProcessingComplete`, once.
-					// This used to transcribe here as well and pass the result along,
-					// and that case transcribed the same blob again and used *its*
-					// result — two round-trips and two bills per utterance, with the
-					// first answer thrown away.
-					dispatch({
-						type: 'audioProcessingComplete',
-						audioBlob
-					});
-				} catch (error) {
-					dispatch({
-						type: 'audioProcessingFailed',
-						error: error instanceof Error ? error.message : 'Processing failed'
-					});
+					if (failedManager) releaseAudioManager(deps, managerId, failedManager);
+				} finally {
+					dispatch({ type: 'microphonePermissionDenied', managerId, error: error instanceof Error ? error.message : 'Permission denied' });
 				}
-			})
-		];
-	}
+			}
+		};
+		// Cleanup after a late acquisition can itself fail. Keep that asynchronous
+		// error observed even after the resource's dispatch capability is retired.
+		void acquire().catch(error => console.error('[VoiceInput] Microphone acquisition cleanup failed:', error));
+		return () => { if (!live) return; live = false; dispose(); };
+	});
+}
 
-	// === Cleanup === //
 
-	case 'deactivateVoiceInput': {
-			// `cleanup()` runs in the effect below, not here. A reducer is a pure
-			// function of (state, action, deps) — calling into the audio device from
-			// its body makes the transition unrepeatable and untestable, and is the
-			// rule CLAUDE.md states first.
+function retireWork(): EffectType<VoiceInputAction> {
+	return Effect.batch(Effect.cancelGroup(SESSION_WORK), Effect.cancel(VAD_SUBSCRIPTION), Effect.cancel(LEVEL_SUBSCRIPTION));
+}
+/** A completed/absent recorder can reject stop; termination still retires every loop.
+ * Keep the microphone available for retry. Its resource owns final device cleanup. */
+function stopDevice(deps: VoiceInputDependencies, id: string | null): EffectType<VoiceInputAction> {
+	return Effect.run(async () => { try { await deps.getAudioManager(id!)?.stopRecording(); } catch { /* Already stopped or unavailable. */ } });
+}
+function stopAndSend(device: NonNullable<ReturnType<VoiceInputDependencies['getAudioManager']>>, generation: number, sequence: number, continuing: boolean): EffectType<VoiceInputAction> {
+	return Effect.inGroup(Effect.cancellable('voice-input-stop', async (dispatch, signal) => {
+		try {
+			const audioBlob = await device.stopRecording();
+			if (signal?.aborted) return;
+			// Released mid-stop (the view unmounted): the accepted segment is still sent, the recorder stays off.
+			const restart = continuing && !releasedDevices.has(device);
+			if (restart) device.startRecording();
+			if (signal?.aborted) return;
+			dispatch({ type: '_audioStopped', generation, sequence, audioBlob, continuing: restart });
+		} catch (error) {
+			if (!signal?.aborted) dispatch({ type: '_operationFailed', generation, error: message(error, 'Processing failed') });
+		}
+	}), SESSION_WORK);
+}
+function transcribe(deps: VoiceInputDependencies, blob: Blob, generation: number, sequence: number): EffectType<VoiceInputAction> {
+	return Effect.inGroup(Effect.cancellable(`voice-input-transcription-${sequence}`, async (dispatch, signal) => {
+		try {
+			const transcript = await deps.transcribeAudio(blob);
+			if (!signal?.aborted) dispatch({ type: '_transcriptionResult', generation, sequence, transcript });
+		} catch (error) {
+			if (!signal?.aborted) dispatch({ type: '_operationFailed', generation, error: message(error, 'Transcription failed') });
+		}
+	}), SESSION_WORK);
+}
 
-			return [
-				{
-					...state,
-					mode: null,
-					status: 'idle',
-					vadState: null,
-					audioLevel: 0,
-					recordingStartTime: null,
-					errorMessage: null
-				},
+export const voiceInputReducer: Reducer<VoiceInputState, VoiceInputAction, VoiceInputDependencies> = (state, action, deps) => {
+	const generation = state._generation ?? 0;
+	switch (action.type) {
+		case 'requestMicrophonePermission':
+		case '_requestRecordingPermission': {
+			const next = nextGeneration(generation), previousId = state._audioManagerId;
+			return [{ ...state, _generation: next, _recordAfterPermission: action.type === '_requestRecordingPermission' || (state.status === 'requesting-permission' && state._recordAfterPermission === true), _activeStop: null, _pendingTranscriptions: [], status: 'requesting-permission', errorMessage: null, recordingStartTime: null, vadState: null, audioLevel: 0, _audioManagerId: null, _ownsAudioManager: true },
+				Effect.batch(retireWork(), !state._ownsAudioManager && previousId ? Effect.run(() => releaseAudioManager(deps, previousId)) : Effect.none(), microphoneResource(deps, next))];
+		}
+		case '_microphoneAllocated':
+			return action.generation === generation && state.status === 'requesting-permission' ? [{ ...state, _audioManagerId: action.managerId }, Effect.none()] : [state, Effect.none()];
+		case 'microphonePermissionGranted': {
+			if (action.managerId !== state._audioManagerId) return [state, Effect.run(() => releaseAudioManager(deps, action.managerId))];
+			if (state.status !== 'requesting-permission') return [state, Effect.none()];
+			return [{ ...state, permission: 'granted', status: 'ready', _recordAfterPermission: false }, !state._recordAfterPermission || state.mode === null ? Effect.none() : Effect.run(dispatch => dispatch({ type: state.mode === 'conversation' ? 'activateConversationMode' : 'startPushToTalkRecording' }))];
+		}
+		case 'microphonePermissionDenied': {
+			if (action.managerId && (action.managerId !== state._audioManagerId || state.status !== 'requesting-permission')) return [state, action.managerId === state._audioManagerId ? Effect.none() : Effect.run(() => releaseAudioManager(deps, action.managerId!))];
+			if (!action.managerId && !state._ownsAudioManager && state.status !== 'requesting-permission') return [{ ...state, status: 'error', permission: 'denied', errorMessage: action.error }, Effect.none()];
+			const managerId = state._audioManagerId;
+			return [{ ...state, status: 'error', permission: 'denied', errorMessage: action.error, _audioManagerId: null, _ownsAudioManager: false }, Effect.batch(Effect.cancel(MICROPHONE_RESOURCE), !state._ownsAudioManager && managerId ? Effect.run(() => releaseAudioManager(deps, managerId)) : Effect.none())];
+		}
+		case 'activatePushToTalk': {
+			if (state.mode !== 'conversation') return [{ ...state, _recordAfterPermission: false, mode: 'push-to-talk' }, Effect.none()];
+			return [{ ...state, _recordAfterPermission: false, mode: 'push-to-talk', status: state.status === 'requesting-permission' ? state.status : state.permission === 'granted' ? 'ready' : 'idle', _generation: state.status === 'requesting-permission' ? generation : nextGeneration(generation), _activeStop: null, _pendingTranscriptions: [], recordingStartTime: null, audioLevel: 0, vadState: null }, Effect.batch(retireWork(), state.status === 'recording' || state.status === 'processing' ? stopDevice(deps, state._audioManagerId) : Effect.none())];
+		}
+		case 'startPushToTalkRecording':
+		case 'activateConversationMode': {
+			const mode = action.type === 'startPushToTalkRecording' ? 'push-to-talk' : 'conversation';
+			if (state.status === 'requesting-permission') return [{ ...state, mode, _recordAfterPermission: true }, Effect.none()];
+			if (state.mode === mode && (state.status === 'recording' || (mode === 'conversation' && state.status === 'processing'))) return [state, Effect.none()];
+			const device = state._audioManagerId || state._ownsAudioManager === undefined ? deps.getAudioManager(state._audioManagerId!) : undefined;
+			if (state.permission !== 'granted' || !device) return [{ ...state, mode }, Effect.run(dispatch => dispatch({ type: '_requestRecordingPermission' }))];
+			const next = nextGeneration(generation);
+			return [{ ...state, mode, status: 'recording', _generation: next, _activeStop: null, _pendingTranscriptions: [], recordingStartTime: null, audioLevel: 0, errorMessage: null, vadState: mode === 'conversation' ? { isSpeaking: false, silenceDuration: 0, autoSendThreshold: 1500 } : null },
+				Effect.batch(retireWork(), levelMonitoring(device), mode === 'conversation' ? vadMonitoring(device) : Effect.none(), startRecording(device, next, state.status === 'recording' || state._activeStop != null))];
+		}
+		case '_recordingStarted':
+			return action.generation === generation && state.status === 'recording' ? [{ ...state, recordingStartTime: action.timestamp }, Effect.none()] : [state, Effect.none()];
+		case 'stopPushToTalkRecording':
+		case 'autoSendTriggered':
+		case 'manualSendRequested': {
+			const continuing = action.type !== 'stopPushToTalkRecording';
+			if (state.status !== 'recording' || state.mode !== (continuing ? 'conversation' : 'push-to-talk')) return [state, Effect.none()];
+			const device = deps.getAudioManager(state._audioManagerId!);
+			if (!device) return [state, Effect.none()];
+			const sequence = nextGeneration(state._processingSequence);
+			return [{ ...state, status: 'processing', recordingStartTime: continuing ? state.recordingStartTime : null, _activeStop: sequence, _processingSequence: sequence }, stopAndSend(device, generation, sequence, continuing)];
+		}
+		case '_audioStopped': {
+			if (action.generation !== generation || state._activeStop !== action.sequence || state.status !== 'processing') return [state, Effect.none()];
+			return [{ ...state, _activeStop: null, _pendingTranscriptions: [...(state._pendingTranscriptions ?? []), action.sequence], status: action.continuing ? 'recording' : 'processing', audioLevel: 0, vadState: state.vadState ? { ...state.vadState, isSpeaking: false, silenceDuration: 0 } : null },
+				Effect.batch(action.continuing ? Effect.none() : Effect.batch(Effect.cancel(VAD_SUBSCRIPTION), Effect.cancel(LEVEL_SUBSCRIPTION)), transcribe(deps, action.audioBlob, generation, action.sequence))];
+		}
+		case 'audioProcessingComplete': {
+			// Compatibility entry for explicitly supplied audio; framework stops use the tagged handoff.
+			const sequence = nextGeneration(state._processingSequence);
+			return [{ ...state, errorMessage: null, _processingSequence: sequence, _pendingTranscriptions: [...(state._pendingTranscriptions ?? []), sequence], status: state.mode === 'conversation' ? 'recording' : 'processing' }, transcribe(deps, action.audioBlob, generation, sequence)];
+		}
+		case '_transcriptionResult': {
+			if (action.generation !== generation || !(state._pendingTranscriptions ?? []).includes(action.sequence)) return [state, Effect.none()];
+			const pending = state._pendingTranscriptions!.filter(id => id !== action.sequence);
+			return [{ ...state, _pendingTranscriptions: pending, ...(state.mode === 'conversation' ? {} : { status: pending.length ? 'processing' as const : 'idle' as const, mode: state.mode, recordingStartTime: null, audioLevel: 0, vadState: null }), errorMessage: null }, Effect.run(dispatch => dispatch({ type: 'transcriptionCompleted', transcript: action.transcript }))];
+		}
+		case 'transcriptionCompleted': return [state, Effect.none()];
+		case '_operationFailed':
+			return action.generation === generation
+				? voiceInputReducer(state, { type: 'audioProcessingFailed', error: action.error }, deps)
+				: [state, Effect.none()];
+		case 'audioProcessingFailed':
+			return [{ ...state, _generation: nextGeneration(generation), _activeStop: null, _pendingTranscriptions: [], status: 'error', errorMessage: action.error, mode: null, recordingStartTime: null, audioLevel: 0, vadState: null }, Effect.batch(retireWork(), stopDevice(deps, state._audioManagerId))];
+		case 'cancelPushToTalkRecording': {
+			const pendingPermission = state.status === 'requesting-permission';
+			return [{ ...state, _generation: nextGeneration(generation), _activeStop: null, _pendingTranscriptions: [], status: 'idle', mode: null, recordingStartTime: null, audioLevel: 0, vadState: null, errorMessage: null, ...(pendingPermission ? { _audioManagerId: null, _ownsAudioManager: false } : {}) }, Effect.batch(retireWork(), pendingPermission ? Effect.cancel(MICROPHONE_RESOURCE) : stopDevice(deps, state._audioManagerId))];
+		}
+		case 'deactivateVoiceInput': {
+			const id = state._audioManagerId;
+			return [{ ...state, _generation: nextGeneration(generation), _activeStop: null, _pendingTranscriptions: [], mode: null, status: 'idle', vadState: null, audioLevel: 0, recordingStartTime: null, errorMessage: null, _audioManagerId: null, _ownsAudioManager: false }, Effect.batch(retireWork(), Effect.cancel(MICROPHONE_RESOURCE), id && !state._ownsAudioManager ? Effect.run(() => releaseAudioManager(deps, id)) : Effect.none())];
+		}
+		case '_releaseDevice': {
+			// The view went away while the store lives on. Nothing still depends on
+			// the microphone once the user has finished an utterance, so the device
+			// and its loops go now — but a stop the user already asked for (a
+			// conversation send included), and any transcription already under way,
+			// keep their generation and deliver `transcriptionCompleted` to whoever
+			// still owns the store. Anything not yet accepted — a permission prompt, a
+			// recording nobody stopped — ends exactly as `deactivateVoiceInput` ends it.
+			const stopping = state.status === 'processing' && state._activeStop != null;
+			if (!stopping && !(state._pendingTranscriptions ?? []).length) {
+				return voiceInputReducer(state, { type: 'deactivateVoiceInput' }, deps);
+			}
+			const id = state._audioManagerId;
+			return [{ ...state, mode: null, status: 'processing', _recordAfterPermission: false, _activeStop: stopping ? state._activeStop : null, vadState: null, audioLevel: 0, recordingStartTime: null, errorMessage: null, _audioManagerId: null, _ownsAudioManager: false },
 				Effect.batch(
-					Effect.cancel(VAD_SUBSCRIPTION),
-					Effect.cancel(LEVEL_SUBSCRIPTION),
-					Effect.run(async () => {
-						deps.getAudioManager(state._audioManagerId!)?.cleanup();
-					})
-				)
-			];
+					Effect.cancel(VAD_SUBSCRIPTION), Effect.cancel(LEVEL_SUBSCRIPTION), Effect.cancel('voice-input-start'),
+					// A conversation stop in flight sees the release and settles without restarting.
+					Effect.cancel(MICROPHONE_RESOURCE),
+					id && !state._ownsAudioManager ? Effect.run(() => releaseAudioManager(deps, id)) : Effect.none())];
 		}
-
-		default: {
-			const _exhaustive: never = action;
-			return [state, Effect.none()];
+		case 'conversationModeToggled': return [state, Effect.run(dispatch => dispatch({ type: action.enabled ? 'activateConversationMode' : 'deactivateVoiceInput' }))];
+		case 'audioLevelUpdated': return [{ ...state, audioLevel: action.level }, Effect.none()];
+		case 'speechDetected': return state.vadState ? [{ ...state, vadState: { ...state.vadState, isSpeaking: true, silenceDuration: 0 } }, Effect.none()] : [state, Effect.none()];
+		case 'silenceDetected': {
+			if (!state.vadState || state.mode !== 'conversation' || state.status !== 'recording') return [state, Effect.none()];
+			// Silence is meaningful only after this utterance has contained speech.
+			if (!state.vadState.isSpeaking && state.vadState.silenceDuration === 0) return [state, Effect.none()];
+			const duration = state.vadState.silenceDuration + action.duration;
+			const send = duration >= state.vadState.autoSendThreshold;
+			return [{ ...state, vadState: { ...state.vadState, isSpeaking: false, silenceDuration: send ? 0 : duration } }, send ? Effect.run(dispatch => dispatch({ type: 'autoSendTriggered' })) : Effect.none()];
 		}
+		default: { const exhaustive: never = action; return [state, Effect.none()]; }
 	}
 };

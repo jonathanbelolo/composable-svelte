@@ -4,6 +4,6 @@
 
 <DropdownMenu items={[{ id: 'a', label: 'Alpha' }]}>
 	{#snippet children()}
-		<button type="button">Open</button>
+		<span>Open</span>
 	{/snippet}
 </DropdownMenu>

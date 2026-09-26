@@ -108,15 +108,3 @@ export { integrate } from './integrate.js';
 // Fluent Store Scoping
 export { scopeTo } from './scope.js';
 export type { ScopedStore } from './scope.js';
-
-// ============================================================================
-// Dismiss Dependency
-// ============================================================================
-
-export {
-  createDismissDependency,
-  createDismissDependencyWithCleanup,
-  dismissDependency
-} from './dismiss-dependency.js';
-
-export type { DismissDependency } from './dismiss-dependency.js';

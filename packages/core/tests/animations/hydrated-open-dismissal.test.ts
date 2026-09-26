@@ -1,3 +1,4 @@
+import { waitForState as waitForStoreState } from '../helpers/wait-for-state.js';
 /**
  * An overlay that mounted already `presented` must still be dismissable.
  *
@@ -32,25 +33,12 @@ import DrawerTest from './test-components/DrawerTest.svelte';
 import AlertTest from './test-components/AlertTest.svelte';
 
 function waitForState<State>(
-	store: { subscribe: (listener: (state: State) => void) => () => void },
-	condition: (state: State) => boolean,
-	description: string,
-	timeout = 3000
+  store: { subscribe(listener: (state: State) => void): () => void },
+  condition: (state: State) => boolean,
+  description: string,
+  timeout = 3000
 ): Promise<State> {
-	return new Promise((resolve, reject) => {
-		let unsubscribe: (() => void) | null = null;
-		const timeoutId = setTimeout(() => {
-			unsubscribe?.();
-			reject(new Error(`Timeout waiting for ${description} after ${timeout}ms`));
-		}, timeout);
-		unsubscribe = store.subscribe((state) => {
-			if (condition(state)) {
-				clearTimeout(timeoutId);
-				unsubscribe?.();
-				resolve(state);
-			}
-		});
-	});
+  return waitForStoreState(store, condition, { description, timeout });
 }
 
 /**

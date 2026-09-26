@@ -1,101 +1,64 @@
 <script lang="ts">
-  import { createStore, Effect } from '@composable-svelte/core';
-  import type { PresentationState } from '@composable-svelte/core/navigation';
+  import { Effect } from '@composable-svelte/core';
+  import type { Reducer } from '@composable-svelte/core';
+  import { ApplicationHost, ApplicationRoot, defineApplication, ManagedIntegrationBuilder, optionalSlot, scopeTo } from '@composable-svelte/core/application';
+  import type { PresentationAction, PresentationState } from '@composable-svelte/core/navigation';
   import { Sheet } from '@composable-svelte/core/navigation-components';
   import { Button } from '@composable-svelte/core/components/ui';
 
   interface DemoState {
     showSheet: boolean;
+    sheetContent: boolean | null;
     presentation: PresentationState<boolean>;
   }
-
-  type PresentationEvent =
-    | { type: 'presentationCompleted' }
-    | { type: 'dismissalCompleted' };
-
+  type SheetContentAction = { type: 'presentationCompleted' } | { type: 'dismissalCompleted' };
   type DemoAction =
     | { type: 'openSheet' }
     | { type: 'closeSheet' }
-    | { type: 'presentation'; event: PresentationEvent };
+    | { type: 'sheetContent'; action: PresentationAction<SheetContentAction> };
 
-  const demoStore = createStore<DemoState, DemoAction>({
-    initialState: {
-      showSheet: false,
-      presentation: { status: 'idle' }
-    },
-    reducer: (state, action) => {
-      switch (action.type) {
-        case 'openSheet':
-          return [
-            {
-              showSheet: true,
-              presentation: {
-                status: 'presenting' as const,
-                content: true,
-                duration: 300
-              }
-            },
-            Effect.afterDelay(300, (d) => d({ type: 'presentation', event: { type: 'presentationCompleted' } }))
-          ];
-
-        case 'closeSheet':
-          // Only allow dismissal if we're in presented state
-          if (state.presentation.status !== 'presented') {
-            return [state, Effect.none()];
-          }
-          return [
-            {
-              ...state,
-              presentation: {
-                status: 'dismissing' as const,
-                content: state.presentation.content,
-                duration: 200
-              }
-            },
-            Effect.afterDelay(200, (d) => d({ type: 'presentation', event: { type: 'dismissalCompleted' } }))
-          ];
-
-        case 'presentation':
-          if (action.event.type === 'presentationCompleted') {
-            return [
-              {
-                ...state,
-                presentation: {
-                  status: 'presented' as const,
-                  content: state.presentation.status === 'presenting' ? state.presentation.content : true
-                }
-              },
-              Effect.none()
-            ];
-          }
-          if (action.event.type === 'dismissalCompleted') {
-            return [
-              {
-                showSheet: false,
-                presentation: { status: 'idle' as const }
-              },
-              Effect.none()
-            ];
-          }
-          return [state, Effect.none()];
-
-        default:
-          return [state, Effect.none()];
+  const reducer: Reducer<DemoState, DemoAction, undefined> = (state, action) => {
+    if (action.type === 'sheetContent') {
+      if (action.action.type === 'dismiss') {
+        if (state.presentation.status !== 'presented') return [state, Effect.none()];
+        return [{ ...state, presentation: { status: 'dismissing', content: state.presentation.content } }, Effect.none()];
       }
-    },
-    dependencies: {}
+      if (action.action.action.type === 'presentationCompleted') {
+        if (state.presentation.status !== 'presenting') return [state, Effect.none()];
+        return [{ ...state, presentation: { status: 'presented', content: state.presentation.content } }, Effect.none()];
+      }
+      if (state.presentation.status !== 'dismissing') return [state, Effect.none()];
+      return [{ ...state, showSheet: false, sheetContent: null, presentation: { status: 'idle' } }, Effect.none()];
+    }
+    switch (action.type) {
+      case 'openSheet':
+        if (state.presentation.status === 'presenting' || state.presentation.status === 'presented') return [state, Effect.none()];
+        return [{ ...state, showSheet: true, sheetContent: true, presentation: { status: 'presenting', content: true } }, Effect.none()];
+      case 'closeSheet':
+        if (state.presentation.status !== 'presented') return [state, Effect.none()];
+        return [{ ...state, presentation: { status: 'dismissing', content: state.presentation.content } }, Effect.none()];
+      default:
+        return [state, Effect.none()];
+    }
+  };
+  const sheetSlot = optionalSlot<DemoState, DemoAction>()('sheetContent');
+  const childReducer: Reducer<boolean, SheetContentAction, undefined> = state => [state, Effect.none()];
+  const composition = new ManagedIntegrationBuilder(reducer).with(sheetSlot, childReducer, {
+    dismissal: 'deferred',
+    replaceOn: action => action.type === 'openSheet'
+  }).build();
+  const application = defineApplication(composition, {
+    initialState: (): DemoState => ({ showSheet: false, sheetContent: null, presentation: { status: 'idle' } })
   });
-
-  // Create a store wrapper with dismiss() method for Sheet component
-  const storeWithDismiss = $derived({
-    ...demoStore,
-    state: $demoStore,
-    dispatch: demoStore.dispatch,
-    dismiss: () => demoStore.dispatch({ type: 'closeSheet' })
-  });
-
-  const state = $derived($demoStore);
 </script>
+
+
+<ApplicationRoot definition={application} options={{ dependencies: undefined, initial: { input: undefined } }}>
+{#snippet children(app)}
+<ApplicationHost {app}>
+{@const demoStore = app.store}
+{@const state = app.store.state}
+{@const sheetView = scopeTo(app.store, sheetSlot)}
 
 <div class="space-y-12">
   <!-- Live Demo Section -->
@@ -210,13 +173,18 @@
 
 <!-- Sheet Implementation -->
 {#if state.showSheet}
+  <!--
+    Interim legacy bridge: this demo keeps explicit PresentationState so the existing
+    animation callbacks remain visible. The framework-owned view supplies lifetime and
+    dismissal authority; it does not synthesize these presentation states.
+  -->
   <Sheet
-    store={storeWithDismiss}
+    store={sheetView}
     presentation={state.presentation}
     onPresentationComplete={() =>
-      demoStore.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } })}
+      sheetView?.dispatch({ type: 'presentationCompleted' })}
     onDismissalComplete={() =>
-      demoStore.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })}
+      sheetView?.dispatch({ type: 'dismissalCompleted' })}
     height="60vh"
   >
     {#snippet children()}
@@ -285,3 +253,6 @@
     {/snippet}
   </Sheet>
 {/if}
+</ApplicationHost>
+{/snippet}
+</ApplicationRoot>

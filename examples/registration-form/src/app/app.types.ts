@@ -11,6 +11,8 @@ import type { RegistrationFormData } from '../features/registration/registration
 export interface AppState {
   registrationForm: FormState<RegistrationFormData>;
   registrationSuccess: boolean;
+  /** Business identity submitted by the current attempt, independent of later edits. */
+  submittedUser?: { username: string; email: string } | null;
   registeredUser: {
     username: string;
     email: string;

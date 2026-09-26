@@ -11,8 +11,8 @@ import type { Store } from '../../src/lib/types.js';
 
 describe('scopeTo() reactivity', () => {
 	describe('reference stability', () => {
-		it('returns same scoped store object when state unchanged', () => {
-			// This test verifies object reference stability
+		it('returns different scoped store instances but preserves state reference when state unchanged', () => {
+			// This test verifies state reference stability
 			const state = {
 				destination: { type: 'addItem', state: { name: 'Test' } }
 			};
@@ -78,9 +78,9 @@ describe('scopeTo() reactivity', () => {
 		});
 	});
 
-	describe('Svelte 5 reactivity pattern', () => {
-		it('works correctly with $derived pattern', () => {
-			// Simulate Svelte 5's $derived behavior
+	describe('Explicit scope re-evaluation', () => {
+		it('reads replacement state when scopeTo is called again', () => {
+			// This is a plain getter control, not a mounted rune-reactivity test.
 			let storeState = {
 				destination: { type: 'addItem', state: { name: 'Test' } }
 			};
@@ -102,7 +102,7 @@ describe('scopeTo() reactivity', () => {
 				destination: { type: 'addItem', state: { name: 'Updated' } }
 			};
 
-			// Re-derive (simulating $derived re-computation)
+			// Explicitly re-evaluate against the replacement state.
 			const scoped2 = scopeTo(store).into('destination').case('addItem');
 			expect(scoped2).not.toBeNull();
 			expect(scoped2?.state.name).toBe('Updated');
@@ -110,10 +110,6 @@ describe('scopeTo() reactivity', () => {
 			// Objects are different (new derivation)
 			expect(scoped1).not.toBe(scoped2);
 
-			// But Svelte 5 doesn't care about object reference for {#if}
-			// It only cares if the value went from null -> non-null or vice versa
-			expect(scoped1).not.toBeNull();
-			expect(scoped2).not.toBeNull();
 		});
 
 		it('transitions correctly between null and non-null', () => {

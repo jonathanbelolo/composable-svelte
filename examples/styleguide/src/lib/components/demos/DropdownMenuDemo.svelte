@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { DropdownMenu } from '@composable-svelte/core/components/ui';
 	import type { MenuItem } from '@composable-svelte/core/components/ui';
-	import { Button } from '@composable-svelte/core/components/ui';
 
 	const menuItems: MenuItem[] = [
 		{ id: '1', label: 'Profile', icon: '👤' },
@@ -48,21 +47,15 @@
 
 		<div class="flex flex-wrap items-center gap-4 p-12 rounded-lg border-2 bg-card">
 			<DropdownMenu items={menuItems} onSelect={handleSelect}>
-				<Button variant="default">
-					User Menu
-				</Button>
+				User Menu
 			</DropdownMenu>
 
-			<DropdownMenu items={editMenuItems} onSelect={handleSelect} align="end">
-				<Button variant="secondary">
-					Edit Menu
-				</Button>
+			<DropdownMenu items={editMenuItems} onSelect={handleSelect} align="end" triggerClass="bg-secondary text-secondary-foreground">
+				Edit Menu
 			</DropdownMenu>
 
-			<DropdownMenu items={fileMenuItems} onSelect={handleSelect}>
-				<Button variant="outline">
-					File Menu
-				</Button>
+			<DropdownMenu items={fileMenuItems} onSelect={handleSelect} triggerClass="border border-input bg-background text-foreground">
+				File Menu
 			</DropdownMenu>
 		</div>
 	</section>

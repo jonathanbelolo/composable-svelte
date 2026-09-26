@@ -18,6 +18,8 @@
  * @packageDocumentation
  */
 
+import { bindManagedProjection, isManagedProjection, type ManagedProjection } from '../execution/store-access.js';
+import type { SlotHandle, PresentationSlotHandle, ChildView, PresentationView } from './managed-integration.js';
 import type { Store } from '../types.js';
 import type { PresentationAction } from './types.js';
 import { isDev } from '../dependencies/utils.js';
@@ -98,14 +100,6 @@ export interface ScopedStore<State, Action> {
 	 * ```
 	 */
 	dispatch(action: Action): void;
-
-	/**
-	 * Dismiss the child feature.
-	 *
-	 * Dispatches the field's `{ type: 'dismiss' }` through the same path as
-	 * `dispatch`, without the case: `{ type: 'destination', action: { type: 'dismiss' } }`.
-	 */
-	dismiss(): void;
 }
 
 /**
@@ -142,12 +136,10 @@ export interface ScopedStore<State, Action> {
  *   scopeTo(store).into('destination').case('addItem')
  * );
  *
- * // Use in template
- * <Modal store={addItemStore}>
- *   {#if addItemStore}
- *     <AddItemView store={addItemStore} />
- *   {/if}
- * </Modal>
+ * // Use the legacy scoped store for state and child actions only.
+ * {#if addItemStore}
+ *   <AddItemView store={addItemStore} />
+ * {/if}
  * ```
  *
  * @example
@@ -163,10 +155,19 @@ export interface ScopedStore<State, Action> {
  * );
  * ```
  */
-export function scopeTo<State, Action>(
-	store: Store<State, Action>
-): ScopeBuilder<State, Action, State> {
-	return new ScopeBuilder(store, []);
+export function scopeTo<State, Action, Child, ChildAction>(
+    store: ManagedProjection<State, Action>, slot: PresentationSlotHandle<NoInfer<State>, NoInfer<Action>, Child, ChildAction>
+): PresentationView<Child, ChildAction> | undefined;
+export function scopeTo<State, Action, Child, ChildAction>(
+    store: ManagedProjection<State, Action>, slot: SlotHandle<NoInfer<State>, NoInfer<Action>, Child, ChildAction>
+): ChildView<Child, ChildAction> | undefined;
+export function scopeTo<State, Action>(store: Store<State, Action>): ScopeBuilder<State, Action, State>;
+export function scopeTo<State, Action, Child, ChildAction>(
+    store: ManagedProjection<State, Action>, slot?: SlotHandle<State, Action, Child, ChildAction>
+): ChildView<Child, ChildAction> | undefined | ScopeBuilder<State, Action, State> {
+    if (slot) return bindManagedProjection(store, slot);
+    if (isManagedProjection(store)) throw new TypeError('Application scoping requires a typed slot token');
+    return new ScopeBuilder(store as Store<State, Action>, []);
 }
 
 /**
@@ -368,7 +369,7 @@ class ScopeBuilder<State, Action, Current = State, CurrentAction = Action> {
 	 * // Result: ScopedStore<ModalState, ModalAction> | null
 	 *
 	 * {#if modalStore}
-	 *   <Modal store={modalStore} />
+	 *   <ModalContent store={modalStore} />
 	 * {/if}
 	 * ```
 	 */
@@ -462,31 +463,9 @@ class ScopeBuilder<State, Action, Current = State, CurrentAction = Action> {
 			this.store.dispatch(wrapped);
 		};
 
-		const dismiss = (): void => {
-			// The field's own PresentationAction. The case is deliberately not
-			// named: `ifLetPresentation` nulls the field on `{ type: 'dismiss' }`
-			// and recognises nothing else, so the earlier case-wrapped form was a
-			// no-op that never cleared the destination (AUDIT-2026-09-03-FINDINGS
-			// N1). Which case was dismissed is answered by the state, not the action.
-			let wrapped: any = { type: 'dismiss' };
-
-			// Wrap in parent actions by following the path backwards
-			for (let i = this.path.length - 1; i >= 0; i--) {
-				const key = this.path[i];
-				wrapped = {
-					type: key,
-					action: wrapped
-				};
-			}
-
-			// Dispatch to root store
-			this.store.dispatch(wrapped);
-		};
-
 		return {
 			state,
-			dispatch,
-			dismiss
+			dispatch
 		};
 	}
 }

@@ -1,0 +1,36 @@
+{
+  "status": "CLEAR independent Opus focused review",
+  "review": "../CHAT-FOCUSED-REVIEW.md",
+  "files": [
+    {
+      "path": "packages/chat/recipes/managed/ManagedChat.svelte",
+      "beforeSHA256": "4d9ee74548aad73ca5b2876523bb04f7724d99cfb8fb55d9812375e2a4a9a7bc",
+      "afterSHA256": "194f49fe9ebeccab4a5b0190fb3b135dbdd41f7b21b3d504daf8653a0c6dc083"
+    },
+    {
+      "path": "packages/chat/README.md",
+      "beforeSHA256": "d4b594f2155bb66fc85e3a91687bf88653f51e9d8789cfe6b21a79e75c82ab4c",
+      "afterSHA256": "3e584005e45ef74ea8e97bd66ccc7289705a0da61f29f5605443babc70d0f8a5"
+    },
+    {
+      "path": "packages/chat/recipes/managed/README.md",
+      "beforeSHA256": "48e4bf9816c0cb7fcfb48f4ae9d0b85306e4e27b3c7a1234a64cbe06924db4fa",
+      "afterSHA256": "821b3934bd61cbadc279171f163a8c811e98f4e99643f9da0fae59cf333dd516"
+    },
+    {
+      "path": "packages/chat/tests/recipes/ManagedChat.svelte",
+      "beforeSHA256": "4d9ee74548aad73ca5b2876523bb04f7724d99cfb8fb55d9812375e2a4a9a7bc",
+      "afterSHA256": "194f49fe9ebeccab4a5b0190fb3b135dbdd41f7b21b3d504daf8653a0c6dc083"
+    },
+    {
+      "path": "packages/chat/tests/fixtures/managed-chat.ts",
+      "beforeSHA256": "952b26f9ae5f67ed8f9e7234a8eb32e180df1f90cd96b16f450289de3c90ac61",
+      "afterSHA256": "f4f4744a80b3058d433b5ea56a32a948a18f671a7a8a3be66d0cf634cfac737e"
+    },
+    {
+      "path": "packages/chat/tests/managed-chat.test.ts",
+      "beforeSHA256": "dd2c63908bbc15335d7a36e5922ed2804d4eeaee608d4db81b1fede0b327d347",
+      "afterSHA256": "a7eeb00be692346d4aedcc5beb6ede64d982e04fa781e38475b210a19309e923"
+    }
+  ]
+}

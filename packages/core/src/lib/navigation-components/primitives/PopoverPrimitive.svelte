@@ -1,11 +1,12 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
+  import { onDestroy, type Snippet } from 'svelte';
   import { portal } from '../../actions/portal.js';
-  import { clickOutside } from '../../actions/clickOutside.js';
-  import { focusTrap } from '../../actions/focusTrap.js';
-  import type { ScopedDestinationStore } from '../../navigation/scope-to-destination.js';
+  import { createDismissalBoundary } from '../../actions/dismissalBoundary.js';
+  const registerDismissalLayer = createDismissalBoundary();
+  import { assertPresentationView, type PresentationView } from '../../navigation/managed-integration.js';
   import type { PresentationState } from '../../navigation/types.js';
   import type { SpringConfig } from '../../animation/spring-config.js';
+  import { createRemovedContentDismissal } from './presentationCompletion.js';
   import {
     animatePopoverIn,
     animatePopoverOut
@@ -17,10 +18,10 @@
 
   interface PopoverPrimitiveProps<State, Action> {
     /**
-     * Scoped store for the popover content.
-     * When null, popover is hidden. When non-null, popover is visible.
+     * Managed presentation view for the popover content.
+     * When undefined or retired, popover is hidden (unless presentation retains exit shell).
      */
-    store: ScopedDestinationStore<State, Action> | null;
+    store?: PresentationView<State, Action> | undefined;
 
     /**
      * Presentation state for animation lifecycle.
@@ -70,8 +71,8 @@
       [
         {
           visible: boolean;
-          store: ScopedDestinationStore<State, Action> | null;
-          bindContent: (node: HTMLElement, transform?: string) => void;
+          store: PresentationView<State, Action> | undefined;
+          bindContent: (node: HTMLElement, transform?: string) => { destroy: () => void };
           initialOpacity: string | undefined;
         }
       ]
@@ -91,19 +92,29 @@
   }: PopoverPrimitiveProps<unknown, unknown> = $props();
 
   // ============================================================================
-  // Derived State
+  // Membership & Derived State
   // ============================================================================
 
-  // Visible when store is non-null OR presentation is not idle
+  const admittedStore = $derived.by(() => {
+    if (store !== undefined) {
+      assertPresentationView(store);
+    }
+    return store;
+  });
+
+  // Visible when admitted store has live state OR presentation is not idle
   // This ensures popover stays mounted during 'dismissing' state for exit animation
   const visible = $derived(
-    (store !== null && store.state !== null) ||
+    (admittedStore !== undefined && admittedStore.state !== undefined) ||
       (presentation?.status !== 'idle' && presentation?.status !== undefined)
   );
 
-  // Only allow interactions when fully presented
+  // Focus authority retires at 'dismissing'; pointer/Escape shielding keeps following visible
+  const focusActive = $derived(visible && presentation?.status !== 'dismissing');
+
+  // Entrance motion must not delay accepted user intent. Exit shells remain inert.
   const interactionsEnabled = $derived(
-    presentation ? presentation.status === 'presented' : visible
+    visible && (!presentation || presentation.status === 'presenting' || presentation.status === 'presented')
   );
 
   // ============================================================================
@@ -123,16 +134,28 @@
   // questions only diverge when the component mounts already `presented` — SSR
   // hydration of a page rendered with this overlay open — and the difference is
   // a permanent deadlock: the collapse branch is refused, `dismissalCompleted`
-  // never fires, and the reducer's own `status !== 'presented'` guard then
-  // rejects every further dismiss.
+  // never fires, and a reducer waiting for that completion cannot finish teardown.
+  // Entrance itself must not prevent the managed dismissal request.
   let lastAnimated: { status: string; content: unknown } | null = null;
+
+  // Bound content removed while the same 'presenting' or 'dismissing' pair stays live settles
+  // that transition once: `lastAnimated` marks the pair, then the matching callback is notified.
+  const removedContentSettlement = createRemovedContentDismissal();
 
   // Watch presentation status and trigger animations
   $effect(() => {
-    if (!presentation || !contentElement) return;
+    // Retire a completed marker even when idle/cleared content cannot reach the animation branch.
+    if (!presentation || presentation.status === 'idle') lastAnimated = null;
+    if (!presentation || !contentElement) {
+      return removedContentSettlement.contentLost(presentation, lastAnimated, (pair) => {
+        lastAnimated = pair;
+        if (pair.status === 'presenting') onPresentationComplete?.();
+        else onDismissalComplete?.();
+      });
+    }
+    removedContentSettlement.contentBound(presentation);
 
     if (presentation.status === 'idle') {
-      lastAnimated = null;
       return;
     }
 
@@ -140,53 +163,121 @@
     if (lastAnimated?.status === status && lastAnimated.content === content) return;
     lastAnimated = { status, content };
 
+    if (status !== 'presenting' && status !== 'dismissing') return;
+    const owner = new AbortController();
+    let completed = false;
+
     if (status === 'presenting') {
-      animatePopoverIn(contentElement, positionTransform, springConfig).then(() => {
-        queueMicrotask(() => onPresentationComplete?.());
+      animatePopoverIn(contentElement, positionTransform, springConfig, owner.signal).then(() => {
+        queueMicrotask(() => {
+          if (owner.signal.aborted) return;
+          completed = true;
+          onPresentationComplete?.();
+        });
       });
     }
 
     if (status === 'dismissing') {
-      animatePopoverOut(contentElement, positionTransform, springConfig).then(() => {
-        queueMicrotask(() => onDismissalComplete?.());
+      animatePopoverOut(contentElement, positionTransform, springConfig, owner.signal).then(() => {
+        queueMicrotask(() => {
+          if (owner.signal.aborted) return;
+          completed = true;
+          onDismissalComplete?.();
+        });
       });
     }
+    return () => {
+      owner.abort();
+      if (!completed) lastAnimated = null;
+    };
   });
 
   // ============================================================================
   // Event Handlers
   // ============================================================================
 
-  function handleEscape(event: KeyboardEvent) {
-    if (event.key === 'Escape' && !disableEscapeKey && store && interactionsEnabled) {
-      event.preventDefault();
-      try {
-        store.dismiss();
-      } catch (error) {
-        console.error('[PopoverPrimitive] Failed to dismiss:', error);
+  let releaseContent: (() => void) | undefined;
+  function bindContent(node: HTMLElement, transform: string = '') {
+    releaseContent?.();
+    contentElement = node;
+    positionTransform = transform;
+    let disposed = false;
+    const destroy = () => {
+      if (disposed) return;
+      disposed = true;
+      if (releaseContent === destroy) {
+        releaseContent = undefined;
+        contentElement = undefined;
       }
-    }
+    };
+    releaseContent = destroy;
+    return { destroy };
   }
-
-  function handleClickOutside() {
-    if (!disableClickOutside && store && interactionsEnabled) {
-      try {
-        store.dismiss();
-      } catch (error) {
-        console.error('[PopoverPrimitive] Failed to dismiss:', error);
-      }
-    }
-  }
+  onDestroy(() => releaseContent?.());
 
   // Note: Popovers typically don't prevent body scroll
   // as they're meant for contextual menus/tooltips
+  function presentationLayer(
+    node: HTMLElement,
+    layer: { view: PresentationView<unknown, unknown> | undefined; focusActive: boolean }
+  ) {
+    function dismissal(view: PresentationView<unknown, unknown> | undefined) {
+      return Object.freeze({
+        identity: () => view,
+        onPointerOutside: () => {
+          if (!disableClickOutside && view && interactionsEnabled) {
+            try {
+              view.dismiss();
+            } catch (error) {
+              console.error('[PopoverPrimitive] Failed to dismiss:', error);
+            }
+          }
+        },
+        onEscape: (event: KeyboardEvent) => {
+          if (event.key === 'Escape' && !disableEscapeKey && view && interactionsEnabled) {
+            event.preventDefault();
+            try {
+              view.dismiss();
+            } catch (error) {
+              console.error('[PopoverPrimitive] Failed to dismiss:', error);
+            }
+          }
+        }
+      });
+    }
+
+    let currentView = layer.view;
+    const handle = registerDismissalLayer.enroll({
+      node,
+      ...dismissal(currentView),
+      focusActive: layer.focusActive,
+      pointerBoundary: () => contentElement,
+      pointerEnabled: () => visible,
+      escapeEnabled: () => visible,
+      focus: { node, modal: false, returnFocus: () => returnFocusTo }
+    });
+    return {
+      update(next: { view: PresentationView<unknown, unknown> | undefined; focusActive: boolean }) {
+        if (next.view !== currentView) {
+          handle.replaceDismissal(dismissal(next.view));
+          currentView = next.view;
+        }
+        handle.setFocusActive(next.focusActive);
+        handle.refresh();
+      },
+      destroy() {
+        handle.release();
+        currentView = undefined;
+      }
+    };
+  }
 </script>
 
 <!-- ============================================================================ -->
 <!-- Keyboard Listeners -->
 <!-- ============================================================================ -->
 
-<svelte:window on:keydown={handleEscape} />
+
 
 <!-- ============================================================================ -->
 <!-- Portal Content -->
@@ -195,17 +286,13 @@
 {#if visible}
   <div use:portal>
     <div
-      use:clickOutside={{ handler: handleClickOutside, enabled: () => !disableClickOutside }}
-      use:focusTrap={{ returnFocus: returnFocusTo }}
+      use:presentationLayer={{ view: admittedStore, focusActive }}
       style:pointer-events={interactionsEnabled ? 'auto' : 'none'}
     >
       {@render children?.({
         visible,
-        store,
-        bindContent: (node: HTMLElement, transform: string = '') => {
-          contentElement = node;
-          positionTransform = transform;
-        },
+        store: admittedStore,
+        bindContent,
         initialOpacity: presentation?.status === 'presenting' ? '0' : undefined
       })}
     </div>

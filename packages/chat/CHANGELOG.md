@@ -5,7 +5,34 @@ All notable changes to `@composable-svelte/chat` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.5.0] - 2026-09-26
+
+### Changed
+
+- Requires `@composable-svelte/core` `^0.13.1`, Svelte `^5.20.0`, and optional peers `@composable-svelte/code` `^0.5.0` and `@composable-svelte/media` `^0.5.0`. Installing the optional `code` peer requires Svelte `^5.30.0`, so an application that enables it needs Svelte 5.30 or newer.
+- **Managed views.** `MinimalStreamingChat`, `StandardStreamingChat`, `FullStreamingChat`, `ChatMessageWithActions`, `ActionButtons` and the four collaborative hooks accept a managed `ChildView` from `@composable-svelte/core/application` (`FeatureViewProps.store`, `composition.bind`, typed `scopeTo`) as well as a standalone `Store`. The `store` prop type widens to `Store<S, A> | ChildView<S, A>`; the action union is unchanged and no prop was added or removed. Chat imports only types from `@composable-svelte/core/application`; the `^0.13.1` core floor comes from the coordinated release, not from a new runtime import. See the README's "Managed applications", which quotes a tested recipe.
+- A retired managed view renders nothing: every variant and store-taking primitive reads the state as possibly `undefined`. Previously a retired view threw on the first `$store.…` read, including `FullStreamingChat`'s unmount cleanup.
+- An unkeyed variant whose `store` prop changes clears its unsent draft, so text typed into one conversation is never sent to another. Files still being read when the store changes are added to the store they were picked in, or revoked if that owner has retired.
+- Under a managed view the collaborative hooks release their listeners and timers when the owner retires, without a call to the returned teardown; calling it afterwards is harmless. Standalone stores are unchanged: the teardown remains the only release.
+- Tracked listeners now use a wrapper so `once`, abort and early disposal release tracking entries. Remove them with the disposer returned by `addEventListener` or with tracker disposal; native `target.removeEventListener` with the original callback no longer removes the wrapper. Tracked listeners retire before general cleanup callbacks.
+- `resourceCount` counts live tracked listeners; once-fired, aborted and explicitly disposed listeners no longer remain counted. Completed typing timers no longer retain cleanup closures per keystroke.
+
+### Added
+
+- `scripts/verify-optional-peers.mjs` (repository only, not published): installs the packed package with none of `prismjs`, `@composable-svelte/code`, `@composable-svelte/media` or `pdfjs-dist`, and checks plain Node imports, `tsc` with `skipLibCheck: false`, SSR (dev server and production bundle), a Vite build and the build in Chromium, with no page error and no console warning or error; then installs `prismjs` and checks that it is picked up. A deliberate mutation of the installed `markdown.js` proves the console checks catch a stub taken for Prism.
+- `CleanupTracker.clearInterval` releases a tracked interval independently. `addEventListener` returns a tracked disposer for early removal while preserving its typed browser overloads.
+
+### Fixed
+
+- Retire replaced chat streams and ignore stale callbacks. The latest send, edit, or regeneration owns the reply slot; earlier attachment uploads may finish metadata, but cannot start an obsolete reply. `streamSuperseded` reports the retired operation.
+- Stop preserves partial content, cancels only the active operation's upload, and preserves unchanged message identities. Natural completion does not abort the completed transport.
+- **Syntax highlighting on the server.** With the optional `prismjs` peer installed, a Node or SSR render (where `prismjs`, which is CommonJS, is loaded as a `default` export) highlighted nothing and logged "Failed to highlight code block" for every block. Bundled browser builds were unaffected. Found by the new packed-install check.
+- `FullStreamingChat` revokes its pending attachments' blob URLs when a managed owner retires, from the last list it saw, instead of reading the retired store at unmount.
+- `FullStreamingChat` tracks pending blob URLs per conversation. Changing an unkeyed chat's `store`, whether to another live store or to an already-retired view, no longer revokes the previous conversation's URLs while that conversation still holds them. They are revoked when the previous owner retires, or when the component unmounts. Previously the chat either revoked them at once or, after a live-to-live change, forgot them.
+- **No per-block warning without `prismjs` in production builds.** A production Vite build (client or `--ssr`) resolves an absent optional peer to a stub `{}`. That stub was taken for Prism, so every fenced code block warned "Failed to highlight code block", once per render and so on every chunk of a streaming reply. Only a module with Prism's `highlight` and `languages` is used now. Node's CommonJS `default` interop is kept. `getVideoEmbedComponent()` now returns `null`, as documented, rather than `undefined` when media is absent in such a build.
+- `useTypingEmitter`'s `start` and `update` do nothing once the emitter is released, whether by its teardown or by the owner retiring. They previously armed a timer and warned "[CleanupTracker] Setting timeout after dispose" on each keystroke.
+- Once and aborted event listeners release their tracking entries immediately; listener disposal retains the original capture option.
+- Post-disposal timer registrations leave no active timer. Cleanup errors are contained so remaining cleanup continues, including cleanup registered during disposal.
 
 ## [0.4.1] - 2026-09-18
 

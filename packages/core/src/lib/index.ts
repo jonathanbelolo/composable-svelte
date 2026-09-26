@@ -97,8 +97,7 @@ export type {
   StackActionOptions,
   ScopedDestinationStore,
   ScopableStore,
-  ScopedStore,
-  DismissDependency
+  ScopedStore
 } from './navigation/index.js';
 
 export {
@@ -128,10 +127,7 @@ export {
   scopeToOptional,
   scopeToElement,
   scopeTo,
-  integrate,
-  createDismissDependency,
-  createDismissDependencyWithCleanup,
-  dismissDependency
+  integrate
 } from './navigation/index.js';
 
 // ============================================================================
@@ -364,3 +360,5 @@ export { isServer } from './ssr/index.js';
 // ============================================================================
 
 export * from './components-exports.js';
+
+export { RootThrottleCapacityError } from './execution/runtime.js';

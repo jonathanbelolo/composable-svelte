@@ -15,17 +15,12 @@
  * never the problem.
  */
 
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import Combobox from '../src/lib/components/ui/combobox/Combobox.svelte';
 
 const settle = (ms = 250) => new Promise((r) => setTimeout(r, ms));
 
-let cleanup: Array<() => void> = [];
-afterEach(() => {
-	cleanup.forEach((fn) => fn());
-	cleanup = [];
-});
 
 const options = [
 	{ value: '1', label: 'Apple' },

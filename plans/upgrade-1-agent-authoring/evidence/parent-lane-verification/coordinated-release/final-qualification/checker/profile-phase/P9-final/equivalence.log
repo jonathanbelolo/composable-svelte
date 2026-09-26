@@ -1,0 +1,21 @@
+ok   maps production consumer npm run check exit=0
+ok   maps production consumer npm run build exit=0
+ok   maps production consumer npm run ssr exit=0
+ok   maps original instrumented fixture: shipped npm run test:browser exit=0
+ok   maps SSR output identical (default props and brush:true) exit=0
+ok   maps browser equivalence (Chromium): instrumented without onApp vs production consumer exit=0
+ok   graphics production consumer npm run check exit=0
+ok   graphics production consumer npm run typecheck:nodenext exit=0
+ok   graphics production consumer npm run build exit=0
+ok   graphics production consumer npm run ssr exit=0
+ok   graphics original instrumented fixture: shipped npm run test:browser exit=0
+ok   graphics SSR output identical (default props and brush:true) exit=0
+ok   graphics browser equivalence (Chromium): instrumented without onApp vs production consumer exit=0
+ok   charts production consumer npm run check exit=0
+ok   charts production consumer npm run typecheck:nodenext exit=0
+ok   charts production consumer npm run build exit=0
+ok   charts production consumer npm run ssr exit=0
+ok   charts original instrumented fixture: shipped npm run test:browser exit=0
+ok   charts SSR output identical (default props and brush:true) exit=0
+ok   charts browser equivalence (Chromium): instrumented without onApp vs production consumer exit=0
+report P9-final/production-consumer-equivalence.json sha256 8bf3d313ce65cc409f8326ff705ed2d0d373c187d22fe9e5ba9b6c5f4ed49c5a EQUIVALENCE_CHECKS_PASSED

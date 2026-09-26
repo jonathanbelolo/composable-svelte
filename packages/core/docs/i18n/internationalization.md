@@ -17,7 +17,7 @@ The i18n system integrates seamlessly with the Composable Architecture:
 i18n is included in `@composable-svelte/core`:
 
 ```bash
-pnpm add @composable-svelte/core
+pnpm add @composable-svelte/core@next
 ```
 
 ### Basic Setup

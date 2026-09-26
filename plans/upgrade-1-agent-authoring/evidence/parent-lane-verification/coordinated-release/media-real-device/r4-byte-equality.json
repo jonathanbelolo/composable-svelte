@@ -1,0 +1,16 @@
+[
+  {
+    "name": "@composable-svelte/core",
+    "r3Path": "/private/tmp/companion-runtime-release/archives-r3/composable-svelte-core-0.13.1.tgz",
+    "r4Path": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-core-0.13.1.tgz",
+    "sha256": "30e044e139e831033e06fdf626db979875efa2f7c29d72dece33a21db112d18b",
+    "archiveBytesIdentical": true
+  },
+  {
+    "name": "@composable-svelte/media",
+    "r3Path": "/private/tmp/companion-runtime-release/archives-r3/composable-svelte-media-0.5.0.tgz",
+    "r4Path": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-media-0.5.0.tgz",
+    "sha256": "c0bfa6528fb6cd3dc68f2769237d3053514f76f79bc5197316b230eb07b78298",
+    "archiveBytesIdentical": true
+  }
+]

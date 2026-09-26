@@ -1,0 +1,12 @@
+[
+  {
+    "path": "scripts/verify-release-archives.test.mjs",
+    "beforeSHA256": "cbcff88e1ee25a1b65e09b32c4beb3fcdf719f261a7ea67f85067a65186f8476",
+    "afterSHA256": "dd076e16c0b1548b82823afe81003c0a9fe2288c806caafe3478d1e9a1041c21"
+  },
+  {
+    "path": ".github/workflows/ci.yml",
+    "beforeSHA256": "c0688befeea39512cb7293b39a13e9ff6e81b3f68673e2d204bc43d1d47881d0",
+    "afterSHA256": "21d25ad7350d3d4054f08f182d008e740b07234e95b47847e303ca462da9e0e4"
+  }
+]

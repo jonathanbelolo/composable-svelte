@@ -65,9 +65,9 @@ const MAX_FAILED_MESSAGES = 100;
  * Checks for patterns like:
  * - {variable, plural, ...}
  * - {variable, select, ...}
- * - {variable, number, ...}
- * - {variable, date, ...}
- * - {variable, time, ...}
+ * - {variable, number} or {variable, number, ...}
+ * - {variable, date} or {variable, date, ...}
+ * - {variable, time} or {variable, time, ...}
  *
  * @param str - String to check
  * @returns true if string contains ICU syntax
@@ -81,7 +81,7 @@ const MAX_FAILED_MESSAGES = 100;
  */
 export function isICUMessage(str: string): boolean {
   // Check for ICU format specifiers
-  return /\{\s*\w+\s*,\s*(plural|select|selectordinal|number|date|time)\s*,/.test(str);
+  return /\{\s*\w+\s*,\s*(?:(plural|select|selectordinal)\s*,|(number|date|time)\s*[,}])/.test(str);
 }
 
 /**

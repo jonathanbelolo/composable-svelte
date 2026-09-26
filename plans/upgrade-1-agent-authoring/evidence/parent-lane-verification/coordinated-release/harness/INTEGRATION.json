@@ -1,0 +1,30 @@
+{
+  "integratedAt": "2026-09-26T12:51:24.996478+00:00",
+  "files": [
+    {
+      "path": "scripts/verify-release-archives.mjs",
+      "beforeSHA256": null,
+      "afterSHA256": "01e71e02ca3205096e35902d9eebbba788ee4c169c9a7cf8f64e7ab4359552c9",
+      "sourcePath": "/private/tmp/composable-final-qualification/repo/scripts/verify-release-archives.mjs",
+      "status": "independently-cleared-exact-correction-applied",
+      "review": "/private/tmp/composable-final-qualification/FOCUSED-HARNESS-REREVIEW.md"
+    },
+    {
+      "path": "scripts/verify-release-archives.test.mjs",
+      "beforeSHA256": null,
+      "afterSHA256": "cbcff88e1ee25a1b65e09b32c4beb3fcdf719f261a7ea67f85067a65186f8476",
+      "sourcePath": "/private/tmp/composable-final-qualification/repo/scripts/verify-release-archives.test.mjs",
+      "status": "independently-cleared-exact-correction-applied",
+      "review": "/private/tmp/composable-final-qualification/FOCUSED-HARNESS-REREVIEW.md"
+    },
+    {
+      "path": "scripts/verify-consumer.mjs",
+      "beforeSHA256": "a83273c69fc4a9f6de241a78c29fad33522553c1a2e1c397bdf418b50fb60c24",
+      "afterSHA256": "055f117abed189b774242c8e5b68aa1e33155e1155d5f36fa541fe5826fa131a",
+      "sourcePath": "/private/tmp/composable-final-qualification/repo/scripts/verify-consumer.mjs",
+      "status": "independently-cleared-exact-correction-applied",
+      "review": "/private/tmp/composable-final-qualification/FOCUSED-HARNESS-REREVIEW.md"
+    }
+  ],
+  "status": "independently reviewed infrastructure; runtime/checker/app qualification pending"
+}

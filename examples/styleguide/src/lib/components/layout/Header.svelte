@@ -4,9 +4,10 @@
   interface HeaderProps {
     theme: Theme;
     onThemeToggle: () => void;
+    onHome?: () => void;
   }
 
-  let { theme, onThemeToggle }: HeaderProps = $props();
+  let { theme, onThemeToggle, onHome }: HeaderProps = $props();
 </script>
 
 <header class="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -14,7 +15,7 @@
     <!-- Logo/Title -->
     <div class="flex items-center gap-3">
       <button
-        onclick={() => {/* TODO: Navigate home */}}
+        onclick={onHome}
         class="flex items-center gap-3 hover:opacity-80"
       >
         <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">

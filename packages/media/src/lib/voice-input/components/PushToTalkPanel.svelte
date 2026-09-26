@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { animateFadeIn } from '@composable-svelte/core/animation';
-	import type { Store } from '@composable-svelte/core';
+	import type { ViewStore } from '../../internal/view-store.js';
 	import type { VoiceInputState, VoiceInputAction } from '../types.js';
 	import AudioVisualizer from './AudioVisualizer.svelte';
 	import RecordingTimer from './RecordingTimer.svelte';
@@ -12,7 +12,8 @@
 	 * Shows audio visualization and timer without blocking interaction.
 	 */
 	interface Props {
-		store: Store<VoiceInputState, VoiceInputAction>;
+		/** A standalone store or a managed feature view; its state is `undefined` once retired. */
+		store: ViewStore<VoiceInputState, VoiceInputAction>;
 	}
 
 	const { store }: Props = $props();
@@ -50,12 +51,12 @@
 <div class="push-to-talk-popover" bind:this={rootElement}>
 	<div class="popover-content">
 		<!-- Audio Visualizer -->
-		<AudioVisualizer audioLevel={$store.audioLevel} variant="bars" />
+		<AudioVisualizer audioLevel={$store?.audioLevel ?? 0} variant="bars" />
 
 		<!-- Recording Timer -->
-		{#if $store.recordingStartTime}
+		{#if $store?.recordingStartTime}
 			<RecordingTimer
-				startTime={$store.recordingStartTime}
+				startTime={$store?.recordingStartTime}
 				maxDuration={60}
 				onMaxDurationReached={handleCancel}
 			/>

@@ -1,0 +1,30 @@
+import {run} from '../probes/harness.mjs';
+const S = `let fire: any; const p = new Promise(r => { fire = r; });`;
+const svelte = (tpl, extra = '') => ({'App.svelte': `<script lang="ts">\n${extra}${S}\n</script>\n${tpl}\n`});
+run([
+  ['T4 snippet param to handler', svelte(`{#snippet s(f: any)}<button onclick={f}>x</button>{/snippet}\n{@render s(fire)}`)],
+  ['T4b snippet param called w/ data', svelte(`{#snippet s(f: any)}<button onclick={() => f({a: 1})}>x</button>{/snippet}\n{@render s(fire)}`)],
+  ['T5 use:fire action name', svelte(`<div use:fire></div>`)],
+  ['T6 use:act={fire}', svelte(`<div use:act={fire}></div>`, `function act(n: any, f: any) {}\n`)],
+  ['T7 attach fire', svelte(`<div {@attach fire}></div>`)],
+  ['T7b attach arrow fire(node)', svelte(`<div {@attach (n) => fire(n)}></div>`)],
+  ['T8 shorthand attr', svelte(`<button {fire}>x</button>`)],
+  ['T9 const tag', svelte(`{#if true}{@const g = fire}<button onclick={g}>x</button>{/if}`)],
+  ['T10 svelte:window', svelte(`<svelte:window onkeydown={fire} />`)],
+  ['T11 on: directive', svelte(`<button on:click={fire}>x</button>`)],
+  ['T12 transition:fire', svelte(`<div transition:fire></div>`)],
+  ['T12c transition:t control', {'App.svelte': `<script lang="ts">\nfunction t(n: any) { n.ownerDocument.defaultView.location.href = '/x'; return {}; }\n</script>\n<div transition:t></div>\n`}],
+  ['T13 each over array', svelte(`{#each [fire] as f}<button onclick={f}>x</button>{/each}`)],
+  ['T14 spread attrs', svelte(`<button {...{onclick: fire}}>x</button>`)],
+  ['T15 cond expr', svelte(`<button onclick={Math.random() > 0.5 ? fire : null}>x</button>`)],
+  ['T16 bind getter/setter', svelte(`<input bind:value={() => fire, (v) => {}} />`)],
+  ['T17 debug tag', svelte(`{@debug fire}`)],
+  ['T18 svelte:element this', svelte(`<svelte:element this={'div'} onclick={fire}></svelte:element>`)],
+  ['T19 class directive', svelte(`<div class:x={fire}></div>`)],
+  ['T20 inst in template', svelte(`<button onclick={(fire as any)}>x</button>`)],
+  ['T21 inst expr in template', svelte(`<button onclick={((f: any) => f)<number>}>x</button>`)],
+  ['T22 inst expr settle via template', svelte(`<button onclick={(<T,>(f: T) => f)<any>(fire)}>x</button>`)],
+  ['T23 key block', svelte(`{#key fire}<p>x</p>{/key}`)],
+  ['OK closure data', svelte(`<button onclick={() => fire({ok: 1})}>x</button>`)],
+  ['OK closure event', svelte(`<button onclick={(e) => fire(e)}>x</button>`)],
+]);

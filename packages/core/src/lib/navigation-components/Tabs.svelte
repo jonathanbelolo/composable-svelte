@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
+  import { onDestroy, tick, type Snippet } from 'svelte';
   import TabsPrimitive from './primitives/TabsPrimitive.svelte';
-  import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
+  import type { ChildView } from '../navigation/managed-integration.js';
   import { cn } from '../utils.js';
 
   // ============================================================================
@@ -12,7 +12,7 @@
     /**
      * Scoped store for the tabs content.
      */
-    store: ScopedDestinationStore<State, Action> | null;
+    store: ChildView<State, Action> | undefined;
 
     /**
      * Tab labels for rendering tab buttons.
@@ -58,7 +58,7 @@
       [
         {
           visible: boolean;
-          store: ScopedDestinationStore<State, Action> | null;
+          store: ChildView<State, Action> | undefined;
           tabs: string[];
           activeTab: number;
           onTabChange: (index: number) => void;
@@ -78,6 +78,15 @@
     class: className,
     children: renderContent
   }: TabsProps<unknown, unknown> = $props();
+
+  const uid = $props.id();
+
+  let live = true;
+  onDestroy(() => {
+    live = false;
+  });
+
+  let tabListElement: HTMLDivElement | null = $state(null);
 
   // ============================================================================
   // Computed Classes
@@ -132,11 +141,14 @@
     }
 
     if (newIndex !== null) {
+      const list = tabListElement;
       onTabChange(newIndex);
-      // Focus the newly selected tab
-      setTimeout(() => {
-        document.getElementById(`tab-${newIndex}`)?.focus();
-      }, 0);
+      // Keep the originating DOM instance across the update and never steal
+      // focus for a replaced or unmounted tab list.
+      void tick().then(() => {
+        if (!live || !list?.isConnected || list !== tabListElement) return;
+        list.querySelector<HTMLElement>(`[id="${uid}-tab-${newIndex}"]`)?.focus();
+      });
     }
   }
 
@@ -149,13 +161,13 @@
 
 <TabsPrimitive {store} {tabs} {activeTab} {onTabChange}>
   {#snippet children({ visible, store, tabs, activeTab, onTabChange })}
-    <div role="tablist" aria-label="Tabs" class={tabListClasses}>
+    <div role="tablist" aria-label="Tabs" class={tabListClasses} bind:this={tabListElement}>
       {#each tabs as tab, index}
         <button
           role="tab"
           aria-selected={activeTab === index}
-          aria-controls="tabpanel-{index}"
-          id="tab-{index}"
+          aria-controls="{uid}-tabpanel-{index}"
+          id="{uid}-tab-{index}"
           class={getTabClasses(activeTab === index)}
           tabindex={activeTab === index ? 0 : -1}
           onclick={() => onTabChange(index)}
@@ -168,8 +180,8 @@
 
     <div
       role="tabpanel"
-      id="tabpanel-{activeTab}"
-      aria-labelledby="tab-{activeTab}"
+      id="{uid}-tabpanel-{activeTab}"
+      aria-labelledby="{uid}-tab-{activeTab}"
       tabindex="0"
       class={contentClasses}
     >

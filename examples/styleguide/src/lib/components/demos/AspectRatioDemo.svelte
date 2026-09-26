@@ -1,6 +1,12 @@
 <script lang="ts">
   import { AspectRatio } from '@composable-svelte/core/components/ui';
   import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@composable-svelte/core/components/ui';
+
+  const productGradients = [
+    'from-blue-300 to-purple-400',
+    'from-blue-400 to-purple-500',
+    'from-blue-500 to-purple-600'
+  ];
 </script>
 
 <div class="space-y-12">
@@ -231,7 +237,7 @@
           {#each Array(8) as _, i}
             <div class="space-y-2">
               <AspectRatio ratio={1}>
-                <div class="w-full h-full bg-gradient-to-br from-blue-{(i % 3 + 3) * 100} to-purple-{(i % 3 + 4) * 100} rounded-lg flex items-center justify-center">
+                <div class="w-full h-full bg-gradient-to-br {productGradients[i % productGradients.length]} rounded-lg flex items-center justify-center">
                   <span class="text-3xl">🛍️</span>
                 </div>
               </AspectRatio>
@@ -316,15 +322,15 @@
       <CardContent class="pt-6">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {#each [
-            { ratio: 16/9, color: 'blue', icon: '🌄' },
-            { ratio: 1, color: 'green', icon: '🌳' },
-            { ratio: 4/3, color: 'purple', icon: '🏔️' },
-            { ratio: 16/9, color: 'red', icon: '🌅' },
-            { ratio: 1, color: 'yellow', icon: '🌻' },
-            { ratio: 4/3, color: 'pink', icon: '🌺' }
+            { ratio: 16/9, gradient: 'from-blue-400 to-blue-600', icon: '🌄' },
+            { ratio: 1, gradient: 'from-green-400 to-green-600', icon: '🌳' },
+            { ratio: 4/3, gradient: 'from-purple-400 to-purple-600', icon: '🏔️' },
+            { ratio: 16/9, gradient: 'from-red-400 to-red-600', icon: '🌅' },
+            { ratio: 1, gradient: 'from-yellow-400 to-yellow-600', icon: '🌻' },
+            { ratio: 4/3, gradient: 'from-pink-400 to-pink-600', icon: '🌺' }
           ] as item}
             <AspectRatio ratio={item.ratio}>
-              <div class="w-full h-full bg-gradient-to-br from-{item.color}-400 to-{item.color}-600 rounded-lg flex items-center justify-center">
+              <div class="w-full h-full bg-gradient-to-br {item.gradient} rounded-lg flex items-center justify-center">
                 <span class="text-5xl">{item.icon}</span>
               </div>
             </AspectRatio>

@@ -1,3 +1,13 @@
+<script module lang="ts">
+	/**
+	 * Tracks the last handled completionCount per store instance.
+	 * Preserved across mounts and unmounts, so completions that occur while
+	 * the form is unmounted are handed over on remount, while re-renders, field edits,
+	 * and remounts with no new completion do not duplicate handoffs.
+	 */
+	const handledCompletions = new WeakMap<object, number>();
+</script>
+
 <script lang="ts">
 	/**
 	 * Setting or changing the password on the signed-in account.
@@ -17,6 +27,7 @@
 	 */
 	import { Form, FormField } from '@composable-svelte/core/components/form';
 	import type { FormAction, FormState } from '@composable-svelte/core/components/form';
+	import type { PresentationView } from '@composable-svelte/core/application';
 	import type { Snippet } from 'svelte';
 
 	import PasswordInput from './PasswordInput.svelte';
@@ -29,27 +40,14 @@
 	import type { ChangePasswordFields } from '../flows/change-password/schema.js';
 	import type { SessionAction } from '../session/types.js';
 
-	interface Props {
+	interface StandaloneBinding {
+		mode?: 'standalone' | undefined;
 		flowStore: {
 			readonly state: ChangePasswordState;
 			dispatch(action: ChangePasswordAction): void;
 			subscribe(listener: (state: ChangePasswordState) => void): () => void;
 		};
 		sessionStore: { dispatch(action: SessionAction): void };
-		/**
-		 * Whether the account already has a password.
-		 *
-		 * From `fetchAccount`, and display-only: it decides whether this says
-		 * "change" or "set". Offering to *change* a password an OAuth-only account
-		 * never had is a small lie that makes the whole panel untrustworthy.
-		 *
-		 * `undefined` means not known yet, and the panel then says "change" —
-		 * the commoner case, and the one that is wrong only for an account that
-		 * has no password. **It will flip to "set" when the account arrives**, so
-		 * a surface that would rather not show that flicker should render the
-		 * panel once the account has loaded, as the styleguide demo does.
-		 */
-		hasPassword?: boolean | undefined;
 		/** Called once the password has been changed. */
 		onChanged?: (() => void) | undefined;
 		/**
@@ -64,6 +62,31 @@
 		onReauthenticationRequired?:
 			| ((demand: { methods: readonly ('password' | 'totp' | 'recovery_code')[] }) => void)
 			| undefined;
+	}
+
+	interface ManagedBinding {
+		mode: 'managed';
+		flowStore: PresentationView<ChangePasswordState, ChangePasswordAction>;
+		sessionStore?: never;
+		onChanged?: never;
+		onReauthenticationRequired?: never;
+	}
+
+	interface PresentationProps {
+		/**
+		 * Whether the account already has a password.
+		 *
+		 * From `fetchAccount`, and display-only: it decides whether this says
+		 * "change" or "set". Offering to *change* a password an OAuth-only account
+		 * never had is a small lie that makes the whole panel untrustworthy.
+		 *
+		 * `undefined` means not known yet, and the panel then says "change" —
+		 * the commoner case, and the one that is wrong only for an account that
+		 * has no password. **It will flip to "set" when the account arrives**, so
+		 * a surface that would rather not show that flicker should render the
+		 * panel once the account has loaded, as the styleguide demo does.
+		 */
+		hasPassword?: boolean | undefined;
 		headingLevel?: 1 | 2 | 3 | 4 | undefined;
 		submitLabel?: string | undefined;
 		/** Rendered below the form on every branch. */
@@ -71,17 +94,23 @@
 		class?: string | undefined;
 	}
 
+	type Props = PresentationProps & (StandaloneBinding | ManagedBinding);
+
 	let {
-		flowStore,
-		sessionStore,
 		hasPassword,
-		onChanged,
-		onReauthenticationRequired,
 		headingLevel = 2,
 		submitLabel,
 		footer,
-		class: className = ''
+		class: className = '',
+		...binding
 	}: Props = $props();
+
+	type Owner = symbol | PresentationView<ChangePasswordState, ChangePasswordAction>;
+	const standaloneOwner = Symbol('standalone');
+	const owner: Owner = $derived(binding.mode === 'managed' ? binding.flowStore : standaloneOwner);
+	const viewOf = (key: Owner) => (typeof key === 'symbol' ? binding.flowStore : key);
+
+	const flow: ChangePasswordState | undefined = $derived(binding.flowStore.state);
 
 	const uid = $props.id();
 	const passwordId = `${uid}-password`;
@@ -93,50 +122,86 @@
 	const listeners = new Set<(state: FormState<ChangePasswordFields>) => void>();
 
 	$effect(() => {
-		return flowStore.subscribe((state) => {
+		if (binding.mode === 'managed') return;
+		return binding.flowStore.subscribe((state) => {
 			for (const listener of listeners) listener(state.form);
 		});
 	});
 
+	function standaloneForm(): FormState<ChangePasswordFields> {
+		const state = binding.flowStore.state;
+		if (state === undefined) throw new Error('ChangePasswordForm: no live flow');
+		return state.form;
+	}
+
 	const formStore = {
 		get state(): FormState<ChangePasswordFields> {
-			return flowStore.state.form;
+			return standaloneForm();
 		},
 		dispatch(action: FormAction<ChangePasswordFields>) {
-			flowStore.dispatch({ type: 'form', action });
+			binding.flowStore.dispatch({ type: 'form', action });
 		},
 		subscribe(listener: (state: FormState<ChangePasswordFields>) => void) {
 			listeners.add(listener);
-			listener(flowStore.state.form);
+			listener(standaloneForm());
 			return () => listeners.delete(listener);
 		}
 	};
 
-	const status = $derived(flowStore.state.status);
-	const error = $derived(flowStore.state.error);
+	function managedFormStore(view: PresentationView<ChangePasswordState, ChangePasswordAction>) {
+		let last: FormState<ChangePasswordFields> | undefined;
+		function current(): FormState<ChangePasswordFields> {
+			const state = view.state;
+			if (state !== undefined) last = state.form;
+			if (last === undefined) throw new Error('ChangePasswordForm: no live flow');
+			return last;
+		}
+		return {
+			get state() {
+				return current();
+			},
+			dispatch(action: FormAction<ChangePasswordFields>) {
+				view.dispatch({ type: 'form', action });
+			},
+			subscribe(listener: (state: FormState<ChangePasswordFields>) => void) {
+				const unsubscribe = view.subscribe((state) => {
+					if (state !== undefined) {
+						last = state.form;
+						listener(state.form);
+					}
+				});
+				listener(current());
+				return unsubscribe;
+			}
+		};
+	}
+
+	const status = $derived(flow?.status);
+	const error = $derived(flow?.error ?? null);
 	const isSubmitting = $derived(status === 'submitting');
 
 	/** Neutral while the account is still loading, rather than guessing. */
 	const verb = $derived(hasPassword === false ? 'Set' : 'Change');
 	const title = $derived(hasPassword === false ? 'Set a password' : 'Change your password');
 
-	/** Whether the session produced by the change has been handed over. */
-	let handedOver = false;
-
 	$effect(() => {
-		const state = flowStore.state;
-		if (state.status !== 'changed') {
-			handedOver = false;
-			return;
-		}
-		if (handedOver) return;
-		handedOver = true;
+		if (binding.mode === 'managed') return;
+		const currentStore = binding.flowStore;
+		const state = currentStore.state;
+		if (state.status !== 'changed') return;
+
+		const count = state.completionCount;
+		const lastHandled = handledCompletions.get(currentStore) ?? 0;
+		if (count <= lastHandled) return;
+
+		handledCompletions.set(currentStore, count);
+
 		// A rotated session crosses over; `null` means this device kept its own,
 		// which is a success too — so `onChanged` fires either way.
 		if (state.session !== null) {
-			sessionStore.dispatch({ type: 'sessionEstablished', session: state.session });
+			binding.sessionStore.dispatch({ type: 'sessionEstablished', session: state.session });
 		}
-		onChanged?.();
+		binding.onChanged?.();
 	});
 
 	/**
@@ -149,14 +214,15 @@
 	let reportedDemand = false;
 
 	$effect(() => {
-		const current = flowStore.state.error;
-		if (onReauthenticationRequired === undefined || !isReauthenticationRequired(current)) {
+		if (binding.mode === 'managed') return;
+		const current = binding.flowStore.state?.error ?? null;
+		if (binding.onReauthenticationRequired === undefined || !isReauthenticationRequired(current)) {
 			reportedDemand = false;
 			return;
 		}
 		if (reportedDemand) return;
 		reportedDemand = true;
-		onReauthenticationRequired({ methods: current.methods });
+		binding.onReauthenticationRequired({ methods: current.methods });
 	});
 
 	/**
@@ -164,123 +230,128 @@
 	 *
 	 * A re-authentication demand handled by a consumer is not one: they are
 	 * routing to a confirmation prompt, and a red "something went wrong" on the
-	 * way there is both wrong and alarming. The `mfa_required` lesson.
+	 * way there is both wrong and alarming. In managed mode or when no callback
+	 * is provided, it is shown in the banner.
 	 */
 	const showsError = $derived(
 		error !== null &&
-			!(onReauthenticationRequired !== undefined && isReauthenticationRequired(error))
+			!(binding.mode !== 'managed' && binding.onReauthenticationRequired !== undefined && isReauthenticationRequired(error))
 	);
 </script>
 
-<div class="change-password {className}">
-	<svelte:element this={`h${headingLevel}`} class="change-password__title">
-		{title}
-	</svelte:element>
+{#if flow}
+	{#each [owner] as key (key)}
+		<div class="change-password {className}">
+			<svelte:element this={`h${headingLevel}`} class="change-password__title">
+				{title}
+			</svelte:element>
 
-	{#if hasPassword === false}
-		<p class="change-password__body">
-			This account signs in another way today. Setting a password adds one — it does not remove
-			anything.
-		</p>
-	{/if}
+			{#if hasPassword === false}
+				<p class="change-password__body">
+					This account signs in another way today. Setting a password adds one — it does not remove
+					anything.
+				</p>
+			{/if}
 
-	{#if status === 'changed'}
-		<p class="change-password__body" role="status" aria-live="polite">
-			Your password is set. Other devices may need to sign in again.
-		</p>
-	{/if}
+			{#if status === 'changed'}
+				<p class="change-password__body" role="status" aria-live="polite">
+					Your password is set. Other devices may need to sign in again.
+				</p>
+			{/if}
 
-	{#if showsError && error}
-		<div
-			class="change-password__error"
-			role="alert"
-			aria-live="polite"
-			data-error-code={error.code}
-		>
-			{error.message}
+			{#if showsError && error}
+				<div
+					class="change-password__error"
+					role="alert"
+					aria-live="polite"
+					data-error-code={error.code}
+				>
+					{error.message}
+				</div>
+			{/if}
+
+			<Form store={typeof key === 'symbol' ? formStore : managedFormStore(key)} class="change-password__form">
+				<FormField name="password">
+					{#snippet children({ field, send })}
+						<div class="change-password__field">
+							<label class="change-password__label" for={passwordId}>New password</label>
+							<PasswordInput
+								id={passwordId}
+								name="password"
+								value={field.value}
+								autocomplete="new-password"
+								invalid={!!field.error}
+								errorId={passwordErrorId}
+								describedBy={criteriaId}
+								oninput={(event) =>
+									send({ type: 'fieldChanged', field: 'password', value: event.currentTarget.value })}
+								onblur={() => send({ type: 'fieldBlurred', field: 'password' })}
+							/>
+							{#if field.error}
+								<p
+									class="change-password__field-error"
+									id={passwordErrorId}
+									role="alert"
+									aria-live="polite"
+								>
+									{field.error}
+								</p>
+							{/if}
+							<div id={criteriaId}>
+								<PasswordCriteria password={field.value} />
+							</div>
+						</div>
+					{/snippet}
+				</FormField>
+
+				<FormField name="confirmPassword">
+					{#snippet children({ field, send })}
+						<div class="change-password__field">
+							<label class="change-password__label" for={confirmId}>Confirm new password</label>
+							<PasswordInput
+								id={confirmId}
+								name="confirmPassword"
+								value={field.value}
+								autocomplete="new-password"
+								invalid={!!field.error}
+								errorId={confirmErrorId}
+								oninput={(event) =>
+									send({
+										type: 'fieldChanged',
+										field: 'confirmPassword',
+										value: event.currentTarget.value
+									})}
+								onblur={() => send({ type: 'fieldBlurred', field: 'confirmPassword' })}
+							/>
+							{#if field.error}
+								<p
+									class="change-password__field-error"
+									id={confirmErrorId}
+									role="alert"
+									aria-live="polite"
+								>
+									{field.error}
+								</p>
+							{/if}
+						</div>
+					{/snippet}
+				</FormField>
+
+				<p class="change-password__status" role="status" aria-live="polite">
+					{isSubmitting ? 'Saving your password…' : ''}
+				</p>
+
+				<button type="submit" class="change-password__submit" disabled={isSubmitting}>
+					{isSubmitting ? 'Saving…' : (submitLabel ?? `${verb} password`)}
+				</button>
+			</Form>
+
+			{#if footer}
+				<div class="change-password__footer">{@render footer()}</div>
+			{/if}
 		</div>
-	{/if}
-
-	<Form store={formStore} class="change-password__form">
-		<FormField name="password">
-			{#snippet children({ field, send })}
-				<div class="change-password__field">
-					<label class="change-password__label" for={passwordId}>New password</label>
-					<PasswordInput
-						id={passwordId}
-						name="password"
-						value={field.value}
-						autocomplete="new-password"
-						invalid={!!field.error}
-						errorId={passwordErrorId}
-						describedBy={criteriaId}
-						oninput={(event) =>
-							send({ type: 'fieldChanged', field: 'password', value: event.currentTarget.value })}
-						onblur={() => send({ type: 'fieldBlurred', field: 'password' })}
-					/>
-					{#if field.error}
-						<p
-							class="change-password__field-error"
-							id={passwordErrorId}
-							role="alert"
-							aria-live="polite"
-						>
-							{field.error}
-						</p>
-					{/if}
-					<div id={criteriaId}>
-						<PasswordCriteria password={field.value} />
-					</div>
-				</div>
-			{/snippet}
-		</FormField>
-
-		<FormField name="confirmPassword">
-			{#snippet children({ field, send })}
-				<div class="change-password__field">
-					<label class="change-password__label" for={confirmId}>Confirm new password</label>
-					<PasswordInput
-						id={confirmId}
-						name="confirmPassword"
-						value={field.value}
-						autocomplete="new-password"
-						invalid={!!field.error}
-						errorId={confirmErrorId}
-						oninput={(event) =>
-							send({
-								type: 'fieldChanged',
-								field: 'confirmPassword',
-								value: event.currentTarget.value
-							})}
-						onblur={() => send({ type: 'fieldBlurred', field: 'confirmPassword' })}
-					/>
-					{#if field.error}
-						<p
-							class="change-password__field-error"
-							id={confirmErrorId}
-							role="alert"
-							aria-live="polite"
-						>
-							{field.error}
-						</p>
-					{/if}
-				</div>
-			{/snippet}
-		</FormField>
-
-		<p class="change-password__status" role="status" aria-live="polite">
-			{isSubmitting ? 'Saving your password…' : ''}
-		</p>
-
-		<button type="submit" class="change-password__submit" disabled={isSubmitting}>
-			{isSubmitting ? 'Saving…' : (submitLabel ?? `${verb} password`)}
-		</button>
-	</Form>
-
-	{#if footer}
-		<div class="change-password__footer">{@render footer()}</div>
-	{/if}
-</div>
+	{/each}
+{/if}
 
 <style>
 	/* Scoped CSS over core's theme tokens — see `LoginForm` for why not Tailwind. */

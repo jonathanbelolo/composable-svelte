@@ -48,18 +48,18 @@ function animated(duration = 1000) {
 			duration
 		}
 	});
-	return { store, start: store.state.animations[0]!.startTime };
+	return { store };
 }
 
 describe('tick keeps progress inside the animation', () => {
 	it('completes a zero-duration animation instead of producing NaN', () => {
 		// `elapsed / duration` is `0 / 0` when a tick lands in the same
-		// millisecond as the start — both come from `Date.now()`, so this is
+		// millisecond as the start — including the first anchoring tick, so this is
 		// ordinary, not exotic. NaN then flows into the position, and
 		// `progress >= 1` is false for NaN, so the animation never stops.
-		const { store, start } = animated(0);
+		const { store } = animated(0);
 
-		store.dispatch({ type: 'tick', time: start });
+		store.dispatch({ type: 'tick', time: 1000 });
 
 		expect(store.state.meshes[0]!.position.every(Number.isFinite)).toBe(true);
 		expect(store.state.meshes[0]!.position).toEqual([10, 0, 0]);
@@ -70,9 +70,10 @@ describe('tick keeps progress inside the animation', () => {
 		// `Math.min(…, 1)` clamps the top and nothing clamped the bottom, so a
 		// tick timestamped before `startTime` ran the animation backwards out of
 		// its own range.
-		const { store, start } = animated();
+		const { store } = animated();
 
-		store.dispatch({ type: 'tick', time: start - 500 });
+		store.dispatch({ type: 'tick', time: 1000 });
+		store.dispatch({ type: 'tick', time: 1000 - 500 });
 
 		expect(store.state.meshes[0]!.position[0]).toBeGreaterThanOrEqual(0);
 	});
@@ -118,10 +119,9 @@ describe('tick does not manufacture work', () => {
 				duration: 1000
 			}
 		});
-		const start = store.state.animations[0]!.startTime;
-
+		store.dispatch({ type: 'tick', time: 1000 });
 		const before = store.state.meshes;
-		store.dispatch({ type: 'tick', time: start + 100 });
+		store.dispatch({ type: 'tick', time: 1000 + 100 });
 
 		expect(store.state.meshes, 'a frame that changed nothing rebuilt the list').toBe(before);
 	});
@@ -144,12 +144,12 @@ describe('tick does not manufacture work', () => {
 				loop: true
 			}
 		});
-		const start = store.state.animations[0]!.startTime;
+		store.dispatch({ type: 'tick', time: 1000 });
 
 		// 60ms past the end of the first lap.
-		store.dispatch({ type: 'tick', time: start + 160 });
+		store.dispatch({ type: 'tick', time: 1000 + 160 });
 
-		expect(store.state.animations[0]!.startTime).toBe(start + 100);
+		expect(store.state.animations[0]!.startTime).toBe(1100);
 	});
 });
 
@@ -181,10 +181,10 @@ describe('two animations on one property', () => {
 			});
 		}
 
-		const start = Math.max(...store.state.animations.map((a) => a.startTime));
+		store.dispatch({ type: 'tick', time: 1000 });
 		const seen: number[] = [];
 		for (const offset of [100, 200, 300, 400, 500, 600]) {
-			store.dispatch({ type: 'tick', time: start + offset });
+			store.dispatch({ type: 'tick', time: 1000 + offset });
 			seen.push(store.state.meshes[0]!.position[0]);
 		}
 
@@ -213,8 +213,8 @@ describe('two animations on one property', () => {
 			});
 		}
 
-		const start = Math.max(...store.state.animations.map((a) => a.startTime));
-		store.dispatch({ type: 'tick', time: start + 600 });
+		store.dispatch({ type: 'tick', time: 1000 });
+		store.dispatch({ type: 'tick', time: 1000 + 600 });
 
 		expect(store.state.meshes[0]!.position[0], 'the last writer did not win').toBeCloseTo(3);
 	});
@@ -239,9 +239,8 @@ describe('animations are keyed by id, like meshes and lights', () => {
 				loop: true
 			}
 		});
-		const start = store.state.animations[0]!.startTime;
 
-		store.dispatch({ type: 'tick', time: start });
+		store.dispatch({ type: 'tick', time: 1000 });
 
 		expect(store.state.meshes[0]!.position).toEqual([10, 0, 0]);
 		expect(store.state.animations[0]!.isPlaying, 'it never stopped').toBe(false);
@@ -306,8 +305,9 @@ describe('an animation id can be reused', () => {
 		// Straight out of the README: its `<button onclick={startRotation}>`
 		// dispatches a fixed id, so without `loop: true` that button worked
 		// exactly once, silently.
-		const { store, start } = animated(100);
-		store.dispatch({ type: 'tick', time: start + 200 });
+		const { store } = animated(100);
+		store.dispatch({ type: 'tick', time: 1000 });
+		store.dispatch({ type: 'tick', time: 1000 + 200 });
 		expect(store.state.animations[0]!.isPlaying).toBe(false);
 
 		store.dispatch({
@@ -346,8 +346,8 @@ describe('an animation id can be reused', () => {
 				duration: 1000
 			}
 		});
-		const start = store.state.animations[0]!.startTime;
-		store.dispatch({ type: 'tick', time: start + 500 });
+		store.dispatch({ type: 'tick', time: 1000 });
+		store.dispatch({ type: 'tick', time: 1000 + 500 });
 		expect(store.state.meshes[0]!.position[0]).toBeCloseTo(5);
 
 		store.dispatch({
@@ -361,8 +361,8 @@ describe('an animation id can be reused', () => {
 				duration: 1000
 			}
 		});
-		const restart = store.state.animations[0]!.startTime;
-		store.dispatch({ type: 'tick', time: restart + 1000 });
+		store.dispatch({ type: 'tick', time: 2000 });
+		store.dispatch({ type: 'tick', time: 2000 + 1000 });
 
 		expect(store.state.meshes[0]!.position[0], 'the stranded mesh moved').toBeCloseTo(5);
 		expect(store.state.meshes[1]!.position[0]).toBeCloseTo(10);

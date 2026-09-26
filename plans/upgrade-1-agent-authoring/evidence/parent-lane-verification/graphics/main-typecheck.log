@@ -1,0 +1,4 @@
+
+> @composable-svelte/graphics@0.2.1 typecheck /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics
+> tsc --noEmit
+

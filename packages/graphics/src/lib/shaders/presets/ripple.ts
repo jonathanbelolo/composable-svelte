@@ -72,7 +72,7 @@ void main() {
   float decay = exp(-distance * uDecay);
 
   // Calculate distortion
-  vec2 distortion = normalize(toCenter) * ripple * uAmplitude * decay;
+  vec2 distortion = distance > 0.0001 ? normalize(toCenter) * ripple * uAmplitude * decay : vec2(0.0);
 
   // Sample texture with distorted coordinates
   vec2 distortedCoord = vTexCoord + distortion;

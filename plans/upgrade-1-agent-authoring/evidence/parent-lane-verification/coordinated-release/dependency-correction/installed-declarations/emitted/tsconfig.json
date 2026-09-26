@@ -1,0 +1,1 @@
+{ "compilerOptions": { "strict": true, "exactOptionalPropertyTypes": true, "noUncheckedIndexedAccess": true, "target": "ES2022", "module": "ES2022", "moduleResolution": "bundler", "lib": ["ES2022","DOM"], "types": [], "skipLibCheck": true, "declaration": true, "emitDeclarationOnly": true, "outDir": "out" }, "include": ["*.ts"] }

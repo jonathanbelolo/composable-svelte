@@ -1,0 +1,13 @@
+{
+  "lane": "maps-graphics-charts",
+  "runtimeHash": "cb804c1e729472867707872bd22d6b783cad9d7ce55a7876e8282086f4304ae9",
+  "parentTests": {
+    "viewport": 6,
+    "managedViews": 13,
+    "chromium": 6,
+    "result": "passed"
+  },
+  "decision": "lifetime contract accepted; remaining package migration authorized",
+  "fullPackageQualification": false,
+  "integratedIntoOriginalCheckout": false
+}

@@ -1,3 +1,4 @@
+import { waitForState } from '../helpers/wait-for-state.js';
 /**
  * Browser tests for Sheet animation lifecycle.
  *
@@ -9,46 +10,20 @@
  * 5. Sheet animates from bottom edge
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { userEvent } from 'vitest/browser';
 import SheetTest from './test-components/SheetTest.svelte';
 
-// Simple wait helper for DOM checks
-const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+import { tick } from 'svelte';
+import { assertMotionAllowed, midFlight, waitUntil, waitForAnimations } from '../../src/lib/test/animation.js';
+
+beforeAll(() => assertMotionAllowed());
 
 /**
  * Wait for store state to match a condition.
  * This hooks directly into the store's reactivity system - NO POLLING!
  */
-function waitForState<State>(
-	store: { subscribe: (listener: (state: State) => void) => () => void },
-	condition: (state: State) => boolean,
-	options: { timeout?: number; description?: string } = {}
-): Promise<State> {
-	const { timeout = 2000, description = 'state condition' } = options;
-
-	return new Promise((resolve, reject) => {
-		let unsubscribe: (() => void) | null = null;
-		let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-		// Set up timeout
-		timeoutId = setTimeout(() => {
-			unsubscribe?.();
-			reject(new Error(`Timeout waiting for ${description} after ${timeout}ms`));
-		}, timeout);
-
-		// Subscribe to state changes
-		unsubscribe = store.subscribe((state) => {
-			if (condition(state)) {
-				// Condition met! Clean up and resolve
-				if (timeoutId) clearTimeout(timeoutId);
-				unsubscribe?.();
-				resolve(state);
-			}
-		});
-	});
-}
 
 describe('Sheet Animation Lifecycle', () => {
 	it('should animate in when presenting', async () => {
@@ -170,100 +145,93 @@ describe('Sheet Animation Lifecycle', () => {
 	});
 
 	it('should handle rapid open/close transitions', async () => {
-		const { container } = render(SheetTest);
+		render(SheetTest);
 		const store = (window as any).__sheetTestStore;
-
-		// Rapidly open and close
-		const openButton = container.querySelector('[data-testid="open-sheet"]') as HTMLButtonElement;
-		await userEvent.click(openButton);
-
-		// Wait for presentation to start
-		await waitForState(store, (state: any) => state.presentation.status === 'presenting', {
-			description: "presentation to start"
-		});
-
-		// Dismiss before animation completes
-		const dismissButton = document.querySelector('[data-testid="dismiss-sheet"]') as HTMLButtonElement;
-		await userEvent.click(dismissButton);
-
-		// Wait for all animations to settle - notification-based!
-		await waitForState(store, (state: any) => state.presentation.status === 'idle', {
-			description: "all animations to settle"
-		});
-
-		// Sheet should eventually be removed
-		const sheetContent = document.querySelector('[data-testid="sheet-content"]');
-		expect(sheetContent).toBeNull();
-
-		// Status should be idle
-		const status = container.querySelector('[data-testid="presentation-status"]');
-		expect(status?.textContent).toBe('idle');
+		store.dispatch({ type: 'openSheet' });
+		await tick();
+		const content = document.querySelector<HTMLElement>('.actual-sheet-content')!;
+		expect(content).toBeTruthy();
+		expect(store.state.presentation.status).toBe('presenting');
+		// The supported contract rejects dismiss while entering. Direct dispatch
+		// does not let userEvent wait for pointer-events to become enabled.
+		store.dispatch({ type: 'dismissSheet' });
+		expect(store.state.presentation.status).toBe('presenting');
+		await waitForState(store, (state: any) => state.presentation.status === 'presented');
+		store.dispatch({ type: 'dismissSheet' });
+		expect(store.state.presentation.status).toBe('dismissing');
+		await tick();
+		const opacity = await midFlight(() => Number(getComputedStyle(content).opacity), { from: 1, to: 0, what: 'sheet exit opacity' });
+		expect(opacity).toBeGreaterThan(0);
+		expect(opacity).toBeLessThan(1);
+		expect(content.isConnected).toBe(true);
+		expect(store.state.presentation.status).toBe('dismissing');
+		await waitForState(store, (state: any) => state.presentation.status === 'idle');
+		await tick();
+		expect(content.isConnected).toBe(false);
+		// A completed cycle can present again; no permanently stuck guard.
+		store.dispatch({ type: 'openSheet' });
+		await waitForState(store, (state: any) => state.presentation.status === 'presented');
 	});
 
 	it('should animate backdrop independently', async () => {
-		const { container } = render(SheetTest);
+		render(SheetTest);
 		const store = (window as any).__sheetTestStore;
-
-		// Open sheet
-		const openButton = container.querySelector('[data-testid="open-sheet"]') as HTMLButtonElement;
-		await userEvent.click(openButton);
-
-		// Wait for presentation to start
-		await waitForState(store, (state: any) => state.presentation.status === 'presenting', {
-			description: "presentation to start"
-		});
-
-		// Both backdrop and content should be present
-		const backdrop = document.querySelector('[data-testid="sheet-backdrop"]');
-		const content = document.querySelector('[data-testid="sheet-content"]');
-
+		store.dispatch({ type: 'openSheet' });
+		await tick();
+		const backdrop = document.querySelector<HTMLElement>('.actual-sheet-backdrop')!;
+		const content = document.querySelector<HTMLElement>('.actual-sheet-content')!;
 		expect(backdrop).toBeTruthy();
-		expect(content).toBeTruthy();
-
-		// Check that backdrop has opacity applied (animated)
-		const initialOpacity = window.getComputedStyle(backdrop as Element).opacity;
-		expect(parseFloat(initialOpacity)).toBeGreaterThanOrEqual(0);
-		expect(parseFloat(initialOpacity)).toBeLessThanOrEqual(1);
-
-		// Wait for animation to complete - notification-based!
-		await waitForState(store, (state: any) => state.presentation.status === 'presented', {
-			description: "presentation to complete"
-		});
-
-		// After animation, opacity should be 1
-		const finalOpacity = window.getComputedStyle(backdrop as Element).opacity;
-		expect(parseFloat(finalOpacity)).toBe(1);
+		expect(backdrop).not.toBe(content);
+		expect(backdrop.contains(content)).toBe(false);
+		const animations = await waitForAnimations(backdrop, { subtree: false });
+		const opacityAnimation = animations.find(animation =>
+			(animation.effect as KeyframeEffect).getKeyframes().some(frame => frame.opacity !== undefined));
+		expect(opacityAnimation, 'the library backdrop must own an opacity animation').toBeDefined();
+		const animation = opacityAnimation!;
+		animation.pause();
+		await animation.ready;
+		animation.currentTime = 0;
+		const startOpacity = Number(getComputedStyle(backdrop).opacity);
+		const duration = Number(animation.effect!.getComputedTiming().activeDuration);
+		expect(duration).toBeGreaterThan(0);
+		animation.currentTime = duration * 0.1;
+		const movingOpacity = Number(getComputedStyle(backdrop).opacity);
+		expect(startOpacity).toBeCloseTo(0, 3);
+		expect(movingOpacity).toBeGreaterThan(startOpacity);
+		expect(movingOpacity).toBeLessThan(1);
+		// Hold only the backdrop: finishing content must not complete presentation.
+		const contentAnimations = await waitForAnimations(content, { subtree: false });
+		await Promise.all(contentAnimations.map(playback => playback.finished));
+		// Modal's helper commits styles on the following frame, then publishes
+		// completion through a microtask. Observe after that boundary.
+		await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+		await waitUntil(() => Number(getComputedStyle(content).opacity), value => value === 1, { what: 'content entering independently' });
+		expect(store.state.presentation.status).toBe('presenting');
+		animation.finish();
+		await waitForState(store, (state: any) => state.presentation.status === 'presented');
+		expect(Number(getComputedStyle(backdrop).opacity)).toBe(1);
 	});
 
-	it('should animate from bottom edge', async () => {
-		const { container } = render(SheetTest);
+	it.each(['bottom', 'left', 'right'] as const)('should animate from %s edge', async side => {
+		render(SheetTest, { side });
 		const store = (window as any).__sheetTestStore;
-
-		// Open sheet
-		const openButton = container.querySelector('[data-testid="open-sheet"]') as HTMLButtonElement;
-		await userEvent.click(openButton);
-
-		// Wait for presentation to start
-		await waitForState(store, (state: any) => state.presentation.status === 'presenting', {
-			description: "presentation to start"
-		});
-
-		// Sheet content should be present and positioned at bottom
-		const content = document.querySelector('[data-testid="sheet-content"]') as HTMLElement;
-		expect(content).toBeTruthy();
-
-		// Check that content is positioned at bottom (has bottom: 0)
-		const styles = window.getComputedStyle(content);
-		expect(styles.position).toBe('fixed');
-		expect(styles.bottom).toBe('0px');
-
-		// Wait for animation to complete
-		await waitForState(store, (state: any) => state.presentation.status === 'presented', {
-			description: "presentation to complete"
-		});
-
-		// After animation, content should still be at bottom
-		const finalStyles = window.getComputedStyle(content);
-		expect(finalStyles.bottom).toBe('0px');
+		store.dispatch({ type: 'openSheet' });
+		await tick();
+		const content = document.querySelector<HTMLElement>('.actual-sheet-content')!;
+		const displacement = () => {
+			const matrix = new DOMMatrixReadOnly(getComputedStyle(content).transform);
+			return side === 'bottom' ? matrix.m42 / content.clientHeight : matrix.m41 / content.clientWidth;
+		};
+		const start = side === 'left' ? -1 : 1;
+		const entering = await midFlight(displacement, { from: start, to: 0, what: `${side} sheet entering transform` });
+		expect(Math.sign(entering)).toBe(Math.sign(start));
+		await waitForState(store, (state: any) => state.presentation.status === 'presented');
+		expect(displacement()).toBeCloseTo(0, 3);
+		store.dispatch({ type: 'dismissSheet' });
+		await tick();
+		const exiting = await midFlight(displacement, { from: 0, to: start, what: `${side} sheet exiting transform` });
+		expect(Math.sign(exiting)).toBe(Math.sign(start));
+		expect(content.isConnected).toBe(true);
+		await waitForState(store, (state: any) => state.presentation.status === 'idle');
 	});
 });

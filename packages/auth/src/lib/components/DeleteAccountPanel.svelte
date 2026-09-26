@@ -1,3 +1,11 @@
+<script module lang="ts">
+	/**
+	 * Handed-over status tracked per store: prevents duplicate logout or onDeleted
+	 * on unmount and remount in standalone mode. Deletion is terminal in standalone mode.
+	 */
+	const handedOverStores = new WeakSet<object>();
+</script>
+
 <script lang="ts">
 	/**
 	 * Deleting the account.
@@ -17,13 +25,15 @@
 	 *
 	 * Pattern A: it animates nothing.
 	 */
+	import type { PresentationView } from '@composable-svelte/core/application';
 	import type { Snippet } from 'svelte';
 
 	import { isReauthenticationRequired } from '../errors/helpers.js';
 	import type { DeleteAccountAction, DeleteAccountState } from '../flows/delete-account/types.js';
 	import type { SessionAction } from '../session/types.js';
 
-	interface Props {
+	interface StandaloneBinding {
+		mode?: 'standalone' | undefined;
 		store: {
 			readonly state: DeleteAccountState;
 			dispatch(action: DeleteAccountAction): void;
@@ -37,8 +47,6 @@
 		 * a compile error; an optional callback would fail silently.
 		 */
 		sessionStore: { dispatch(action: SessionAction): void };
-		/** The address being deleted, from `fetchAccount`. Named in the copy. */
-		email?: string | undefined;
 		/** Called once, after the session store has been told. */
 		onDeleted?: (() => void) | undefined;
 		/**
@@ -50,6 +58,19 @@
 		onReauthenticationRequired?:
 			| ((demand: { methods: readonly ('password' | 'totp' | 'recovery_code')[] }) => void)
 			| undefined;
+	}
+
+	interface ManagedBinding {
+		mode: 'managed';
+		store: PresentationView<DeleteAccountState, DeleteAccountAction>;
+		sessionStore?: never;
+		onDeleted?: never;
+		onReauthenticationRequired?: never;
+	}
+
+	interface PresentationProps {
+		/** The address being deleted, from `fetchAccount`. Named in the copy. */
+		email?: string | undefined;
 		/**
 		 * Render the confirmation yourself — a modal, a typed phrase, anything.
 		 *
@@ -64,41 +85,43 @@
 		class?: string | undefined;
 	}
 
+	type Props = PresentationProps & (StandaloneBinding | ManagedBinding);
+
 	let {
-		store,
-		sessionStore,
 		email,
-		onDeleted,
-		onReauthenticationRequired,
 		confirm: confirmSnippet,
 		headingLevel = 2,
 		footer,
-		class: className = ''
+		class: className = '',
+		...binding
 	}: Props = $props();
 
-	const status = $derived(store.state.status);
-	const error = $derived(store.state.error);
+	type Owner = symbol | PresentationView<DeleteAccountState, DeleteAccountAction>;
+	const standaloneOwner = Symbol('standalone');
+	const owner: Owner = $derived(binding.mode === 'managed' ? binding.store : standaloneOwner);
+	const viewOf = (key: Owner) => (typeof key === 'symbol' ? binding.store : key);
+
+	const flow: DeleteAccountState | undefined = $derived(binding.store.state);
+
+	const status = $derived(flow?.status);
+	const error = $derived(flow?.error ?? null);
 	const isDeleting = $derived(status === 'deleting');
 	const isConfirming = $derived(status === 'confirming');
 
-	const confirm = () => store.dispatch({ type: 'deletionRequested' });
-	const cancel = () => store.dispatch({ type: 'confirmationDismissed' });
-
-	/** Whether the ending has been handed over. Once per deletion. */
-	let handedOver = false;
-
 	$effect(() => {
-		if (store.state.status !== 'deleted') {
-			handedOver = false;
+		if (binding.mode === 'managed') return;
+		const currentStore = binding.store;
+		const state = currentStore.state;
+		if (state.status !== 'deleted') {
 			return;
 		}
-		if (handedOver) return;
-		handedOver = true;
+		if (handedOverStores.has(currentStore)) return;
+		handedOverStores.add(currentStore);
 		// The server has already destroyed the session and cleared the cookie.
 		// The reducer fails closed to `anonymous` whether or not the call
 		// succeeds, so this is telling the store what has already happened.
-		sessionStore.dispatch({ type: 'logout' });
-		onDeleted?.();
+		binding.sessionStore.dispatch({ type: 'logout' });
+		binding.onDeleted?.();
 	});
 
 	/**
@@ -109,85 +132,94 @@
 	let reportedDemand = false;
 
 	$effect(() => {
-		const current = store.state.error;
-		if (onReauthenticationRequired === undefined || !isReauthenticationRequired(current)) {
+		if (binding.mode === 'managed') return;
+		const current = binding.store.state?.error ?? null;
+		if (binding.onReauthenticationRequired === undefined || !isReauthenticationRequired(current)) {
 			reportedDemand = false;
 			return;
 		}
 		if (reportedDemand) return;
 		reportedDemand = true;
-		onReauthenticationRequired({ methods: current.methods });
+		binding.onReauthenticationRequired({ methods: current.methods });
 	});
 
 	/** A demand a consumer is handling is not a failure to paint red. */
 	const showsError = $derived(
 		error !== null &&
-			!(onReauthenticationRequired !== undefined && isReauthenticationRequired(error))
+			!(binding.mode !== 'managed' && binding.onReauthenticationRequired !== undefined && isReauthenticationRequired(error))
 	);
 </script>
 
-<div class="delete-account {className}">
-	<svelte:element this={`h${headingLevel}`} class="delete-account__title">
-		Delete your account
-	</svelte:element>
+{#if flow}
+	{#each [owner] as key (key)}
+		<div class="delete-account {className}">
+			<svelte:element this={`h${headingLevel}`} class="delete-account__title">
+				Delete your account
+			</svelte:element>
 
-	{#if status === 'deleted'}
-		<p class="delete-account__body" role="status" aria-live="polite">
-			Your account has been deleted.
-		</p>
-	{:else}
-		<p class="delete-account__body">
-			This removes {email !== undefined ? email : 'your account'} and everything on it, permanently.
-			It cannot be undone.
-		</p>
-
-		{#if showsError && error !== null}
-			<p class="delete-account__error" role="alert">{error.message}</p>
-		{/if}
-
-		{#if isConfirming || isDeleting}
-			{#if confirmSnippet}
-				{@render confirmSnippet({ confirm, cancel, busy: isDeleting })}
+			{#if status === 'deleted'}
+				<p class="delete-account__body" role="status" aria-live="polite">
+					Your account has been deleted.
+				</p>
 			{:else}
-				<div class="delete-account__confirm" role="group" aria-label="Confirm deletion">
-					<p class="delete-account__body">
-						Are you sure? There is no way back from this.
-					</p>
-					<div class="delete-account__actions">
-						<button
-							type="button"
-							class="delete-account__secondary"
-							disabled={isDeleting}
-							onclick={cancel}
-						>
-							Keep my account
-						</button>
-						<button
-							type="button"
-							class="delete-account__destructive"
-							disabled={isDeleting}
-							onclick={confirm}
-						>
-							{isDeleting ? 'Deleting…' : 'Delete permanently'}
-						</button>
-					</div>
-				</div>
-			{/if}
-		{:else}
-			<button
-				type="button"
-				class="delete-account__destructive"
-				onclick={() => store.dispatch({ type: 'confirmationRequested' })}
-			>
-				Delete my account
-			</button>
-		{/if}
-	{/if}
+				<p class="delete-account__body">
+					This removes {email !== undefined ? email : 'your account'} and everything on it, permanently.
+					It cannot be undone.
+				</p>
 
-	{#if footer}
-		<div class="delete-account__footer">{@render footer()}</div>
-	{/if}
-</div>
+				{#if showsError && error !== null}
+					<p class="delete-account__error" role="alert">{error.message}</p>
+				{/if}
+
+				{#if isConfirming || isDeleting}
+					{#if confirmSnippet}
+						{@render confirmSnippet({
+							confirm: () => viewOf(key).dispatch({ type: 'deletionRequested' }),
+							cancel: () => viewOf(key).dispatch({ type: 'confirmationDismissed' }),
+							busy: isDeleting
+						})}
+					{:else}
+						<div class="delete-account__confirm" role="group" aria-label="Confirm deletion">
+							<p class="delete-account__body">
+								Are you sure? There is no way back from this.
+							</p>
+							<div class="delete-account__actions">
+								<button
+									type="button"
+									class="delete-account__secondary"
+									disabled={isDeleting}
+									onclick={() => viewOf(key).dispatch({ type: 'confirmationDismissed' })}
+								>
+									Keep my account
+								</button>
+								<button
+									type="button"
+									class="delete-account__destructive"
+									disabled={isDeleting}
+									onclick={() => viewOf(key).dispatch({ type: 'deletionRequested' })}
+								>
+									{isDeleting ? 'Deleting…' : 'Delete permanently'}
+								</button>
+							</div>
+						</div>
+					{/if}
+				{:else}
+					<button
+						type="button"
+						class="delete-account__destructive"
+						onclick={() => viewOf(key).dispatch({ type: 'confirmationRequested' })}
+					>
+						Delete my account
+					</button>
+				{/if}
+			{/if}
+
+			{#if footer}
+				<div class="delete-account__footer">{@render footer()}</div>
+			{/if}
+		</div>
+	{/each}
+{/if}
 
 <style>
 	/* Scoped CSS over core's theme tokens — see `LoginForm` for why not Tailwind. */

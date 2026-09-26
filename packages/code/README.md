@@ -25,6 +25,11 @@ pnpm add @composable-svelte/code
 pnpm add @composable-svelte/core svelte
 ```
 
+Requires `@composable-svelte/core` `^0.13.1` and Svelte `^5.30.0`. Svelte
+5.20–5.29 is not supported: SvelteFlow, which powers `NodeCanvas`, failed during
+server rendering on Svelte 5.20 and 5.25. An application that combines this package
+with other Composable Svelte packages needs Svelte 5.30 or newer.
+
 ## Components
 
 ### CodeHighlight
@@ -73,7 +78,7 @@ interface CodeHighlightState {
 }
 ```
 
-**Actions:** `init`, `codeChanged`, `languageChanged`, `themeChanged`, `toggleLineNumbers`, `highlightLinesChanged`, `copyTriggered`
+**Actions:** `init`, `codeChanged`, `languageChanged`, `themeChanged`, `toggleLineNumbers`, `highlightLinesChanged`, `copyCode`
 
 **Supported languages:** TypeScript, JavaScript, Python, Rust, SQL, HTML, CSS, JSON, Markdown, and more via `loadLanguage()`.
 
@@ -209,7 +214,104 @@ const validator = strictValidator;
 const validator = composeValidators(strictValidator, customValidator);
 ```
 
+## Managed features
+
+Each component's `store` prop takes either a standalone `Store` (as in the
+examples above) or a **managed view**: the `store` a feature view receives from
+`FeatureViews` / `FeatureOutlet`, a presentation view, or the result of
+`scopeTo` / `composition.bind`. Pass the view as it is: no adapter, and no
+inverse action mapping.
+
+```typescript
+import { Effect, type Reducer } from '@composable-svelte/core';
+import { ManagedIntegrationBuilder, defineViews, keyedSlot } from '@composable-svelte/core/application';
+import {
+  CodeEditor,
+  codeEditorReducer,
+  type CodeEditorAction,
+  type CodeEditorDependencies,
+  type CodeEditorState
+} from '@composable-svelte/code';
+
+interface Root {
+  editors: Array<{ id: string; state: CodeEditorState }>;
+}
+type RootAction = { type: 'editors'; id: string; action: CodeEditorAction };
+
+const editors = keyedSlot<Root, RootAction>()('editors');
+const root: Reducer<Root, RootAction, CodeEditorDependencies> = (state) => [state, Effect.none()];
+
+export const composition = new ManagedIntegrationBuilder(root)
+  .forEach(editors, codeEditorReducer)
+  .build();
+
+// Each row renders the real CodeEditor with its own managed view.
+export const views = defineViews(composition, { editors: { render: CodeEditor } });
+```
+
+`NodeCanvas` works the same way. On a managed view, `liftAction` defaults to
+the identity and `unliftAction` is ignored, however the parent wraps canvas
+actions, and whatever `liftAction` you pass. `unliftAction` exists for a
+standalone parent store that wraps them.
+
+**Commands** (`insertText`, `undo`, `redo`, `selectAll`, `deleteSelection`,
+`focus` and `blur` on the editor; `setViewport`, `zoomIn`, `zoomOut`, `fitView`
+and `centerView` on the canvas) are actions the view performs on the live
+engine:
+
+- **Order.** They run in dispatch order, one per action, including several in
+  one tick.
+- **State first.** Anything the store reduced before a command — a loaded
+  value, `setReadOnly(false)`, a theme — is in the engine when the command
+  runs.
+- **Scope.** A managed view receives only its own owner's commands.
+- **No buffering or replay.** A command dispatched before the engine exists is
+  dropped. That includes one dispatched in the same turn that creates the
+  feature's owner. Durable setup belongs in state (`value`, `readOnly`,
+  `viewport`) or props (`autofocus`), not in startup commands.
+
+The editor's value reports name the document and the `valueRevision` they
+edited. A report that arrives after a newer write is ignored, even a write that
+restored the same text. So is a format result for text that has changed since
+the request, or a highlight for code that has since changed.
+
+**A parent reducer may decline or rewrite `valueChanged`**, standalone or
+managed: to enforce a limit, to ignore edits while saving, or to normalise.
+The editor is a controlled input:
+
+- **Declined** (state keeps its value): the editor puts its document back to
+  `state.value`, so the user sees the edit did not take, and Save saves what is
+  shown. The revert stays out of undo history, and so does the declined edit;
+  earlier undo steps survive. Edits the user made on top of the declined text
+  before state answered are reverted with it.
+- **Rewritten** (state takes another value): the editor shows state's value,
+  as an undoable replacement, and later edits build on it.
+
+A write that bypasses `codeEditorReducer` (a parent assigning `value` itself)
+does not move `valueRevision`. Such a write that restores exactly the text of
+an edit still in flight cannot be told from that edit's echo; any other value
+is recognised.
+
+Components bind their `store` once, at mount. `FeatureViews` and
+`FeatureOutlet` remount per owner. If you bind a view by hand and it can be
+replaced, wrap the component in `{#key view}`.
+
+If a store is neither a managed view nor has `subscribeToActions`, the
+component warns once and keeps rendering; only the commands are lost. The
+usual causes are:
+
+- a wrapper around a view;
+- an `ApplicationStore` (render through `FeatureViews` / `FeatureOutlet`);
+- two copies of `@composable-svelte/core` in the bundle.
+
+A custom standalone store without `subscribeToActions` must reduce `dispatch`
+synchronously. The editor checks the resulting state when `dispatch` returns
+to decide whether an edit was accepted or declined.
+
 ## Testing
+
+The npm archive includes a [runnable managed recipe](./recipes/managed/README.md)
+with a real CodeEditor, CodeHighlight, and NodeCanvas integration test.
 
 All components have dedicated reducers testable via `TestStore`:
 

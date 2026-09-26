@@ -1,0 +1,15 @@
+{
+  "integratedAt": "2026-09-25T13:45:15.130070+00:00",
+  "base": "26abc6e21965975b2eda0b6a91ec79738a5a1248",
+  "through": "ab625bf69eb9e9591474d714446d3bf6403b88af",
+  "patchSHA256": "5daf7e65e68264892a91218bead772ec8b0d59657bdabb95255239ab1ed29992",
+  "paths": 26,
+  "verification": {
+    "affectedBrowser": "65/65 passed after integration",
+    "SSR": "38/38 passed after integration",
+    "build": "passed",
+    "typecheck": "passed",
+    "svelteCheck": "0 errors 0 warnings"
+  },
+  "review": "previous Opus initial/followup accepted; optional test gaps closed"
+}

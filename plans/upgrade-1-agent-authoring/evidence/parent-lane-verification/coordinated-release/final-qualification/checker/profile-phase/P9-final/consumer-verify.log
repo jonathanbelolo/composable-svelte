@@ -1,0 +1,16 @@
+ok   chat svelte-check --fail-on-warnings exit=0
+ok   chat vite build (index.html -> src/main.ts) exit=0
+ok   chat SSR render of every host-mounted component exit=0
+ok   chat shipped recipes/managed/managed.test.ts (Chromium) exit=0
+ok   code svelte-check --fail-on-warnings exit=0
+ok   code vite build (index.html -> src/main.ts) exit=0
+ok   code SSR render of every host-mounted component exit=0
+ok   code shipped recipes/managed/managed.test.ts (Chromium) exit=0
+ok   media svelte-check --fail-on-warnings exit=0
+ok   media vite build (index.html -> src/main.ts) exit=0
+ok   media SSR render of every host-mounted component exit=0
+ok   media shipped recipes/managed/managed.test.ts (Chromium) exit=0
+ok   chat-code-media svelte-check --fail-on-warnings exit=0
+ok   chat-code-media vite build (index.html -> src/main.ts) exit=0
+ok   chat-code-media SSR render of every host-mounted component exit=0
+report P9-final/default-root-consumer-verification.json sha256 3a3e39daccf37cce920baf81a0f1a1786038b0f54eeed0124f9913084cd4474d CONSUMER_VERIFICATION_PASSED

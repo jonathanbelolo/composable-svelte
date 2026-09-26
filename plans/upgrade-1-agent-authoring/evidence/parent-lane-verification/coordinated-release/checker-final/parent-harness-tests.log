@@ -1,0 +1,76 @@
+[qualification-harness] Starting release archives verification in mode 'qualification' (Svelte checkpoint: newer)...
+[qualification-harness] Step 1/5: Preflight archive verification...
+[qualification-harness] Verified 1 package archives and preflight integrity checks passed.
+[qualification-harness] Step 2/5: Safe unpacking of frozen candidate archives (TOCTOU protected)...
+[qualification-harness] Starting release archives verification in mode 'all' (Svelte checkpoint: newer)...
+[qualification-harness] Step 1/5: Preflight archive verification...
+[qualification-harness] Verified 1 package archives and preflight integrity checks passed.
+[qualification-harness] Step 2/5: Safe unpacking of frozen candidate archives (TOCTOU protected)...
+[qualification-harness] Step 3/5: Running shipped managed recipes...
+[qualification-harness] Step 5/5: Executing negative controls...
+     ✓ all 3 negative controls properly failed as expected
+[qualification-harness] Evidence written to:
+  - /var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/test-partial-receipt-u8c2OO/evidence/qualification-receipt.json
+  - /var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/test-partial-receipt-u8c2OO/evidence/SUMMARY.md
+[qualification-harness] Qualification VERDICT: PARTIAL_BROWSER_SKIPPED_AND_POLICY_PENDING (PARTIAL)
+[qualification-harness] Starting release archives verification in mode 'negative-controls' (Svelte checkpoint: newer)...
+[qualification-harness] Step 1/5: Preflight archive verification...
+[qualification-harness] Verified 1 package archives and preflight integrity checks passed.
+[qualification-harness] Step 2/5: Safe unpacking of frozen candidate archives (TOCTOU protected)...
+[qualification-harness] Step 3/5: Running shipped managed recipes...
+[qualification-harness] Step 5/5: Executing negative controls...
+     ✓ all 3 negative controls properly failed as expected
+[qualification-harness] Evidence written to:
+  - /var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/test-receipt-detail-GTzw0Z/evidence/qualification-receipt.json
+  - /var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/test-receipt-detail-GTzw0Z/evidence/SUMMARY.md
+[qualification-harness] Qualification VERDICT: PARTIAL_NEGATIVE_CONTROLS_CHECKER_PENDING (PARTIAL)
+[qualification-harness] Starting release archives verification in mode 'recipes' (Svelte checkpoint: newer)...
+[qualification-harness] Step 1/5: Preflight archive verification...
+[qualification-harness] Verified 1 package archives and preflight integrity checks passed.
+[qualification-harness] Step 2/5: Safe unpacking of frozen candidate archives (TOCTOU protected)...
+[qualification-harness] Starting release archives verification in mode 'negative-controls' (Svelte checkpoint: newer)...
+[qualification-harness] Step 1/5: Preflight archive verification...
+✔ validateManifest: accepts valid manifest with packages array (0.747917ms)
+✔ validateManifest: accepts archives alias for packages (0.229708ms)
+✔ validateManifest: rejects invalid manifests with ManifestValidationError (0.319333ms)
+✔ verifyArchivesPreInstall: rejects non-existent archive file (0.181917ms)
+✔ verifyArchivesPreInstall: rejects archive hash mismatch BEFORE install (7.637208ms)
+✔ verifyArchivesPreInstall: rejects archive package name mismatch BEFORE install (16.503292ms)
+✔ verifyArchivesPreInstall: rejects archive package version mismatch BEFORE install (13.8835ms)
+✔ verifyArchivesPreInstall: rejects archive fileCount mismatch BEFORE install (12.039916ms)
+✔ verifyArchivesPreInstall: passes when archive hash, name, version match (14.437667ms)
+✔ safeExtractTar: extracts archive safely into target directory (14.599666ms)
+✔ verifyInstalledFiles: passes when installed files match archive exactly (34.817375ms)
+✔ verifyInstalledFiles: rejects tampered byte content in installed files (35.420208ms)
+✔ verifyInstalledFiles: rejects missing file in installed directory (33.5815ms)
+✔ verifyInstalledFiles: rejects unexpected extraneous file in installed directory (29.031833ms)
+✔ writeReceipts: outputs structured JSON and markdown summary (1.588584ms)
+✔ CLI: --mode preflight validates manifest and archives via child process (348.073625ms)
+✔ CLI: --mode preflight fails with exit code 1 on corrupted archive hash (336.980625ms)
+✔ runNegativeControls: verifies wrong-archive-hash and wrong-archive-version controls (17.148625ms)
+✔ runNegativeControls: verifies checker controls when checker and policy available (3791.99875ms)
+✔ candidate transport honestly identifies local tarball transport and denies registry provenance (36.642667ms)
+✔ CLI: --mode negative-controls runs and writes evidence receipts (392.622958ms)
+✔ verifyArchivesPreInstall: rejects archive integrity mismatch BEFORE install (6.643166ms)
+✔ runVerification: mode qualification rejects when checker, policy, or core are missing (28.136084ms)
+✔ runVerification: mode all with skipBrowser produces PARTIAL receipt and does not claim full pass (37.616ms)
+✔ freezeCandidateArchives: copies candidate archives to isolated cache and verifies integrity (7.244041ms)
+✔ freezeCandidateArchives: rejects if candidate archive hash fails verification in freeze cache (6.042333ms)
+✔ verifyInstalledSvelteVersion: passes when installed Svelte version matches exact pin and throws on mismatch (1.499333ms)
+✔ resolveSveltePin: correctly resolves starter, newer, and minimum checkpoints (0.06975ms)
+✔ CLI: --svelte-checkpoint flag is accepted and recorded in evidence receipts (406.484875ms)
+✔ CLI: invalid --svelte-checkpoint flag is rejected with exit code 1 (349.584083ms)
+✔ Receipts: retain command stdout/stderr logs, lockfile paths, and installedInventory (39.812666ms)
+✔ inspectTarEntries: rejects symlink entries and entries outside package/ (24.681459ms)
+✔ CLI: rejects a dual checkpoint, an unknown mode and an unknown recipe instead of running less (1029.427791ms)
+✔ runVerification: a requested recipe whose package is absent fails instead of being skipped (31.462166ms)
+✔ runVerification: a failing rerun replaces a stale PASSED receipt with a FAILED one (6.838167ms)
+✔ verifyLockedCandidateIdentities: accepts only top-level frozen candidates and rejects registry, nested or altered copies (7.611583ms)
+ℹ tests 36
+ℹ suites 0
+ℹ pass 36
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7474.786958

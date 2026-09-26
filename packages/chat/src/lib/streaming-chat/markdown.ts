@@ -72,6 +72,23 @@ let videoEmbedComponent: unknown = null;
 let optionalDepsLoaded = false;
 
 /**
+ * The resolved `prismjs` module if it really is Prism, else `null`.
+ *
+ * An absent optional peer does not always throw. A production Vite build
+ * resolves it to a stub whose default export is `{}`, which is truthy, so it
+ * used to be kept as "Prism": every fenced block then threw on
+ * `Prism.languages[…]` and warned "Failed to highlight", once per block per
+ * render — on every chunk of a streaming reply. `null` is what the renderer
+ * already treats as "not installed".
+ */
+function asPrism(candidate: unknown): typeof import('prismjs') | null {
+	const prism = candidate as Partial<typeof import('prismjs')> | null | undefined;
+	return typeof prism?.highlight === 'function' && typeof prism.languages === 'object' && prism.languages !== null
+		? (prism as typeof import('prismjs'))
+		: null;
+}
+
+/**
  * Attempt to load optional dependencies (prismjs, @composable-svelte/code, @composable-svelte/media)
  * Falls back gracefully if not installed.
  */
@@ -81,7 +98,15 @@ async function loadOptionalDependencies(): Promise<void> {
 
 	// Try to load Prism
 	try {
-		Prism = await import('prismjs');
+		// `prismjs` is CommonJS. A bundler's interop hoists its members onto the
+		// namespace; Node's ESM loader (and so an SSR build that leaves it
+		// external) exposes it only as `default`. Reading the namespace alone
+		// made `Prism.languages` undefined there, so a server render with prismjs
+		// installed highlighted nothing.
+		const module = (await import('prismjs')) as typeof import('prismjs') & {
+			default?: typeof import('prismjs');
+		};
+		Prism = asPrism(module.default ?? module);
 	} catch {
 		// prismjs not installed - syntax highlighting disabled
 	}
@@ -108,15 +133,17 @@ async function loadOptionalDependencies(): Promise<void> {
 	//
 	// The `catch` is not the only path that matters, and under this repo's own
 	// bundler it is not even the usual one: Vite resolves an absent optional peer
-	// to a stub `{}` rather than throwing, so both assignments below land as
+	// to a stub `{}` rather than throwing, so both members below are
 	// `undefined` and the catch never fires. Callers must therefore treat a
 	// missing value as normal — `extractVideosFromMarkdown` null-checks, and the
 	// components gate on `VideoEmbed` being truthy. The catch covers bundlers
 	// that do hard-fail the dynamic import.
 	try {
 		const mediaModule = await import('@composable-svelte/media');
-		extractVideosFromMarkdownFn = mediaModule.extractVideosFromMarkdown;
-		videoEmbedComponent = mediaModule.VideoEmbed;
+		// `?? null`: the stub has neither, and `getVideoEmbedComponent` promises
+		// `null` when media is absent, not `undefined`.
+		extractVideosFromMarkdownFn = mediaModule.extractVideosFromMarkdown ?? null;
+		videoEmbedComponent = mediaModule.VideoEmbed ?? null;
 	} catch {
 		// @composable-svelte/media not installed
 	}

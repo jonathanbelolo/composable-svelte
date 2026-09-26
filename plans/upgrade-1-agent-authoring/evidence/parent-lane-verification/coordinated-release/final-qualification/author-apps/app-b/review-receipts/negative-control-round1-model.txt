@@ -1,0 +1,4 @@
+     × the dashboard is refused while logging out and always shows the current subject 12ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+AssertionError: expected 'dashboard' to be 'login' // Object.is equality
+      Tests  1 failed | 14 skipped (15)

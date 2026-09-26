@@ -6,6 +6,7 @@ export function createInitialAppState(): AppState {
   return {
     contactForm: createInitialFormState(contactFormConfig),
     submissionHistory: [],
-    successMessage: null
+    successMessage: null,
+    pendingSubmission: null
   };
 }

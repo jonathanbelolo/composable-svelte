@@ -1,0 +1,24 @@
+{
+  "name": "composable-svelte-auth-consumer",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "svelte-check --tsconfig tsconfig.json --fail-on-warnings",
+    "build": "vite build",
+    "dev": "vite",
+    "test:browser": "node scripts/browser.mjs",
+    "test:ssr": "node scripts/ssr.mjs"
+  },
+  "dependencies": {
+    "@composable-svelte/core": "0.13.1",
+    "@composable-svelte/auth": "0.3.0",
+    "svelte": "5.55.3"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "6.2.1",
+    "playwright": "1.56.1",
+    "svelte-check": "4.3.3",
+    "typescript": "5.9.3",
+    "vite": "6.4.1"
+  }
+}

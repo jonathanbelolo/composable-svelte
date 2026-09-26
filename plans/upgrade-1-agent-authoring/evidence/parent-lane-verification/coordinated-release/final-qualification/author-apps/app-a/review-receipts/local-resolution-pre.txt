@@ -1,0 +1,20 @@
+svelte LOCAL /private/tmp/composable-final-authoring/app-a/node_modules/svelte/package.json
+vite LOCAL /private/tmp/composable-final-authoring/app-a/node_modules/vite/package.json
+vitest LOCAL /private/tmp/composable-final-authoring/app-a/node_modules/vitest/package.json
+jsdom LOCAL /private/tmp/composable-final-authoring/app-a/node_modules/jsdom/package.json
+@playwright/test LOCAL /private/tmp/composable-final-authoring/app-a/node_modules/@playwright/test/package.json
+playwright LOCAL /private/tmp/composable-final-authoring/app-a/node_modules/playwright/package.json
+@sveltejs/vite-plugin-svelte LOCAL /private/tmp/composable-final-authoring/app-a/node_modules/@sveltejs/vite-plugin-svelte/package.json (exports-blocked, direct)
+@composable-svelte/core LOCAL /private/tmp/composable-final-authoring/app-a/node_modules/@composable-svelte/core/package.json
+@composable-svelte/chat LOCAL /private/tmp/composable-final-authoring/app-a/node_modules/@composable-svelte/chat/package.json
+@composable-svelte/code LOCAL /private/tmp/composable-final-authoring/app-a/node_modules/@composable-svelte/code/package.json
+@composable-svelte/media LOCAL /private/tmp/composable-final-authoring/app-a/node_modules/@composable-svelte/media/package.json
+isomorphic-dompurify LOCAL /private/tmp/composable-final-authoring/app-a/node_modules/isomorphic-dompurify/package.json (exports-blocked, direct)
+@xyflow/svelte LOCAL /private/tmp/composable-final-authoring/app-a/node_modules/@xyflow/svelte/package.json
+codemirror LOCAL /private/tmp/composable-final-authoring/app-a/node_modules/codemirror/package.json (exports-blocked, direct)
+typescript LOCAL /private/tmp/composable-final-authoring/app-a/node_modules/typescript/package.json
+svelte-check LOCAL /private/tmp/composable-final-authoring/app-a/node_modules/svelte-check/package.json
+ls: /private/tmp/composable-final-authoring/node_modules: No such file or directory
+ls: /private/tmp/node_modules: No such file or directory
+ls: /private/node_modules: No such file or directory
+ls: //node_modules: No such file or directory

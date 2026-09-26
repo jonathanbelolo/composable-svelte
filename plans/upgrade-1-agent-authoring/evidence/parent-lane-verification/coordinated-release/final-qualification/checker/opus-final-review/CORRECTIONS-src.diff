@@ -1,0 +1,48 @@
+--- opus-final-review/pre-correction/package/src/semantic-context.mjs	1985-10-26 09:15:00
++++ packages/architecture/src/semantic-context.mjs	2026-09-26 17:07:11
+@@ -4,6 +4,7 @@
+ import {parseSemanticModules} from './semantic-parse.mjs';
+ import {buildSymbols} from './symbols.mjs';
+ import {buildOrigins} from './semantic-origins.mjs';
++import {isInstantiationExpression} from './expression-values.mjs';
+ 
+ export function buildSemanticContext({projectRoot, graph}) {
+   const parsed = parseSemanticModules({projectRoot, graph});
+@@ -49,7 +50,9 @@
+         fn = {...functionRecord, id: id(module, unit, node), module, parent: parentFunction, class: cls};
+         functions.set(fn.id, fn);
+       }
+-      const typeOnly = ts.isTypeNode(node) || ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node)
++      // An instantiation expression (`f<T>`) is a TypeNode kind to TypeScript but evaluates its expression at runtime;
++      // only its type arguments are type-only.
++      const typeOnly = (ts.isTypeNode(node) && !isInstantiationExpression(node)) || ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node)
+         || ts.isImportDeclaration(node) || ts.isExportDeclaration(node);
+       const runtime = parentRuntime && !typeOnly && unit.kind !== 'binding';
+       const record = {node, unit, module, function: fn, class: cls, snippet:snippetFor(unit), runtime, id: id(module, unit, node)};
+--- opus-final-review/pre-correction/package/src/semantic-flow.mjs	1985-10-26 09:15:00
++++ packages/architecture/src/semantic-flow.mjs	2026-09-26 17:08:44
+@@ -904,8 +904,10 @@
+     const [promise, kind] = JSON.parse(id);
+     const spread = args.some((arg) => arg.spread) || args.length > 1;
+     const value = spread ? empty() : args[0]?.value ?? empty();
+-    const check = settleChecks.get(node);
+-    settleChecks.set(node, {node, kind, spread: spread || Boolean(check?.spread), value: join(check?.value ?? empty(), value)});
++    // One call site may settle through both functions (`(ok ? resolve : reject)(v)`); each kind is checked on its own.
++    const key = `${nodeId(node)}:${kind}`;
++    const check = settleChecks.get(key);
++    settleChecks.set(key, {node, kind, spread: spread || Boolean(check?.spread), value: join(check?.value ?? empty(), value)});
+     if (kind !== 'resolve' || spread) return;
+     const previous = promiseValues.get(promise) ?? empty();
+     const next = join(previous, value);
+@@ -990,6 +992,11 @@
+       if (!runtime || !(ts.isObjectLiteralExpression(node) || ts.isArrayLiteralExpression(node))) continue;
+       if (holdsSettle(value(node))) addError(node, 'promise-settle-escape', 'Promise settle functions must stay in local bindings.', true);
+     }
++    // A template expression hands its value to Svelte, the DOM or a component, none of which is an inspected callee.
++    for (const unit of context.units.keys()) {
++      const root = unit.kind === 'template' ? unit.sourceFile.statements[0]?.expression : null;
++      if (root && holdsSettle(value(root))) addError(root, 'promise-settle-escape', 'Promise settle functions must not reach templates.', true);
++    }
+     for (const [id, returned] of functionReturns) if (holdsSettle(returned)) {
+       addError(context.functions.get(id)?.node ?? null, 'promise-settle-escape', 'Promise settle functions must not be returned.', true);
+     }

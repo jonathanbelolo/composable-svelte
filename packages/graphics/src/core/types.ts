@@ -3,6 +3,8 @@
  * @description Core types for the graphics package
  */
 
+import type { ChildView } from '@composable-svelte/core/application';
+
 // ============================================================================
 // Vector Types
 // ============================================================================
@@ -178,7 +180,8 @@ export interface AnimationConfig {
 export interface AnimationState {
   id: string;
   config: AnimationConfig;
-  startTime: number;
+  /** Null until the first tick anchors this animation; numeric hydrated times remain authoritative. */
+  startTime: number | null;
   isPlaying: boolean;
 }
 
@@ -191,11 +194,11 @@ export interface GraphicsState {
    * Identity for this scene, unique per store slice.
    *
    * Used to key the animation frame loop's cancellable effect. A cancellable
-   * id is the one part of a reducer's output that is global by construction:
-   * the store keeps a single in-flight map and `Effect.map` preserves the id
-   * through every layer of scoping. A module-level constant is therefore shared
-   * by every instance of this feature, so two composed scenes cancelled each
-   * other's frame loop — the first froze permanently while still reporting
+   * id is shared across scenes composed under the same effect owner: that
+   * owner's store keeps one in-flight map and `Effect.map` preserves the id
+   * through scoping. A module-level constant is therefore shared by every
+   * scene under that owner, so two composed scenes cancelled each other's
+   * frame loop — the first froze permanently while still reporting
    * `isPlaying: true`.
    *
    * `createInitialGraphicsState` generates one; pass your own if you need it
@@ -269,3 +272,13 @@ export type GraphicsAction =
 export interface GraphicsDeps {
   // Empty for now, will add as needed
 }
+
+// ============================================================================
+// Store & Managed View Binding
+// ============================================================================
+
+/**
+ * A store or managed child view that can drive Graphics components.
+ * Structural projection containing only state, dispatch, and subscribe.
+ */
+export type GraphicsStore = Pick<ChildView<GraphicsState, GraphicsAction>, 'state' | 'dispatch' | 'subscribe'>;

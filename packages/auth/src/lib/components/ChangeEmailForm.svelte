@@ -18,13 +18,15 @@
 	 */
 	import { Form, FormField } from '@composable-svelte/core/components/form';
 	import type { FormAction, FormState } from '@composable-svelte/core/components/form';
+	import type { PresentationView } from '@composable-svelte/core/application';
 	import type { Snippet } from 'svelte';
 
 	import { isReauthenticationRequired } from '../errors/helpers.js';
 	import type { ChangeEmailAction, ChangeEmailState } from '../flows/change-email/types.js';
 	import type { ChangeEmailFields } from '../flows/change-email/schema.js';
 
-	interface Props {
+	interface StandaloneBinding {
+		mode?: 'standalone' | undefined;
 		flowStore: {
 			readonly state: ChangeEmailState;
 			dispatch(action: ChangeEmailAction): void;
@@ -54,6 +56,19 @@
 		onReauthenticationRequired?:
 			| ((demand: { methods: readonly ('password' | 'totp' | 'recovery_code')[] }) => void)
 			| undefined;
+	}
+
+	interface ManagedBinding {
+		mode: 'managed';
+		flowStore: PresentationView<ChangeEmailState, ChangeEmailAction>;
+		currentEmail?: string | undefined;
+		emailVerified?: boolean | undefined;
+		pendingEmail?: string | null | undefined;
+		onChanged?: never;
+		onReauthenticationRequired?: never;
+	}
+
+	interface PresentationProps {
 		headingLevel?: 1 | 2 | 3 | 4 | undefined;
 		submitLabel?: string | undefined;
 		emailLabel?: string | undefined;
@@ -62,19 +77,23 @@
 		class?: string | undefined;
 	}
 
+	type Props = PresentationProps & (StandaloneBinding | ManagedBinding);
+
 	let {
-		flowStore,
-		currentEmail,
-		emailVerified,
-		pendingEmail,
-		onChanged,
-		onReauthenticationRequired,
 		headingLevel = 2,
 		submitLabel = 'Send confirmation link',
 		emailLabel = 'New email address',
 		footer,
-		class: className = ''
+		class: className = '',
+		...binding
 	}: Props = $props();
+
+	type Owner = symbol | PresentationView<ChangeEmailState, ChangeEmailAction>;
+	const standaloneOwner = Symbol('standalone');
+	const owner: Owner = $derived(binding.mode === 'managed' ? binding.flowStore : standaloneOwner);
+	const viewOf = (key: Owner) => (typeof key === 'symbol' ? binding.flowStore : key);
+
+	const flow: ChangeEmailState | undefined = $derived(binding.flowStore.state);
 
 	const uid = $props.id();
 	const emailId = `${uid}-email`;
@@ -83,39 +102,76 @@
 	const listeners = new Set<(state: FormState<ChangeEmailFields>) => void>();
 
 	$effect(() => {
-		return flowStore.subscribe((state) => {
+		if (binding.mode === 'managed') return;
+		return binding.flowStore.subscribe((state) => {
 			for (const listener of listeners) listener(state.form);
 		});
 	});
 
+	function standaloneForm(): FormState<ChangeEmailFields> {
+		const state = binding.flowStore.state;
+		if (state === undefined) throw new Error('ChangeEmailForm: no live flow');
+		return state.form;
+	}
+
 	const formStore = {
 		get state(): FormState<ChangeEmailFields> {
-			return flowStore.state.form;
+			return standaloneForm();
 		},
 		dispatch(action: FormAction<ChangeEmailFields>) {
-			flowStore.dispatch({ type: 'form', action });
+			binding.flowStore.dispatch({ type: 'form', action });
 		},
 		subscribe(listener: (state: FormState<ChangeEmailFields>) => void) {
 			listeners.add(listener);
-			listener(flowStore.state.form);
+			listener(standaloneForm());
 			return () => listeners.delete(listener);
 		}
 	};
 
-	const status = $derived(flowStore.state.status);
-	const error = $derived(flowStore.state.error);
-	const resendStatus = $derived(flowStore.state.resendStatus);
-	const resendError = $derived(flowStore.state.resendError);
-	const pending = $derived(flowStore.state.pendingEmail);
+	function managedFormStore(view: PresentationView<ChangeEmailState, ChangeEmailAction>) {
+		let last: FormState<ChangeEmailFields> | undefined;
+		function current(): FormState<ChangeEmailFields> {
+			const state = view.state;
+			if (state !== undefined) last = state.form;
+			if (last === undefined) throw new Error('ChangeEmailForm: no live flow');
+			return last;
+		}
+		return {
+			get state() {
+				return current();
+			},
+			dispatch(action: FormAction<ChangeEmailFields>) {
+				view.dispatch({ type: 'form', action });
+			},
+			subscribe(listener: (state: FormState<ChangeEmailFields>) => void) {
+				const unsubscribe = view.subscribe((state) => {
+					if (state !== undefined) {
+						last = state.form;
+						listener(state.form);
+					}
+				});
+				listener(current());
+				return unsubscribe;
+			}
+		};
+	}
+
+	const status = $derived(flow?.status);
+	const error = $derived(flow?.error ?? null);
+	const resendStatus = $derived(flow?.resendStatus);
+	const resendError = $derived(flow?.resendError ?? null);
+	const pending = $derived(flow?.pendingEmail ?? null);
 	const isSubmitting = $derived(status === 'submitting');
 
 	/**
-	 * The last value actually reported, so only a *change* is reported onward.
+	 * The last value actually reported, so only a *change* is reported onward —
+	 * per owner: a fresh managed owner has observed nothing yet.
 	 *
 	 * Not `$state`: nothing renders from it, and making it reactive would put the
 	 * effect below in a loop with itself.
 	 */
 	let lastObserved: string | null | undefined = undefined;
+	let lastObservedOwner: Owner | null = null;
 
 	/**
 	 * Tell the flow what the account says is pending, **only when it changes**.
@@ -127,23 +183,35 @@
 	 * shape.
 	 */
 	$effect(() => {
-		if (pendingEmail === undefined || pendingEmail === lastObserved) return;
-		lastObserved = pendingEmail;
-		flowStore.dispatch({ type: 'pendingEmailObserved', email: pendingEmail });
+		const key = owner;
+		if (key !== lastObservedOwner) {
+			lastObservedOwner = key;
+			lastObserved = undefined;
+		}
+		if (binding.pendingEmail === undefined || binding.pendingEmail === lastObserved) return;
+		const view = viewOf(key);
+		if (view.state === undefined) return;
+		lastObserved = binding.pendingEmail;
+		if (binding.pendingEmail !== null) {
+			reported = binding.pendingEmail;
+		}
+		view.dispatch({ type: 'pendingEmailObserved', email: binding.pendingEmail });
 	});
 
 	/** Whether the request has been reported. Cleared when nothing is pending. */
-	let reported: string | null = null;
+	// svelte-ignore state_referenced_locally
+	let reported: string | null = binding.pendingEmail ?? binding.flowStore.state?.pendingEmail ?? null;
 
 	$effect(() => {
-		const current = flowStore.state.pendingEmail;
+		if (binding.mode === 'managed') return;
+		const current = binding.flowStore.state?.pendingEmail ?? null;
 		if (current === null) {
 			reported = null;
 			return;
 		}
 		if (reported === current) return;
 		reported = current;
-		onChanged?.();
+		binding.onChanged?.();
 	});
 
 	/**
@@ -155,14 +223,15 @@
 	let reportedDemand = false;
 
 	$effect(() => {
-		const current = flowStore.state.error;
-		if (onReauthenticationRequired === undefined || !isReauthenticationRequired(current)) {
+		if (binding.mode === 'managed') return;
+		const current = binding.flowStore.state?.error ?? null;
+		if (binding.onReauthenticationRequired === undefined || !isReauthenticationRequired(current)) {
 			reportedDemand = false;
 			return;
 		}
 		if (reportedDemand) return;
 		reportedDemand = true;
-		onReauthenticationRequired({ methods: current.methods });
+		binding.onReauthenticationRequired({ methods: current.methods });
 	});
 
 	/**
@@ -186,100 +255,104 @@
 	const showsError = $derived(
 		error !== null &&
 			taken === null &&
-			!(onReauthenticationRequired !== undefined && isReauthenticationRequired(error))
+			!(binding.mode !== 'managed' && binding.onReauthenticationRequired !== undefined && isReauthenticationRequired(error))
 	);
 </script>
 
-<div class="change-email {className}">
-	<svelte:element this={`h${headingLevel}`} class="change-email__title">
-		Change your email address
-	</svelte:element>
+{#if flow}
+	{#each [owner] as key (key)}
+		<div class="change-email {className}">
+			<svelte:element this={`h${headingLevel}`} class="change-email__title">
+				Change your email address
+			</svelte:element>
 
-	{#if currentEmail !== undefined}
-		<p class="change-email__body">
-			You are <strong>{currentEmail}</strong>{emailVerified === false
-				? ' — not yet confirmed'
-				: ''}.
-		</p>
-	{/if}
-
-	{#if pending !== null}
-		<div class="change-email__pending" role="status" aria-live="polite">
-			<p class="change-email__pending-body">
-				We have sent a link to <strong>{pending}</strong>. Nothing changes until you follow it.
-			</p>
-			<button
-				type="button"
-				class="change-email__secondary"
-				disabled={resendStatus === 'sending'}
-				onclick={() => flowStore.dispatch({ type: 'resendRequested' })}
-			>
-				{resendStatus === 'sending' ? 'Sending…' : 'Send it again'}
-			</button>
-			{#if resendStatus === 'sent'}
-				<p class="change-email__note">Sent again.</p>
-			{/if}
-			{#if resendError !== null}
-				<p class="change-email__error" role="alert">{resendError.message}</p>
-			{/if}
-		</div>
-	{/if}
-
-	{#if taken !== null}
-		<div class="change-email__taken" role="status" aria-live="polite">
-			<p class="change-email__pending-body">
-				{taken.message}
-			</p>
-			{#if taken.code === 'email_taken' && taken.email !== undefined}
-				<p class="change-email__note">
-					If <strong>{taken.email}</strong> is yours, sign in to it instead — an address can only
-					belong to one account.
+			{#if binding.currentEmail !== undefined}
+				<p class="change-email__body">
+					You are <strong>{binding.currentEmail}</strong>{binding.emailVerified === false
+						? ' — not yet confirmed'
+						: ''}.
 				</p>
 			{/if}
-		</div>
-	{/if}
 
-	{#if showsError && error !== null}
-		<p class="change-email__error" role="alert">{error.message}</p>
-	{/if}
+			{#if pending !== null}
+				<div class="change-email__pending" role="status" aria-live="polite">
+					<p class="change-email__pending-body">
+						We have sent a link to <strong>{pending}</strong>. Nothing changes until you follow it.
+					</p>
+					<button
+						type="button"
+						class="change-email__secondary"
+						disabled={resendStatus === 'sending'}
+						onclick={() => viewOf(key).dispatch({ type: 'resendRequested' })}
+					>
+						{resendStatus === 'sending' ? 'Sending…' : 'Send it again'}
+					</button>
+					{#if resendStatus === 'sent'}
+						<p class="change-email__note">Sent again.</p>
+					{/if}
+					{#if resendError !== null}
+						<p class="change-email__error" role="alert">{resendError.message}</p>
+					{/if}
+				</div>
+			{/if}
 
-	<Form store={formStore} class="change-email__form">
-		<FormField name="email">
-			{#snippet children({ field, send })}
-				<div class="change-email__field">
-					<label class="change-email__label" for={emailId}>{emailLabel}</label>
-					<input
-						id={emailId}
-						name="email"
-						type="email"
-						autocomplete="email"
-						class="change-email__input"
-						class:change-email__input--invalid={!!field.error}
-						value={field.value}
-						aria-invalid={field.error ? 'true' : undefined}
-						aria-describedby={field.error ? emailErrorId : undefined}
-						oninput={(event) =>
-							send({ type: 'fieldChanged', field: 'email', value: event.currentTarget.value })}
-						onblur={() => send({ type: 'fieldBlurred', field: 'email' })}
-					/>
-					{#if field.error}
-						<p class="change-email__field-error" id={emailErrorId} role="alert" aria-live="polite">
-							{field.error}
+			{#if taken !== null}
+				<div class="change-email__taken" role="status" aria-live="polite">
+					<p class="change-email__pending-body">
+						{taken.message}
+					</p>
+					{#if taken.code === 'email_taken' && taken.email !== undefined}
+						<p class="change-email__note">
+							If <strong>{taken.email}</strong> is yours, sign in to it instead — an address can only
+							belong to one account.
 						</p>
 					{/if}
 				</div>
-			{/snippet}
-		</FormField>
+			{/if}
 
-		<button type="submit" class="change-email__submit" disabled={isSubmitting}>
-			{isSubmitting ? 'Sending…' : submitLabel}
-		</button>
-	</Form>
+			{#if showsError && error !== null}
+				<p class="change-email__error" role="alert">{error.message}</p>
+			{/if}
 
-	{#if footer}
-		<div class="change-email__footer">{@render footer()}</div>
-	{/if}
-</div>
+			<Form store={typeof key === 'symbol' ? formStore : managedFormStore(key)} class="change-email__form">
+				<FormField name="email">
+					{#snippet children({ field, send })}
+						<div class="change-email__field">
+							<label class="change-email__label" for={emailId}>{emailLabel}</label>
+							<input
+								id={emailId}
+								name="email"
+								type="email"
+								autocomplete="email"
+								class="change-email__input"
+								class:change-email__input--invalid={!!field.error}
+								value={field.value}
+								aria-invalid={field.error ? 'true' : undefined}
+								aria-describedby={field.error ? emailErrorId : undefined}
+								oninput={(event) =>
+									send({ type: 'fieldChanged', field: 'email', value: event.currentTarget.value })}
+								onblur={() => send({ type: 'fieldBlurred', field: 'email' })}
+							/>
+							{#if field.error}
+								<p class="change-email__field-error" id={emailErrorId} role="alert" aria-live="polite">
+									{field.error}
+								</p>
+							{/if}
+						</div>
+					{/snippet}
+				</FormField>
+
+				<button type="submit" class="change-email__submit" disabled={isSubmitting}>
+					{isSubmitting ? 'Sending…' : submitLabel}
+				</button>
+			</Form>
+
+			{#if footer}
+				<div class="change-email__footer">{@render footer()}</div>
+			{/if}
+		</div>
+	{/each}
+{/if}
 
 <style>
 	/* Scoped CSS over core's theme tokens — see `LoginForm` for why not Tailwind. */

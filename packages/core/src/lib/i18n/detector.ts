@@ -27,8 +27,9 @@ function parseAcceptLanguage(header: string): string[] {
     .map((lang) => {
       const parts = lang.trim().split(';');
       const locale = parts[0];
-      const q = parts[1];
-      const quality = q ? parseFloat(q.replace('q=', '')) : 1.0;
+      const qPart = parts.slice(1).find((p) => /^q=/i.test(p.trim()));
+      const parsedQuality = qPart ? parseFloat(qPart.trim().replace(/^q=/i, '')) : 1.0;
+      const quality = Number.isFinite(parsedQuality) ? parsedQuality : 1.0;
       return { locale: locale?.trim() || '', quality };
     })
     .filter((item) => item.locale !== '') // Remove empty locales
@@ -41,19 +42,37 @@ function parseAcceptLanguage(header: string): string[] {
  */
 function normalizeLocale(locale: string): string {
   // Convert underscores to hyphens
-  locale = locale.replace('_', '-');
+  const cleaned = locale.replace(/_/g, '-');
 
-  // Split into parts
-  const parts = locale.split('-');
-  if (parts.length === 1) {
-    // Just language code (e.g., "en")
-    return parts[0]?.toLowerCase() || locale;
+  if (typeof Intl !== 'undefined' && typeof Intl.Locale !== 'undefined') {
+    try {
+      return new Intl.Locale(cleaned).toString();
+    } catch {
+      // Fallback if tag is not a valid BCP-47 locale
+    }
   }
 
-  // Language + region (e.g., "en-US")
+  // Split into parts
+  const parts = cleaned.split('-');
+  if (parts.length === 1) {
+    // Just language code (e.g., "en")
+    return parts[0]?.toLowerCase() || cleaned;
+  }
+
+  // Language + region/script/variant (e.g., "en-US", "zh-Hans-CN")
   const lang = parts[0]?.toLowerCase() || '';
-  const region = parts[1]?.toUpperCase() || '';
-  return `${lang}-${region}`;
+  const rest = parts.slice(1).map((part) => {
+    if (part.length === 4) {
+      // Script tag (e.g., "Hans")
+      return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+    }
+    if (part.length === 2) {
+      // Region tag (e.g., "US", "CN")
+      return part.toUpperCase();
+    }
+    return part;
+  });
+  return [lang, ...rest].join('-');
 }
 
 /**
@@ -61,27 +80,31 @@ function normalizeLocale(locale: string): string {
  *
  * Supports partial matches (e.g., "pt-BR" matches "pt" if "pt-BR" not supported).
  */
+/** Compare canonical tags but retain the registered spelling for loader/cache keys. */
+function findExactMatch(locale: string, supported: string[]): string | null {
+  const normalized = normalizeLocale(locale);
+  return supported.find(candidate => normalizeLocale(candidate) === normalized) ?? null;
+}
 function findBestMatch(preferred: string[], supported: string[]): string | null {
-  // Try exact matches first
   for (const locale of preferred) {
-    const normalized = normalizeLocale(locale);
-    if (supported.includes(normalized)) {
-      return normalized;
+    const exact = findExactMatch(locale, supported);
+    if (exact !== null) return exact;
+  }
+  const normalizedSupported = supported.map(locale => ({ locale, normalized: normalizeLocale(locale) }));
+  for (const locale of preferred) {
+    let candidate = normalizeLocale(locale);
+    while (candidate) {
+      const exact = normalizedSupported.find(item => item.normalized === candidate);
+      if (exact) return exact.locale;
+      const variant = normalizedSupported.find(item => item.normalized.startsWith(candidate + '-'));
+      if (variant) return variant.locale;
+      const parts = candidate.split('-');
+      parts.pop();
+      // A truncated extension singleton is not a language range on its own.
+      if (parts.at(-1)?.length === 1) parts.pop();
+      candidate = parts.join('-');
     }
   }
-
-  // Try base language matches (pt-BR → pt)
-  for (const locale of preferred) {
-    const normalized = normalizeLocale(locale);
-    const baseLanguage = normalized.split('-')[0];
-
-    // Find any supported locale with same base language
-    const match = supported.find((s) => s.split('-')[0] === baseLanguage);
-    if (match) {
-      return match;
-    }
-  }
-
   return null;
 }
 
@@ -124,10 +147,8 @@ export function createBrowserLocaleDetector(config: {
         const params = new URLSearchParams(window.location.search);
         const urlLocale = params.get(urlParam);
         if (urlLocale) {
-          const normalized = normalizeLocale(urlLocale);
-          if (supportedLocales.includes(normalized)) {
-            return normalized;
-          }
+          const match = findExactMatch(urlLocale, supportedLocales);
+          if (match !== null) return match;
         }
       }
 
@@ -135,9 +156,8 @@ export function createBrowserLocaleDetector(config: {
       if (typeof localStorage !== 'undefined') {
         try {
           const stored = localStorage.getItem(storageKey);
-          if (stored && supportedLocales.includes(stored)) {
-            return stored;
-          }
+          const match = stored ? findExactMatch(stored, supportedLocales) : null;
+          if (match !== null) return match;
         } catch (error) {
           // localStorage might be disabled
         }
@@ -154,9 +174,8 @@ export function createBrowserLocaleDetector(config: {
             const value = trimmed.substring(equalsIndex + 1);
             if (name === cookieName && value) {
               const decoded = decodeURIComponent(value);
-              if (supportedLocales.includes(decoded)) {
-                return decoded;
-              }
+              const match = findExactMatch(decoded, supportedLocales);
+              if (match !== null) return match;
             }
           }
         }
@@ -164,17 +183,8 @@ export function createBrowserLocaleDetector(config: {
 
       // 4. Check navigator.language
       if (typeof navigator !== 'undefined' && navigator.language) {
-        const normalized = normalizeLocale(navigator.language);
-        if (supportedLocales.includes(normalized)) {
-          return normalized;
-        }
-
-        // Try base language
-        const baseLanguage = normalized.split('-')[0];
-        const match = supportedLocales.find((s) => s.split('-')[0] === baseLanguage);
-        if (match) {
-          return match;
-        }
+        const match = findBestMatch([navigator.language], supportedLocales);
+        if (match !== null) return match;
       }
 
       // 5. Check navigator.languages
@@ -239,10 +249,8 @@ export function createSSRLocaleDetector(config: {
         const urlObj = new URL(url);
         const urlLocale = urlObj.searchParams.get(urlParam);
         if (urlLocale) {
-          const normalized = normalizeLocale(urlLocale);
-          if (supportedLocales.includes(normalized)) {
-            return normalized;
-          }
+          const match = findExactMatch(urlLocale, supportedLocales);
+          if (match !== null) return match;
         }
       } catch (error) {
         console.error('[i18n] Invalid URL:', error);
@@ -259,9 +267,8 @@ export function createSSRLocaleDetector(config: {
             const value = trimmed.substring(equalsIndex + 1);
             if (name === cookieName && value) {
               const decoded = decodeURIComponent(value);
-              if (supportedLocales.includes(decoded)) {
-                return decoded;
-              }
+              const match = findExactMatch(decoded, supportedLocales);
+              if (match !== null) return match;
             }
           }
         }

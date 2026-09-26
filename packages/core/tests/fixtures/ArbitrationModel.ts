@@ -1,0 +1,7 @@
+import {defineApplication,defineViews,ManagedIntegrationBuilder,optionalSlot} from '../../src/lib/application/index.js';
+import {Effect} from '../../src/lib/effect.js';import type {Reducer} from '../../src/lib/types.js';import type {PresentationAction} from '../../src/lib/navigation/types.js';
+import Leaf from './ArbitrationLeaf.svelte';import type {MotionBinding} from '../../src/lib/application/renderer/target-registry.js';import type {MotionRunContext,MotionRun} from '../../src/lib/application/renderer/motion-run.js';
+export const bindings:MotionBinding[]=[];export const contexts:MotionRunContext[]=[];export const runs:MotionRun[]=[];export const registries:unknown[]=[];export let initialized=0;export function noteInitialized(){initialized++;}export function resetInitialized(){initialized=0;}
+export type S={child:{value:number}|null};export type CA={type:'increment'};export type A={type:'child';action:PresentationAction<CA>}|{type:'remove'}|{type:'replace'};
+const slot=optionalSlot<S,A>()('child');const reducer:Reducer<S,A>=(s,a)=>[a.type==='remove'?{child:null}:a.type==='replace'?{child:{value:s.child?.value??0}}:s,Effect.none()];const child:Reducer<{value:number},CA>=s=>[s,Effect.none()];
+export const composition=new ManagedIntegrationBuilder(reducer).with(slot,child,{replaceOn:a=>a.type==='replace'}).build();export const application=defineApplication(composition,{initialState:()=>({child:{value:0}})});export const views=defineViews(composition,{child:{render:Leaf}});

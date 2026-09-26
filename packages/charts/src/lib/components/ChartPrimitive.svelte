@@ -1,19 +1,16 @@
-<script lang="ts">
+<script lang="ts" generics="TRow = unknown">
 /**
  * ChartPrimitive - Low-level component that renders Observable Plot
  * This component handles the Plot lifecycle: mount, update, unmount
  */
 
-import { onMount, untrack } from 'svelte';
+import { untrack } from 'svelte';
 import { zoom as d3Zoom } from 'd3-zoom';
 import { brush as d3Brush } from 'd3-brush';
 import { select } from 'd3-selection';
-import type { ChartState, ChartConfig } from '../types/chart.types.js';
-import type { ChartAction } from '../types/chart.types.js';
+import type { ChartState, ChartConfig, ChartStore } from '../types/chart.types.js';
 import { animateZoomTransition } from '../utils/animate-zoom.js';
 import { ZOOM_MIN, ZOOM_MAX } from '../reducers/chart.reducer.js';
-
-import type { Store } from '@composable-svelte/core';
 
 // Props
 let {
@@ -23,25 +20,61 @@ let {
   enableZoom = false,
   enableBrush = false
 }: {
-  store: Store<ChartState<any>, ChartAction<any>>;
-  config: ChartConfig & { type?: 'scatter' | 'line' | 'bar' | 'area' | 'histogram' };
-  plotBuilder: (state: ChartState<any>, config: any) => any;
+  store: ChartStore<TRow>;
+  config: ChartConfig<TRow> & { type?: 'scatter' | 'line' | 'bar' | 'area' | 'histogram' };
+  plotBuilder: (state: ChartState<TRow>, config: ChartConfig<TRow>) => Element | null;
   enableZoom?: boolean | undefined;
   enableBrush?: boolean | undefined;
 } = $props();
 
 // Container element
 let containerElement: HTMLDivElement | null = $state(null);
-// Gates the prop effect: the store subscription draws the initial state, and
-// this must not double-render alongside it at mount.
+// Gates prop redraws until the store subscription has drawn its first state.
 let mounted = $state(false);
-let plotElement: HTMLElement | null = $state(null);
+let propEffectInitialized = false;
+let plotElement: Element | null = $state(null);
+let isRetired = $state(false);
+let attachmentTimer: ReturnType<typeof setTimeout> | undefined;
+let attachmentGeneration = 0;
+function retireAttachment() {
+  attachmentGeneration++;
+  if (attachmentTimer !== undefined) clearTimeout(attachmentTimer);
+  attachmentTimer = undefined;
+}
 let cleanupEventListeners: (() => void) | null = null;
+let animationAbortController: AbortController | null = null;
 
-// Setup plot rendering with manual subscription (NOT Svelte 5 effects)
-// This avoids infinite loops caused by effect → DOM manipulation → effect
-onMount(() => {
+function cleanupAll() {
+  if (isRetired) return;
+  isRetired = true;
+  retireAttachment();
+  if (cleanupEventListeners) {
+    cleanupEventListeners();
+    cleanupEventListeners = null;
+  }
+  if (animationAbortController) {
+    animationAbortController.abort();
+    animationAbortController = null;
+  }
+  if (plotElement) {
+    plotElement.remove();
+    plotElement = null;
+  }
+}
+
+// Rebind when the store prop changes. Subscription callbacks and DOM work stay
+// untracked, so only the store identity and container drive this effect.
+$effect(() => {
+  const binding = store;
   if (!containerElement) return;
+
+  if (untrack(() => binding.state) === undefined) {
+    // Owner is already retired or uninitialized
+    cleanupAll();
+    return;
+  }
+
+  isRetired = false;
 
   /**
    * The state this component last drew. Identity, not a hand-picked set of
@@ -65,25 +98,33 @@ onMount(() => {
    * same object. Identity is the signal that was being thrown away, and it is
    * O(1) — which matters, because a pan dispatches per frame.
    */
-  let renderedState: ChartState<any> | null = null;
+  let renderedState: ChartState<TRow> | null = null;
 
-  const renderIfChanged = (state: ChartState<any>) => {
+  const renderIfChanged = (state: ChartState<TRow> | undefined) => {
+    // A predecessor cannot retire or draw into its successor between a prop
+    // update and this effect's cleanup.
+    if (store !== binding) return;
+    if (state === undefined) {
+      // Terminal undefined from ChildView retirement!
+      cleanupAll();
+      return;
+    }
+    if (isRetired) return;
     if (state === renderedState) return;
     renderedState = state;
     renderPlot();
   };
 
   // `store.subscribe` invokes its listener immediately, so this draws the
-  // initial state — no separate `renderPlot()` call, which used to render the
-  // chart twice at mount.
-  const unsubscribe = store.subscribe(renderIfChanged);
+  // initial state without a separate explicit `renderPlot()` call. The prop
+  // effect skips its first run so mount also has one Plot build.
+  const unsubscribe = untrack(() => binding.subscribe(renderIfChanged));
   mounted = true;
 
   return () => {
     unsubscribe();
-    if (cleanupEventListeners) {
-      cleanupEventListeners();
-    }
+    cleanupAll();
+    mounted = false;
   };
 });
 
@@ -111,6 +152,13 @@ $effect(() => {
   void enableZoom;
   void enableBrush;
 
+  if (!propEffectInitialized) {
+    propEffectInitialized = true;
+    return;
+  }
+
+  if (isRetired || untrack(() => store.state) === undefined) return;
+
   // `untrack` is load-bearing, not decoration. `renderPlot` reads *and* writes
   // `plotElement`, which is `$state`, so calling it inside an effect makes its
   // own writes into the effect's dependencies — the "effect → DOM manipulation
@@ -122,55 +170,47 @@ $effect(() => {
   if (untrack(() => mounted)) untrack(() => renderPlot());
 });
 
-// Watch for animated zoom transitions
-// This is state-driven: reducer sets isAnimating + targetTransform, component animates
-let animationRunning = false;
-
+// Depend on the requested target identity, not per-frame transform progress.
+const animationTarget = $derived(!isRetired && $store?.isAnimating ? $store?.targetTransform : undefined);
+const animationsEnabled = $derived(config.enableAnimations !== false);
 $effect(() => {
-  const state = $store;
-
-  // Only start animation if not already running
-  if (state.isAnimating && state.targetTransform && !animationRunning) {
-    const from = state.transform;
-    const to = state.targetTransform;
-
-    // `enableAnimations={false}` skips the animation, not the outcome. The
-    // reducer only records a *target*; the component is what applies it, so
-    // returning early here would leave the zoom unapplied and the store stuck
-    // in `isAnimating` forever. It was read by nothing before — including by
-    // the skill file's advice to pass `false` as a performance remedy.
-    if (config.enableAnimations === false) {
-      store.dispatch({ type: 'zoomProgress', transform: to });
-      store.dispatch({ type: 'zoomComplete' });
-      return;
-    }
-
-    animationRunning = true;
-
-    // Milliseconds, from state. `ChartState.transitionDuration` is documented
-    // and was consulted by nothing while the animator hardcoded 400.
-    animateZoomTransition(
-      from,
-      to,
-      store.dispatch,
-      (transform) => {
-        // Dispatch progress updates during animation
-        store.dispatch({
-          type: 'zoomProgress',
-          transform
-        });
-      },
-      state.transitionDuration
-    ).then(() => {
-      // Animation completed
-      animationRunning = false;
-    });
+  const target = animationTarget;
+  const enabled = animationsEnabled;
+  const currentStore = store;
+  if (!target || isRetired) return;
+  const controller = new AbortController();
+  const current = untrack(() => currentStore.state);
+  if (!current) return;
+  animationAbortController = controller;
+  const dispatch: typeof currentStore.dispatch = action => {
+    const latest = currentStore.state;
+    if (!controller.signal.aborted && !isRetired && latest?.isAnimating && latest?.targetTransform === target)
+      currentStore.dispatch(action);
+  };
+  if (!enabled) {
+    dispatch({ type: 'zoomProgress', transform: target });
+    dispatch({ type: 'zoomComplete' });
+  } else {
+    void animateZoomTransition(
+      current.transform, target, dispatch,
+      transform => dispatch({ type: 'zoomProgress', transform }),
+      current.transitionDuration, controller.signal
+    ).catch(error => console.error('[ChartPrimitive] Zoom animation failed:', error));
   }
+  return () => {
+    controller.abort();
+    if (animationAbortController === controller) {
+      animationAbortController = null;
+    }
+  };
 });
 
 // Render the plot (called on mount and when data/selection/transform changes)
 function renderPlot() {
-  if (!containerElement) return;
+  if (!containerElement || isRetired) return;
+
+  retireAttachment();
+  const generation = attachmentGeneration;
 
   // Clean up previous event listeners
   if (cleanupEventListeners) {
@@ -180,11 +220,11 @@ function renderPlot() {
 
   // Get current state (not reactive, just a snapshot)
   const plotState = store.state;
+  if (!plotState || isRetired) return;
 
-  // Build plot. `plotBuilder` is typed `=> any`, so bind it to a real element
-  // type here rather than letting `plotElement`'s `| null` reach appendChild.
-  const plot: HTMLElement | null = plotBuilder(plotState, config);
-  if (!plot) return;
+  // Build plot. `plotBuilder` returns an Element (SVG or Figure) or null.
+  const plot: Element | null = plotBuilder(plotState, config);
+  if (!plot || isRetired) return;
 
   // Clear previous plot
   if (plotElement) {
@@ -195,10 +235,13 @@ function renderPlot() {
   plotElement = plot;
   containerElement.appendChild(plot);
 
+  if (!enableZoom && !enableBrush) return;
+
   // Wait for SVG to be available before attaching behaviors
   // Observable Plot returns the SVG element directly, so we need to query from the container
   const attemptAttach = (retries = 0) => {
-    if (!containerElement || !plotElement) return; // Guard in case component unmounted
+    if (generation !== attachmentGeneration || isRetired || !containerElement || plotElement !== plot) return;
+    attachmentTimer = undefined;
 
     // Observable Plot returns the SVG directly, so look for it in the container
     const svg = containerElement.querySelector('svg');
@@ -206,11 +249,12 @@ function renderPlot() {
       // SVG found - attach event listeners
       const cleanup = attachEventListeners(containerElement);
       if (cleanup) {
-        cleanupEventListeners = cleanup;
+        if (generation === attachmentGeneration && !isRetired) cleanupEventListeners = cleanup;
+        else cleanup();
       }
     } else if (retries < 5) {
       // SVG not found yet - retry after a short delay
-      setTimeout(() => attemptAttach(retries + 1), 10);
+      attachmentTimer = setTimeout(() => attemptAttach(retries + 1), 10);
     } else if (enableZoom || enableBrush) {
       // Give up after 5 retries
       console.warn('[ChartPrimitive] Could not find SVG after multiple attempts');
@@ -218,7 +262,7 @@ function renderPlot() {
   };
 
   // Start attachment attempt on next tick
-  setTimeout(() => attemptAttach(), 0);
+  attachmentTimer = setTimeout(() => attemptAttach(), 0);
 }
 
 /**
@@ -256,6 +300,7 @@ function attachZoomBehavior(svg: SVGSVGElement): () => void {
     // change to one cannot leave the other behind.
     .scaleExtent([ZOOM_MIN, ZOOM_MAX])
     .on('zoom', (event) => {
+      if (isRetired || !store.state) return;
       // Dispatch zoom action with transform
       store.dispatch({
         type: 'zoom',
@@ -303,9 +348,11 @@ function dataCircles(svg: SVGSVGElement): SVGCircleElement[] {
 function attachBrushBehavior(svg: SVGSVGElement): () => void {
   const brushBehavior = d3Brush()
     .on('start', () => {
+      if (isRetired || !store.state) return;
       store.dispatch({ type: 'brushStart' });
     })
     .on('end', (event) => {
+      if (isRetired || !store.state) return;
       if (!event.selection) {
         // Brush was cleared - clear selection
         store.dispatch({ type: 'clearSelection' });
@@ -317,6 +364,7 @@ function attachBrushBehavior(svg: SVGSVGElement): () => void {
 
       const selectedIndices: number[] = [];
       const currentState = store.state;
+      if (!currentState) return;
 
       dataCircles(svg).forEach((circle, index) => {
         const cx = parseFloat(circle.getAttribute('cx') || '0');
@@ -350,6 +398,7 @@ function attachBrushBehavior(svg: SVGSVGElement): () => void {
 
   // Return cleanup function
   return () => {
+    brushGroup.on('.brush', null);
     brushGroup.remove();
   };
 }

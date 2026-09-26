@@ -52,7 +52,7 @@ function makeStore() {
 		},
 		detectVoiceActivity: () => {
 			calls.polls += 1;
-			return false; // always silent, so auto-send is reached
+			return calls.polls === 1; // One speech sample followed by the utterance-ending silence.
 		},
 		cleanup: () => {},
 		requestMicrophone: async () => {}
@@ -88,8 +88,8 @@ describe('a conversation that reaches auto-send', () => {
 
 	// A control, not a regression guard, and labelled as one deliberately.
 	//
-	// Continuous auto-send on each silent interval is what conversation mode is
-	// *for*, so the transcription count is the same before and after the fix —
+	// Speech followed by the silence threshold triggers auto-send, so the
+	// transcription count is the same before and after the original fix —
 	// this assertion cannot distinguish them and must not be read as if it does.
 	// Its job is to prove the window is long enough to complete a cycle, which is
 	// what makes the two assertions above meaningful rather than vacuous.

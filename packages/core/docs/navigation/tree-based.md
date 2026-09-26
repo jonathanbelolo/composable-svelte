@@ -574,124 +574,21 @@ const editState = Destination.extract(state.destination, 'editItem');
 const isEditing = Destination.is(action, 'editItem.saveButtonTapped');
 ```
 
-## Navigation Components
+## Navigation components
 
-Composable Svelte provides components for rendering navigation:
-
-- `Modal` - Centered dialog overlay
-- `Sheet` - Slide-in panel (bottom or side)
-- `Drawer` - Persistent side panel
-- `Alert` - Non-dismissible dialog
-- `NavigationStack` - Multi-screen linear flow
-- `DestinationRouter` - Declarative routing
-
-### Modal Example
+Dismissing components consume managed `PresentationView` values produced by the
+application composition. Keep tree reducers responsible for state and actions; declare
+optional or destination slots at the application boundary and render them through
+`FeatureViews` and `FeatureOutlet`.
 
 ```svelte
-<script lang="ts">
-  import { Modal } from '@composable-svelte/core';
-  import { scopeToDestination } from '@composable-svelte/core/navigation';
-
-  const { store } = $props();
-
-  // Scope to optional child
-  const addItemStore = scopeToDestination(
-    store,
-    ['destination'],
-    'addItem',
-    'destination'
-  );
-</script>
-
-<Modal store={addItemStore}>
-  {#snippet children({ store })}
-    <h2>Add Item</h2>
-    <input
-      value={store.state.name}
-      oninput={(e) => store.dispatch({
-        type: 'nameChanged',
-        name: e.currentTarget.value
-      })}
-    />
-    <button onclick={() => store.dispatch({ type: 'saveButtonTapped' })}>
-      Save
-    </button>
-    <button onclick={() => store.dispatch({ type: 'cancelButtonTapped' })}>
-      Cancel
-    </button>
-  {/snippet}
-</Modal>
+<FeatureOutlet view={views.destination} />
 ```
 
-### Sheet Example
-
-```svelte
-<script lang="ts">
-  import { Sheet } from '@composable-svelte/core';
-
-  const { store } = $props();
-  const filterStore = scopeToDestination(store, ['destination'], 'filter', 'destination');
-</script>
-
-<Sheet store={filterStore} side="bottom">
-  {#snippet children({ store })}
-    <h2>Filter Items</h2>
-    <!-- Filter UI -->
-  {/snippet}
-</Sheet>
-```
-
-### DestinationRouter
-
-For enum destinations, use `DestinationRouter` to declaratively render:
-
-```svelte
-<script lang="ts">
-  import { DestinationRouter } from '@composable-svelte/core';
-  import AddItemModal from './AddItemModal.svelte';
-  import EditItemModal from './EditItemModal.svelte';
-  import FilterSheet from './FilterSheet.svelte';
-
-  const { store } = $props();
-</script>
-
-<DestinationRouter
-  {store}
-  destinationPath={['destination']}
-  actionField="destination"
->
-  {#snippet addItem({ store })}
-    <AddItemModal {store} />
-  {/snippet}
-
-  {#snippet editItem({ store })}
-    <EditItemModal {store} />
-  {/snippet}
-
-  {#snippet filter({ store })}
-    <FilterSheet {store} />
-  {/snippet}
-</DestinationRouter>
-```
-
-### scopeToDestination
-
-Creates a scoped store for a child feature:
-
-```typescript
-import { scopeToDestination } from '@composable-svelte/core/navigation';
-
-// Scope to optional child
-const childStore = scopeToDestination(
-  parentStore,
-  ['destination'],     // Path to destination field
-  'addItem',           // Case type (for enum destinations)
-  'destination'        // Action field name
-);
-
-// childStore.state is AddItemState (or null if not presented)
-// childStore.dispatch sends actions wrapped in PresentationAction
-```
+A declared view can render `Modal`, `Sheet`, `Drawer`, `Alert`, or `Popover` and pass
+its admitted `store` directly. Legacy `scopeToDestination` remains available for
+non-presentation state/read/dispatch, but its result is not a presentation component
+input. See [Navigation components](./components.md) for the rendering contract.
 
 ## Stack Navigation
 
@@ -822,101 +719,39 @@ if (canGoBack(state.stack)) {
 const depth = stackDepth(state.stack);  // Number of screens
 ```
 
-## Dismiss Dependency
+## Managed dismissal dependency
 
-Child features can dismiss themselves without knowing about their parent.
-
-### The Problem
-
-```typescript
-// ❌ Child knows about parent structure
-case 'cancelButtonTapped':
-  return [
-    state,
-    Effect.run((dispatch) => {
-      dispatch({ type: 'destination', action: { type: 'dismiss' } });
-    })
-  ];
-```
-
-The child shouldn't know it's being presented in a `destination` field.
-
-### The Solution: Dismiss Dependency
-
-```typescript
-// ✅ Child requests dismissal via dependency
-interface AddItemDeps {
-  dismiss: DismissDependency;
-  api: APIClient;
-}
-
-const addItemReducer: Reducer<AddItemState, AddItemAction, AddItemDeps> = (
-  state,
-  action,
-  deps
-) => {
-  switch (action.type) {
-    case 'cancelButtonTapped':
-      return [state, deps.dismiss()];
-
-    case 'saveButtonTapped':
-      return [
-        state,
-        Effect.batch(
-          Effect.run(async (dispatch) => {
-            await deps.api.saveItem(state);
-            dispatch({ type: 'saved' });
-          }),
-          deps.dismiss()  // Dismiss after save
-        )
-      ];
-  }
-};
-```
-
-### Creating Dismiss Dependency
+A presented child should request dismissal without knowing its parent field or current occupant.
+Inject the application-only managed dependency into the child reducer and return its effect:
 
 ```typescript
 import {
-  createDismissDependency,
-  dismissDependency
-} from '@composable-svelte/core/navigation';
+  managedDismissDependency,
+  type DismissDependency
+} from @composable-svelte/core/application;
 
-// In parent reducer when presenting child
-case 'addButtonTapped': {
-  const childDeps: AddItemDeps = {
-    ...deps,
-    dismiss: dismissDependency(
-      (action) => store.dispatch(action),
-      'destination'
-    )
-  };
-
-  // Store childDeps somewhere accessible to child
-  // (Usually via store creation or context)
-
-  return [
-    { ...state, destination: { name: '', quantity: 0 } },
-    Effect.none()
-  ];
+interface AddItemDeps {
+  readonly dismiss: DismissDependency;
+  readonly api: APIClient;
 }
+
+const childDeps: AddItemDeps = {
+  api,
+  dismiss: managedDismissDependency(async () => {
+    await analytics.track(modal_dismissed);
+  })
+};
+
+const addItemReducer: Reducer<AddItemState, AddItemAction, AddItemDeps> =
+  (state, action, deps) => {
+    if (action.type === cancelButtonTapped) return [state, deps.dismiss()];
+    return [state, Effect.none()];
+  };
 ```
 
-### Dismiss with Cleanup
-
-```typescript
-import { createDismissDependencyWithCleanup } from '@composable-svelte/core/navigation';
-
-const dismiss = createDismissDependencyWithCleanup(
-  (action) => store.dispatch(action),
-  (presentationAction) => ({ type: 'destination', action: presentationAction }),
-  async () => {
-    // Cleanup before dismissing
-    await analytics.track('modal_dismissed');
-    localStorage.setItem('lastDismissed', Date.now().toString());
-  }
-);
-```
+Managed composition claims the request for the exact optional or destination owner.
+Replacement or destruction retires it. Legacy scopes still support state reads and action
+dispatch, but they do not mint dismissal authority.
 
 ## Deep Linking and URL Sync
 
@@ -1227,24 +1062,17 @@ case 'destination':
   return ifLet(...)(state, action, deps);
 ```
 
-### 4. Inject Dismiss Dependency
+### 4. Inject managed dismissal
 
 ```typescript
-// ✅ Child can dismiss itself. Built where the store is built — a reducer has
-// no `dispatch` in scope — capturing the store's dispatch lazily.
-let dispatch: Dispatch<ParentAction> = () => {};
-
-const store = createStore({
-  initialState,
-  reducer: parentReducer,
-  dependencies: {
-    ...deps,
-    dismiss: dismissDependency((action) => dispatch(action), 'destination')
-  }
-});
-
-dispatch = (action) => store.dispatch(action);
+const childDependencies = {
+  ...deps,
+  dismiss: managedDismissDependency()
+};
 ```
+
+Register the child through an `optionalSlot` or `destinationSlot`. The managed owner
+claims `deps.dismiss()`; no parent dispatch closure or action-field string is required.
 
 ### 5. Test Navigation Flows
 
@@ -1346,34 +1174,20 @@ case 'editButtonTapped':
 
 ### Nested Presentation
 
-```typescript
-// Parent presents child, child presents grandchild
-interface ParentState {
-  destination: ChildState | null;
-}
-
-interface ChildState {
-  data: Data;
-  destination: GrandchildState | null;  // Nested!
-}
-```
-
-Components nest naturally:
+A presented child may declare its own managed optional or destination slot. Render each
+admitted layer from its typed feature view rather than scoping a raw parent store inside
+another presentation component:
 
 ```svelte
-<Modal store={childStore}>
-  {#snippet children({ store })}
-    <ChildComponent {store} />
-
-    <!-- Child can present its own modal -->
-    <Modal store={scopeToDestination(store, ['destination'], 'confirm', 'destination')}>
-      {#snippet children({ store })}
-        <GrandchildComponent {store} />
-      {/snippet}
-    </Modal>
-  {/snippet}
+<Modal store={views.parent.store}>
+  <section use:views.parent.surface>
+    <ChildContent store={views.parent.store} />
+    <FeatureOutlet view={views.parent.destination} />
+  </section>
 </Modal>
 ```
+
+Each nested `PresentationView` carries only its own owner-bound dismissal authority.
 
 ### Wizard with Conditional Steps
 

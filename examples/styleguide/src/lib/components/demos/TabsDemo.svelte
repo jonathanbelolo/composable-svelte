@@ -1,24 +1,34 @@
 <script lang="ts">
 	import { Tabs } from '@composable-svelte/core/navigation-components';
-	import { createStore } from '@composable-svelte/core';
-	import { scopeToDestination } from '@composable-svelte/core/navigation';
 	import { Effect } from '@composable-svelte/core';
+	import type { Reducer } from '@composable-svelte/core';
+	import {
+		ApplicationHost,
+		ApplicationRoot,
+		defineApplication,
+		ManagedIntegrationBuilder,
+		optionalSlot,
+		scopeTo
+	} from '@composable-svelte/core/application';
+	import type { PresentationAction } from '@composable-svelte/core/navigation';
 
 	// Create a simple store for demo purposes (Tabs requires a non-null store to render)
 	interface DemoState {
-		destination: { type: 'demo'; state: Record<string, never> } | null;
+		content: Record<string, never> | null;
 	}
 
-	type DemoAction = { type: 'show' };
+	type ContentAction = { type: 'noop' };
+	type DemoAction = { type: 'content'; action: PresentationAction<ContentAction> };
 
-	const demoStore = createStore<DemoState, DemoAction>({
-		initialState: {
-			destination: { type: 'demo', state: {} }
-		},
-		reducer: (state) => [state, Effect.none()]
+	const contentSlot = optionalSlot<DemoState, DemoAction>()('content');
+	const reducer: Reducer<DemoState, DemoAction, undefined> = (state) => [state, Effect.none()];
+	const childReducer: Reducer<Record<string, never>, ContentAction, undefined> = (state) => [state, Effect.none()];
+	const composition = new ManagedIntegrationBuilder(reducer)
+		.with(contentSlot, childReducer)
+		.build();
+	const application = defineApplication(composition, {
+		initialState: (): DemoState => ({ content: {} })
 	});
-
-	const scopedStore = scopeToDestination(demoStore, ['destination'], 'demo', 'destination');
 
 	// Example 1: Basic tabs
 	let activeTab1 = $state(0);
@@ -29,6 +39,11 @@
 	// Example 3: Content-heavy tabs
 	let activeTab3 = $state(0);
 </script>
+
+<ApplicationRoot definition={application} options={{ dependencies: undefined, initial: { input: undefined } }}>
+{#snippet children(app)}
+<ApplicationHost {app}>
+{@const scopedStore = scopeTo(app.store, contentSlot)}
 
 <div class="space-y-12">
 	<!-- Live Demo Section -->
@@ -49,7 +64,7 @@
 					tabs={['Overview', 'Details', 'Settings']}
 					activeTab={activeTab1}
 					onTabChange={(index) => (activeTab1 = index)}
-				/>
+				>
 
 				<div class="rounded-lg bg-muted/20 p-6 min-h-[120px]">
 					{#if activeTab1 === 0}
@@ -78,6 +93,7 @@
 						</div>
 					{/if}
 				</div>
+				</Tabs>
 			</div>
 
 			<!-- Example 2: Settings Tabs -->
@@ -88,7 +104,7 @@
 					tabs={['Account', 'Security', 'Notifications', 'Appearance']}
 					activeTab={activeTab2}
 					onTabChange={(index) => (activeTab2 = index)}
-				/>
+				>
 
 				<div class="rounded-lg bg-muted/20 p-6 min-h-[120px]">
 					{#if activeTab2 === 0}
@@ -149,6 +165,7 @@
 						</div>
 					{/if}
 				</div>
+				</Tabs>
 			</div>
 
 			<!-- Example 3: Content Tabs -->
@@ -159,7 +176,7 @@
 					tabs={['Features', 'Pricing', 'Documentation']}
 					activeTab={activeTab3}
 					onTabChange={(index) => (activeTab3 = index)}
-				/>
+				>
 
 				<div class="rounded-lg bg-muted/20 p-6 min-h-[120px]">
 					{#if activeTab3 === 0}
@@ -200,6 +217,7 @@
 						</div>
 					{/if}
 				</div>
+				</Tabs>
 			</div>
 		</div>
 	</section>
@@ -371,3 +389,6 @@
 		</div>
 	</section>
 </div>
+</ApplicationHost>
+{/snippet}
+</ApplicationRoot>

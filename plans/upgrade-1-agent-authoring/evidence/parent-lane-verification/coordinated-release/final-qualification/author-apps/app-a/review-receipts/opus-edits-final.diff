@@ -1,0 +1,727 @@
+diff --color -ru -x n pre-opus-app-a/HANDOFF.md app-a/HANDOFF.md
+--- pre-opus-app-a/HANDOFF.md	2026-09-26 14:52:26
++++ app-a/HANDOFF.md	2026-09-26 15:13:36
+@@ -21,7 +21,7 @@
+ 
+ | Acceptance Requirement | Implementation Detail | Verifying Test(s) |
+ |---|---|---|
+-| **Completed assistant response recorded once** | Parent `workspaceReducer` observes routed child `streamComplete` action and appends reply content to `completedResponses`. | `tests/workspace.test.ts` (test 1)<br>`tests/component.test.ts` (test 3)<br>`browser/workspace.spec.ts` |
++| **Completed assistant response recorded once** | Parent `workspaceReducer` observes routed child `streamComplete` and appends `{ messageId, content }` to `completedResponses` only when that assistant message id is not already archived (idle/superseded completions the chat child ignores do not re-archive; added in Opus review). | `tests/workspace.test.ts` (test 1)<br>`tests/component.test.ts` (test 3)<br>`browser/workspace.spec.ts` |
+ | **Editor commands affect intended live editor** | `observeChildActions` delivers commands (`insertText`, `undo`, `redo`) directly to the active live CodeMirror engine. | `tests/workspace.test.ts` (test 2)<br>`tests/component.test.ts` (test 2)<br>`browser/workspace.spec.ts` |
+ | **Transcripts belong to original conversation** | `transcriptionCompleted` child action routes to parent reducer, which updates `conversations[activeId].transcripts`. | `tests/workspace.test.ts` (test 3)<br>`tests/component.test.ts` (test 4) |
+ | **Closing or replacing prevents late work mutating successor** | `replaceOn` terminates predecessor owner, fires `AbortController.abort()`, and drops late chunks/completions. | `tests/workspace.test.ts` (tests 4 & 5)<br>`tests/component.test.ts` (test 5) |
+@@ -46,9 +46,9 @@
+ npm run test
+ ```
+ Runs `vitest run` over:
+-- `tests/workspace.test.ts`: 7 tests exercising `createTestStore` with managed execution, state transitions, command emissions, and lifecycle replacement.
+-- `tests/component.test.ts`: 6 tests using Svelte 5 `mount()` in jsdom exercising live DOM interactions, live CodeMirror command execution, streaming chat, and voice dictation.
+-- Result: **2 test files passed, 13 tests passed**.
++- `tests/workspace.test.ts`: 7 tests exercising `createTestStore` with managed execution, state transitions, command emissions, and lifecycle replacement (all exhaustive; late transport callbacks are invoked after close/replace).
++- `tests/component.test.ts`: 7 tests using Svelte 5 `mount()` in jsdom exercising live DOM interactions, live CodeMirror command execution, streaming chat, and voice dictation.
++- Result (post Opus review, see `review-receipts/`): **2 test files passed, 14 tests passed**.
+ 
+ ### 3. End-to-End Browser Tests (Playwright)
+ ```bash
+@@ -56,7 +56,7 @@
+ ```
+ Runs `playwright test` in Chromium against the production build preview server.
+ - Verifies full browser workflow: header navigation, live editor commands, chat streaming, draft dispatch, conversation replacement, and closing.
+-- Result: **1 test passed in Chromium (1.0s)**.
++- Result (re-run after Opus review, twice): **1 passed**, 1.0s and 888ms for the test, 5.5s and 5.2s for the whole run including the build and preview server. Receipts are in `review-receipts/final/`.
+ 
+ ### 4. Server-Side Rendering (SSR) Check
+ ```bash
+@@ -82,12 +82,18 @@
+ - **No Copied Package Reducers:** Directly imports `streamingChatReducer`, `codeEditorReducer`, and `voiceInputReducer` from their respective installed packages.
+ - **No Root Action-Stream Listeners:** Child actions are naturally routed through `ManagedIntegrationBuilder` into `workspaceReducer`.
+ - **No Callback-Based Managed Business Routing:** Business outcomes (`completedResponses`, `transcripts`, `draftCode`) are handled purely in reducers upon receiving routed child actions, not through component UI callbacks like `onTranscript`.
+-- **No Ownership Casts:** Fully typed without `as unknown as ChildView` or `as any`.
++- **No Ownership Casts:** No `ChildView`/store/presentation casts and no `as any`. The only casts are in the fake audio device (`{} as MediaStream`, `as unknown as VoiceInputAudioManager` in `src/dependencies.ts`), mirroring the shipped media recipe's fake; they are test-double typing, not ownership casts.
+ - **No Duplicated Lifecycle Orchestration:** Teardown, cancellation, and owner replacements rely on `replaceOn` and `ApplicationRoot` / `ApplicationHost`.
+ 
+ ---
+ 
+ ## 5. Remaining Boundaries & Operational Limits
++
++- **Transcription interrupted by close/replace is discarded:** the media package cancels pending transcription work with its retired owner, so a transcript that resolves after its conversation was closed or replaced is attributed to neither conversation (tested in `tests/component.test.ts`). It never reaches the successor.
++- **Chat history per open:** each open creates a fresh chat child; the durable record of a conversation is its archived assistant replies, transcripts and draft, not the full message list.
++- **Browser media embeds are live:** `VideoEmbed` renders lazy YouTube/Vimeo iframes, so the Playwright run contacts those hosts unless routed.
++- **Test tooling:** the component tests run in jsdom, now declared as the exact devDependency `jsdom` 28.1.0; it needs a `Range.getClientRects` stub. The unused `@vitest/browser-playwright` was removed. The shipped companion recipes use Vitest browser mode instead.
++- **Qualification pending:** architecture checker/external policy were not supplied at authoring or review time; see `OPUS-APP-REVIEW.md`.
+ 
+ - **Microphone Qualification Boundary:** Automated test runs use in-memory deterministic audio buffers (`createFakeWorkspaceDependencies`). Physical microphone qualification requires user browser media stream permissions (`navigator.mediaDevices.getUserMedia`) and live hardware access.
+ - **Draft Persistence:** Unsent drafts in chat are component-level state; code drafts in the code editor are durable parent state and survive conversation switching.
+diff --color -ru -x n pre-opus-app-a/ITERATION-LOG.md app-a/ITERATION-LOG.md
+--- pre-opus-app-a/ITERATION-LOG.md	2026-09-26 14:52:15
++++ app-a/ITERATION-LOG.md	2026-09-26 15:13:36
+@@ -85,3 +85,27 @@
+ | `npm run test:browser` | PASSED | 1 test passed in Chromium (5.1s) |
+ | `npm run test:ssr` | PASSED | SSR bundle built, deterministic assertions passed |
+ | `npm run build` | PASSED | Production client bundle built in 2.62s |
++
++---
++
++## 4. Independent Opus Review Changes (2026-09-26)
++
++Recorded by the independent reviewer; see `OPUS-APP-REVIEW.md` and `review-receipts/`.
++
++- **Defect (fixed): idle completion re-archived a reply.** Probe: after one archived reply, dispatching the public child action `streamComplete` (no stream, or superseded `streamId`) was ignored by the chat reducer but the parent appended the same reply again (`['answer','answer','answer']`). Fix in `src/model.ts`: archive `{ messageId, content }` only when the last assistant message id is not already archived; `Workspace.svelte` renders `.content` keyed by `messageId`. Regression assertions added to `tests/workspace.test.ts`; mutation check (guard removed) fails that test.
++- **Test strengthened: late work after close/replace.** The close and replace tests previously only asserted abort; they now invoke the retired transport's chunk/complete callbacks and assert no mutation of the successor or archives.
++- **Test strengthened: `exhaustivity = 'off'` removed.** The send-draft test passes fully exhaustive with exact nested matches (`sendMessage` message, `chunkReceived`/`streamComplete` with `streamId`), and now asserts the archived reply. The relaxation was unnecessary.
++- **Test added: late transcription after replacement** (rendered, real VoiceInput UI, deferred fake STT) with a no-replacement negative control.
++- **SSR check strengthened:** counts all injected device/STT/upload calls (must be 0) and re-renders a default request after other requests to show independent roots.
++
++## 5. Opus Review Follow-up: Browser Run and Dependency Hygiene (2026-09-26)
++
++- **Local resolution:** the accidental `/private/tmp/node_modules` ancestor symlink had been removed by the coordinator. No `node_modules` exists in any ancestor directory, and every direct dependency resolves inside `app-a/node_modules`. Receipt: `review-receipts/local-resolution-pre.txt`.
++- **Dependency hygiene (N1 closed):**
++  - `jsdom` is now declared as the exact devDependency 28.1.0; it was already installed.
++  - The unused `@vitest/browser-playwright` was removed; no app file imported or configured it.
++  - The lock was updated with `npm install --offline --no-audit --no-fund --ignore-scripts`. Only the browser-playwright subtree was removed (9 entries); the lock gained nothing new.
++  - npm reported "added 50 packages". These are optional entries for other platforms (esbuild and rollup binaries). They are in the lock but not on disk on darwin-arm64, and no directory was newly written.
++  - The `@composable-svelte/*` `file:` specs, their lock `resolved`/`integrity` values, and all archive and installed bytes are unchanged.
++  - Receipts: `review-receipts/dep-hygiene/`, `review-receipts/artifact-hash-verification-post-deps.txt`.
++- **Browser:** `npm run test:browser` passed twice after all edits. Receipts are in `review-receipts/final/`. The earlier 1.0s vs 5.1s note is the per-test time vs the whole run.
+diff --color -ru -x n pre-opus-app-a/PUBLIC-REFERENCE-GAPS.md app-a/PUBLIC-REFERENCE-GAPS.md
+--- pre-opus-app-a/PUBLIC-REFERENCE-GAPS.md	2026-09-26 14:52:05
++++ app-a/PUBLIC-REFERENCE-GAPS.md	2026-09-26 15:15:30
+@@ -34,3 +34,14 @@
+ - **Missing guarantee / documentation:** The docs state that `store.receive()` performs partial matching. However, for nested objects (such as `{ type: 'chat', action: { type: 'presented', action: { type: 'chunkReceived' } } }`), TestStore compares nested object fields structurally in full. Internal child reducer properties (e.g. `streamId: "1"` attached by `streamingChatReducer`) cause the nested match to fail unless explicitly specified or `store.exhaustivity = 'off'` is set.
+ - **Resolution in application:** Explicitly specified child action fields (like `streamId: '1'`) or used `store.exhaustivity = 'off'` for top-level dispatched action assertions.
+ - **Proposed documentation fix:** Clarify in `testing-owned-work.md` that nested action properties inside `PresentationAction` wrapper objects are matched structurally, and demonstrate matching child-dispatched actions under managed integration.
++
++---
++
++## Independent reviewer assessment (Opus review, 2026-09-26)
++
++Checked against the installed, hash-verified package files only.
++
++- **Gap 1 (xyflow preprocessing): discoverable in shipped guidance; not a missing reference.** `node_modules/@composable-svelte/code/recipes/managed/README.md` ships in the public tarball. It says to `cp recipes/managed/svelte.config.js ./svelte.config.js` and that "The Svelte config preprocesses the TypeScript syntax in xyflow's `.svelte` files". Calling that recipe "internal" is inaccurate. There is a minor placement improvement: the main `code/README.md` Quick Start does not mention it. This does not require a package repack.
++- **Gap 2 (jsdom resolve conditions): app-specific tooling choice; not a missing reference.** The starter (`core/consumer`) uses node Vitest for reducer tests and Playwright for rendered tests. The companion recipes use Vitest browser mode with `@vitest/browser-playwright`. The chat recipe's `vitest.config.ts` also shows the exact `resolve.conditions: ['browser', 'module', 'import', 'default']` line this app copied. jsdom is not a documented path, and it needed a `Range.getClientRects` stub here. At review time jsdom was not a declared devDependency and resolved only through `isomorphic-dompurify`. The reviewer follow-up has since declared it as the exact devDependency 28.1.0 (see ITERATION-LOG.md §5).
++- **Gap 3 (nested TestStore matching / exhaustivity-off): documented; claim not supported.** `core/docs/core-concepts/testing.md` ("Partial Action Matching") says that top-level keys are partial and that a nested value is compared "structurally, as a whole ... an `event` carrying one more field does not match". `exhaustivity = 'off'` was unnecessary: the send-draft test passes fully exhaustive with exact nested matches. That test has been restored to exhaustive form.
++- **New finding (package guidance, chat managed recipe):** `chat/recipes/managed/ManagedChat.svelte` archives `messages.at(-1)` on every routed `streamComplete`. The chat reducer ignores an idle or superseded `streamComplete`, but the parent still receives it, so the same reply is archived again. This app inherited the pattern and fixed it with a message-id guard. The recipe README says its test proves "no duplicate archive", but that test covers only a late completion from a retired owner, not an idle completion on the live owner. `core/docs/agent-patterns.md` asks to "Verify idle completions cannot commit." Owning scope: the chat recipe, fixed by a package maintainer. This app did not edit the package.
+diff --color -ru -x n pre-opus-app-a/package-lock.json app-a/package-lock.json
+--- pre-opus-app-a/package-lock.json	2026-09-26 14:10:48
++++ app-a/package-lock.json	2026-09-26 15:12:12
+@@ -16,7 +16,7 @@
+         "@playwright/test": "1.56.1",
+         "@sveltejs/vite-plugin-svelte": "6.2.1",
+         "@types/node": "22.18.6",
+-        "@vitest/browser-playwright": "4.0.7",
++        "jsdom": "28.1.0",
+         "playwright": "1.56.1",
+         "svelte-check": "4.3.3",
+         "typescript": "5.9.3",
+@@ -1231,13 +1231,6 @@
+         "node": ">=18"
+       }
+     },
+-    "node_modules/@polka/url": {
+-      "version": "1.0.0-next.29",
+-      "resolved": "https://registry.npmjs.org/@polka/url/-/url-1.0.0-next.29.tgz",
+-      "integrity": "sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==",
+-      "dev": true,
+-      "license": "MIT"
+-    },
+     "node_modules/@rollup/rollup-android-arm-eabi": {
+       "version": "4.63.5",
+       "resolved": "https://registry.npmjs.org/@rollup/rollup-android-arm-eabi/-/rollup-android-arm-eabi-4.63.5.tgz",
+@@ -1741,53 +1734,6 @@
+       "integrity": "sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==",
+       "license": "MIT"
+     },
+-    "node_modules/@vitest/browser": {
+-      "version": "4.0.7",
+-      "resolved": "https://registry.npmjs.org/@vitest/browser/-/browser-4.0.7.tgz",
+-      "integrity": "sha512-Ycl/1ifrzgbXeJe7tzK7jObBFyCrIlR9UQGEKjRHh+7CcnSjtUhbllvJ9HS4WH4ib5jAaqb/Ytdoyz/W5kKMLw==",
+-      "dev": true,
+-      "license": "MIT",
+-      "dependencies": {
+-        "@vitest/mocker": "4.0.7",
+-        "@vitest/utils": "4.0.7",
+-        "magic-string": "^0.30.19",
+-        "pixelmatch": "7.1.0",
+-        "pngjs": "^7.0.0",
+-        "sirv": "^3.0.2",
+-        "tinyrainbow": "^3.0.3",
+-        "ws": "^8.18.3"
+-      },
+-      "funding": {
+-        "url": "https://opencollective.com/vitest"
+-      },
+-      "peerDependencies": {
+-        "vitest": "4.0.7"
+-      }
+-    },
+-    "node_modules/@vitest/browser-playwright": {
+-      "version": "4.0.7",
+-      "resolved": "https://registry.npmjs.org/@vitest/browser-playwright/-/browser-playwright-4.0.7.tgz",
+-      "integrity": "sha512-j5vA74jIqKbMA6yRTQ4PwEwbuPx+Ldtdb12gAJt++eds3kDtuvmfqRe9SmCxXRJ50drZaSai6Vunh2WcjUw8Fg==",
+-      "dev": true,
+-      "license": "MIT",
+-      "dependencies": {
+-        "@vitest/browser": "4.0.7",
+-        "@vitest/mocker": "4.0.7",
+-        "tinyrainbow": "^3.0.3"
+-      },
+-      "funding": {
+-        "url": "https://opencollective.com/vitest"
+-      },
+-      "peerDependencies": {
+-        "playwright": "*",
+-        "vitest": "4.0.7"
+-      },
+-      "peerDependenciesMeta": {
+-        "playwright": {
+-          "optional": false
+-        }
+-      }
+-    },
+     "node_modules/@vitest/expect": {
+       "version": "4.0.7",
+       "resolved": "https://registry.npmjs.org/@vitest/expect/-/expect-4.0.7.tgz",
+@@ -2612,16 +2558,6 @@
+         "node": ">=4"
+       }
+     },
+-    "node_modules/mrmime": {
+-      "version": "2.0.1",
+-      "resolved": "https://registry.npmjs.org/mrmime/-/mrmime-2.0.1.tgz",
+-      "integrity": "sha512-Y3wQdFg2Va6etvQ5I82yUhGdsKrcYox6p7FfL1LbK2J4V01F9TGlepTIhnK24t7koZibmg82KGglhA1XK5IsLQ==",
+-      "dev": true,
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">=10"
+-      }
+-    },
+     "node_modules/ms": {
+       "version": "2.1.3",
+       "resolved": "https://registry.npmjs.org/ms/-/ms-2.1.3.tgz",
+@@ -2710,19 +2646,6 @@
+         "url": "https://github.com/sponsors/jonschlinkert"
+       }
+     },
+-    "node_modules/pixelmatch": {
+-      "version": "7.1.0",
+-      "resolved": "https://registry.npmjs.org/pixelmatch/-/pixelmatch-7.1.0.tgz",
+-      "integrity": "sha512-1wrVzJ2STrpmONHKBy228LM1b84msXDUoAzVEl0R8Mz4Ce6EPr+IVtxm8+yvrqLYMHswREkjYFaMxnyGnaY3Ng==",
+-      "dev": true,
+-      "license": "ISC",
+-      "dependencies": {
+-        "pngjs": "^7.0.0"
+-      },
+-      "bin": {
+-        "pixelmatch": "bin/pixelmatch"
+-      }
+-    },
+     "node_modules/playwright": {
+       "version": "1.56.1",
+       "resolved": "https://registry.npmjs.org/playwright/-/playwright-1.56.1.tgz",
+@@ -2755,16 +2678,6 @@
+         "node": ">=18"
+       }
+     },
+-    "node_modules/pngjs": {
+-      "version": "7.0.0",
+-      "resolved": "https://registry.npmjs.org/pngjs/-/pngjs-7.0.0.tgz",
+-      "integrity": "sha512-LKWqWJRhstyYo9pGvgor/ivk2w94eSjE3RGVuzLGlr3NmD8bf7RcYGze1mNdEHRP6TRP6rMuDHk5t44hnTRyow==",
+-      "dev": true,
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">=14.19.0"
+-      }
+-    },
+     "node_modules/postcss": {
+       "version": "8.5.28",
+       "resolved": "https://registry.npmjs.org/postcss/-/postcss-8.5.28.tgz",
+@@ -2913,21 +2826,6 @@
+       "devOptional": true,
+       "license": "ISC"
+     },
+-    "node_modules/sirv": {
+-      "version": "3.0.2",
+-      "resolved": "https://registry.npmjs.org/sirv/-/sirv-3.0.2.tgz",
+-      "integrity": "sha512-2wcC/oGxHis/BoHkkPwldgiPSYcpZK3JU28WoMVv55yHJgcZ8rlXvuG9iZggz+sU1d4bRgIGASwyWqjxu3FM0g==",
+-      "dev": true,
+-      "license": "MIT",
+-      "dependencies": {
+-        "@polka/url": "^1.0.0-next.24",
+-        "mrmime": "^2.0.0",
+-        "totalist": "^3.0.0"
+-      },
+-      "engines": {
+-        "node": ">=18"
+-      }
+-    },
+     "node_modules/source-map-js": {
+       "version": "1.2.1",
+       "resolved": "https://registry.npmjs.org/source-map-js/-/source-map-js-1.2.1.tgz",
+@@ -3089,16 +2987,6 @@
+       "integrity": "sha512-ERuv0p98XgSzmlSLJr8vDNxX+uATGInlN97V3R+JpYWaSqn5IG3ewWgCwczk4bkOpgth/o8Nt5FOi4B4w0n/1A==",
+       "license": "MIT"
+     },
+-    "node_modules/totalist": {
+-      "version": "3.0.1",
+-      "resolved": "https://registry.npmjs.org/totalist/-/totalist-3.0.1.tgz",
+-      "integrity": "sha512-sf4i37nQ2LBx4m3wB74y+ubopq6W/dIzXg0FDGjsYnZHVa1Da8FH853wlL2gtUhg+xJXjfk3kUZS3BRoQeoQBQ==",
+-      "dev": true,
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">=6"
+-      }
+-    },
+     "node_modules/tough-cookie": {
+       "version": "6.0.2",
+       "resolved": "https://registry.npmjs.org/tough-cookie/-/tough-cookie-6.0.2.tgz",
+@@ -3412,28 +3300,6 @@
+       },
+       "engines": {
+         "node": ">=8"
+-      }
+-    },
+-    "node_modules/ws": {
+-      "version": "8.21.3",
+-      "resolved": "https://registry.npmjs.org/ws/-/ws-8.21.3.tgz",
+-      "integrity": "sha512-201TZ/kPWxoPr/OKWjquZR1SWKXcvxdH+e1xrx89b3YbmzLMFCLfnaG1HFIgWzJOEWZ7MvpK++odZufgYR50Rw==",
+-      "dev": true,
+-      "license": "MIT",
+-      "engines": {
+-        "node": ">=10.0.0"
+-      },
+-      "peerDependencies": {
+-        "bufferutil": "^4.0.1",
+-        "utf-8-validate": ">=5.0.2"
+-      },
+-      "peerDependenciesMeta": {
+-        "bufferutil": {
+-          "optional": true
+-        },
+-        "utf-8-validate": {
+-          "optional": true
+-        }
+       }
+     },
+     "node_modules/xml-name-validator": {
+diff --color -ru -x n pre-opus-app-a/package.json app-a/package.json
+--- pre-opus-app-a/package.json	2026-09-26 14:51:19
++++ app-a/package.json	2026-09-26 15:12:12
+@@ -11,21 +11,21 @@
+     "test:ssr": "vite build --ssr tests/ssr-entry.ts --outDir ssr && node tests/ssr.mjs"
+   },
+   "dependencies": {
+-    "@composable-svelte/core": "file:/private/tmp/composable-final-authoring/artifacts-a/composable-svelte-core-0.13.1.tgz",
++    "@composable-svelte/chat": "file:/private/tmp/composable-final-authoring/artifacts-a/composable-svelte-chat-0.5.0.tgz",
+     "@composable-svelte/code": "file:/private/tmp/composable-final-authoring/artifacts-a/composable-svelte-code-0.5.0.tgz",
++    "@composable-svelte/core": "file:/private/tmp/composable-final-authoring/artifacts-a/composable-svelte-core-0.13.1.tgz",
+     "@composable-svelte/media": "file:/private/tmp/composable-final-authoring/artifacts-a/composable-svelte-media-0.5.0.tgz",
+-    "@composable-svelte/chat": "file:/private/tmp/composable-final-authoring/artifacts-a/composable-svelte-chat-0.5.0.tgz",
+     "svelte": "5.55.3"
+   },
+   "devDependencies": {
+-    "typescript": "5.9.3",
+-    "svelte-check": "4.3.3",
+-    "vite": "7.3.6",
+-    "@sveltejs/vite-plugin-svelte": "6.2.1",
+-    "vitest": "4.0.7",
+-    "@vitest/browser-playwright": "4.0.7",
+     "@playwright/test": "1.56.1",
++    "@sveltejs/vite-plugin-svelte": "6.2.1",
++    "@types/node": "22.18.6",
++    "jsdom": "28.1.0",
+     "playwright": "1.56.1",
+-    "@types/node": "22.18.6"
++    "svelte-check": "4.3.3",
++    "typescript": "5.9.3",
++    "vite": "7.3.6",
++    "vitest": "4.0.7"
+   }
+ }
+diff --color -ru -x n pre-opus-app-a/src/Workspace.svelte app-a/src/Workspace.svelte
+--- pre-opus-app-a/src/Workspace.svelte	2026-09-26 14:46:51
++++ app-a/src/Workspace.svelte	2026-09-26 15:02:37
+@@ -175,10 +175,10 @@
+                 <p class="empty-note">No completed assistant replies recorded yet.</p>
+               {:else}
+                 <ul class="archived-list">
+-                  {#each activeConv.completedResponses as resp, idx (idx)}
++                  {#each activeConv.completedResponses as resp, idx (resp.messageId)}
+                     <li class="archived-item" data-testid="archived-reply-item">
+                       <span class="reply-num">#{idx + 1}</span>
+-                      <span class="reply-text">{resp}</span>
++                      <span class="reply-text">{resp.content}</span>
+                     </li>
+                   {/each}
+                 </ul>
+diff --color -ru -x n pre-opus-app-a/src/model.ts app-a/src/model.ts
+--- pre-opus-app-a/src/model.ts	2026-09-26 14:45:43
++++ app-a/src/model.ts	2026-09-26 15:06:29
+@@ -29,11 +29,16 @@
+  * Durable business outcomes (transcripts, completed assistant responses,
+  * and drafts) are owned and updated by the parent reducer.
+  */
++export interface ArchivedResponse {
++  readonly messageId: string;
++  readonly content: string;
++}
++
+ export interface ConversationRecord {
+   readonly id: string;
+   readonly title: string;
+   readonly draftCode: string;
+-  readonly completedResponses: readonly string[];
++  readonly completedResponses: readonly ArchivedResponse[];
+   readonly transcripts: readonly string[];
+   readonly mediaUrl?: string;
+ }
+@@ -188,25 +193,33 @@
+         const activeId = state.activeConversationId;
+         if (!activeId) return [state, Effect.none()];
+ 
++        // The chat reduces first and ignores an idle or superseded completion, but the
++        // parent still sees that action. Archive only an assistant reply not yet recorded
++        // (assumes the injected generateId yields unique message ids).
+         const reply = state.chat?.messages.at(-1);
+-        if (reply?.role === 'assistant') {
+-          const conv = state.conversations[activeId];
+-          if (conv) {
+-            const nextConv: ConversationRecord = {
+-              ...conv,
+-              completedResponses: [...conv.completedResponses, reply.content]
+-            };
+-            return [
+-              {
+-                ...state,
+-                conversations: {
+-                  ...state.conversations,
+-                  [activeId]: nextConv
+-                }
+-              },
+-              Effect.none()
+-            ];
+-          }
++        const conv = state.conversations[activeId];
++        if (
++          reply?.role === 'assistant' &&
++          conv &&
++          !conv.completedResponses.some((archived) => archived.messageId === reply.id)
++        ) {
++          const nextConv: ConversationRecord = {
++            ...conv,
++            completedResponses: [
++              ...conv.completedResponses,
++              { messageId: reply.id, content: reply.content }
++            ]
++          };
++          return [
++            {
++              ...state,
++              conversations: {
++                ...state.conversations,
++                [activeId]: nextConv
++              }
++            },
++            Effect.none()
++          ];
+         }
+       }
+       return [state, Effect.none()];
+diff --color -ru -x n pre-opus-app-a/tests/component.test.ts app-a/tests/component.test.ts
+--- pre-opus-app-a/tests/component.test.ts	2026-09-26 14:50:05
++++ app-a/tests/component.test.ts	2026-09-26 15:06:29
+@@ -199,6 +199,72 @@
+     expect(target.querySelector('[data-testid="transcripts-count"]')?.textContent).toBe('1');
+   });
+ 
++  it('a transcription finishing after replacement never reaches the successor conversation', async () => {
++    // Deferred fake STT: the test decides when each transcription resolves.
++    async function recordThenMaybeReplace(replace: boolean) {
++      const dependencies = createFakeWorkspaceDependencies();
++      let resolveTranscript: ((text: string) => void) | undefined;
++      dependencies.transcribeAudio = () =>
++        new Promise<string>((resolve) => {
++          resolveTranscript = resolve;
++        });
++
++      const target = document.createElement('div');
++      document.body.appendChild(target);
++      const app = mount(App, { target, props: { dependencies } });
++      flushSync();
++      cleanup.push(async () => {
++        await unmount(app);
++        target.remove();
++      });
++
++      const micButton = await waitFor(
++        () => target.querySelector<HTMLButtonElement>('.voice-input button'),
++        'Voice input mic button'
++      );
++      micButton.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
++      flushSync();
++      await settle(30);
++      micButton.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', bubbles: true, cancelable: true }));
++      flushSync();
++      await waitFor(() => resolveTranscript, 'Pending conv-1 transcription');
++
++      if (replace) {
++        target.querySelector<HTMLButtonElement>('[data-testid="switch-to-conv-2-btn"]')!.click();
++        flushSync();
++        await waitFor(
++          () => target.querySelector('[data-testid="active-id"]')?.textContent === 'conv-2',
++          'Active conversation conv-2'
++        );
++      }
++
++      resolveTranscript!('Late conv-1 voice note');
++      await settle(50);
++      flushSync();
++      return target;
++    }
++
++    // Negative control: without replacement the pending transcript lands on conv-1.
++    // It is asserted after the same fixed wait used for the replacement case below.
++    const control = await recordThenMaybeReplace(false);
++    expect(control.querySelector('[data-testid="transcripts-count"]')?.textContent).toBe('1');
++
++    // With replacement the retired voice owner cannot deliver into conv-2.
++    const target = await recordThenMaybeReplace(true);
++    expect(target.querySelector('[data-testid="active-id"]')?.textContent).toBe('conv-2');
++    expect(target.querySelector('[data-testid="transcripts-count"]')?.textContent).toBe('0');
++    expect(target.textContent).not.toContain('Late conv-1 voice note');
++
++    // The package cancels transcription work with its owner, so conv-1 does not receive it either.
++    target.querySelector<HTMLButtonElement>('[data-testid="switch-to-conv-1-btn"]')!.click();
++    flushSync();
++    await waitFor(
++      () => target.querySelector('[data-testid="active-id"]')?.textContent === 'conv-1',
++      'Active conversation conv-1'
++    );
++    expect(target.querySelector('[data-testid="transcripts-count"]')?.textContent).toBe('0');
++  });
++
+   it('supports replacing conversations, preserving independent state and preventing cross-conversation mutation', async () => {
+     const dependencies = createFakeWorkspaceDependencies();
+     const target = document.createElement('div');
+diff --color -ru -x n pre-opus-app-a/tests/ssr.mjs app-a/tests/ssr.mjs
+--- pre-opus-app-a/tests/ssr.mjs	2026-09-26 14:50:34
++++ app-a/tests/ssr.mjs	2026-09-26 15:03:59
+@@ -2,6 +2,7 @@
+ import { render, App } from '../ssr/ssr-entry.js';
+ 
+ let streamCallCount = 0;
++let serviceCallCount = 0;
+ const dependencies = {
+   streamMessage: () => {
+     streamCallCount++;
+@@ -9,10 +10,25 @@
+   },
+   generateId: () => 'ssr-id',
+   getTimestamp: () => 1700000000000,
+-  transcribeAudio: async () => 'ssr transcript',
+-  createAudioManager: () => ({}),
+-  getAudioManager: () => ({}),
+-  deleteAudioManager: () => {}
++  transcribeAudio: async () => {
++    serviceCallCount++;
++    return 'ssr transcript';
++  },
++  createAudioManager: () => {
++    serviceCallCount++;
++    return {};
++  },
++  getAudioManager: () => {
++    serviceCallCount++;
++    return {};
++  },
++  deleteAudioManager: () => {
++    serviceCallCount++;
++  },
++  uploadFile: async () => {
++    serviceCallCount++;
++    return 'ssr-upload';
++  }
+ };
+ 
+ console.log('Running SSR verification...');
+@@ -47,8 +63,16 @@
+   }
+ });
+ assert.match(conv2Res.body, /Issue #102: Audio Stream Buffer Tuning/, 'Must render Conv-2 title');
++assert.match(conv2Res.body, /data-testid="active-id"[^>]*>conv-2</, 'Conv-2 request renders conv-2 as active');
+ 
+-// 4. Ensure no async background side-effects ran during SSR
++// 4. Independent request roots: a later default request is unaffected by earlier requests
++const res3 = render(App, { props: { dependencies } });
++assert.equal(res3.body, res1.body, 'A later default request must not observe earlier request state');
++assert.match(res3.body, /data-testid="active-id"[^>]*>conv-1</, 'Default request renders conv-1 as active');
++
++// 5. Ensure no async background side-effects or device work ran during SSR
++await new Promise((resolve) => setTimeout(resolve, 50));
+ assert.equal(streamCallCount, 0, 'SSR must not execute streaming services');
++assert.equal(serviceCallCount, 0, 'SSR must not touch audio devices, transcription or uploads');
+ 
+ console.log('SSR verification passed: deterministic rendering, request isolation, and no server-side service execution.');
+diff --color -ru -x n pre-opus-app-a/tests/workspace.test.ts app-a/tests/workspace.test.ts
+--- pre-opus-app-a/tests/workspace.test.ts	2026-09-26 14:48:37
++++ app-a/tests/workspace.test.ts	2026-09-26 15:03:14
+@@ -72,10 +72,25 @@
+         // Acceptance observation: completed assistant response recorded once by application
+         const conv = state.conversations['conv-1'];
+         expect(conv?.completedResponses).toHaveLength(1);
+-        expect(conv?.completedResponses[0]).toBe('Use a try/catch block around verifyToken.');
++        expect(conv?.completedResponses[0]?.content).toBe('Use a try/catch block around verifyToken.');
+       }
+     );
+ 
++    // Idle and superseded completions are ignored by the chat child but still reach
++    // the parent; they must not archive the same reply again.
++    await store.send(
++      { type: 'chat', action: { type: 'presented', action: { type: 'streamComplete' } } },
++      (state) => {
++        expect(state.conversations['conv-1']?.completedResponses).toHaveLength(1);
++      }
++    );
++    await store.send(
++      { type: 'chat', action: { type: 'presented', action: { type: 'streamComplete', streamId: '1' } } },
++      (state) => {
++        expect(state.conversations['conv-1']?.completedResponses).toHaveLength(1);
++      }
++    );
++
+     await store.finish();
+   });
+ 
+@@ -165,8 +180,12 @@
+ 
+   it('closing a conversation retires child slots and aborts in-flight work', async () => {
+     const abortSpy = vi.fn();
++    let lateChunk!: (chunk: string) => void;
++    let lateComplete!: () => void;
+     const dependencies = createFakeWorkspaceDependencies();
+-    dependencies.streamMessage = () => {
++    dependencies.streamMessage = (_msg, onChunk, onComplete) => {
++      lateChunk = onChunk;
++      lateComplete = onComplete;
+       const controller = new AbortController();
+       controller.signal.addEventListener('abort', abortSpy);
+       return controller;
+@@ -199,16 +218,24 @@
+     // Abort signal should have fired on slot retirement
+     expect(abortSpy).toHaveBeenCalledTimes(1);
+ 
++    // A transport that ignores abort still calls back; retired dispatch drops it
++    lateChunk('late reply for a closed conversation');
++    lateComplete();
++    expect(store.state.chat).toBeNull();
++    expect(store.state.conversations['conv-1']?.completedResponses).toHaveLength(0);
++
+     await store.finish();
+   });
+ 
+   it('replacing a conversation prevents late work from mutating its successor', async () => {
+     const conv1Abort = vi.fn();
++    const streams: Array<{ chunk: (chunk: string) => void; complete: () => void }> = [];
+ 
+     const dependencies = createFakeWorkspaceDependencies();
+-    dependencies.streamMessage = () => {
++    dependencies.streamMessage = (_msg, onChunk, onComplete) => {
++      streams.push({ chunk: onChunk, complete: onComplete });
+       const controller = new AbortController();
+-      controller.signal.addEventListener('abort', conv1Abort);
++      if (streams.length === 1) controller.signal.addEventListener('abort', conv1Abort);
+       return controller;
+     };
+ 
+@@ -241,6 +268,33 @@
+     // Conv-2 has its own clean initial state
+     expect(store.state.conversations['conv-2']?.completedResponses).toHaveLength(0);
+ 
++    // Conv-2 starts its own stream; conv-1's transport then calls back late
++    await store.send({
++      type: 'chat',
++      action: { type: 'presented', action: { type: 'sendMessage', message: 'Conv 2 question' } }
++    });
++    streams[0]!.chunk('LATE conv-1 reply');
++    streams[0]!.complete();
++    expect(store.state.chat?.messages).toHaveLength(1);
++    expect(store.state.chat?.currentStreaming?.content).toBe('');
++    expect(store.state.conversations['conv-1']?.completedResponses).toHaveLength(0);
++    expect(store.state.conversations['conv-2']?.completedResponses).toHaveLength(0);
++
++    // Conv-2's own reply is archived to conv-2 only
++    streams[1]!.chunk('Conv 2 reply');
++    await store.receive({
++      type: 'chat',
++      action: { type: 'presented', action: { type: 'chunkReceived', chunk: 'Conv 2 reply', streamId: '1' } }
++    });
++    streams[1]!.complete();
++    await store.receive(
++      { type: 'chat', action: { type: 'presented', action: { type: 'streamComplete', streamId: '1' } } },
++      (state) => {
++        expect(state.conversations['conv-2']?.completedResponses.map((r) => r.content)).toEqual(['Conv 2 reply']);
++        expect(state.conversations['conv-1']?.completedResponses).toHaveLength(0);
++      }
++    );
++
+     await store.finish();
+   });
+ 
+@@ -312,10 +366,12 @@
+ 
+   it('sendDraftToChat runs an effect dispatching the drafted code to chat', async () => {
+     let sentMessage = '';
++    let chunk!: (text: string) => void;
+     let complete!: () => void;
+     const dependencies = createFakeWorkspaceDependencies();
+-    dependencies.streamMessage = (msg, _chunk, onComplete) => {
++    dependencies.streamMessage = (msg, onChunk, onComplete) => {
+       sentMessage = msg;
++      chunk = onChunk;
+       complete = onComplete;
+       return new AbortController();
+     };
+@@ -327,26 +383,35 @@
+       dependencies
+     });
+ 
+-    store.exhaustivity = 'off';
++    const draft = store.state.editor!.value;
++    const message = `Here is the current code draft for review:\n\`\`\`typescript\n${draft}\n\`\`\``;
+ 
+-    // Trigger sendDraftToChat
+     await store.send({ type: 'sendDraftToChat' });
+ 
+-    // Expect the chat to receive the sendMessage action containing the draft
++    // The chat receives the sendMessage action containing the live editor draft
+     await store.receive(
+-      {
+-        type: 'chat'
+-      },
++      { type: 'chat', action: { type: 'presented', action: { type: 'sendMessage', message } } },
+       (state) => {
+         expect(state.chat?.messages).toHaveLength(1);
+         expect(state.chat?.messages[0]?.content).toContain('verifyAuthToken');
+-        expect(sentMessage).toContain('verifyAuthToken');
++        expect(sentMessage).toBe(message);
+       }
+     );
+ 
+-    // Complete the stream so the subscription settles
++    chunk('Draft looks correct.');
++    await store.receive({
++      type: 'chat',
++      action: { type: 'presented', action: { type: 'chunkReceived', chunk: 'Draft looks correct.', streamId: '1' } }
++    });
+     complete();
+-    await store.receive({ type: 'chat' });
++    await store.receive(
++      { type: 'chat', action: { type: 'presented', action: { type: 'streamComplete', streamId: '1' } } },
++      (state) => {
++        expect(state.conversations['conv-1']?.completedResponses.map((r) => r.content)).toEqual([
++          'Draft looks correct.'
++        ]);
++      }
++    );
+ 
+     await store.finish();
+   });

@@ -285,21 +285,28 @@ describe('Form - Integrated Mode', () => {
 		});
 
 		it('parent can react to form events with effects', async () => {
-			// Note: This test shows the pattern, but Effect.afterDelay would need
-			// to be tested with a real time-based test
-			const store = createTestStore({
-				initialState: createInitialAppState(),
-				reducer: appReducer,
-				dependencies: {}
+			let release!: () => void;
+			let started = false;
+			const gate = new Promise<void>(resolve => { release = resolve; });
+			const reducer: typeof appReducer = (state, action, deps) => {
+				const [next, effect] = appReducer(state, action, deps);
+				if (action.type !== 'contactForm' || action.action.type !== 'submissionSucceeded') return [next, effect];
+				return [next, Effect.batch(effect, Effect.run<AppAction>(async dispatch => {
+					started = true;
+					await gate;
+					dispatch({ type: 'successMessageDismissed' });
+				}))];
+			};
+			const store = createTestStore({ initialState: createInitialAppState(), reducer, dependencies: {} });
+			await store.send({ type: 'contactForm', action: { type: 'submissionSucceeded' } });
+			expect(started).toBe(true);
+			expect(store.state.successMessage).toBe('Thank you, !');
+			store.assertNoPendingActions();
+			release();
+			await store.receive({ type: 'successMessageDismissed' }, state => {
+				expect(state.successMessage).toBeNull();
 			});
-
-			// Verify parent state structure supports effects
-			expect(store.state.successMessage).toBeNull();
-
-			// Parent can dispatch its own actions
-			await store.send({ type: 'successMessageDismissed' });
-
-			expect(store.state.successMessage).toBeNull();
+			await store.finish();
 		});
 	});
 

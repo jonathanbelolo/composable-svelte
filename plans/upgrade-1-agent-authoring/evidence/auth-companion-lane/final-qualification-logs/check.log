@@ -1,0 +1,8 @@
+
+> @composable-svelte/auth@0.2.1 check /Users/jonathanbelolo/.codex/worktrees/fe42/composable-svelte/packages/auth
+> svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings
+
+Loading svelte-check in workspace: /Users/jonathanbelolo/.codex/worktrees/fe42/composable-svelte/packages/auth
+Getting Svelte diagnostics...
+
+svelte-check found 0 errors and 0 warnings

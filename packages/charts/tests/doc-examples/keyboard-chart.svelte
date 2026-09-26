@@ -33,7 +33,7 @@
 
   const store = createStore({
     initialState: createInitialChartState({ data }),
-    reducer: chartReducer,
+    reducer: chartReducer<Reading>,
     dependencies: {}
   });
 

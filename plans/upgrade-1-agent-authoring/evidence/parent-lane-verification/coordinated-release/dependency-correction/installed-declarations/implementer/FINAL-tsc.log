@@ -1,0 +1,25 @@
+implementer/n1-negative.ts(12,58): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(slot: DestinationSlot<S, A, DestinationReducers, string>, policy?: (Omit<ChildPolicy<S, A, { readonly type: string; readonly state: any; }, { ...; }, Missing>, "startup"> & { ...; }) | undefined): ManagedIntegrationBuilder<...>', gave the following error.
+    Argument of type 'OptionalSlot<S, A, AuthFeatureState, AuthFeatureAction, "auth">' is not assignable to parameter of type 'DestinationSlot<S, A, DestinationReducers, string>'.
+      Property 'case' is missing in type 'OptionalSlot<S, A, AuthFeatureState, AuthFeatureAction, "auth">' but required in type 'DestinationSlot<S, A, DestinationReducers, string>'.
+  Overload 2 of 2, '(slot: OptionalSlot<S, A, AuthFeatureState, AuthFeatureAction, "auth">, child: Reducer<AuthFeatureState, AuthFeatureAction, Missing> | ManagedComposition<...>, policy?: ChildPolicy<...> | undefined): ManagedIntegrationBuilder<...>', gave the following error.
+    Argument of type 'ManagedComposition<AuthFeatureState, AuthFeatureAction, AuthFeatureDependencies, AuthFeatureCatalog>' is not assignable to parameter of type 'Reducer<AuthFeatureState, AuthFeatureAction, Missing> | ManagedComposition<AuthFeatureState, AuthFeatureAction, Missing, AuthFeatureCatalog>'.
+      Type 'ManagedComposition<AuthFeatureState, AuthFeatureAction, AuthFeatureDependencies, AuthFeatureCatalog>' is not assignable to type 'ManagedComposition<AuthFeatureState, AuthFeatureAction, Missing, AuthFeatureCatalog>'.
+        Types of property 'reducer' are incompatible.
+          Type 'Reducer<AuthFeatureState, AuthFeatureAction, AuthFeatureDependencies>' is not assignable to type 'Reducer<AuthFeatureState, AuthFeatureAction, Missing>'.
+            Types of parameters 'dependencies' and 'dependencies' are incompatible.
+              Type 'Missing' is not assignable to type 'AuthFeatureDependencies'.
+                Property 'fetchAccount' is missing in type 'Missing' but required in type 'AccountDependencies'.
+implementer/n1-negative.ts(21,63): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(slot: DestinationSlot<P, PA, DestinationReducers, string>, policy?: (Omit<ChildPolicy<P, PA, { readonly type: string; readonly state: any; }, { ...; }, Narrow>, "startup"> & { ...; }) | undefined): ManagedIntegrationBuilder<...>', gave the following error.
+    Argument of type 'OptionalSlot<P, PA, C, CA, "child">' is not assignable to parameter of type 'DestinationSlot<P, PA, DestinationReducers, string>'.
+      Property 'case' is missing in type 'OptionalSlot<P, PA, C, CA, "child">' but required in type 'DestinationSlot<P, PA, DestinationReducers, string>'.
+  Overload 2 of 2, '(slot: OptionalSlot<P, PA, C, CA, "child">, child: Reducer<C, CA, Narrow> | ManagedComposition<C, CA, Narrow, Record<"leaf", SlotSchema<...>>>, policy?: ChildPolicy<...> | undefined): ManagedIntegrationBuilder<...>', gave the following error.
+    Argument of type 'ManagedComposition<C, CA, Wide, Record<"leaf", SlotSchema<Leaf, LeafA, {}, true>>>' is not assignable to parameter of type 'Reducer<C, CA, Narrow> | ManagedComposition<C, CA, Narrow, Record<"leaf", SlotSchema<Leaf, LeafA, {}, true>>>'.
+      Type 'ManagedComposition<C, CA, Wide, Record<"leaf", SlotSchema<Leaf, LeafA, {}, true>>>' is not assignable to type 'ManagedComposition<C, CA, Narrow, Record<"leaf", SlotSchema<Leaf, LeafA, {}, true>>>'.
+        Types of property 'reducer' are incompatible.
+          Type 'Reducer<C, CA, Wide>' is not assignable to type 'Reducer<C, CA, Narrow>'.
+            Types of parameters 'dependencies' and 'dependencies' are incompatible.
+              Property 'fetchRows' is missing in type 'Narrow' but required in type 'Wide'.
+implementer/n1-negative.ts(27,113): error TS2322: Type 'AuthFeatureDependencies' is not assignable to type 'Ext | undefined'.
+  Property 'fetchActivity' is missing in type 'AuthFeatureDependencies' but required in type 'Ext'.

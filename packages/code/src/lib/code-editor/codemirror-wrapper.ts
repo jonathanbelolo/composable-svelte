@@ -224,13 +224,14 @@ function getLineColumn(state: EditorState, pos: number): { line: number; column:
  * Create CodeMirror editor view
  *
  * @param parent Parent element to mount editor into
- * @param store Composable Svelte store
+ * @param store Anything that accepts the editor's actions: a standalone `Store`
+ *   or a managed `ChildView`. Only `dispatch` is used.
  * @param config Initial configuration
  * @returns EditorView instance
  */
 export async function createEditorView(
 	parent: HTMLElement,
-	store: Store<CodeEditorState, CodeEditorAction>,
+	store: Pick<Store<CodeEditorState, CodeEditorAction>, 'dispatch'>,
 	config: {
 		value: string;
 		language: SupportedLanguage;
@@ -250,6 +251,10 @@ export async function createEditorView(
 	// Plain locals, not reactive state: read and written by the listener below.
 	let lastCanUndo = false;
 	let lastCanRedo = false;
+	// The document as last reported, so each report can name the document it
+	// was edited from without serialising the start state again. Every doc
+	// change passes through this listener, so it tracks `startState.doc`.
+	let reportedValue = config.value;
 
 	const updateListener = EditorView.updateListener.of((update) => {
 		// Document changed
@@ -257,22 +262,32 @@ export async function createEditorView(
 			const newValue = update.state.doc.toString();
 			const cursor = update.state.selection.main.head;
 			const cursorPos = getLineColumn(update.state, cursor);
+			// Advanced BEFORE dispatching: the dispatch can synchronously write a
+			// newer value back into this view, whose report must name this one.
+			const baseValue = reportedValue;
+			reportedValue = newValue;
 
 			store.dispatch({
 				type: 'valueChanged',
 				value: newValue,
-				cursorPosition: cursorPos
+				cursorPosition: cursorPos,
+				// Lets the reducer drop this report if a newer write has been
+				// reduced since the edit was made (see `valueChanged`).
+				baseValue
 			});
 		}
 
-		// Selection changed
-		if (update.selectionSet) {
-			const { from, to } = update.state.selection.main;
+		// A synchronous store can decline the edit above and restore the view
+		// before this listener resumes. Report the live selection, never the
+		// rejected transaction's now-obsolete positions.
+		const liveState = update.view.state;
+		if (update.selectionSet || (update.docChanged && liveState !== update.state)) {
+			const { from, to } = liveState.selection.main;
 			if (from !== to) {
 				// Has selection
-				const text = update.state.sliceDoc(from, to);
-				const fromPos = getLineColumn(update.state, from);
-				const toPos = getLineColumn(update.state, to);
+				const text = liveState.sliceDoc(from, to);
+				const fromPos = getLineColumn(liveState, from);
+				const toPos = getLineColumn(liveState, to);
 				const selection: EditorSelection = {
 					from: fromPos,
 					to: toPos,
@@ -283,7 +298,7 @@ export async function createEditorView(
 				// No selection
 				store.dispatch({ type: 'selectionChanged', selection: null });
 				// Update cursor position
-				const cursorPos = getLineColumn(update.state, from);
+				const cursorPos = getLineColumn(liveState, from);
 				store.dispatch({ type: 'cursorMoved', position: cursorPos });
 			}
 		}
@@ -294,8 +309,8 @@ export async function createEditorView(
 		// would be a storm. These are booleans that flip only at session
 		// boundaries — first edit, stack exhausted, first undo — so typing 500
 		// characters produces one dispatch, not 500.
-		const canUndo = undoDepth(update.state) > 0;
-		const canRedo = redoDepth(update.state) > 0;
+		const canUndo = undoDepth(liveState) > 0;
+		const canRedo = redoDepth(liveState) > 0;
 		if (canUndo !== lastCanUndo || canRedo !== lastCanRedo) {
 			lastCanUndo = canUndo;
 			lastCanRedo = canRedo;
@@ -427,6 +442,39 @@ export function updateEditorValue(
 				: {})
 		});
 	}
+}
+
+/**
+ * Put the document back to `value` after state declined the edits that led
+ * away from it. Package-internal: `CodeEditor` uses it; it is not re-exported.
+ *
+ * The change is the smallest one that turns the document into `value`, and it
+ * stays out of history. CodeMirror maps the undo stack through such a change,
+ * and an undo event whose inverse it cancels is dropped. So Undo does not
+ * offer to re-apply an edit the store refused, and the undo events before it
+ * survive. A whole-document replacement would map every earlier event away.
+ *
+ * `value` is compared and inserted with its line breaks normalised, as
+ * CodeMirror stores them.
+ */
+export function restoreEditorValue(view: EditorView, value: string): void {
+	const current = view.state.doc.toString();
+	const target = value.replace(/\r\n?/g, '\n');
+	if (current === target) return;
+	const shorter = Math.min(current.length, target.length);
+	let start = 0;
+	while (start < shorter && current.charCodeAt(start) === target.charCodeAt(start)) start += 1;
+	let end = 0;
+	while (
+		end < shorter - start &&
+		current.charCodeAt(current.length - 1 - end) === target.charCodeAt(target.length - 1 - end)
+	) {
+		end += 1;
+	}
+	view.dispatch({
+		changes: { from: start, to: current.length - end, insert: target.slice(start, target.length - end) },
+		annotations: Transaction.addToHistory.of(false)
+	});
 }
 
 /**
@@ -584,4 +632,3 @@ export function updateAutocomplete(view: EditorView, enabled: boolean): void {
 	if (!enabled) closeCompletion(view);
 	view.dispatch({ effects: autocompleteCompartment.reconfigure(autocompleteExtension(enabled)) });
 }
-

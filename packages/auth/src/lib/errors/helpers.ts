@@ -69,6 +69,21 @@ function looksLikeTransportFailure(message: string): boolean {
 	return /failed to fetch|networkerror|load failed|fetch failed/i.test(message);
 }
 
+const AUTH_ERROR_CODES = new Set<string>([
+	'invalid_credentials',
+	'mfa_required',
+	'email_unverified',
+	'email_taken',
+	'account_locked',
+	'rate_limited',
+	'token_expired',
+	'oauth_denied',
+	'oauth_state_mismatch',
+	'reauthentication_required',
+	'network',
+	'unknown'
+]);
+
 /**
  * Whether a value is one of ours.
  *
@@ -79,13 +94,39 @@ function looksLikeTransportFailure(message: string): boolean {
  * JSON is the one that constrains the union's *fields*, not just its identity —
  * core hydrates SSR state with `JSON.stringify`/`parse`, which silently turns a
  * `Date` into a string while the type still claims `Date`. So every field here
- * is a JSON primitive, and `auth-error.test.ts` round-trips all eight arms.
+ * is a JSON primitive, and `auth-error.test.ts` round-trips every declared arm.
  */
 export function isAuthError(value: unknown): value is AuthError {
 	if (typeof value !== 'object' || value === null) return false;
 
-	const candidate = value as { code?: unknown; message?: unknown };
-	return typeof candidate.code === 'string' && typeof candidate.message === 'string';
+	const candidate = value as Record<string, unknown>;
+	if (typeof candidate.code !== 'string' || typeof candidate.message !== 'string') {
+		return false;
+	}
+
+	if (!AUTH_ERROR_CODES.has(candidate.code)) {
+		return false;
+	}
+
+	switch (candidate.code) {
+		case 'mfa_required':
+			return typeof candidate.challengeId === 'string' && Array.isArray(candidate.methods) && candidate.methods.every(method => method === 'totp' || method === 'recovery_code');
+		case 'reauthentication_required':
+			return Array.isArray(candidate.methods) && candidate.methods.every(method => method === 'password' || method === 'totp' || method === 'recovery_code');
+		case 'rate_limited':
+			return candidate.retryAfterSeconds === undefined || (typeof candidate.retryAfterSeconds === 'number' && Number.isFinite(candidate.retryAfterSeconds));
+		case 'account_locked':
+			return candidate.until === undefined || typeof candidate.until === 'string';
+		case 'email_unverified':
+		case 'email_taken':
+			return candidate.email === undefined || typeof candidate.email === 'string';
+		case 'oauth_denied':
+			return candidate.provider === undefined || typeof candidate.provider === 'string';
+		case 'unknown':
+			return candidate.status === undefined || (typeof candidate.status === 'number' && Number.isFinite(candidate.status));
+		default:
+			return true;
+	}
 }
 
 /**

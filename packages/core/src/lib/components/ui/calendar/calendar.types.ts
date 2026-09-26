@@ -185,13 +185,14 @@ export function createInitialCalendarState(
 	mode: CalendarMode = 'single',
 	selectedDate: Date | null = null,
 	minDate: Date | null = null,
-	maxDate: Date | null = null
+	maxDate: Date | null = null,
+	selectedRange: DateRange = { from: null, to: null }
 ): CalendarState {
 	return {
 		mode,
 		selectedDate,
-		selectedRange: { from: null, to: null },
-		currentMonth: selectedDate || new Date(),
+		selectedRange,
+		currentMonth: selectedDate || selectedRange.from || new Date(),
 		minDate,
 		maxDate
 	};

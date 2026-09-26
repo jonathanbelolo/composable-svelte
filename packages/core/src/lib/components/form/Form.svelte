@@ -1,8 +1,8 @@
 <script lang="ts" generics="T extends Record<string, any>">
-	import { setContext } from 'svelte';
+	import { setContext, onDestroy } from 'svelte';
 	import { createStore } from '../../store.svelte.js';
 	import { createFormReducer } from './form.reducer.js';
-	import type { FormConfig, FormAction, FormProps, FormStore } from './form.types.js';
+	import type { FormConfig, FormAction, FormProps, FormStore, FormState } from './form.types.js';
 	import { createInitialFormState } from './form.reducer.js';
 
 	// Form component - Creates and manages form state using the reducer pattern.
@@ -24,6 +24,7 @@
 
 	// Determine which store to use
 	let store: FormStore<T>;
+	let internalStore: ReturnType<typeof createStore<FormState<T>, FormAction<T>>> | undefined;
 
 	if (externalStore) {
 		// Integrated mode - use external store
@@ -32,26 +33,45 @@
 		// Standalone mode - create internal store
 		const reducer = createFormReducer(config);
 		const initialState = createInitialFormState(config);
-		store = createStore({
+		internalStore = createStore({
 			initialState,
 			reducer,
 			dependencies: {}
 		});
+		store = internalStore;
 	} else {
 		throw new Error('Form: Unreachable - props validation failed');
 	}
 
+	onDestroy(() => internalStore?.destroy());
+
 	// Provide store to child components via context
 	setContext('formStore', store);
+
+	let formElement: HTMLFormElement | undefined = $state();
 
 	// Handle form submission
 	function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
+
+		const form = (event.currentTarget ?? formElement) as HTMLFormElement | null;
+		if (form) {
+			const inputs = Array.from(form.elements).filter((element): element is HTMLInputElement => element instanceof HTMLInputElement);
+			for (const input of inputs) {
+				if (!input.willValidate) continue;
+				if (input.validity.badInput) {
+					input.reportValidity();
+					return;
+				}
+			}
+		}
+
 		store.dispatch({ type: 'submitTriggered' });
 	}
 </script>
 
 <form
+	bind:this={formElement}
 	onsubmit={handleSubmit}
 	class={className}
 	novalidate

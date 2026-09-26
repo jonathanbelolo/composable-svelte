@@ -14,6 +14,7 @@
   const state = $derived($store);
   const t = $derived(createTranslator($store.i18n, 'common'));
   const formatters = $derived(createFormatters($store.i18n));
+  const locale = $derived($store.i18n.currentLocale);
   const commentCount = $derived(
     state.comments.filter((c) => c.postId === post.id).length
   );
@@ -35,7 +36,7 @@
 
 <div class="detail-page">
   <nav class="breadcrumb">
-    <a href={listURL()} onclick={(e) => { e.preventDefault(); navigateToList(); }}>
+    <a href={listURL(locale)} onclick={(e) => { e.preventDefault(); navigateToList(); }}>
       {t('posts.backToList')}
     </a>
   </nav>
@@ -60,7 +61,7 @@
 
     <footer>
       <a
-        href={commentsURL(post.id)}
+        href={commentsURL(post.id, locale)}
         class="comments-link"
         onclick={(e) => { e.preventDefault(); navigateToComments(); }}
       >

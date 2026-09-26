@@ -5,8 +5,7 @@
  */
 
 import { onDestroy, untrack } from 'svelte';
-import type { Store } from '@composable-svelte/core';
-import type { GraphicsState, GraphicsAction, LightConfig } from '../core/types.js';
+import type { GraphicsStore, LightConfig } from '../core/types.js';
 
 /**
  * Props, discriminated by `type`.
@@ -39,7 +38,7 @@ import type { GraphicsState, GraphicsAction, LightConfig } from '../core/types.j
  * and this paragraph is left as the demonstration.
  */
 interface AmbientLightProps {
-  store: Store<GraphicsState, GraphicsAction>;
+  store: GraphicsStore;
   /**
    * Stable identity for this light. Optional: one is generated when you do not
    * supply it, so existing markup is unaffected. Supply it if you need to
@@ -56,7 +55,7 @@ interface AmbientLightProps {
 }
 
 interface DirectionalLightProps {
-  store: Store<GraphicsState, GraphicsAction>;
+  store: GraphicsStore;
   id?: string | undefined;
   type: 'directional';
   /** The direction the light travels in. A directional light has no position. */
@@ -69,7 +68,7 @@ interface DirectionalLightProps {
 }
 
 interface PointLightProps {
-  store: Store<GraphicsState, GraphicsAction>;
+  store: GraphicsStore;
   id?: string | undefined;
   type: 'point';
   position?: [number, number, number] | undefined;
@@ -81,7 +80,7 @@ interface PointLightProps {
 }
 
 interface SpotLightProps {
-  store: Store<GraphicsState, GraphicsAction>;
+  store: GraphicsStore;
   id?: string | undefined;
   type: 'spot';
   position?: [number, number, number] | undefined;
@@ -185,40 +184,39 @@ let ownedId: string | null = null;
 let warnedId: string | null = null;
 
 $effect(() => {
-  // `lightConfig` is the only tracked read: this effect exists to follow the
-  // props, and everything below is untracked so it does not also follow the
-  // store it is writing to. `store.dispatch` reads state internally, so without
-  // this the effect depended on its own output — mounting dispatched `addLight`
-  // and then a redundant `updateLight`, and only the reducer's value-idempotency
-  // stopped that becoming a loop.
   const config = lightConfig;
-
+  // Only the props drive this effect. Dispatch reads and writes the store;
+  // tracking those reads would make this effect follow its own output.
   untrack(() => syncToStore(config));
 });
 
 function syncToStore(config: LightConfig): void {
+  if (!store.state) {
+    ownedId = null;
+    return;
+  }
+
   if (ownedId === config.id) {
     store.dispatch({ type: 'updateLight', id: config.id, light: config });
     return;
   }
 
-  // The id changed, so release the old light before claiming the new one.
-  // Without this the update went to an id the store had never heard of,
-  // `updateLight` dropped it in silence, and the original light stayed in the
-  // scene for good — surviving even this component's own unmount, because
-  // `onDestroy` removes the *current* id.
   if (ownedId !== null) {
-    store.dispatch({ type: 'removeLight', id: ownedId });
+    // Release the old identity before claiming the new one. Updating an id
+    // absent from the store would leave the former light orphaned.
+    if (store.state) {
+      store.dispatch({ type: 'removeLight', id: ownedId });
+    }
     ownedId = null;
   }
+
+  if (!store.state) return;
 
   const taken = store.state.lights.some((light) => light.id === config.id);
 
   if (taken) {
-    // Two components owning one id used to overwrite each other's config
-    // forever — the reducer's guard compares against the first match while its
-    // update maps over every match — until Svelte aborted the app with
-    // `effect_update_depth_exceeded`. Standing aside is what breaks the cycle.
+    // A second component with the same id must stand aside; otherwise both
+    // effects continually overwrite the same light.
     if (warnedId !== config.id) {
       console.warn(
         `[graphics] <Light> id "${config.id}" is already in use; this light is inert`
@@ -233,7 +231,7 @@ function syncToStore(config: LightConfig): void {
 }
 
 onDestroy(() => {
-  if (ownedId !== null) {
+  if (ownedId !== null && store.state) {
     store.dispatch({ type: 'removeLight', id: ownedId });
   }
 });

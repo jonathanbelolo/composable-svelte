@@ -1,786 +1,145 @@
-# Navigation Best Practices
+# Navigation best practices
 
-**A comprehensive guide to using the @composable-svelte/core navigation system correctly**
+This guide describes the supported tree-navigation and managed-presentation boundaries.
 
-This guide documents best practices, common pitfalls, and patterns for implementing tree-based navigation in Composable Svelte applications.
+## Core principles
 
----
+### Prefer parent observation for business outcomes
 
-## Table of Contents
-
-1. [Core Principles](#core-principles)
-2. [Parent Observation Pattern](#parent-observation-pattern)
-3. [Dependency Management](#dependency-management)
-4. [Common Mistakes](#common-mistakes)
-5. [Navigation Patterns](#navigation-patterns)
-6. [Testing Guidelines](#testing-guidelines)
-7. [Troubleshooting](#troubleshooting)
-
----
-
-## Core Principles
-
-### ✅ DO: Prefer Parent Observation for Dismissal
-
-The library supports two approaches to dismissal. **Parent observation** is the recommended default because it keeps child reducers pure and gives the parent full control. The **dismiss dependency** (`createDismissDependency()`) is also fully supported and appropriate for simple cases where the child just needs to close itself. See "When to use which" below.
+A child reducer emits domain actions. Its parent may observe a presented action, update
+parent state, and dismiss by clearing the destination. Use this when the parent must
+save data, update a list, navigate, or distinguish confirmation from cancellation.
 
 ```typescript
-// ✅ CORRECT: Parent observes child action
 case 'destination': {
-  const [newState, effect] = ifLetPresentation(
-    (s) => s.destination,
-    (s, d) => ({ ...s, destination: d }),
-    'destination',
-    (ca) => ({ type: 'destination', action: { type: 'presented', action: ca } }),
-    childReducer
-  )(state, action, deps);
-
-  // Observe child's completion action
-  if (
-    action.action.type === 'presented' &&
-    action.action.action.type === 'saveButtonTapped'
-  ) {
-    // Parent dismisses by setting destination to null
-    return [{ ...newState, destination: null }, effect];
+  const [next, effect] = integrateChild(state, action, deps);
+  if (action.action.type === 'presented' && action.action.action.type === 'saved') {
+    return [{ ...next, destination: null }, effect];
   }
-
-  return [newState, effect];
+  return [next, effect];
 }
 ```
 
-**Dismiss Dependency (fine for simple cases)**:
+### Use managed dismissal for a simple close request
+
+Reducer-owned self-dismissal uses the application-only managed dependency:
 
 ```typescript
-import { createDismissDependency } from '@composable-svelte/core/navigation';
+import {
+  managedDismissDependency,
+  type DismissDependency
+} from '@composable-svelte/core/application';
 
-// Simple child that just needs to close itself
-const childReducer = (state, action, deps) => {
-  case 'closeButtonTapped':
-    // `deps.dismiss()` IS the effect — return it. Calling it and returning
-    // `Effect.none()` discards the dismiss and nothing happens.
-    return [state, deps.dismiss()];  // OK when parent doesn't need to observe this
-}
-```
-
-**When to use which**:
-- **Parent observation**: When the parent needs to react to the child's action (save data, update lists, show confirmation)
-- **Dismiss dependency**: When the child simply needs to close and the parent doesn't care why
-
-### ✅ DO: Keep Child Reducers Pure
-
-Child reducers should be **pure functions** that only return state and effects. They should not directly trigger side effects like dismissal (unless using the dismiss dependency for simple close actions).
-
-```typescript
-// ✅ CORRECT: Pure child reducer
-export const addToCartReducer: Reducer<
-  AddToCartState,
-  AddToCartAction,
-  AddToCartDependencies
-> = (state, action, deps) => {
-  switch (action.type) {
-    case 'addButtonTapped':
-      // Just return state - parent will observe this action
-      return [state, Effect.none()];
-
-    case 'cancelButtonTapped':
-      // Just return state - parent will observe this action
-      return [state, Effect.none()];
-
-    default:
-      return [state, Effect.none()];
-  }
-};
-```
-
-### ✅ DO: Use Empty Dependencies When No Callbacks Needed
-
-If a child reducer doesn't need any external dependencies, use an empty interface:
-
-```typescript
-// ✅ CORRECT: Empty dependencies interface
-export interface AddToCartDependencies {
-  // No dependencies needed - parent observes actions
-}
-```
-
----
-
-## Parent Observation Pattern
-
-### The Three-Step Pattern
-
-1. **Child Dispatches Action**: Child feature dispatches an action (e.g., `saveButtonTapped`)
-2. **Parent Observes**: Parent reducer observes the child action via `ifLetPresentation`
-3. **Parent Handles**: Parent updates state (e.g., sets `destination: null`) and/or dispatches effects
-
-### Complete Example
-
-```typescript
-// Child Reducer (AddToCart)
-export interface AddToCartDependencies {
-  // No dependencies needed
+interface ChildDependencies {
+  readonly dismiss: DismissDependency;
 }
 
-export const addToCartReducer: Reducer<
-  AddToCartState,
-  AddToCartAction,
-  AddToCartDependencies
-> = (state, action, deps) => {
-  switch (action.type) {
-    case 'addButtonTapped':
-      // Parent will observe this action
-      return [state, Effect.none()];
-
-    case 'cancelButtonTapped':
-      // Parent will observe this action
-      return [state, Effect.none()];
-
-    default:
-      return [state, Effect.none()];
-  }
-};
-```
-
-```typescript
-// Parent Reducer (ProductDetail)
-export interface ProductDetailDependencies {
-  onCartItemAdded?: (productId: string, quantity: number) => void;
-}
-
-export const productDetailReducer: Reducer<
-  ProductDetailState,
-  ProductDetailAction,
-  ProductDetailDependencies
-> = (state, action, deps) => {
-  switch (action.type) {
-    case 'destination': {
-      const [newState, effect] = ifLetPresentation(
-        (s) => s.destination,
-        (s, d) => ({ ...s, destination: d }),
-        'destination',
-        destinationReducer
-      )(state, action, deps);
-
-      const presentedAction = action.action;
-
-      // Observe AddToCart completion
-      if (
-        presentedAction.type === 'presented' &&
-        presentedAction.action.type === 'addToCart' &&
-        presentedAction.action.action.type === 'addButtonTapped'
-      ) {
-        const addToCartState = state.destination;
-        if (addToCartState?.type === 'addToCart') {
-          const { productId, quantity } = addToCartState.state;
-
-          // Notify grandparent and dismiss
-          if (deps.onCartItemAdded) {
-            return [
-              { ...newState, destination: null },  // Dismiss
-              Effect.batch(
-                effect,
-                Effect.run((dispatch) => {
-                  deps.onCartItemAdded!(productId, quantity);
-                })
-              )
-            ];
-          }
-        }
-      }
-
-      // Observe AddToCart cancellation
-      if (
-        presentedAction.type === 'presented' &&
-        presentedAction.action.type === 'addToCart' &&
-        presentedAction.action.action.type === 'cancelButtonTapped'
-      ) {
-        // Just dismiss
-        return [{ ...newState, destination: null }, effect];
-      }
-
-      return [newState, effect];
-    }
-
-    default:
-      return [state, Effect.none()];
-  }
-};
-```
-
----
-
-## Dependency Management
-
-### When to Use Dependencies
-
-Use dependencies for:
-- ✅ **Upward Communication**: Notifying parent/grandparent of important events
-- ✅ **External Services**: API clients, analytics, logging
-- ✅ **Shared Resources**: User session, app configuration
-
-```typescript
-// ✅ CORRECT: Dependencies for upward communication
-export interface ProductDetailDependencies {
-  onCartItemAdded?: (productId: string, quantity: number) => void;
-  onProductDeleted?: (productId: string) => void;
-}
-```
-
-### When NOT to Use Dependencies
-
-Do **not** use dependencies for:
-- ❌ **Navigation**: Use state changes instead
-- ❌ **Dispatch Functions**: Pass via store, not dependencies
-
-```typescript
-// ❌ WRONG: Using dependencies for dispatch
-export interface ChildDependencies {
-  dispatch: (action: ParentAction) => void;  // ❌ Don't do this
-}
-```
-
-Note: The `dismiss` dependency is a valid use case — see `createDismissDependency()` from `@composable-svelte/core/navigation`. Use it for simple close actions; use parent observation when the parent needs to react.
-
-### Providing Dependencies
-
-Always provide the correct dependencies when calling child reducers:
-
-```typescript
-// ✅ CORRECT: Provide dependencies
-case 'productDetail': {
-  const productDetailDeps = {
-    onCartItemAdded: (productId: string, quantity: number) => {
-      // Will be called via Effect.run() when cart item is added
-    },
-    onProductDeleted: (productId: string) => {
-      // Will be called via Effect.run() when product is deleted
-    }
-  };
-
-  const [newState, effect] = ifLetPresentation(
-    (s) => s.productDetail,
-    (s, detail) => ({ ...s, productDetail: detail }),
-    'productDetail',
-    productDetailReducer
-  )(state, action, productDetailDeps);  // ✅ Provide dependencies
-
-  return [newState, effect];
-}
-```
-
-```typescript
-// ❌ WRONG: Empty dependencies when callbacks are expected
-const [newState, effect] = ifLetPresentation(
-  (s) => s.productDetail,
-  (s, detail) => ({ ...s, productDetail: detail }),
-  'productDetail',
-  productDetailReducer
-)(state, action, {});  // ❌ Missing required dependencies
-```
-
----
-
-## Common Mistakes
-
-### Mistake 1: Using `deps.dismiss()` When Parent Needs to Observe
-
-**Problem**: Child reducer calls `deps.dismiss()` for an action the parent needs to react to (e.g., saving data).
-
-```typescript
-// ❌ WRONG when parent needs to handle the save
-case 'saveButtonTapped':
-  return [state, deps.dismiss()];  // Parent never sees this action!
-```
-
-**Solution**: Let parent observe the action so it can handle both the save and the dismissal.
-
-```typescript
-// ✅ CORRECT for actions the parent needs to observe
-case 'saveButtonTapped':
-  // Parent will observe this action, handle the save, and dismiss
-  return [state, Effect.none()];
-```
-
-Note: `deps.dismiss()` is fine for simple close/cancel actions where the parent doesn't need to react.
-
-### Mistake 2: Not Providing Required Dependencies
-
-**Problem**: Parent reducer passes empty dependencies when child expects callbacks.
-
-```typescript
-// ❌ WRONG
-const [newState, effect] = ifLetPresentation(
-  (s) => s.destination,
-  (s, d) => ({ ...s, destination: d }),
-  'destination',
-  childReducer
-)(state, action, {});  // ❌ Empty dependencies
-```
-
-**Solution**: Provide the expected dependencies.
-
-```typescript
-// ✅ CORRECT
-const childDeps = {
-  onItemAdded: (item: Item) => {
-    // Handle in Effect
-  }
+const childDependencies: ChildDependencies = {
+  dismiss: managedDismissDependency()
 };
 
-const [newState, effect] = ifLetPresentation(
-  (s) => s.destination,
-  (s, d) => ({ ...s, destination: d }),
-  'destination',
-  childReducer
-)(state, action, childDeps);  // ✅ Provide dependencies
+case 'closeButtonTapped':
+  return [state, deps.dismiss()];
 ```
 
-### Mistake 3: Forgetting to Observe Cancel Actions
+Return or batch `deps.dismiss()`; calling it and then returning `Effect.none()` discards
+the effect. Managed composition claims it for the exact optional/destination owner.
+A stale request cannot dismiss a replacement.
 
-**Problem**: Parent observes "success" actions but forgets to observe "cancel" actions.
+### Keep reducers pure
 
-```typescript
-// ❌ INCOMPLETE
-if (
-  presentedAction.type === 'presented' &&
-  presentedAction.action.type === 'addToCart' &&
-  presentedAction.action.action.type === 'addButtonTapped'
-) {
-  return [{ ...newState, destination: null }, effect];
-}
-// ❌ Missing cancelButtonTapped observation
-```
+Reducers return state and effects. They do not capture a store, DOM node, presentation
+component, parent dispatch function, or animation callback.
 
-**Solution**: Observe all actions that should trigger dismissal.
+## Presentation rendering
 
-```typescript
-// ✅ CORRECT
-// Observe success action
-if (
-  presentedAction.type === 'presented' &&
-  presentedAction.action.type === 'addToCart' &&
-  presentedAction.action.action.type === 'addButtonTapped'
-) {
-  return [{ ...newState, destination: null }, effect];
-}
+Legacy `scopeToDestination`, `scopeToOptional`, and fluent `scopeTo` remain supported
+for state reads and action dispatch outside presentation rendering. They carry no
+dismissal authority and are not valid inputs to dismissing navigation components.
 
-// ✅ Observe cancel action
-if (
-  presentedAction.type === 'presented' &&
-  presentedAction.action.type === 'addToCart' &&
-  presentedAction.action.action.type === 'cancelButtonTapped'
-) {
-  return [{ ...newState, destination: null }, effect];
-}
-```
-
-### Mistake 4: Using `disableClickOutside` Incorrectly
-
-**Problem**: Not disabling click-outside when child presents nested modals/sheets/alerts.
+Declare presentations with `optionalSlot` or `destinationSlot`, then render their
+framework-minted `PresentationView` through `FeatureViews` and `FeatureOutlet`.
 
 ```svelte
-// ❌ WRONG: Click-outside enabled on parent modal
-<Modal store={parentStore}>
-  <!-- Child can present sheets/alerts -->
-  <!-- User clicks outside child sheet -> parent modal dismisses! -->
+{#snippet modalView({ store, surface })}
+  <Modal {store} ariaLabel="Edit item">
+    <form use:surface>
+      <button onclick={() => store.dispatch({ type: 'save' })}>Save</button>
+      <button onclick={() => store.dismiss()}>Cancel</button>
+    </form>
+  </Modal>
+{/snippet}
+```
+
+The same contract applies to `Alert`, `Sheet`, `Drawer`, `Popover`, and `Sidebar`.
+`Tabs`, `NavigationStack`, and `AnimatedNavigationStack` are non-dismissing families
+and retain `ChildView` rather than `PresentationView`.
+
+## Nested presentation
+
+Declare a child-owned optional or destination slot and render its view through a nested
+`FeatureOutlet`. Do not call `scopeToDestination` inside one presentation component and
+pass the result into another.
+
+```svelte
+<Modal store={views.parent.store}>
+  <section use:views.parent.surface>
+    <FeatureOutlet view={views.parent.destination} />
+  </section>
 </Modal>
 ```
 
-**Solution**: Disable click-outside on parent when children can present their own UI.
+Each nested view carries only its own owner-bound dismissal authority.
 
-```svelte
-// ✅ CORRECT: Disable click-outside on parent
-<Modal store={parentStore} disableClickOutside>
-  <!-- Child can safely present sheets/alerts -->
-  <!-- Clicking outside child sheet only dismisses child, not parent -->
-</Modal>
-```
+## Interaction and lifecycle
 
----
+- Outside-pointer and Escape behavior belong to the component's dismissal boundary.
+- `disableClickOutside` disables only outside-pointer dismissal.
+- Keep an explicit close control when a gesture is disabled.
+- `PresentationState` and completion callbacks report visual lifecycle; they do not
+  mint dismissal authority.
+- Application reducers describe state and business effects; components own focus,
+  portal, scroll lock, event listeners, and retained exit shells.
 
-## Navigation Patterns
+## Testing
 
-### Pattern 1: Simple Modal with No Nested Navigation
+Test the child reducer, parent observation, and managed presentation separately:
 
-```typescript
-// State
-interface AppState {
-  addItem: AddItemState | null;
-}
+1. A child business action reaches the parent and produces the expected state/effect.
+2. `deps.dismiss()` is returned and dismisses only its originating live owner.
+3. A stale copied view or delayed cleanup cannot dismiss a replacement.
+4. Escape and outside-pointer gestures route through the top eligible component.
+5. Disabling one gesture does not disable other supported dismissal paths.
+6. Nested presentations dismiss the selected child without dismissing its parent.
 
-// Reducer
-case 'addItem': {
-  const [newState, effect] = ifLetPresentation(
-    (s) => s.addItem,
-    (s, item) => ({ ...s, addItem: item }),
-    'addItem',
-    (ca) => ({ type: 'addItem', action: { type: 'presented', action: ca } }),
-    addItemReducer
-  )(state, action, {});
-
-  // Observe save action
-  if (
-    action.action.type === 'presented' &&
-    action.action.action.type === 'saveButtonTapped'
-  ) {
-    // Dismiss
-    return [{ ...newState, addItem: null }, effect];
-  }
-
-  return [newState, effect];
-}
-
-```
-
-The component:
-
-```svelte
-<Modal store={scopeToDestination(store, ['addItem'], 'addItem', 'addItem')}>
-  {#snippet children({ store: childStore })}
-    <AddItem store={childStore} />
-  {/snippet}
-</Modal>
-```
-
-### Pattern 2: Modal with Nested Sheets/Alerts
-
-```typescript
-// State
-interface ProductDetailState {
-  destination: ProductDetailDestination | null;
-}
-
-type ProductDetailDestination =
-  | { type: 'addToCart'; state: AddToCartState }
-  | { type: 'share'; state: ShareState }
-  | { type: 'deleteAlert'; state: DeleteAlertState };
-
-// Reducer
-case 'destination': {
-  const [newState, effect] = ifLetPresentation(
-    (s) => s.destination,
-    (s, d) => ({ ...s, destination: d }),
-    'destination',
-    (ca) => ({ type: 'destination', action: { type: 'presented', action: ca } }),
-    destinationReducer
-  )(state, action, deps);
-
-  // Observe all child completion actions
-  if (
-    action.action.type === 'presented' &&
-    action.action.action.type === 'addToCart' &&
-    action.action.action.action.type === 'addButtonTapped'
-  ) {
-    return [{ ...newState, destination: null }, effect];
-  }
-
-  // ... more observations ...
-
-  return [newState, effect];
-}
-
-```
-
-The component. The parent sets `disableClickOutside`, so a click outside
-reaches the child that is actually presented rather than dismissing the parent
-out from under it:
-
-```svelte
-<Modal store={parentStore} disableClickOutside>
-  {#snippet children({ store })}
-    <ProductDetail store={store} />
-  {/snippet}
-</Modal>
-```
-
-### Pattern 3: Upward Communication via Dependencies
-
-```typescript
-// Grandchild notifies grandparent via dependencies
-export interface ChildDependencies {
-  onImportantEvent?: (data: EventData) => void;
-}
-
-// Child reducer
-case 'eventHappened': {
-  return [
-    state,
-    Effect.run((dispatch) => {
-      if (deps.onImportantEvent) {
-        deps.onImportantEvent(eventData);
-      }
-    })
-  ];
-}
-
-// Parent provides dependency that bubbles to grandparent
-case 'childDestination': {
-  const childDeps = {
-    onImportantEvent: (data: EventData) => {
-      // Bubble up to grandparent via our own dependency
-      if (deps.onGrandchildEvent) {
-        // Will execute in Effect
-      }
-    }
-  };
-
-  const [newState, effect] = ifLetPresentation(
-    (s) => s.childDestination,
-    (s, d) => ({ ...s, childDestination: d }),
-    'childDestination',
-    childReducer
-  )(state, action, childDeps);
-
-  return [newState, effect];
-}
-```
-
----
-
-## Testing Guidelines
-
-### Testing Child Reducers
-
-Test child reducers in isolation without dependencies:
-
-```typescript
-describe('AddToCartReducer', () => {
-  it('returns state unchanged when add button tapped', () => {
-    const state: AddToCartState = {
-      productId: 'prod-1',
-      quantity: 2
-    };
-
-    const [newState, effect] = addToCartReducer(
-      state,
-      { type: 'addButtonTapped' },
-      {}  // Empty dependencies
-    );
-
-    expect(newState).toEqual(state);
-    expect(effect._tag).toBe('None');
-  });
-
-  it('returns state unchanged when cancel button tapped', () => {
-    const state: AddToCartState = {
-      productId: 'prod-1',
-      quantity: 2
-    };
-
-    const [newState, effect] = addToCartReducer(
-      state,
-      { type: 'cancelButtonTapped' },
-      {}  // Empty dependencies
-    );
-
-    expect(newState).toEqual(state);
-    expect(effect._tag).toBe('None');
-  });
-});
-```
-
-### Testing Parent Observation
-
-Test that parent correctly observes child actions:
-
-```typescript
-describe('ProductDetailReducer - Parent Observation', () => {
-  it('dismisses AddToCart when add button tapped', () => {
-    const state: ProductDetailState = {
-      productId: 'prod-1',
-      destination: {
-        type: 'addToCart',
-        state: { productId: 'prod-1', quantity: 2 }
-      }
-    };
-
-    const action: ProductDetailAction = {
-      type: 'destination',
-      action: {
-        type: 'presented',
-        action: {
-          type: 'addToCart',
-          action: { type: 'addButtonTapped' }
-        }
-      }
-    };
-
-    const deps = {
-      onCartItemAdded: vi.fn()
-    };
-
-    const [newState, effect] = productDetailReducer(state, action, deps);
-
-    // Destination should be dismissed
-    expect(newState.destination).toBeNull();
-
-    // Dependency should be called (in effect)
-    // Test effect execution separately
-  });
-});
-```
-
-### Testing with Vitest Browser Mode
-
-Test the complete integration with actual UI:
-
-```typescript
-import { render } from '@testing-library/svelte';
-import { expect, test } from 'vitest';
-
-test('Add to Cart flow - Add button dismisses sheet', async () => {
-  const { page } = render(App);
-
-  // Open product detail
-  await page.getByRole('button', { name: /Bluetooth Speaker/ }).click();
-
-  // Open add to cart
-  await page.getByRole('button', { name: 'Add to Cart' }).click();
-
-  // Click add button
-  await page.getByRole('button', { name: 'Add', exact: true }).click();
-
-  // Sheet should be dismissed
-  expect(page.getByRole('dialog', { name: 'Bottom sheet' })).not.toBeVisible();
-
-  // Modal should still be visible
-  expect(page.getByRole('dialog', { name: 'Modal dialog' })).toBeVisible();
-});
-```
-
----
+Use `TestStore` for reducer/effect behavior and maintained browser fixtures for mounted
+focus, pointer, Escape, portal, and animation behavior.
 
 ## Troubleshooting
 
-### Console Error: "deps.dismiss is not a function"
+### `deps.dismiss is not a function`
 
-**Problem**: Child reducer is trying to call `deps.dismiss()` but the dependency wasn't provided.
+The reducer was run outside an admitted managed optional/destination integration, or its
+dependencies omitted `managedDismissDependency()`. Supply the managed dependency at the
+application composition boundary. Do not replace it with a raw parent-dispatch closure.
 
-**Solution** (choose one):
-1. **Provide the dependency**: Use `createDismissDependency()` from `@composable-svelte/core/navigation` when setting up the child
-2. **Switch to parent observation**: Remove `deps.dismiss()` from the child, let the parent observe the action and set `destination: null`
+### The parent never observes a save
 
-### Child Action Not Observed by Parent
+Do not use dismissal as a substitute for a business action. Emit `saved`, let the
+parent observe it, then update or dismiss parent state.
 
-**Problem**: Parent reducer doesn't see child actions, dismissal doesn't happen.
+### A component does not dismiss
 
-**Checklist**:
-1. ✅ Is `ifLetPresentation` being used correctly?
-2. ✅ Is the action type matching exactly (case-sensitive)?
-3. ✅ Is the action wrapped correctly? Check: `action.action.type === 'presented'`
-4. ✅ Is the destination case type matching? Check: `action.action.action.type === 'addToCart'`
-5. ✅ Is the child action type matching? Check: `action.action.action.action.type === 'addButtonTapped'`
+Confirm that it received a live `PresentationView`, that its owner still exists, and
+that the requested gesture is enabled. A legacy scoped store or structural lookalike
+is intentionally refused.
 
-**Debugging**: Add console.log to see action structure:
+## Checklist
 
-```typescript
-case 'destination': {
-  console.log('Destination action:', JSON.stringify(action, null, 2));
-  // Check the actual structure
-}
-```
-
-### Modal/Sheet Not Dismissing
-
-**Problem**: UI component doesn't dismiss even though state is set to `null`.
-
-**Checklist**:
-1. ✅ Is the scoped store correctly observing state changes?
-2. ✅ Is `scopeToDestination` being used with correct parameters?
-3. ✅ Is the state path correct? (e.g., `['destination']`)
-4. ✅ Is the case type correct? (e.g., `'addToCart'`)
-5. ✅ Is the action field correct? (e.g., `'destination'`)
-
-**Common Fix**: Check `scopeToDestination` parameters:
-
-```typescript
-// ✅ CORRECT
-const addToCartStore = scopeToDestination(
-  store,
-  ['destination'],    // Path to destination in state
-  'addToCart',        // Case type to match
-  'destination'       // Action field name
-);
-```
-
-### Click-Outside Dismissing Parent and Child
-
-**Problem**: Clicking outside a child sheet/alert dismisses both child AND parent modal.
-
-**Solution**: Add `disableClickOutside` to parent modal:
-
-```svelte
-<Modal store={parentStore} disableClickOutside>
-  <!-- Children are safe now -->
-</Modal>
-```
-
-### Effect Not Executing
-
-**Problem**: `Effect.run()` callback isn't being called.
-
-**Checklist**:
-1. ✅ Is the effect being returned from the reducer?
-2. ✅ Is the effect being passed up through `Effect.batch()` or `Effect.map()`?
-3. ✅ Is the store actually executing effects?
-
-**Common Fix**: Ensure effect is returned and not lost:
-
-```typescript
-// ✅ CORRECT: Return the effect
-return [
-  { ...newState, destination: null },
-  Effect.batch(
-    effect,  // ✅ Include child effect
-    Effect.run((dispatch) => {
-      deps.onImportantEvent!(data);
-    })
-  )
-];
-
-// ❌ WRONG: Effect is lost
-return [
-  { ...newState, destination: null },
-  Effect.none()  // ❌ Child effect is lost!
-];
-```
-
----
-
-## Quick Reference
-
-### ✅ DO
-
-- ✅ Prefer parent observation for dismissal when the parent needs to react
-- ✅ Use `dismiss` dependency for simple close/cancel actions
-- ✅ Keep child reducers pure
-- ✅ Provide required dependencies
-- ✅ Observe both success AND cancel actions
-- ✅ Use `disableClickOutside` on parent modals with nested UI
-- ✅ Return effects from child reducers via `Effect.batch()` or `Effect.map()`
-- ✅ Test parent observation patterns
-- ✅ Use empty dependency interfaces when no callbacks needed
-
-### ❌ DON'T
-
-- ❌ Use `deps.dismiss()` for actions the parent needs to observe (saves, confirmations)
-- ❌ Pass empty dependencies when callbacks are expected
-- ❌ Forget to observe cancel actions
-- ❌ Enable click-outside on parents with nested UI
-- ❌ Lose child effects when batching
-- ❌ Use dependencies for dispatch functions
-- ❌ Forget to provide dependency callbacks
-
----
-
-## Additional Resources
-
-- [Navigation Specification](../specs/frontend/navigation-spec.md)
-- [Product Gallery Example](../examples/product-gallery/README.md)
-- [Composable Architecture Spec](../specs/frontend/composable-svelte-spec.md)
-
----
-
-**Version**: 1.1.0
-**Last Updated**: 2026-03-28
-**Maintainer**: Composable Svelte Team
+- Prefer parent observation for business outcomes.
+- Use managed dismissal only for owner-bound close/cancel requests.
+- Return dismissal effects.
+- Pass only a framework-minted `PresentationView` to dismissing components.
+- Keep legacy scopes limited to state/read/dispatch.
+- Render nested presentations through declared slots and feature views.
+- Test stale replacement, nested ownership, and gesture behavior.

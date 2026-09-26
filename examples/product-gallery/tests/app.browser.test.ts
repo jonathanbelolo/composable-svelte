@@ -4,7 +4,8 @@
  * These tests use Vitest browser mode with Playwright to test actual user flows.
  */
 
-import { expect, test, describe } from 'vitest';
+import { expect, test, describe, beforeEach, afterEach, vi } from 'vitest';
+import { flushSync } from 'svelte';
 import { render } from 'vitest-browser-svelte';
 import { page, userEvent } from 'vitest/browser';
 import App from '../src/app/App.svelte';
@@ -20,7 +21,12 @@ import '../src/lib/styles.css';
 // 100ms wait left modals mid-animation.
 const waitForUpdates = () => new Promise((resolve) => setTimeout(resolve, 400));
 
+let previousURL: string;
+beforeEach(() => { previousURL = window.location.href; window.history.replaceState(null, '', '/'); });
+afterEach(() => { window.history.replaceState(null, '', previousURL); });
+
 describe('Product Gallery - User Flows', () => {
+
   describe('Initial Render', () => {
     test('renders product grid with sample products', async () => {
       const { container } = render(App);
@@ -100,6 +106,32 @@ describe('Product Gallery - User Flows', () => {
   });
 
   describe('Product Detail Modal', () => {
+    test.each(['Escape', 'backdrop'] as const)('%s requests the root exit before owner dismissal', async (gesture) => {
+      const { container } = render(App);
+      await waitForUpdates();
+      container.querySelector<HTMLElement>('[data-product-name="Wireless Headphones"]')!.click();
+      await waitForUpdates();
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      const modal = document.querySelector<HTMLElement>('[data-dialog-type="modal"]')!;
+      expect(modal.textContent).toContain('Wireless Headphones');
+      if (gesture === 'Escape') {
+        await userEvent.keyboard('{Escape}');
+      } else {
+        (modal.previousElementSibling as HTMLElement).dispatchEvent(
+          new PointerEvent('pointerdown', { button: 0, bubbles: true, cancelable: true })
+        );
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // The primitive gesture requests reducer-owned dismissal; the exact
+      // minted view remains mounted until the primitive reports completion.
+      expect(document.body.contains(modal)).toBe(true);
+      expect(modal.textContent).toContain('Wireless Headphones');
+
+      await vi.waitFor(() => expect(document.body.contains(modal)).toBe(false), { timeout: 3_000 });
+    });
+
     test('opens product detail modal when product is clicked', async () => {
       const { container } = render(App);
       await waitForUpdates();
@@ -176,6 +208,25 @@ describe('Product Gallery - User Flows', () => {
   });
 
   describe('Share Flow', () => {
+    test('nested Escape retains the exact case owner until completion', async () => {
+      const { container } = render(App);
+      await waitForUpdates();
+      container.querySelector<HTMLElement>('[data-product-name="Cotton T-Shirt"]')!.click();
+      await waitForUpdates();
+      await page.getByTestId('detail-share').click();
+      await waitForUpdates();
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      const sheet = document.querySelector<HTMLElement>('[data-dialog-type="sheet"]')!;
+      expect(sheet.textContent).toContain('Share via');
+      await userEvent.keyboard('{Escape}');
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      expect(document.body.contains(sheet)).toBe(true);
+
+      await vi.waitFor(() => expect(document.body.contains(sheet)).toBe(false), { timeout: 3_000 });
+      expect(document.querySelector('[data-dialog-type="modal"]')).toBeTruthy();
+    });
+
     test('opens Share sheet when button is clicked', async () => {
       const { container } = render(App);
       await waitForUpdates();
@@ -312,6 +363,10 @@ describe('Product Gallery - User Flows', () => {
       // Step 5: Confirm add to cart
       await page.getByTestId('add-to-cart-confirm').click();
       await waitForUpdates();
+      await vi.waitFor(
+        () => expect(document.querySelector('[data-testid="add-to-cart-confirm"]')).toBeNull(),
+        { timeout: 3_000 }
+      );
 
       // Sharing is covered end-to-end by the Share Flow suite above; repeating
       // it here only duplicates that coverage.
@@ -321,8 +376,57 @@ describe('Product Gallery - User Flows', () => {
         .element(page.getByRole('heading', { name: 'Product Details' }))
         .toBeInTheDocument();
       // The sheet closed and the two units landed in the cart.
-      expect(document.querySelector('[data-testid="add-to-cart-confirm"]')).toBeNull();
       await expect.element(page.getByTestId('cart-total')).toHaveTextContent('2');
     });
+  });
+});
+
+
+describe('B029 mounted regressions', () => {
+  test('favorite controls update actual products in both grid and list without opening detail', async () => {
+    render(App);
+    expect(document.querySelector('button[aria-label="Add to favorites"]')).not.toBeNull();
+    await page.getByRole('button', { name: 'Add to favorites', exact: true }).first().click();
+    flushSync();
+    expect(document.querySelectorAll('[role=dialog]')).toHaveLength(0);
+    const added = document.querySelectorAll('button[aria-label="Remove from favorites"]').length;
+    expect(added).toBe(5);
+    await page.getByRole('tab', { name: /List/ }).click();
+    await page.getByRole('button', { name: 'Remove from favorites', exact: true }).first().click();
+    flushSync();
+    expect(document.querySelectorAll('button[aria-label="Remove from favorites"]')).toHaveLength(4);
+    expect(document.querySelectorAll('[role=dialog]')).toHaveLength(0);
+  });
+  test('Clear Filters restores favorite results while retaining Favorites view', async () => {
+    render(App);
+    await page.getByRole('tab', { name: /Favorites/ }).click();
+    await page.getByRole('button', { name: /Clothing/ }).click();
+    expect(document.querySelectorAll('[data-testid=product-card]')).toHaveLength(0);
+    expect(Array.from(document.querySelectorAll('button')).some(button => button.textContent?.trim() === 'Clear Filters')).toBe(true);
+    await page.getByRole('button', { name: 'Clear Filters', exact: true }).click();
+    flushSync();
+    expect(document.querySelector('[role=tab][aria-selected=true]')?.textContent).toContain('Favorites');
+    expect(document.querySelectorAll('[data-testid=product-card]')).toHaveLength(4);
+  });
+  test('confirming delete removes the catalog card and resets URL and presentation', async () => {
+    render(App);
+    await page.getByTestId('product-card').first().click();
+    await waitForUpdates();
+    await page.getByTestId('detail-delete').click();
+    await page.getByTestId('delete-confirm').click();
+    flushSync();
+    expect(document.querySelector('[data-product-id="prod-1"]')).toBeNull();
+    expect(document.querySelectorAll('[role=dialog]')).toHaveLength(0);
+    expect(window.location.pathname).toBe('/');
+  });
+  test('unknown initial deep link renders a usable catalog rather than an absent dialog', async () => {
+    window.history.replaceState(null, '', '/product/missing');
+    render(App); flushSync();
+    expect(document.querySelectorAll('[role=dialog]')).toHaveLength(0);
+    expect(document.querySelectorAll('[data-testid=product-card]')).toHaveLength(12);
+    await page.getByTestId('product-card').first().click();
+    await waitForUpdates();
+    expect(document.querySelector('[role=dialog]')).not.toBeNull();
+    expect(window.location.pathname).toBe('/product/prod-1');
   });
 });

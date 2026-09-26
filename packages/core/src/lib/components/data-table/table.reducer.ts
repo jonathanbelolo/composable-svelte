@@ -10,8 +10,7 @@ import type {
 	TableState,
 	TableAction,
 	TableConfig,
-	ColumnFilter,
-	FilterOperator
+	ColumnFilter
 } from './table.types.js';
 
 /**
@@ -19,10 +18,18 @@ import type {
  */
 export function createInitialState<T>(config: TableConfig<T>): TableState<T> {
 	const initialData = config.initialData || [];
-	const pageSize = config.pageSize || 10;
+	const pageSize = validPageSize(config.pageSize) ? config.pageSize : 10;
+	const total = config.serverSide ? validTotal(config.initialTotal, initialData.length) : initialData.length;
+
+	let page = 0;
+	if (config.initialPage !== undefined && Number.isFinite(config.initialPage)) {
+		page = clampPage(config.initialPage, total, pageSize);
+	}
 
 	// Apply initial pagination
-	const paginatedData = initialData.slice(0, pageSize);
+	const paginatedData = config.serverSide
+		? initialData
+		: initialData.slice(page * pageSize, (page + 1) * pageSize);
 
 	return {
 		data: paginatedData,
@@ -30,9 +37,9 @@ export function createInitialState<T>(config: TableConfig<T>): TableState<T> {
 		sorting: [],
 		filters: [],
 		pagination: {
-			page: 0,
+			page,
 			pageSize,
-			total: initialData.length
+			total
 		},
 		selectedRows: new Set(),
 		isLoading: false,
@@ -131,25 +138,66 @@ function applyPagination<T>(data: T[], page: number, pageSize: number): T[] {
 	return data.slice(start, end);
 }
 
-/**
- * Processes data through filters, sorting, and pagination (client-side).
- */
-function processData<T>(state: TableState<T>): T[] {
-	let processed = state.originalData;
+/** Validate pagination bounds before changing the query. */
+function validPageSize(value: number | undefined): value is number {
+	return value !== undefined && Number.isSafeInteger(value) && value > 0;
+}
 
-	// Apply filters
-	processed = applyFilters(processed, state.filters);
+function validTotal(value: number | undefined, fallback: number): number {
+	return value !== undefined && Number.isSafeInteger(value) && value >= 0 ? value : fallback;
+}
 
-	// Apply sorting
-	processed = applySorting(processed, state.sorting);
+function clampPage(page: number, total: number, pageSize: number): number {
+	return Math.max(0, Math.min(Math.floor(page), Math.max(0, Math.ceil(total / pageSize) - 1)));
+}
 
-	// Update total count for pagination
-	const total = processed.length;
+function queryChanged<T>(prev: TableState<T>, next: TableState<T>): boolean {
+	if (prev.pagination.page !== next.pagination.page) return true;
+	if (prev.pagination.pageSize !== next.pagination.pageSize) return true;
+	if (prev.sorting.length !== next.sorting.length) return true;
+	for (let i = 0; i < prev.sorting.length; i++) {
+		if (
+			prev.sorting[i]!.column !== next.sorting[i]!.column ||
+			prev.sorting[i]!.direction !== next.sorting[i]!.direction
+		) {
+			return true;
+		}
+	}
+	if (prev.filters.length !== next.filters.length) return true;
+	for (let i = 0; i < prev.filters.length; i++) {
+		const pf = prev.filters[i]!;
+		const nf = next.filters[i]!;
+		if (pf.column !== nf.column || pf.operator !== nf.operator || !Object.is(pf.value, nf.value)) {
+			return true;
+		}
+	}
+	return false;
+}
 
-	// Apply pagination
-	processed = applyPagination(processed, state.pagination.page, state.pagination.pageSize);
+function getPageOutOfRangeMessage<T>(config: TableConfig<T>, state: TableState<T>): string {
+	if (typeof config.pageOutOfRangeMessage === 'function') {
+		return config.pageOutOfRangeMessage(state);
+	}
+	if (typeof config.pageOutOfRangeMessage === 'string') {
+		return config.pageOutOfRangeMessage;
+	}
+	return 'The requested page is no longer available. Refresh to load the current page.';
+}
 
-	return processed;
+/** Derive page rows and total from one filter pass; never mutate the previous state. */
+function processData<T>(state: TableState<T>): TableState<T> {
+	const filtered = applyFilters(state.originalData, state.filters);
+	const pagination = {
+		...state.pagination,
+		total: filtered.length,
+		page: clampPage(state.pagination.page, filtered.length, state.pagination.pageSize)
+	};
+	const sorted = applySorting(filtered, state.sorting);
+	return {
+		...state,
+		pagination,
+		data: applyPagination(sorted, pagination.page, pagination.pageSize)
+	};
 }
 
 /**
@@ -159,210 +207,229 @@ export function createTableReducer<T>(config: TableConfig<T> = {}): Reducer<Tabl
 	const getRowId = config.getRowId || ((row: T) => String((row as any).id));
 	const serverSide = config.serverSide || false;
 
-	return (state, action, deps) => {
+	function refresh(state: TableState<T>, correctionPending = false): ReturnType<Reducer<TableState<T>, TableAction<T>, {}>> {
+		if (!config.fetchData) return [state, Effect.none()];
+		const requestVersion = (state.requestVersion ?? 0) + 1;
+		const loadingState: TableState<T> = {
+			...state,
+			isLoading: true,
+			error: null,
+			errorReason: null,
+			needsRefresh: false,
+			correctionPending,
+			requestVersion
+		};
+		return [loadingState, Effect.run<TableAction<T>>(async (dispatch, signal) => {
+			let result: { data: T[]; total: number } | undefined;
+			let error: unknown;
+			let failed = false;
+			try {
+				result = await config.fetchData!(loadingState, signal);
+				if (!result || !Array.isArray(result.data)) throw new TypeError('fetchData must return an object with a data array');
+			} catch (err) {
+				error = err;
+				failed = true;
+			}
+			if (signal?.aborted) return;
+			if (failed) {
+				dispatch({
+					type: 'dataLoadFailed',
+					error: error instanceof Error ? error.message : 'Unknown error',
+					requestVersion
+				});
+			} else if (result !== undefined) {
+				dispatch({
+					type: 'dataLoaded',
+					data: result.data,
+					total: result.total,
+					requestVersion
+				});
+			}
+		})];
+	}
+
+	function handleQueryAction(
+		state: TableState<T>,
+		updater: (s: TableState<T>) => TableState<T>
+	): readonly [TableState<T>, Effect<TableAction<T>>] {
+		const candidate = updater(state);
+		if (!queryChanged(state, candidate)) {
+			return [state, Effect.none()];
+		}
+
+		let updatedState: TableState<T> = {
+			...candidate,
+			...(serverSide ? { requestVersion: (state.requestVersion ?? 0) + 1 } : {}),
+			isLoading: serverSide ? false : state.isLoading,
+			...(serverSide ? { needsRefresh: true, data: [] } : {}),
+			...(state.errorReason === 'page-out-of-range' ? {error: null, errorReason: null} : {})
+		};
+
+		if (serverSide && state.correctionPending) {
+			updatedState.correctionPending = false;
+		}
+
+		if (!serverSide) {
+			updatedState = processData(updatedState);
+		}
+
+		return [updatedState, Effect.none()];
+	}
+
+	return (state, action) => {
+		if (action.type === 'pageSizeChanged' && !validPageSize(action.pageSize)) return [state, Effect.none()];
+		if (action.type === 'pageChanged' && !Number.isFinite(action.page)) return [state, Effect.none()];
+
 		switch (action.type) {
 			// Data actions
 			case 'dataLoaded': {
+				if (action.requestVersion !== undefined && action.requestVersion !== state.requestVersion) return [state, Effect.none()];
 				const newData = action.data;
-				const updatedState: TableState<T> = {
+				let updatedState: TableState<T> = {
 					...state,
 					originalData: newData,
+					data: newData,
 					isLoading: false,
 					error: null,
-					pagination: {
-						...state.pagination,
-						total: newData.length
-					}
+					errorReason: null,
+					needsRefresh: false,
+					correctionPending: false,
+					requestVersion: (state.requestVersion ?? 0) + 1,
+					pagination: { ...state.pagination, total: serverSide ? validTotal(action.total, newData.length) : newData.length }
 				};
 
-				// Process data if client-side
 				if (!serverSide) {
-					updatedState.data = processData(updatedState);
-					updatedState.pagination.total = updatedState.data.length;
+					const liveIds = new Set(newData.map(getRowId));
+					updatedState.selectedRows = new Set([...state.selectedRows].filter((id) => liveIds.has(id)));
+					updatedState = processData(updatedState);
 				} else {
-					updatedState.data = newData;
+					if (action.total !== undefined && Number.isSafeInteger(action.total) && action.total >= 0) {
+						const page = clampPage(state.pagination.page, updatedState.pagination.total, state.pagination.pageSize);
+						if (page !== state.pagination.page) {
+							updatedState = { ...updatedState, data: [], originalData: [], pagination: { ...updatedState.pagination, page } };
+							// Returned rows belong to the old page. Never relabel them as the clamped page.
+							if (updatedState.pagination.total > 0) {
+								if (config.fetchData && action.requestVersion !== undefined && !state.correctionPending) {
+									updatedState.correctionPending = true;
+									return refresh(updatedState, true);
+								}
+								updatedState.error = getPageOutOfRangeMessage(config, updatedState);
+								updatedState.errorReason = 'page-out-of-range';
+				updatedState.needsRefresh = true;
+							}
+						}
+					}
 				}
 
 				return [updatedState, Effect.none()];
 			}
 
 			case 'dataLoadFailed': {
+				if (action.requestVersion !== undefined && action.requestVersion !== state.requestVersion) return [state, Effect.none()];
 				return [
 					{
 						...state,
 						isLoading: false,
-						error: action.error
+						error: action.error,
+						errorReason: 'load-failed',
+						needsRefresh: serverSide,
+						correctionPending: false,
+						requestVersion: (state.requestVersion ?? 0) + 1
 					},
 					Effect.none()
 				];
 			}
 
-			case 'refreshTriggered': {
-				if (!config.fetchData) {
-					return [state, Effect.none()];
-				}
-
-				const loadingState: TableState<T> = {
-					...state,
-					isLoading: true,
-					error: null
-				};
-
-				const effect = Effect.run<TableAction<T>>(async (dispatch) => {
-					try {
-						const result = await config.fetchData!(loadingState);
-						dispatch({ type: 'dataLoaded', data: result.data });
-					} catch (error) {
-						dispatch({
-							type: 'dataLoadFailed',
-							error: error instanceof Error ? error.message : 'Unknown error'
-						});
-					}
-				});
-
-				return [loadingState, effect];
-			}
+			case 'refreshTriggered':
+				return refresh(state);
 
 			// Sorting actions
 			case 'sortChanged': {
-				let newSorting = [...state.sorting];
-
-				// Find existing sort for this column
-				const existingIndex = newSorting.findIndex((s) => s.column === action.column);
-
-				if (config.multiSort) {
-					// Multi-column sort: add or update
-					if (existingIndex >= 0) {
-						newSorting[existingIndex] = { column: action.column, direction: action.direction };
+				return handleQueryAction(state, (s) => {
+					let newSorting = [...s.sorting];
+					const existingIndex = newSorting.findIndex((item) => item.column === action.column);
+					if (config.multiSort) {
+						if (existingIndex >= 0) {
+							newSorting[existingIndex] = { column: action.column, direction: action.direction };
+						} else {
+							newSorting.push({ column: action.column, direction: action.direction });
+						}
 					} else {
-						newSorting.push({ column: action.column, direction: action.direction });
+						newSorting = [{ column: action.column, direction: action.direction }];
 					}
-				} else {
-					// Single column sort: replace
-					newSorting = [{ column: action.column, direction: action.direction }];
-				}
-
-				const updatedState: TableState<T> = {
-					...state,
-					sorting: newSorting,
-					pagination: {
-						...state.pagination,
-						page: 0 // Reset to first page on sort
-					}
-				};
-
-				// Reprocess data if client-side
-				if (!serverSide) {
-					updatedState.data = processData(updatedState);
-				}
-
-				return [updatedState, Effect.none()];
+					return {
+						...s,
+						sorting: newSorting,
+						pagination: {
+							...s.pagination,
+							page: 0
+						}
+					};
+				});
 			}
 
 			case 'sortCleared': {
-				const updatedState: TableState<T> = {
-					...state,
+				return handleQueryAction(state, (s) => ({
+					...s,
 					sorting: []
-				};
-
-				if (!serverSide) {
-					updatedState.data = processData(updatedState);
-				}
-
-				return [updatedState, Effect.none()];
+				}));
 			}
 
 			// Filtering actions
 			case 'filterAdded': {
-				// Remove existing filter for same column
-				const newFilters = state.filters.filter((f) => f.column !== action.filter.column);
-				newFilters.push(action.filter);
-
-				const updatedState: TableState<T> = {
-					...state,
-					filters: newFilters,
-					pagination: {
-						...state.pagination,
-						page: 0 // Reset to first page on filter
-					}
-				};
-
-				if (!serverSide) {
-					updatedState.data = processData(updatedState);
-					// Update total based on filtered data
-					const filteredData = applyFilters(state.originalData, newFilters);
-					updatedState.pagination.total = filteredData.length;
-				}
-
-				return [updatedState, Effect.none()];
+				return handleQueryAction(state, (s) => {
+					const existing = s.filters.findIndex(f => f.column === action.filter.column);
+					const newFilters = [...s.filters];
+					if (existing < 0) newFilters.push(action.filter);
+					else newFilters[existing] = action.filter;
+					return {
+						...s,
+						filters: newFilters,
+						pagination: {
+							...s.pagination,
+							page: 0
+						}
+					};
+				});
 			}
 
 			case 'filterRemoved': {
-				const newFilters = state.filters.filter((f) => f.column !== action.column);
-
-				const updatedState: TableState<T> = {
-					...state,
-					filters: newFilters
-				};
-
-				if (!serverSide) {
-					updatedState.data = processData(updatedState);
-					const filteredData = applyFilters(state.originalData, newFilters);
-					updatedState.pagination.total = filteredData.length;
-				}
-
-				return [updatedState, Effect.none()];
+				return handleQueryAction(state, (s) => ({
+					...s,
+					filters: s.filters.filter((f) => f.column !== action.column)
+				}));
 			}
 
 			case 'filtersCleared': {
-				const updatedState: TableState<T> = {
-					...state,
+				return handleQueryAction(state, (s) => ({
+					...s,
 					filters: []
-				};
-
-				if (!serverSide) {
-					updatedState.data = processData(updatedState);
-					updatedState.pagination.total = state.originalData.length;
-				}
-
-				return [updatedState, Effect.none()];
+				}));
 			}
 
 			// Pagination actions
 			case 'pageChanged': {
-				const maxPage = Math.ceil(state.pagination.total / state.pagination.pageSize) - 1;
-				const newPage = Math.max(0, Math.min(action.page, maxPage));
-
-				const updatedState: TableState<T> = {
-					...state,
-					pagination: {
-						...state.pagination,
-						page: newPage
-					}
-				};
-
-				if (!serverSide) {
-					updatedState.data = processData(updatedState);
-				}
-
-				return [updatedState, Effect.none()];
+				return handleQueryAction(state, (s) => {
+					const newPage = clampPage(action.page, s.pagination.total, s.pagination.pageSize);
+					return {
+						...s,
+						pagination: {
+							...s.pagination,
+							page: newPage
+						}
+					};
+				});
 			}
 
 			case 'pageSizeChanged': {
-				const updatedState: TableState<T> = {
-					...state,
+				return handleQueryAction(state, (s) => ({
+					...s,
 					pagination: {
-						...state.pagination,
+						...s.pagination,
 						pageSize: action.pageSize,
-						page: 0 // Reset to first page
+						page: 0
 					}
-				};
-
-				if (!serverSide) {
-					updatedState.data = processData(updatedState);
-				}
-
-				return [updatedState, Effect.none()];
+				}));
 			}
 
 			// Selection actions

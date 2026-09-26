@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/code",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Code editor, syntax highlighting, and node-based canvas components for Composable Svelte - Built with Prism.js, CodeMirror, and SvelteFlow",
   "type": "module",
   "main": "./dist/index.js",
@@ -31,14 +31,15 @@
   "svelte": "./dist/index.js",
   "files": [
     "dist",
+    "recipes",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "svelte-package -o dist",
+    "build": "svelte-package -o dist && node ../../scripts/emit-svelte-declaration-bridges.mjs dist",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run && vitest run --config vitest.ssr.config.ts",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
@@ -73,8 +74,8 @@
     "url": "https://github.com/jonathanbelolo/composable-svelte/issues"
   },
   "peerDependencies": {
-    "@composable-svelte/core": "^0.12.0",
-    "svelte": "^5.0.0"
+    "@composable-svelte/core": "^0.13.1",
+    "svelte": "^5.30.0"
   },
   "devDependencies": {
     "@composable-svelte/core": "workspace:*",

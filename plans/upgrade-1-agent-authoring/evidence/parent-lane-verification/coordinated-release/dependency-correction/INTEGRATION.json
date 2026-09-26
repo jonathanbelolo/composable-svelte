@@ -1,0 +1,71 @@
+{
+  "status": "CLEAR independent Opus review",
+  "review": "../DEPENDENCY-INDEPENDENT-REVIEW.md",
+  "files": [
+    {
+      "path": "packages/auth/README.md",
+      "beforeSHA256": "e5f118647f3edaae283abafa0b297a4f12851d8743a5f3b783e2a87e0977b340",
+      "afterSHA256": "32dfa7e539d3c1bf47e48e873d8237523eb35d4c9b89c051f420f0abdc5de480"
+    },
+    {
+      "path": "packages/auth/tests/managed-auth-dependency-extension.types.ts",
+      "beforeSHA256": null,
+      "afterSHA256": "f93a8c37ba7d33d9345744b9e8487789b0f44f4b598fe4cd87a1bf11044f1424"
+    },
+    {
+      "path": "packages/core/CHANGELOG.md",
+      "beforeSHA256": "27b8e21ca2949cf58b65ad662cd8da3c553660ceb8d4e8482194864df3c3d316",
+      "afterSHA256": "a06299329da9ab8ca7691dd3716ed28956613eeeb573804bddf49549fcb0ed93"
+    },
+    {
+      "path": "packages/core/dist/navigation/managed-integration.d.ts",
+      "beforeSHA256": "69ece6112991c6efb430805e97dc24522e055b84c2c48e430f65577f69126c28",
+      "afterSHA256": "a3c40f9462718a44bd5efdde4bff01ce1270e2cda9dfd27ed70c112c4523e10f"
+    },
+    {
+      "path": "packages/core/dist/navigation/managed-integration.d.ts.map",
+      "beforeSHA256": "e8af1b7a91800672bcf8ca72186dfc708866e00c06be8311adf303f1f5e797fc",
+      "afterSHA256": "944ea71ec68817969f637c6d36a7d94759301994d73206810a0ac6ee82f61be7"
+    },
+    {
+      "path": "packages/core/dist/types.d.ts",
+      "beforeSHA256": "9e435b9187bec2753bfd4766e13803c36d55d3c0b39db34ba20fa6a9eb259b67",
+      "afterSHA256": "ae221395587f510d50953b192bcc8a020e172d9e9bcea7ca9b76a12bfac50ba6"
+    },
+    {
+      "path": "packages/core/dist/types.d.ts.map",
+      "beforeSHA256": "52f2fec41a1c3318612a9b5c00e5cae5597bb09e0467c5797bf838966d72824d",
+      "afterSHA256": "8a84e016e991790cf674e294be3581ff9c84754aaacbd8dcdbc469f44a7f2676"
+    },
+    {
+      "path": "packages/core/docs/consumer.md",
+      "beforeSHA256": "56d387f93e4ddb68eb09a5a6de4a875ec8c3538581b1cee137b1b9bab396a6c3",
+      "afterSHA256": "232b7b46fa2f01d81c9aafb34bd2dbd58d0d44a9e88cacd56b110bcc46fdd9c1"
+    },
+    {
+      "path": "packages/core/src/lib/navigation/managed-integration.ts",
+      "beforeSHA256": "a3aa12289b99bcd9b3701ace2519554466a554482ffa65199eb641f6632ed10b",
+      "afterSHA256": "05fb61783193aa7e11bd2f46179e55144d9023149e4da0806bc455e10705dd21"
+    },
+    {
+      "path": "packages/core/src/lib/types.ts",
+      "beforeSHA256": "60df5635e7abb563bed200195adacf5a01f4fe7dcc9884a955a8fbaf03f0c66f",
+      "afterSHA256": "a1ea53585a6621d6d9939fe2396f1f389e10b5d414c5e806e84c4e7b511c05aa"
+    },
+    {
+      "path": "packages/core/tests/managed-dependency-extension.emitted.types.ts",
+      "beforeSHA256": null,
+      "afterSHA256": "f6db2d91518986d13c9ff8b0b5aa16f9416c401898f550cd2977c252c29bb9ff"
+    },
+    {
+      "path": "packages/core/tests/managed-dependency-extension.types.ts",
+      "beforeSHA256": null,
+      "afterSHA256": "32c141613cfdfa0f915562b4b88d21d15f83a3dc93e8bb573ff7d70f0ca8f040"
+    },
+    {
+      "path": "packages/core/tsconfig.application-public-managed-types-emitted.json",
+      "beforeSHA256": "f35a44e54a739b9a2f2083764a20c3c98ef6855b07ee6d61f4f247a8a7b66bac",
+      "afterSHA256": "91df1dda9317998d002fdaa5544d5ae3f15273e552ff2580e19543b9596f1d76"
+    }
+  ]
+}

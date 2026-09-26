@@ -11,14 +11,15 @@
  *   VoiceInput,
  *   voiceInputReducer,
  *   createInitialVoiceInputState,
- *   getAudioManager
+ *   getVoiceInputAudioManager
  * } from '@composable-svelte/media';
  *
  * const voiceStore = createStore({
  *   initialState: createInitialVoiceInputState(),
  *   reducer: voiceInputReducer,
+ *   execution: { mode: 'managed' },
  *   dependencies: {
- *     transcribeAudio: async (blob) => {
+ *     transcribeAudio: async (blob: Blob) => {
  *       // Call your backend API
  *       const formData = new FormData();
  *       formData.append('audio', blob);
@@ -29,7 +30,7 @@
  *       const { transcript } = await res.json();
  *       return transcript;
  *     },
- *     getAudioManager
+ *     getAudioManager: getVoiceInputAudioManager
  *   }
  * });
  * ```

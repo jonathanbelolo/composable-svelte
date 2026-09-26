@@ -1,0 +1,10 @@
+
+> test:browser
+> playwright test
+
+
+Running 1 test using 1 worker
+
+  ✓  1 browser/workspace.spec.ts:4:3 › Support Conversation Workspace - Browser Interaction › full end-to-end support workspace workflow in production build (1.0s)
+
+  1 passed (5.5s)

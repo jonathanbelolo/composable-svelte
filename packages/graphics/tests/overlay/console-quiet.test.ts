@@ -39,11 +39,12 @@ import {
 	type FakeGL
 } from '../helpers/fake-gl.js';
 
+const originalRAF = globalThis.requestAnimationFrame;
 let undo: Array<() => void> = [];
 afterEach(() => {
-	undo.forEach((fn) => fn());
-	undo = [];
+	while (undo.length > 0) undo.pop()!();
 	vi.restoreAllMocks();
+	expect(globalThis.requestAnimationFrame, 'nested frame stubs must restore the original').toBe(originalRAF);
 });
 
 /** Every console channel, counted together — the flood is what matters. */

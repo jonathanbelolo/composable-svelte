@@ -1,13 +1,31 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import type { Store } from '@composable-svelte/core';
+	import { onMount, untrack } from 'svelte';
 	import type { CodeHighlightState, CodeHighlightAction } from './code-highlight.types.js';
+	import { bindViewSource, warnStoreReplaced, type ViewSource } from '../internal/view-source.js';
 
 	/**
-	 * Store containing all component state
-	 * NO component $state - all application state lives in the store
+	 * Either a standalone `Store` or a managed view: a `FeatureViewProps` store,
+	 * or the result of `scopeTo` / `composition.bind`. Bound once, at mount.
 	 */
-	const { store }: { store: Store<CodeHighlightState, CodeHighlightAction> } = $props();
+	const { store }: { store: ViewSource<CodeHighlightState, CodeHighlightAction> } = $props();
+
+	const source = untrack(() => store);
+	let warnedReplaced = false;
+	$effect(() => {
+		if (store !== source && !warnedReplaced) {
+			warnedReplaced = true;
+			warnStoreReplaced('CodeHighlight');
+		}
+	});
+
+	// A retired managed owner reads `undefined`; keep the last committed state
+	// on screen until the outlet unmounts this. Not $state: written only here.
+	let retained: CodeHighlightState | undefined = untrack(() => source.state);
+	const current = $derived.by(() => {
+		const next = $source;
+		if (next !== undefined) retained = next;
+		return retained;
+	});
 
 	// Not $state: read and written by the effect below, and a reactive guard
 	// re-triggers the effect it lives in. Seeded in onMount so `init` and the
@@ -15,19 +33,31 @@
 	let appliedCode: string | null = null;
 
 	onMount(() => {
-		appliedCode = store.state.code;
+		const initial = source.state;
+		if (!initial) return;
+		appliedCode = initial.code;
 
 		// Keep the guard current for changes the store already knows about.
 		// Without this the effect below sees an externally-dispatched
 		// `codeChanged` as a change it did not cause and dispatches a SECOND one
 		// — doubling the highlighter call, which for a network-backed highlighter
-		// is a doubled request per edit.
-		const unsubscribe = store.subscribeToActions?.((action) => {
-			if (action.type === 'codeChanged') appliedCode = action.code;
-		});
+		// is a doubled request per edit. A managed owner's observed actions, or
+		// a standalone store's `subscribeToActions`.
+		const unbind = bindViewSource(
+			source,
+			{
+				component: 'CodeHighlight',
+				loses: 'a codeChanged dispatched from outside is highlighted twice'
+			},
+			{
+				onAction: (action) => {
+					if (action.type === 'codeChanged') appliedCode = action.code;
+				}
+			}
+		);
 
-		store.dispatch({ type: 'init' });
-		return () => unsubscribe?.();
+		source.dispatch({ type: 'init' });
+		return unbind;
 	});
 
 	/**
@@ -44,52 +74,54 @@
 		// This fires only for a `code` change the store did NOT learn about via
 		// `codeChanged` — i.e. a parent reducer writing the field directly, which
 		// is the stale-highlight case. Changes that came through `codeChanged`
-		// have already moved `appliedCode` in the action subscription above.
-		const code = $store.code;
-		if (code === appliedCode) return;
-		appliedCode = code;
-		store.dispatch({ type: 'codeChanged', code });
+		// have already moved `appliedCode` in the action listener above.
+		const next = current?.code;
+		if (next === undefined || appliedCode === null || next === appliedCode) return;
+		appliedCode = next;
+		source.dispatch({ type: 'codeChanged', code: next });
 	});
 
-	// Use Svelte's auto-subscription pattern - ZERO boilerplate!
-	const showCopyButton = $derived($store.code.length > 0);
+	const code = $derived(current?.code ?? '');
+	const startLine = $derived(current?.startLine ?? 1);
+	const showCopyButton = $derived(code.length > 0);
 	const copyButtonText = $derived(
-		$store.copyStatus === 'copied'
+		current?.copyStatus === 'copied'
 			? 'Copied!'
-			: $store.copyStatus === 'copying'
+			: current?.copyStatus === 'copying'
 				? 'Copying...'
-				: $store.copyStatus === 'failed'
+				: current?.copyStatus === 'failed'
 					? 'Failed'
 					: 'Copy'
 	);
-	const copyButtonDisabled = $derived($store.copyStatus === 'copying');
+	const copyButtonDisabled = $derived(current?.copyStatus === 'copying');
 
 	/**
 	 * One entry per rendered line, derived from the SOURCE — never from
 	 * `highlightedCode`, which is HTML and would miscount.
 	 */
 	const lineCount = $derived(
-		Math.max(1, $store.code.split('\n').length - ($store.code.endsWith('\n') ? 1 : 0))
+		Math.max(1, code.split('\n').length - (code.endsWith('\n') ? 1 : 0))
 	);
 	const lineNumbers = $derived(
-		Array.from({ length: lineCount }, (_, i) => $store.startLine + i)
+		Array.from({ length: lineCount }, (_, i) => startLine + i)
 	);
 	/** Requested highlights, dropped if they fall outside the document. */
 	const highlightedLines = $derived(
-		$store.highlightLines.filter(
-			(n) => n >= $store.startLine && n < $store.startLine + lineCount
+		(current?.highlightLines ?? []).filter(
+			(n) => n >= startLine && n < startLine + lineCount
 		)
 	);
 </script>
 
-<div class="code-highlight" data-theme={$store.theme}>
+{#if current}
+<div class="code-highlight" data-theme={current.theme}>
 	{#if showCopyButton}
 		<div class="code-highlight__toolbar">
 			<button
 				class="code-highlight__copy-button"
-				onclick={() => store.dispatch({ type: 'copyCode' })}
+				onclick={() => source.dispatch({ type: 'copyCode' })}
 				disabled={copyButtonDisabled}
-				title={$store.copyError ?? undefined}
+				title={current.copyError ?? undefined}
 				aria-label="Copy code to clipboard"
 			>
 				{copyButtonText}
@@ -97,27 +129,28 @@
 		</div>
 	{/if}
 
-	{#if $store.isHighlighting}
+	{#if current.isHighlighting}
 		<div class="code-highlight__loading">Highlighting...</div>
-	{:else if $store.error}
-		<div class="code-highlight__error">{$store.error}</div>
+	{:else if current.error}
+		<div class="code-highlight__error">{current.error}</div>
 	{/if}
 
 	<pre
-		class="code-highlight__pre language-{$store.language}"
-		class:line-numbers={$store.showLineNumbers}
+		class="code-highlight__pre language-{current.language}"
+		class:line-numbers={current.showLineNumbers}
 	>{#each highlightedLines as n (n)}<span
 			class="code-highlight__line-highlight"
-			style:top="calc({n - $store.startLine} * var(--chl-line-height))"
+			style:top="calc({n - current.startLine} * var(--chl-line-height))"
 			aria-hidden="true"
-		></span>{/each}{#if $store.showLineNumbers}<span
+		></span>{/each}{#if current.showLineNumbers}<span
 			class="code-highlight__line-numbers"
 			aria-hidden="true"
 		>{#each lineNumbers as n (n)}<span>{n}</span>{/each}</span
 		>{/if}<code class="code-highlight__code"
-		>{#if $store.highlightedCode}{@html $store.highlightedCode}{:else}{$store.code}{/if}</code
+		>{#if current.highlightedCode}{@html current.highlightedCode}{:else}{current.code}{/if}</code
 		></pre>
 </div>
+{/if}
 
 <style>
 	.code-highlight {

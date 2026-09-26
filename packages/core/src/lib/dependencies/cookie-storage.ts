@@ -182,7 +182,13 @@ export function createCookieStorage<T = unknown>(
 			const value = valueParts.join('='); // Handle values with '=' in them
 
 			if (name) {
-				cookies.set(decodeURIComponent(name), decodeURIComponent(value));
+				try {
+					cookies.set(decodeURIComponent(name), decodeURIComponent(value));
+				} catch {
+					// Malformed percent encoding in cookie: ignore entry without raw key fallback
+					// to avoid poisoning healthy entries or risking key collisions.
+					continue;
+				}
 			}
 		}
 
@@ -232,23 +238,20 @@ export function createCookieStorage<T = unknown>(
 		removeItem(key: string): void {
 			const prefixedKey = _prefixKey(key);
 			const entry = registry.get(prefixedKey);
+			const cookiePath = entry?.options.path ?? path;
+			const cookieDomain = entry?.options.domain ?? domain;
 
-			if (!entry) {
-				_log(`Remove key "${key}": not in registry, attempting default removal`);
-				// Try default removal (may not work if path/domain differ)
-				document.cookie = `${encodeURIComponent(prefixedKey)}=; Path=${path}; Max-Age=0`;
-				return;
-			}
-
-			// Use registered options for reliable removal
 			const parts = [
 				`${encodeURIComponent(prefixedKey)}=`,
-				`Path=${entry.options.path}`,
+				`Path=${cookiePath}`,
 				'Max-Age=0'
 			];
 
-			if (entry.options.domain) {
-				parts.push(`Domain=${entry.options.domain}`);
+			if (cookieDomain) {
+				parts.push(`Domain=${cookieDomain}`);
+			}
+			if (!entry) {
+				_log(`Remove key "${key}": not in registry, attempting configured removal`);
 			}
 
 			document.cookie = parts.join('; ');
@@ -281,15 +284,29 @@ export function createCookieStorage<T = unknown>(
 			return exists;
 		},
 
+		/**
+		 * Clear cookies matching configured prefix and known path/domain.
+		 * Preserves registered per-cookie options for items set on this instance.
+		 *
+		 * HttpOnly cookies are inaccessible to script. Other cookies can only be
+		 * discovered when visible to this page; cookies with unknown path/domain
+		 * overrides cannot reliably be removed after instance recreation.
+		 */
 		clear(): void {
-			// Clear only cookies in our registry (we know their paths/domains)
-			const keysToRemove = Array.from(registry.keys()).map(_unprefixKey);
+			const keysToRemove = new Set<string>();
+			for (const key of this.keys()) {
+				keysToRemove.add(key);
+			}
+			for (const prefixedKey of registry.keys()) {
+				if (!prefix || prefixedKey.startsWith(prefix)) {
+					keysToRemove.add(_unprefixKey(prefixedKey));
+				}
+			}
 
 			keysToRemove.forEach((key) => {
 				this.removeItem(key);
 			});
-
-			_log(`Cleared ${keysToRemove.length} cookies`);
+			_log(`Cleared ${keysToRemove.size} cookies`);
 		},
 
 		size(): number {
@@ -429,11 +446,19 @@ export function createMockCookieStorage<T = unknown>(
 		},
 
 		clear(): void {
-			const keysToRemove = this.keys();
+			const keysToRemove = new Set<string>();
+			for (const key of this.keys()) {
+				keysToRemove.add(key);
+			}
+			for (const prefixedKey of registry.keys()) {
+				if (!prefix || prefixedKey.startsWith(prefix)) {
+					keysToRemove.add(_unprefixKey(prefixedKey));
+				}
+			}
 			keysToRemove.forEach((key) => {
 				this.removeItem(key);
 			});
-			_log(`Cleared ${keysToRemove.length} cookies`);
+			_log(`Cleared ${keysToRemove.size} cookies`);
 		},
 
 		size(): number {

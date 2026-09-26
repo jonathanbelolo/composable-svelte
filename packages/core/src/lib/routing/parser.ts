@@ -174,8 +174,10 @@ export function parseDestination<Dest extends { type: string; state: any }>(
 ): Dest | null {
 	const basePath = config.basePath ?? '/';
 
-	// Check if path starts with base path
-	if (!path.startsWith(basePath)) {
+	// Nonempty base paths name directories, not arbitrary string prefixes.
+	// Preserve explicitly empty bases for callers parsing relative input.
+	if (basePath !== '' && path !== basePath &&
+		(basePath.endsWith('/') ? !path.startsWith(basePath) : !path.startsWith(basePath + '/'))) {
 		return null;
 	}
 

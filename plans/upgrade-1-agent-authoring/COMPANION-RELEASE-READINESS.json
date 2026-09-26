@@ -1,0 +1,220 @@
+{
+  "schema": "companion-release-readiness/v1",
+  "updatedAt": "2026-09-26T16:30:00.066210+00:00",
+  "status": "publishing-user-authorized",
+  "registrySnapshot": "evidence/companion-release-preparation/registry-snapshot.json",
+  "versions": [
+    {
+      "package": "@composable-svelte/core",
+      "sourceVersion": "0.13.1",
+      "proposedVersion": "0.13.1",
+      "versionAssigned": true,
+      "corePeerFloor": null,
+      "minimumSvelte": "5.20.0",
+      "newerQualificationSvelte": "5.55.3",
+      "finalArchive": "/private/tmp/companion-runtime-release/archives-r8-production/composable-svelte-core-0.13.1.tgz",
+      "finalSHA256": "9e76c7a0b939cdc5b7d5a05202761a14b4186f4408837f1668fdf2b3869b0c51",
+      "registryVerified": false,
+      "archiveStatus": "Final publication archive verified; npm writes underway"
+    },
+    {
+      "package": "@composable-svelte/architecture",
+      "sourceVersion": "0.13.1",
+      "proposedVersion": "0.13.1",
+      "versionAssigned": true,
+      "corePeerFloor": null,
+      "minimumSvelte": null,
+      "newerQualificationSvelte": null,
+      "finalArchive": "/private/tmp/companion-runtime-release/archives-r8-production/composable-svelte-architecture-0.13.1.tgz",
+      "finalSHA256": "a11fc234b1638d45e709eec22c1a27cd96ded433cdae2aa4dc8545ef8d0949f3",
+      "registryVerified": false,
+      "archiveStatus": "Final publication archive verified; npm writes underway"
+    },
+    {
+      "package": "@composable-svelte/auth",
+      "sourceVersion": "0.3.0",
+      "proposedVersion": "0.3.0",
+      "versionAssigned": true,
+      "corePeerFloor": "^0.13.1",
+      "minimumSvelte": "5.20.0",
+      "newerQualificationSvelte": "5.55.3",
+      "finalArchive": "/private/tmp/companion-runtime-release/archives-r6/composable-svelte-auth-0.3.0.tgz",
+      "finalSHA256": "dbb2611bb01616e4e9ef86a54016724cf6271e0ec337b759b5cbcb21dae27112",
+      "registryVerified": false,
+      "archiveStatus": "Final publication archive verified; npm writes underway"
+    },
+    {
+      "package": "@composable-svelte/code",
+      "sourceVersion": "0.5.0",
+      "proposedVersion": "0.5.0",
+      "versionAssigned": true,
+      "corePeerFloor": "^0.13.1",
+      "minimumSvelte": "5.30.0",
+      "newerQualificationSvelte": "5.55.3",
+      "finalArchive": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-code-0.5.0.tgz",
+      "finalSHA256": "f85b945232c460edc45c0051dc69c4580f4a502b39a2988af38c62a2e3a37026",
+      "registryVerified": false,
+      "archiveStatus": "Final publication archive verified; npm writes underway"
+    },
+    {
+      "package": "@composable-svelte/media",
+      "sourceVersion": "0.5.0",
+      "proposedVersion": "0.5.0",
+      "versionAssigned": true,
+      "corePeerFloor": "^0.13.1",
+      "minimumSvelte": "5.20.0",
+      "newerQualificationSvelte": "5.55.3",
+      "finalArchive": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-media-0.5.0.tgz",
+      "finalSHA256": "c0bfa6528fb6cd3dc68f2769237d3053514f76f79bc5197316b230eb07b78298",
+      "registryVerified": false,
+      "archiveStatus": "Final publication archive verified; npm writes underway"
+    },
+    {
+      "package": "@composable-svelte/chat",
+      "sourceVersion": "0.5.0",
+      "proposedVersion": "0.5.0",
+      "versionAssigned": true,
+      "corePeerFloor": "^0.13.1",
+      "minimumSvelte": "5.20.0",
+      "newerQualificationSvelte": "5.55.3",
+      "finalArchive": "/private/tmp/companion-runtime-release/archives-r5-chat/composable-svelte-chat-0.5.0.tgz",
+      "finalSHA256": "fe21f00f75385205073744bc45cba715e441914d38119d46fb7cf0bfdfe76aeb",
+      "registryVerified": false,
+      "archiveStatus": "Final publication archive verified; npm writes underway"
+    },
+    {
+      "package": "@composable-svelte/maps",
+      "sourceVersion": "0.3.0",
+      "proposedVersion": "0.3.0",
+      "versionAssigned": true,
+      "corePeerFloor": "^0.13.1",
+      "minimumSvelte": "5.20.0",
+      "newerQualificationSvelte": "5.55.3",
+      "finalArchive": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-maps-0.3.0.tgz",
+      "finalSHA256": "3730a67a93be13a631729d0538328b92bf6b85c5fc1f603ea0a8e4395aee7116",
+      "registryVerified": false,
+      "archiveStatus": "Final publication archive verified; npm writes underway"
+    },
+    {
+      "package": "@composable-svelte/graphics",
+      "sourceVersion": "0.3.0",
+      "proposedVersion": "0.3.0",
+      "versionAssigned": true,
+      "corePeerFloor": "^0.13.1",
+      "minimumSvelte": "5.20.0",
+      "newerQualificationSvelte": "5.55.3",
+      "finalArchive": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-graphics-0.3.0.tgz",
+      "finalSHA256": "366f918ae042bd510c263f124e247d3a4e3ac4a7a57e91a72d93131cf8c7857b",
+      "registryVerified": false,
+      "archiveStatus": "Final publication archive verified; npm writes underway"
+    },
+    {
+      "package": "@composable-svelte/charts",
+      "sourceVersion": "0.3.0",
+      "proposedVersion": "0.3.0",
+      "versionAssigned": true,
+      "corePeerFloor": "^0.13.1",
+      "minimumSvelte": "5.20.0",
+      "newerQualificationSvelte": "5.55.3",
+      "finalArchive": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-charts-0.3.0.tgz",
+      "finalSHA256": "c36b7a06e5a293259cdbebd599a1698cd448c000eac343c66411c1282a73c21d",
+      "registryVerified": false,
+      "archiveStatus": "Final publication archive verified; npm writes underway"
+    }
+  ],
+  "profiles": [
+    {
+      "name": "auth",
+      "packages": [
+        "core",
+        "auth"
+      ],
+      "status": "scoped-checks-complete-optional",
+      "svelte": "5.55.3"
+    },
+    {
+      "name": "code",
+      "packages": [
+        "core",
+        "code"
+      ],
+      "status": "scoped-checks-complete-optional",
+      "svelte": "5.55.3"
+    },
+    {
+      "name": "media",
+      "packages": [
+        "core",
+        "media"
+      ],
+      "status": "scoped-checks-complete-optional",
+      "svelte": "5.55.3"
+    },
+    {
+      "name": "chat",
+      "packages": [
+        "core",
+        "chat"
+      ],
+      "status": "scoped-checks-complete-optional",
+      "svelte": "5.55.3"
+    },
+    {
+      "name": "maps",
+      "packages": [
+        "core",
+        "maps"
+      ],
+      "status": "scoped-checks-complete-optional",
+      "svelte": "5.55.3"
+    },
+    {
+      "name": "graphics",
+      "packages": [
+        "core",
+        "graphics"
+      ],
+      "status": "scoped-checks-complete-optional",
+      "svelte": "5.55.3"
+    },
+    {
+      "name": "charts",
+      "packages": [
+        "core",
+        "charts"
+      ],
+      "status": "scoped-checks-complete-optional",
+      "svelte": "5.55.3"
+    },
+    {
+      "name": "chat-code-media",
+      "packages": [
+        "core",
+        "chat",
+        "code",
+        "media"
+      ],
+      "status": "scoped-checks-complete-optional",
+      "svelte": "5.55.3"
+    }
+  ],
+  "existingStarter": "Public starter no longer installs or runs checker by default; functional checks remain.",
+  "gates": {
+    "authFinalHandoff": "Complete through f06b63e64416b14eef05fbce2159165747068584; independent Opus CLEAR TO LAND",
+    "authParentIntegration": "Complete: cumulative 104-path delta integrated with no conflicts; parent 942 Chromium + 62 SSR pass, check/typecheck/build pass; exact archive/installed bytes verified",
+    "allGlobalGuidance": "Shipped managed references updated. Checker warnings in Core entry points; default starter checker removed.",
+    "candidateVersionsAssigned": "All nine assigned.",
+    "checkerPrerequisites": "Bounded implementation complete; optional tooling only.",
+    "checkerProfiles": "Final6095ae2f scoped review CLEAR;560tests and172profile controls pass. Historical scope evidence, not architectural certification. Publication docs supersede recommendation.",
+    "finalArchiveQualification": "R6 all16 exact-archive runtime recipe cases PASS; final checker/profile/app scoped gates complete. Publication archive changes limited to warnings and removal of default starter checker dependency/command.",
+    "isolatedAgentAuthoring": "AppA14unit/browser/SSR/build and AppB23unit/8browser/SSR/build passed; independent scoped reviews CLEAR. Final app checker controls complete, not architectural certification.",
+    "mediaPhysicalMicrophone": "Complete: actual normal Chrome/macOS3case suite39assertions PASS after userpermission; capture windows1251/1210/1243ms, zero live tracks/errors/network/restarts. Exact executed Core/Media bytes equal R4. Full metadata-only receipt and fixture retained under coordinated-release/media-real-device.",
+    "publication": "Publishing exact archives after user instruction; final registry receipts pending.",
+    "sharedVerifier": "Independently reviewed immutable archive harness and legacy local-checker injection integrated. Parent36/36 selftests pass in installed checkout; dedicated CI step added. Narrow phase receipts remain explicitly narrow.",
+    "authArchiveHygiene": "Complete: qualified 404-file archive contains no consumer node_modules/.vite/.svelte-kit/dist artifacts",
+    "releaseCheckout": "Draft PR4 initial source CI passed; final reviewed checker closure, docs and evidence being pushed.",
+    "npmAuthentication": "User renewed; final npm writes in progress.",
+    "dependencyExtension": "Core generic typing repair reviewed and integrated; exact R6 installed matrix passes, runtime bytes unchanged."
+  },
+  "checkerPolicy": "Completely optional; use discouraged; practical reliability unestablished; not architectural acceptance or release requirement."
+}

@@ -1,5 +1,5 @@
 /**
- * Every workspace must be covered by the `svelte-check` gate.
+ * Every workspace containing Svelte must be covered by the `svelte-check` gate.
  *
  * `pnpm -r check` runs the script wherever it is defined and **skips every
  * workspace that lacks it, silently and with exit 0**. That is not a
@@ -12,8 +12,8 @@
  * workspace from being added ungated tomorrow, or a script from being quietly
  * deleted the first time it turns red. This test is the part that holds.
  *
- * `tsc` cannot substitute for any of it: it never reads `.svelte`, and every
- * workspace here ships `.svelte` files.
+ * `tsc` cannot substitute for Svelte checking. Source-only Node tools instead
+ * have executable, syntax and Node-test requirements below; they are still scanned.
  *
  * Modelled on `tests/ssr/entry-graph.test.ts` — same shape, same reason for
  * living in `core` (it is a repo-level invariant that needs a home, and `core`
@@ -22,7 +22,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { spawnSync } from 'node:child_process';
+import { packageCapabilities } from './package-capabilities.js';
 import { listDirs } from './walk.js';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
@@ -84,6 +87,8 @@ const workspaces: Workspace[] = workspaceDirs().map((dir) => ({
 	pkg: JSON.parse(readFileSync(join(repoRoot, dir, 'package.json'), 'utf8'))
 }));
 
+const capabilities = (w: Workspace) => packageCapabilities(join(repoRoot, w.dir));
+const svelteWorkspaces = workspaces.filter(w => capabilities(w).svelteFiles.length > 0);
 const isGated = (w: Workspace) => w.pkg.scripts?.check !== undefined;
 
 describe('svelte-check gate coverage', () => {
@@ -91,18 +96,18 @@ describe('svelte-check gate coverage', () => {
 		expect(workspaces.length).toBeGreaterThanOrEqual(19);
 	});
 
-	it.each(workspaces.map((w) => [w.dir, w] as const))('%s is gated', (dir, w) => {
+	it.each(svelteWorkspaces.map((w) => [w.dir, w] as const))('%s is gated', (dir, w) => {
 		// Unconditional. This assertion carried a NOT_YET_GATED allowlist while the
 		// gap was being closed; the allowlist is gone because it reached zero.
 		// Adding a workspace now means gating it in the same change.
 		expect(
 			isGated(w),
-			`${dir} has no \`check\` script. Every workspace in this repo ships ` +
+			`${dir} has no \`check\` script. This workspace contains ` +
 				`.svelte files, and \`tsc\` does not read them.`
 		).toBe(true);
 	});
 
-	const gatedWorkspaces = workspaces.filter(isGated);
+	const gatedWorkspaces = svelteWorkspaces.filter(isGated);
 
 	it.each(gatedWorkspaces.map((w) => [w.dir, w] as const))(
 		'%s runs the canonical check script and declares svelte-check',
@@ -196,4 +201,41 @@ describe('wildcard exports accept the .js form', () => {
 			expect(exports['./*.js']).toEqual(exports['./*']);
 		}
 	);
+});
+
+
+describe('published package capabilities remain gated', () => {
+ it.each(workspaces.filter(w => !w.pkg.private).map(w => [w.dir,w] as const))('%s has a supported distribution and test path', (_dir,w) => {
+  expect(capabilities(w).problems).toEqual([]);
+ });
+ it.each(workspaces.filter(w => !w.pkg.private && capabilities(w).sourceCli).map(w => [w.dir,w] as const))('%s ships valid Node source syntax', (_dir,w) => {
+  for (const file of capabilities(w).sourceFiles.filter(file => /\.[cm]?js$/.test(file))) {
+   const result = spawnSync(process.execPath,['--check',file],{encoding:'utf8'});
+   expect(result.error, file).toBeUndefined();
+   expect(result.status, result.stderr || file).toBe(0);
+  }
+ });
+ it('source CLI capabilities do not hide missing targets, tests, or added Svelte sources', () => {
+  const dir=mkdtempSync(join(tmpdir(),'package-capability-'));
+  try {
+   mkdirSync(join(dir,'bin')); mkdirSync(join(dir,'test'));
+   writeFileSync(join(dir,'package.json'),JSON.stringify({exports:{},bin:{tool:'bin/tool.mjs'},scripts:{test:'node test/run.mjs'}}));
+   writeFileSync(join(dir,'bin/tool.mjs'),'#!/usr/bin/env node\n');
+   writeFileSync(join(dir,'test/run.mjs'),'');
+   writeFileSync(join(dir,'test/tool.test.mjs'),'');
+   expect(packageCapabilities(dir).problems).toEqual([]);
+   expect(packageCapabilities(dir).requiresDist).toBe(false);
+   writeFileSync(join(dir,'Widget.svelte'),'<p>new capability</p>');
+   expect(packageCapabilities(dir).svelteFiles).toEqual([join(dir,'Widget.svelte')]);
+   rmSync(join(dir,'test/tool.test.mjs'));
+   expect(packageCapabilities(dir).problems).toContain('source CLI has no executable test files');
+   rmSync(join(dir,'bin/tool.mjs'));
+   expect(packageCapabilities(dir).problems).toContain('missing or unsupported executable target: bin/tool.mjs');
+   writeFileSync(join(dir,'package.json'),JSON.stringify({exports:{'.':'./dist/index.js'}}));
+   expect(packageCapabilities(dir).requiresDist).toBe(true);
+   expect(packageCapabilities(dir).sourceCli).toBe(false);
+   writeFileSync(join(dir,'package.json'),'{}');
+   expect(packageCapabilities(dir).problems).toContain('package declares neither built output nor a source-only CLI');
+  } finally {rmSync(dir,{recursive:true,force:true});}
+ });
 });

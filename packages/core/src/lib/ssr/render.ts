@@ -47,9 +47,13 @@ export interface RenderOptions {
 
   /**
    * Title for the HTML document.
-   * Default: 'Composable Svelte App'
+   * Default: 'Composable Svelte App'. Set null when the component owns its
+   * title through <svelte:head>; do not configure two title owners.
    */
-  title?: string;
+  title?: string | null;
+
+  /** Document language, attribute-escaped. Default: 'en'. */
+  lang?: string;
 
   /**
    * Additional HTML to inject in <head>.
@@ -139,17 +143,17 @@ export function renderToHTML<Props extends ComponentProps>(
   }
 
   // Build complete HTML
-  const title = options.title ?? 'Composable Svelte App';
+  const title = options.title === null ? '' : `<title>${escapeHtml(options.title ?? 'Composable Svelte App')}</title>`;
   const clientScript = options.clientScript ?? '/app.js';
   const additionalHead = options.head ?? '';
   const additionalBodyScripts = options.bodyScripts ?? '';
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${escapeHtml(options.lang ?? 'en')}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${escapeHtml(title)}</title>
+  ${title}
   ${result.head}
   ${additionalHead}
 </head>

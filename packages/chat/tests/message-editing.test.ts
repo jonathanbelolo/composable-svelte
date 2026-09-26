@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { createStore } from '@composable-svelte/core';
+import { type EffectType, createStore } from '@composable-svelte/core';
 import { streamingChatReducer } from '../src/lib/streaming-chat/reducer.js';
 import { createInitialStreamingChatState } from '../src/lib/streaming-chat/types.js';
 import type {
@@ -22,6 +22,15 @@ import type {
 } from '../src/lib/streaming-chat/types.js';
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const waitForAction = (store: ReturnType<typeof makeStore>['store'], type: string) =>
+	new Promise<void>((resolve) => {
+		const unsub = store.subscribeToActions!((action) => {
+			if (action.type === type) {
+				unsub();
+				resolve();
+			}
+		});
+	});
 
 let cleanup: Array<() => void> = [];
 afterEach(() => {
@@ -31,10 +40,24 @@ afterEach(() => {
 
 function makeStore(deps: Partial<StreamingChatDependencies> = {}) {
 	const streamed: string[] = [];
+	const uploadTasks: Promise<void>[] = [];
+	const observeUploads = (effect: EffectType<StreamingChatAction>): EffectType<StreamingChatAction> => {
+		if (effect._tag === 'Batch') return { ...effect, effects: effect.effects.map(observeUploads) };
+		if (effect._tag !== 'Cancellable' || effect.cancelOnly || !effect.id.startsWith('streaming-chat/upload/')) return effect;
+		return { ...effect, execute: (dispatch, signal) => {
+			const task = Promise.resolve(effect.execute(dispatch, signal));
+			uploadTasks.push(task);
+			return task;
+		} };
+	};
 	let ids = 0;
 	const store = createStore<StreamingChatState, StreamingChatAction>({
 		initialState: createInitialStreamingChatState(),
-		reducer: streamingChatReducer,
+		reducer: (state, action, dependencies) => {
+			const [next, effect] = streamingChatReducer(state, action, dependencies);
+			return [next, observeUploads(effect)];
+		},
+		ssr: { deferEffects: false },
 		dependencies: {
 			streamMessage: (message, onChunk, onComplete) => {
 				streamed.push(message);
@@ -46,8 +69,10 @@ function makeStore(deps: Partial<StreamingChatDependencies> = {}) {
 			...deps
 		} as StreamingChatDependencies
 	});
+	const dispatched: StreamingChatAction[] = [];
+	store.subscribeToActions!(action => dispatched.push(action));
 	cleanup.push(() => store.destroy?.());
-	return { store, streamed };
+	return { store, streamed, dispatched, drainUploads: () => Promise.all(uploadTasks) };
 }
 
 const conversation: Message[] = [
@@ -69,7 +94,7 @@ const contents = (store: { state: StreamingChatState }) =>
 
 describe('submitEditedMessage', () => {
 	it('replaces the message rather than adding a second copy of it', async () => {
-		const { store, streamed } = makeStore();
+		const { store, streamed, dispatched, drainUploads } = makeStore();
 		store.dispatch({ type: 'restoreMessages', messages: conversation });
 
 		store.dispatch({ type: 'startEditingMessage', messageId: 'u1' });
@@ -207,55 +232,67 @@ describe('editing a message with attachments', () => {
 	});
 
 	it('does not let a superseded upload start a second stream', async () => {
-		// Edit while the first upload is still in flight. The resolution used to
-		// land afterwards and stream again — carrying the *pre-edit* text.
-		let release: (url: string) => void = () => {};
-		const { store, streamed } = makeStore({
-			uploadFile: () => new Promise<string>((resolve) => (release = resolve))
+		let releaseFirst!: (url: string) => void;
+		let releaseSecond!: (url: string) => void;
+		let firstStarted!: () => void;
+		const firstReady = new Promise<void>((r) => { firstStarted = r; });
+		let secondStarted!: () => void;
+		const secondReady = new Promise<void>((r) => { secondStarted = r; });
+		let call = 0;
+		const { store, streamed, dispatched, drainUploads } = makeStore({
+			uploadFile: () => {
+				call++;
+				if (call === 1) {
+					firstStarted();
+					return new Promise<string>((r) => { releaseFirst = r; });
+				}
+				secondStarted();
+				return new Promise<string>((r) => { releaseSecond = r; });
+			}
 		});
 		store.dispatch({ type: 'addAttachment', attachment: withAttachment()[0]!.attachments![0]! });
 		store.dispatch({ type: 'sendMessage', message: 'look' });
-		await wait(20);
+		await firstReady;
 
 		store.dispatch({ type: 'startEditingMessage', messageId: store.state.messages[0]!.id });
 		store.dispatch({ type: 'updateEditingContent', content: 'edited' });
 		store.dispatch({ type: 'submitEditedMessage' });
-		await wait(20);
+		await secondReady;
 
-		release('https://cdn.example.com/a.png');
-		await wait(40);
+		const completePromise = waitForAction(store, 'streamComplete');
+		releaseFirst('https://cdn.example.com/a.png');
+		releaseSecond('https://cdn.example.com/a.png');
+		await completePromise;
 
-		expect(streamed, 'the superseded upload streamed the pre-edit text').not.toContain('look');
+		expect(streamed, 'the superseded upload streamed the pre-edit text').toEqual(['edited']);
 	});
 
 	it('cancels an upload whose message the edit removed', async () => {
-		// Edit an *earlier* message while a later one's upload is still going.
-		// `submitEditedMessage` truncates everything after the edited message, so
-		// the uploading message is gone — but its resolution still landed and
-		// streamed the text of a message that is no longer in the conversation.
-		//
-		// This is the path the explicit `Effect.cancel` covers. When the edited
-		// message has its own upload, `Effect.cancellable` supersedes by id on its
-		// own; when it does not, nothing would stop the old one.
-		let release: (url: string) => void = () => {};
-		const { store, streamed } = makeStore({
-			uploadFile: () => new Promise<string>((resolve) => (release = resolve))
+		let release!: (url: string) => void;
+		let started!: () => void;
+		const ready = new Promise<void>((r) => { started = r; });
+		const { store, streamed, dispatched, drainUploads } = makeStore({
+			uploadFile: () => {
+				started();
+				return new Promise<string>((r) => { release = r; });
+			}
 		});
 		store.dispatch({ type: 'restoreMessages', messages: conversation });
 
 		store.dispatch({ type: 'addAttachment', attachment: withAttachment()[0]!.attachments![0]! });
 		store.dispatch({ type: 'sendMessage', message: 'look' });
-		await wait(20);
+		await ready;
 
+		const completePromise = waitForAction(store, 'streamComplete');
 		store.dispatch({ type: 'startEditingMessage', messageId: 'u1' });
 		store.dispatch({ type: 'updateEditingContent', content: 'edited' });
 		store.dispatch({ type: 'submitEditedMessage' });
-		await wait(20);
+		await completePromise;
 
 		release('https://cdn.example.com/a.png');
-		await wait(40);
+		await drainUploads();
 
-		expect(streamed, 'a removed message still got a reply').not.toContain('look');
+		expect(streamed, 'a removed message still got a reply').toEqual(['edited']);
 	});
 });
 
@@ -268,47 +305,65 @@ describe('one upload per message', () => {
 
 	const pending = () => {
 		let release!: (url: string) => void;
+		let started!: () => void;
+		const ready = new Promise<void>((r) => { started = r; });
 		const promise = new Promise<string>((resolve) => (release = resolve));
-		return { promise, release: () => release('https://cdn.example.com/a.png') };
+		return {
+			promise,
+			ready,
+			started,
+			release: () => release('https://cdn.example.com/a.png')
+		};
 	};
 
-	it('does not let a second send destroy the first send’s upload', async () => {
+	it('settles both uploads but only streams the latest send', async () => {
 		const first = pending();
 		const second = pending();
 		let call = 0;
-		const { store, streamed } = makeStore({
-			uploadFile: () => (call++ === 0 ? first.promise : second.promise)
+		const { store, streamed, dispatched, drainUploads } = makeStore({
+			uploadFile: () => {
+				const current = call++ === 0 ? first : second;
+				current.started();
+				return current.promise;
+			}
 		});
 
 		store.dispatch({ type: 'addAttachment', attachment: attach('a1') });
 		store.dispatch({ type: 'sendMessage', message: 'first' });
-		await wait(20);
+		await first.ready;
 		store.dispatch({ type: 'addAttachment', attachment: attach('a2') });
 		store.dispatch({ type: 'sendMessage', message: 'second' });
-		await wait(20);
+		await second.ready;
 
+		const completePromise = waitForAction(store, 'streamComplete');
 		first.release();
 		second.release();
-		await wait(40);
+		await completePromise;
 
-		expect(streamed, 'the first message never got a reply').toContain('first');
+		expect(streamed, 'superseded upload must not replace the current reply').toEqual(['second']);
 		expect(store.state.messages[0]!.attachments![0]!.uploadStatus).toBe('success');
 	});
 
-	it('does not let a plain send destroy an unrelated upload', async () => {
+	it('settles an older upload without replacing the plain send reply', async () => {
 		const upload = pending();
-		const { store, streamed } = makeStore({ uploadFile: () => upload.promise });
+		const { store, streamed, dispatched, drainUploads } = makeStore({
+			uploadFile: () => {
+				upload.started();
+				return upload.promise;
+			}
+		});
 
 		store.dispatch({ type: 'addAttachment', attachment: attach('a1') });
 		store.dispatch({ type: 'sendMessage', message: 'with file' });
-		await wait(20);
+		await upload.ready;
+		const completePromise = waitForAction(store, 'streamComplete');
 		store.dispatch({ type: 'sendMessage', message: 'plain' });
-		await wait(20);
+		await completePromise;
 
 		upload.release();
-		await wait(40);
+		await drainUploads();
 
-		expect(streamed).toContain('with file');
+		expect(streamed, 'superseded upload must not replace the plain reply').toEqual(['plain']);
 		expect(store.state.messages[0]!.attachments![0]!.uploadStatus).toBe('success');
 	});
 
@@ -316,54 +371,72 @@ describe('one upload per message', () => {
 		// The upload outlives the message, and its resolution streams a reply —
 		// into a conversation that no longer contains the question.
 		const upload = pending();
-		const { store, streamed } = makeStore({ uploadFile: () => upload.promise });
+		const { store, streamed, dispatched, drainUploads } = makeStore({
+			uploadFile: () => {
+				upload.started();
+				return upload.promise;
+			}
+		});
 
 		store.dispatch({ type: 'addAttachment', attachment: attach('a1') });
 		store.dispatch({ type: 'sendMessage', message: 'doomed' });
-		await wait(20);
+		await upload.ready;
 
 		store.dispatch({ type: 'deleteMessage', messageId: store.state.messages[0]!.id });
 		upload.release();
-		await wait(40);
+		await drainUploads();
 
+		expect(dispatched.filter(action => action.type === '_internal_attachmentsResolved')).toEqual([]);
 		expect(streamed, 'a deleted message still got a reply').toEqual([]);
 		expect(store.state.messages).toEqual([]);
 	});
 
 	it('cancels uploads when the conversation is cleared', async () => {
 		const upload = pending();
-		const { store, streamed } = makeStore({ uploadFile: () => upload.promise });
+		const { store, streamed, dispatched, drainUploads } = makeStore({
+			uploadFile: () => {
+				upload.started();
+				return upload.promise;
+			}
+		});
 
 		store.dispatch({ type: 'addAttachment', attachment: attach('a1') });
 		store.dispatch({ type: 'sendMessage', message: 'doomed' });
-		await wait(20);
+		await upload.ready;
 
 		store.dispatch({ type: 'clearMessages' });
 		upload.release();
-		await wait(40);
+		await drainUploads();
 
+		expect(dispatched.filter(action => action.type === '_internal_attachmentsResolved')).toEqual([]);
 		expect(streamed).toEqual([]);
 	});
 
 	it('cancels uploads when an older session is restored over them', async () => {
 		const upload = pending();
-		const { store, streamed } = makeStore({ uploadFile: () => upload.promise });
+		const { store, streamed, dispatched, drainUploads } = makeStore({
+			uploadFile: () => {
+				upload.started();
+				return upload.promise;
+			}
+		});
 
 		store.dispatch({ type: 'addAttachment', attachment: attach('a1') });
 		store.dispatch({ type: 'sendMessage', message: 'doomed' });
-		await wait(20);
+		await upload.ready;
 
 		store.dispatch({ type: 'restoreMessages', messages: conversation });
 		upload.release();
-		await wait(40);
+		await drainUploads();
 
+		expect(dispatched.filter(action => action.type === '_internal_attachmentsResolved')).toEqual([]);
 		expect(streamed).toEqual([]);
 	});
 });
 
 describe('regenerateMessage', () => {
 	it('replaces the reply without repeating the question', async () => {
-		const { store, streamed } = makeStore();
+		const { store, streamed, dispatched, drainUploads } = makeStore();
 		store.dispatch({ type: 'restoreMessages', messages: conversation });
 
 		store.dispatch({ type: 'regenerateMessage', messageId: 'a1' });
@@ -378,7 +451,7 @@ describe('regenerateMessage', () => {
 		// role guard still bailed — at the "no preceding user message" check, one
 		// branch later. This one has a user message before it, so only the role
 		// guard can stop it.
-		const { store, streamed } = makeStore();
+		const { store, streamed, dispatched, drainUploads } = makeStore();
 		store.dispatch({
 			type: 'restoreMessages',
 			messages: [
@@ -395,6 +468,7 @@ describe('regenerateMessage', () => {
 			'assistant:first answer',
 			'user:second question'
 		]);
+		expect(dispatched.filter(action => action.type === '_internal_attachmentsResolved')).toEqual([]);
 		expect(streamed).toEqual([]);
 	});
 });

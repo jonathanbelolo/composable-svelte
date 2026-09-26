@@ -160,9 +160,9 @@ describe('an animation reaches the renderer', () => {
 			}
 		});
 
-		const start = store.state.animations[0]!.startTime;
+		store.dispatch({ type: 'tick', time: 1000 });
 		for (const offset of [100, 250, 500, 900, 1000]) {
-			store.dispatch({ type: 'tick', time: start + offset });
+			store.dispatch({ type: 'tick', time: 1000 + offset });
 			sync();
 		}
 
@@ -189,8 +189,8 @@ describe('an animation reaches the renderer', () => {
 			}
 		});
 
-		const start = store.state.animations[0]!.startTime;
-		store.dispatch({ type: 'tick', time: start + 500 });
+		store.dispatch({ type: 'tick', time: 1000 });
+		store.dispatch({ type: 'tick', time: 1000 + 500 });
 		sync();
 
 		const inState = store.state.meshes[0]!.position.join(',');
@@ -219,13 +219,8 @@ describe('an animation reaches the renderer', () => {
 			});
 		}
 
-		// The latest of the two, not the first: `startAnimation` stamps
-		// `Date.now()` per animation, so the second can be a millisecond behind
-		// and ticking off the first one's clock leaves it at 0.999 complete.
-		// This test passed only while both dispatches landed in the same
-		// millisecond.
-		const start = Math.max(...store.state.animations.map((a) => a.startTime));
-		store.dispatch({ type: 'tick', time: start + 1000 });
+		store.dispatch({ type: 'tick', time: 1000 });
+		store.dispatch({ type: 'tick', time: 1000 + 1000 });
 		sync();
 
 		const mesh = store.state.meshes[0]!;

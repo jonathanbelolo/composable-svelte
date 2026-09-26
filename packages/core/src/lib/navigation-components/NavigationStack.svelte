@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import NavigationStackPrimitive from './primitives/NavigationStackPrimitive.svelte';
-  import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
+  import type { ChildView } from '../navigation/managed-integration.js';
   import { cn } from '../utils.js';
 
   // ============================================================================
@@ -12,7 +12,7 @@
     /**
      * Scoped store for the stack content.
      */
-    store: ScopedDestinationStore<State, Action> | null;
+    store: ChildView<State, Action> | undefined;
 
     /**
      * Stack of screen states.
@@ -59,7 +59,7 @@
       [
         {
           visible: boolean;
-          store: ScopedDestinationStore<State, Action> | null;
+          store: ChildView<State, Action> | undefined;
           currentScreen: State | undefined;
           canGoBack: boolean;
           onBack: (() => void) | undefined;

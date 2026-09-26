@@ -12,6 +12,7 @@ see the table below before you depend on one.
 | package | state | what is not there |
 |---|---|---|
 | **core** | production-ready | no store middleware, no devtools integration, no persistence or time-travel (there *is* an action `history` and `subscribeToActions`, so you can build a logger yourself) |
+| **architecture** | development-only CLI | completely optional; use discouraged; practical reliability unestablished; never architectural approval |
 | **chat** | usable | "collaborative" means presence, typing and cursors — **there is no CRDT layer**, so concurrent document editing is not supported |
 | **media** | usable | audio player, `VideoEmbed` (YouTube/Vimeo/Twitch), voice input — no video *player*, no streaming formats |
 | **code** | usable, thin | three wrappers: CodeMirror, Prism, SvelteFlow |
@@ -47,10 +48,11 @@ npm install @composable-svelte/core
 pnpm add @composable-svelte/core
 ```
 
-> **Published release (18 September 2026):** core **0.12.2**; auth, charts,
-> graphics and maps **0.2.1**; chat, code and media **0.4.1**. All eight packages
-> are available on npm with compatible workspace peer ranges. These releases
-> include breaking changes; review each package’s changelog when upgrading.
+> **Proposed release train (26 September 2026):** core **0.13.1**; auth, charts,
+> graphics and maps **0.3.0**; chat, code and media **0.5.0**. All eight packages
+> declare compatible workspace peer ranges (`@composable-svelte/core ^0.13.1`,
+> `@composable-svelte/code ^0.5.0`, `@composable-svelte/media ^0.5.0`, and Svelte
+> `^5.20.0` / Code `^5.30.0`). Review each package’s changelog when upgrading.
 
 ### Versioning
 
@@ -74,8 +76,8 @@ So, concretely, on this line:
   change by a caret range.
 - **A fix or an addition bumps the patch.**
 - **Satellites track core exactly.** Each pins `@composable-svelte/core` to
-  `^<major>.<minor>.0` of the core it is built against, enforced by
-  `packages/core/tests/repo/peer-ranges.test.ts`. Ranges are never widened by
+  `^<version>` of the qualified sibling release it is built against (e.g. `^0.13.1`),
+  enforced by `packages/core/tests/repo/peer-ranges.test.ts`. Ranges are never widened by
   appending, which moves a ceiling and leaves the floor behind.
 
 **What would move this to 1.0:** a release cycle that goes by without review

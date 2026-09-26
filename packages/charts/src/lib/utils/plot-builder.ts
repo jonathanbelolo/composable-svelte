@@ -4,7 +4,7 @@
  */
 
 import * as Plot from '@observablehq/plot';
-import type { ChartState, ChartConfig } from '../types/chart.types.js';
+import type { ChartState, ChartConfig, ChartAccessor } from '../types/chart.types.js';
 import {
   DATA_COLOR,
   DATA_OPACITY,
@@ -20,7 +20,7 @@ import {
  */
 export function buildScatterPlot<T>(
   state: ChartState<T>,
-  config: ChartConfig
+  config: ChartConfig<T>
 ): any {
   const { filteredData, dimensions, transform, selection } = state;
   const { x = 'x', y = 'y', color, size = 5, enableTooltip = true } = config;
@@ -118,7 +118,7 @@ export function buildScatterPlot<T>(
  */
 export function buildLineChart<T>(
   state: ChartState<T>,
-  config: ChartConfig
+  config: ChartConfig<T>
 ): any {
   const { filteredData, dimensions, transform } = state;
   const { x = 'x', y = 'y', color = DATA_COLOR, enableTooltip = true } = config;
@@ -214,7 +214,7 @@ export function buildLineChart<T>(
  */
 export function buildBarChart<T>(
   state: ChartState<T>,
-  config: ChartConfig
+  config: ChartConfig<T>
 ): any {
   const { filteredData, dimensions } = state;
   const { x = 'x', y = 'y', color = DATA_COLOR, enableTooltip = true } = config;
@@ -258,7 +258,8 @@ export function buildBarChart<T>(
     ],
 
     // Explicitly configure categorical x-axis
-    x: { padding: 0.2 },
+    x: { padding: 0.2, ...(config.barCategoryOrder === 'input'
+      ? { domain: filteredData.map(resolveAccessor<T>(x)) } : {}) },
     ...(config.yDomain && config.yDomain !== 'auto' ? { y: { domain: config.yDomain } } : {})
   });
 }
@@ -268,15 +269,10 @@ export function buildBarChart<T>(
  */
 export function buildAreaChart<T>(
   state: ChartState<T>,
-  config: ChartConfig
+  config: ChartConfig<T>
 ): any {
   const { filteredData, dimensions, transform } = state;
   const { x = 'x', y = 'y', color = DATA_COLOR, enableTooltip = true } = config;
-
-  // Same pair the scatter builder computes: which rows are selected, so the
-  // per-datum mark below can dim the rest.
-  const hasSelection = state.selection.selectedIndices.length > 0;
-  const selectedSet = new Set(state.selection.selectedIndices);
 
   // Calculate domains
   let xDomain: [number, number] | undefined;
@@ -362,7 +358,7 @@ export function buildAreaChart<T>(
  */
 export function buildHistogram<T>(
   state: ChartState<T>,
-  config: ChartConfig & { bins?: number; thresholds?: number[] }
+  config: ChartConfig<T> & { bins?: number; thresholds?: number[] }
 ): any {
   const { filteredData, dimensions } = state;
   const { x = 'x', color = DATA_COLOR, bins, thresholds, enableTooltip = true } = config;
@@ -411,8 +407,8 @@ export function buildHistogram<T>(
  */
 export function buildPlot<T>(
   state: ChartState<T>,
-  config: ChartConfig & { type?: 'scatter' | 'line' | 'bar' | 'area' | 'histogram' }
-): any {
+  config: ChartConfig<T> & { type?: 'scatter' | 'line' | 'bar' | 'area' | 'histogram' }
+): Element | null {
   const type = config.type || 'scatter';
 
   switch (type) {
@@ -520,7 +516,7 @@ export function applyZoomToDomain(
  */
 export function selectionMark<T>(
   state: ChartState<T>,
-  config: ChartConfig,
+  config: ChartConfig<T>,
   kind: 'point' | 'rule' = 'point'
 ): any | null {
   const { selection, filteredData } = state;
@@ -532,9 +528,8 @@ export function selectionMark<T>(
   if (selected.length === 0) return null;
 
   if (kind === 'rule') {
-    if (!config.x) return null;
     return Plot.ruleX(selected, {
-      x: config.x as any,
+      x: (config.x ?? 'x') as any,
       // Solid, where the focus rule is dashed — the two are told apart by line
       // style rather than by colour, so the distinction survives a colour-blind
       // reader and a greyscale print.
@@ -544,8 +539,8 @@ export function selectionMark<T>(
   }
 
   return Plot.dot(selected, {
-    x: config.x as any,
-    y: config.y as any,
+    x: (config.x ?? 'x') as any,
+    y: (config.y ?? 'y') as any,
     r: (config.size ?? 5) + 1,
     fill: (config.color as any) || DATA_COLOR,
     fillOpacity: DATA_OPACITY,
@@ -563,10 +558,18 @@ export function selectionMark<T>(
  * its live region — and a second hand-rolled copy is how two readers of one
  * convention drift apart.
  */
-export function resolveAccessor<T, V = any>(
-  accessor: string | ((d: T) => V)
+export function resolveAccessor<T, V = unknown>(
+  accessor: ChartAccessor<T> | string
 ): (d: T) => V {
-  return typeof accessor === 'string' ? (d: T) => (d as any)[accessor] : accessor;
+  if (typeof accessor === 'function') {
+    return accessor as (d: T) => V;
+  }
+  return (d: T) => {
+    if (d !== null && typeof d === 'object') {
+      return (d as Record<string, unknown>)[accessor as string] as V;
+    }
+    return d as unknown as V;
+  };
 }
 
 /**
@@ -586,7 +589,7 @@ export function resolveAccessor<T, V = any>(
  */
 export function focusMark<T>(
   state: ChartState<T>,
-  config: ChartConfig,
+  config: ChartConfig<T>,
   kind: 'point' | 'rule' = 'point'
 ): any | null {
   const { focusedIndex, filteredData } = state;
@@ -596,9 +599,8 @@ export function focusMark<T>(
   if (datum === undefined) return null;
 
   if (kind === 'rule') {
-    if (!config.x) return null;
     return Plot.ruleX([datum], {
-      x: config.x as any,
+      x: (config.x ?? 'x') as any,
       stroke: MARKER_INK,
       strokeWidth: 2,
       strokeDasharray: '4 2'
@@ -606,8 +608,8 @@ export function focusMark<T>(
   }
 
   return Plot.dot([datum], {
-    x: config.x as any,
-    y: config.y as any,
+    x: (config.x ?? 'x') as any,
+    y: (config.y ?? 'y') as any,
     // Sits outside the plotted dot rather than on top of it, so the ring reads
     // as an annotation and the point's own colour stays legible underneath.
     r: (config.size ?? 5) + 4,
@@ -623,7 +625,7 @@ export function focusMark<T>(
  */
 export function calculateDomain<T>(
   data: T[],
-  accessor: string | ((d: T) => number | Date)
+  accessor: ChartAccessor<T> | string
 ): [number, number] | [Date, Date] | undefined {
   if (data.length === 0) return [0, 1];
 
@@ -637,15 +639,14 @@ export function calculateDomain<T>(
   }
 
   // Filter to only numeric values
-  const numericValues = values.filter((v): v is number => typeof v === 'number' && !isNaN(v));
+  const numericValues = values.filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
 
   if (numericValues.length === 0) return [0, 1];
 
-  const min = Math.min(...numericValues);
-  const max = Math.max(...numericValues);
-
-  // Add 5% padding
-  const padding = (max - min) * 0.05;
-
-  return [min - padding, max + padding];
+  let min = Infinity, max = -Infinity;
+  for (const value of numericValues) { min = Math.min(min, value); max = Math.max(max, value); }
+  // Scale-relative padding remains representable for large constants. Dividing
+  // endpoints before subtracting also avoids overflow across a wide domain.
+  const padding = min === max ? Math.max(Math.abs(min) * 0.05, 1) : max * 0.05 - min * 0.05;
+  return [Math.max(-Number.MAX_VALUE, min - padding), Math.min(Number.MAX_VALUE, max + padding)];
 }

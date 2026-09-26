@@ -5,10 +5,13 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { createTestStore } from '../src/lib/test/test-store.js';
+import { createTestStore as baseCreateTestStore } from '../src/lib/test/test-store.js';
 import { tooltipReducer } from '../src/lib/components/ui/tooltip/tooltip.reducer.js';
 import { initialTooltipState } from '../src/lib/components/ui/tooltip/tooltip.types.js';
 import type { TooltipState, TooltipAction, TooltipDependencies } from '../src/lib/components/ui/tooltip/tooltip.types.js';
+
+const activeStores: Array<{ destroy(): void }> = [];
+const createTestStore: typeof baseCreateTestStore = (config) => { const store = baseCreateTestStore(config); activeStores.push(store); return store; };
 
 describe('Tooltip Reducer', () => {
 	beforeEach(() => {
@@ -16,6 +19,9 @@ describe('Tooltip Reducer', () => {
 	});
 
 	afterEach(() => {
+		for (const store of activeStores.splice(0)) store.destroy();
+		vi.clearAllTimers();
+		vi.useRealTimers();
 		vi.restoreAllMocks();
 	});
 
@@ -85,17 +91,9 @@ describe('Tooltip Reducer', () => {
 				expect(state.presentation.status).toBe('idle');
 			});
 
-			// Advance past original delay time - delayCompleted will fire but be ignored
 			await store.advanceTime(300);
-
-			// Receive the delayCompleted action (it fires but is ignored by guard)
-			await store.receive({ type: 'delayCompleted' }, (state) => {
-				// State should remain unchanged (action was ignored)
-				expect(state.content).toBe(null);
-				expect(state.isWaitingToShow).toBe(false);
-				expect(state.presentation.status).toBe('idle');
-			});
-
+			expect(vi.getTimerCount()).toBe(0);
+			store.assertNoPendingActions();
 			await store.finish();
 		});
 	});
@@ -186,7 +184,7 @@ describe('Tooltip Reducer', () => {
 	});
 
 	describe('State Guards', () => {
-		it('should ignore hoverEnded during presenting', async () => {
+		it('should retain exit intent during presenting', async () => {
 			const store = createTestStore<TooltipState, TooltipAction, TooltipDependencies>({
 				initialState: initialTooltipState,
 				reducer: tooltipReducer,
@@ -197,7 +195,7 @@ describe('Tooltip Reducer', () => {
 			await store.advanceTime(300);
 			await store.receive({ type: 'delayCompleted' });
 
-			// Hover ends during animation - should be ignored
+			// Hover ends during animation: phase finishes, then recorded exit intent dismisses.
 			await store.send({ type: 'hoverEnded' }, (state) => {
 				expect(state.presentation.status).toBe('presenting');
 			});
@@ -300,6 +298,166 @@ describe('Tooltip Reducer', () => {
 				expect(state.content).toBe(null);
 				expect(state.presentation.status).toBe('idle');
 			});
+		});
+	});
+
+	describe('Hover Exit During Presentation', () => {
+		it('should dismiss after presentation completes if hover ended during entrance', async () => {
+			const store = createTestStore<TooltipState, TooltipAction, TooltipDependencies>({
+				initialState: initialTooltipState,
+				reducer: tooltipReducer,
+				dependencies: { hoverDelay: 300 }
+			});
+
+			await store.send({ type: 'hoverStarted', content: 'Info' });
+			await store.advanceTime(300);
+			await store.receive({ type: 'delayCompleted' });
+
+			// Pointer leaves trigger while entrance animation is running
+			await store.send({ type: 'hoverEnded' }, (state) => {
+				expect(state.presentation.status).toBe('presenting');
+				expect(state.isHovered).toBe(false);
+			});
+
+			// Advance time for entrance animation duration (150ms)
+			await store.advanceTime(150);
+
+			// Presentation completes: because hover ended, transition directly to dismissing
+			await store.receive(
+				{
+					type: 'presentation',
+					event: { type: 'presentationCompleted' }
+				},
+				(state) => {
+					expect(state.presentation).toMatchObject({
+						status: 'dismissing',
+						content: 'Info'
+					});
+				}
+			);
+
+			// Advance time for dismissal animation duration (105ms)
+			await store.advanceTime(105);
+
+			// Dismissal completes: returns to idle
+			await store.receive(
+				{
+					type: 'presentation',
+					event: { type: 'dismissalCompleted' }
+				},
+				(state) => {
+					expect(state.content).toBe(null);
+					expect(state.presentation.status).toBe('idle');
+				}
+			);
+		});
+
+		it('should remain presented if pointer exits and re-enters during entrance', async () => {
+			const store = createTestStore<TooltipState, TooltipAction, TooltipDependencies>({
+				initialState: initialTooltipState,
+				reducer: tooltipReducer,
+				dependencies: { hoverDelay: 300 }
+			});
+
+			await store.send({ type: 'hoverStarted', content: 'Info' });
+			await store.advanceTime(300);
+			await store.receive({ type: 'delayCompleted' });
+
+			// Pointer exits during entrance
+			await store.send({ type: 'hoverEnded' }, (state) => {
+				expect(state.isHovered).toBe(false);
+				expect(state.presentation.status).toBe('presenting');
+			});
+
+			// Pointer re-enters before entrance completes
+			await store.send({ type: 'hoverStarted', content: 'Info' }, (state) => {
+				expect(state.isHovered).toBe(true);
+				expect(state.presentation.status).toBe('presenting');
+			});
+
+			// Advance time for entrance animation (150ms)
+			await store.advanceTime(150);
+
+			// Presentation completes: latest intent was hovered, so transition to presented
+			await store.receive(
+				{
+					type: 'presentation',
+					event: { type: 'presentationCompleted' }
+				},
+				(state) => {
+					expect(state.presentation).toMatchObject({
+						status: 'presented',
+						content: 'Info'
+					});
+				}
+			);
+		});
+
+		it('should preserve hover intent when pointer re-enters during dismissal animation', async () => {
+			const store = createTestStore<TooltipState, TooltipAction, TooltipDependencies>({
+				initialState: initialTooltipState,
+				reducer: tooltipReducer,
+				dependencies: { hoverDelay: 300 }
+			});
+
+			await store.send({ type: 'hoverStarted', content: 'First' });
+			await store.advanceTime(300);
+			await store.receive({ type: 'delayCompleted' });
+			await store.advanceTime(150);
+			await store.receive({
+				type: 'presentation',
+				event: { type: 'presentationCompleted' }
+			});
+
+			// User unhovers: enters dismissal animation
+			await store.send({ type: 'hoverEnded' }, (state) => {
+				expect(state.presentation.status).toBe('dismissing');
+			});
+
+			// User re-hovers 50ms into dismissal
+			await store.advanceTime(50);
+			await store.send({ type: 'hoverStarted', content: 'Second' }, (state) => {
+				expect(state.isHovered).toBe(true);
+				expect(state.isWaitingToShow).toBe(true);
+				expect(state.content).toBe('Second');
+			});
+
+			// Old dismissal finishes at 105ms total (55ms after re-hover)
+			await store.advanceTime(55);
+			await store.receive(
+				{
+					type: 'presentation',
+					event: { type: 'dismissalCompleted' }
+				},
+				(state) => {
+					// Stale dismissal completion does not clear content or pending hover
+					expect(state.presentation.status).toBe('idle');
+					expect(state.content).toBe('Second');
+					expect(state.isWaitingToShow).toBe(true);
+				}
+			);
+
+			// Advance remaining hover delay (300ms - 55ms = 245ms)
+			await store.advanceTime(245);
+			await store.receive({ type: 'delayCompleted' }, (state) => {
+				expect(state.presentation.status).toBe('presenting');
+				expect(state.content).toBe('Second');
+			});
+
+			// Presentation animation finishes
+			await store.advanceTime(150);
+			await store.receive(
+				{
+					type: 'presentation',
+					event: { type: 'presentationCompleted' }
+				},
+				(state) => {
+					expect(state.presentation).toMatchObject({
+						status: 'presented',
+						content: 'Second'
+					});
+				}
+			);
 		});
 	});
 });

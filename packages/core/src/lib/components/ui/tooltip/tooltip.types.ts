@@ -31,6 +31,11 @@ export interface TooltipState {
 	 * Hover timer is active (waiting for delay before showing)
 	 */
 	isWaitingToShow: boolean;
+	/** Latest hover/focus intent, separate from visual phase. */
+	isHovered?: boolean;
+	/** Correlation for supported delay and rendering completion callbacks. */
+	hoverVersion?: number | undefined;
+	presentationVersion?: number | undefined;
 }
 
 /**
@@ -39,8 +44,8 @@ export interface TooltipState {
 export type TooltipAction =
 	| { type: 'hoverStarted'; content: TooltipContent }
 	| { type: 'hoverEnded' }
-	| { type: 'delayCompleted' }
-	| { type: 'presentation'; event: PresentationEvent };
+	| { type: 'delayCompleted'; hoverVersion?: number | undefined }
+	| { type: 'presentation'; event: PresentationEvent; presentationVersion?: number | undefined };
 
 /**
  * Tooltip dependencies
@@ -49,7 +54,7 @@ export interface TooltipDependencies {
 	/**
 	 * Hover delay in milliseconds (default: 300)
 	 */
-	hoverDelay?: number;
+	hoverDelay?: number | undefined;
 }
 
 /**
@@ -58,5 +63,6 @@ export interface TooltipDependencies {
 export const initialTooltipState: TooltipState = {
 	content: null,
 	presentation: { status: 'idle' },
-	isWaitingToShow: false
+	isWaitingToShow: false,
+	isHovered: false
 };

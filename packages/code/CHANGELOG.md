@@ -5,7 +5,96 @@ All notable changes to `@composable-svelte/code` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.5.0] - 2026-09-26
+
+### Changed — breaking
+
+- **The Svelte peer rises from `^5.20.0` to `^5.30.0`.** Applications on Svelte
+  5.20–5.29 must upgrade Svelte. The `@xyflow/svelte` `^1.4.1` dependency behind
+  `NodeCanvas` already requires Svelte `^5.25.0`, and SvelteFlow's server
+  rendering failed on 5.20 and 5.25 (`$$render_inner is not defined`). Svelte
+  5.30.0 is the lowest version checked passing, including SSR; 5.55.3 was also
+  checked. Earlier 5.2x patches were not individually checked.
+
+### Added
+
+- **`CodeEditor`, `CodeHighlight` and `NodeCanvas` accept a managed view.** The
+  `store` prop takes a standalone `Store` as before, or a managed `ChildView`:
+  a `FeatureViewProps` store, a `PresentationView`, or the result of `scopeTo`
+  / `composition.bind`. So `defineViews(composition, { editor: { render:
+  CodeEditor } })` works with no adapter. Commands reach a managed view through
+  its own owner's observed actions (`observeChildActions`). A standalone store
+  still uses `subscribeToActions`.
+- `CodeEditor` `autofocus` prop. It focuses the editor once it exists. A
+  `focus` command dispatched before then is dropped, including one dispatched
+  in the turn that creates the editor's owner.
+- `NodeCanvas`'s `liftAction` is optional when the store's action type already
+  is `NodeCanvasAction`, which covers every managed canvas view. It defaults to
+  the identity. It is still required when a standalone parent store wraps canvas
+  actions. `unliftAction` is for standalone stores only: a managed view never
+  needs it.
+
+### Changed
+
+- Requires `@composable-svelte/core` `^0.13.1` as a peer; that release exports
+  `observeChildActions` and `isManagedChildView` from
+  `@composable-svelte/core/application`.
+- **A store that is neither a managed view nor has `subscribeToActions` warns
+  once, then renders.** The warning is per store and component. It names the
+  likely causes: a wrapper or copy of a managed view, an `ApplicationStore`,
+  two copies of `@composable-svelte/core`, or a custom store without the
+  method. `CodeHighlight` used to degrade silently in this case. `CodeEditor`
+  and `NodeCanvas` used to warn on every mount.
+- Components bind their `store` once, at mount. Changing the prop afterwards
+  warns once. Use `{#key store}` to rebind; `FeatureViews` / `FeatureOutlet`
+  already remount per owner.
+- **Built-in results now carry correlation fields.** These are additive and
+  optional, and hand-dispatched actions without them behave as before. A test
+  that compares these actions with exact equality must add the fields:
+  - `valueChanged` from the editor carries `baseValue` and `baseRevision`;
+  - `formatted` carries `attemptId` and `input`;
+  - `formatFailed` carries `attemptId`;
+  - `highlighted` and `highlightFailed` carry `code` and `language`.
+- `CodeEditorState` gains optional `formatAttempt` and `valueRevision`.
+  `createInitialCodeEditorState` sets both to `0`. `codeEditorReducer` adds one
+  to `valueRevision` for each accepted `valueChanged` and applied `formatted`,
+  so a test comparing whole editor states with exact equality after a value
+  write must include it.
+- **A parent reducer that declines a `valueChanged` now has the editor revert
+  to `state.value`.** The document used to keep the declined text. Parent
+  reducers that rewrite the value are unaffected: the editor shows state's
+  value, as before.
+
+### Fixed
+
+- **A value or setting written in the same tick before a command was lost.**
+  `valueChanged('Loaded')` followed by `insertText('!')` produced `"!A"`, and
+  the command's report then overwrote `"Loaded"` in state too. State used to
+  reach CodeMirror in `$effect`s, after the synchronous command. It is now
+  applied synchronously from the store's state listener, before any action of
+  the same turn. The same applies to configuration: `setReadOnly(false)`
+  followed by an insert no longer has the insert refused.
+- **An editor report queued behind a newer write no longer overwrites it.**
+  Each `valueChanged` from the editor names the document and the revision it
+  edited, and the reducer drops a report that state has moved past, including
+  past a write that restored the same text. Line-break style (CRLF vs LF) does
+  not count as a difference.
+- **A declined edit no longer desynchronises the editor for good.** When a
+  parent reducer declined a `valueChanged`, the document kept the declined text
+  and every later edit was dropped as stale, so Save wrote a value the user
+  could not see. The editor now reverts the declined edit and later edits land.
+- **Viewport commands on a managed `NodeCanvas` no longer depend on
+  `liftAction`.** A non-identity `liftAction` such as `(a) => ({ ...a })`
+  disabled the default recognition, and `setViewport` / `zoomIn` / `zoomOut` /
+  `fitView` / `centerView` were dropped silently. A managed view's commands now
+  bypass `unliftAction`.
+- **A late format no longer overwrites an edit made while the formatter ran,
+  and overlapping formats resolve to the latest request.** A result applies
+  only if it answers the newest `format` and the value is still its input.
+- **A slow earlier highlight can no longer overwrite a newer one.**
+- A managed view whose owner has retired reads `undefined`. All three
+  components keep rendering the last committed state instead of throwing, and
+  mounting an already-retired view renders nothing.
 
 ## [0.4.1] - 2026-09-18
 

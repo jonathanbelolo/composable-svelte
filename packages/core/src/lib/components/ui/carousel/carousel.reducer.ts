@@ -13,6 +13,26 @@ import type {
   CarouselSlide
 } from './carousel.types.js';
 
+const AUTOPLAY_EFFECT_ID = 'carousel-autoplay';
+
+function createAutoPlayTickEffect(interval: number): EffectType<CarouselAction> {
+  if (!Number.isFinite(interval) || interval <= 0) {
+    return Effect.none<CarouselAction>();
+  }
+
+  return Effect.cancellable<CarouselAction>(AUTOPLAY_EFFECT_ID, async (dispatch, signal) => {
+    if (signal?.aborted) return;
+    await new Promise<void>((resolve) => {
+      const finish = () => { clearTimeout(timer); signal?.removeEventListener('abort', finish); resolve(); };
+      const timer = setTimeout(finish, interval);
+      signal?.addEventListener('abort', finish, { once: true });
+    });
+    if (!signal?.aborted) {
+      dispatch({ type: 'autoPlayTick' });
+    }
+  });
+}
+
 /**
  * Main reducer for the Carousel component
  */
@@ -23,7 +43,7 @@ export function carouselReducer<T = unknown>(
 ): [CarouselState<T>, EffectType<CarouselAction>] {
   switch (action.type) {
     case 'nextSlide': {
-      if (state.isTransitioning) {
+      if (state.isTransitioning || state.slides.length <= 1) {
         return [state, Effect.none<CarouselAction>()];
       }
 
@@ -42,7 +62,7 @@ export function carouselReducer<T = unknown>(
     }
 
     case 'previousSlide': {
-      if (state.isTransitioning) {
+      if (state.isTransitioning || state.slides.length <= 1) {
         return [state, Effect.none<CarouselAction>()];
       }
 
@@ -61,14 +81,14 @@ export function carouselReducer<T = unknown>(
     }
 
     case 'goToSlide': {
-      if (state.isTransitioning) {
+      if (state.isTransitioning || state.slides.length <= 1) {
         return [state, Effect.none<CarouselAction>()];
       }
 
       const targetIndex = action.index;
 
       // Validate index
-      if (targetIndex < 0 || targetIndex >= state.slides.length) {
+      if (!Number.isInteger(targetIndex) || targetIndex < 0 || targetIndex >= state.slides.length) {
         return [state, Effect.none<CarouselAction>()];
       }
 
@@ -81,32 +101,28 @@ export function carouselReducer<T = unknown>(
     }
 
     case 'autoPlayStarted': {
-      if (state.autoPlayInterval <= 0) {
-        return [state, Effect.none<CarouselAction>()];
-      }
+      if (action.interval !== undefined) state = { ...state, autoPlayInterval: Number.isFinite(action.interval) && action.interval > 0 ? action.interval : 0 };
+      if (state.autoPlayInterval <= 0) return carouselReducer(state, { type: 'autoPlayStopped' }, deps);
 
-      const onStartEffect = deps?.onAutoPlayStart
+      const onStartEffect = deps?.onAutoPlayStart && !state.isAutoPlaying
         ? Effect.run<CarouselAction>(async () => {
             deps.onAutoPlayStart!();
           })
         : Effect.none<CarouselAction>();
 
-      const tickEffect = Effect.run<CarouselAction>(async (dispatch) => {
-        await new Promise((resolve) => setTimeout(resolve, state.autoPlayInterval));
-        dispatch({ type: 'autoPlayTick' });
-      });
+      const tickEffect = state.slides.length > 1 ? createAutoPlayTickEffect(state.autoPlayInterval) : Effect.none<CarouselAction>();
 
       return [
         {
           ...state,
           isAutoPlaying: true
         },
-        Effect.batch(onStartEffect, tickEffect)
+        Effect.batch(tickEffect, onStartEffect)
       ];
     }
 
     case 'autoPlayStopped': {
-      const onStopEffect = deps?.onAutoPlayStop
+      const onStopEffect = deps?.onAutoPlayStop && state.isAutoPlaying
         ? Effect.run<CarouselAction>(async () => {
             deps.onAutoPlayStop!();
           })
@@ -117,14 +133,14 @@ export function carouselReducer<T = unknown>(
           ...state,
           isAutoPlaying: false
         },
-        onStopEffect
+        Effect.batch(Effect.cancel(AUTOPLAY_EFFECT_ID), onStopEffect)
       ];
     }
 
     case 'autoPlayTick': {
-      if (!state.isAutoPlaying || state.isTransitioning) {
-        return [state, Effect.none<CarouselAction>()];
-      }
+      if (!state.isAutoPlaying) return [state, Effect.none<CarouselAction>()];
+      const tickEffect = state.slides.length > 1 ? createAutoPlayTickEffect(state.autoPlayInterval) : Effect.none<CarouselAction>();
+      if (state.isTransitioning || state.slides.length <= 1) return [state, tickEffect];
 
       // Move to next slide
       const nextIndex = state.currentIndex + 1;
@@ -132,16 +148,11 @@ export function carouselReducer<T = unknown>(
 
       const [newState, slideChangeEffect] = handleSlideChange(state, targetIndex, deps);
 
-      // Schedule next tick
-      const tickEffect = Effect.run<CarouselAction>(async (dispatch) => {
-        await new Promise((resolve) => setTimeout(resolve, state.autoPlayInterval));
-        dispatch({ type: 'autoPlayTick' });
-      });
-
-      return [newState, Effect.batch(slideChangeEffect, tickEffect)];
+      return [newState, Effect.batch(tickEffect, slideChangeEffect)];
     }
 
     case 'transitionStarted': {
+      if (action.transitionId !== undefined) return [state, Effect.none()];
       return [
         {
           ...state,
@@ -152,6 +163,7 @@ export function carouselReducer<T = unknown>(
     }
 
     case 'transitionCompleted': {
+      if (action.transitionId !== undefined && action.transitionId !== state.transitionId) return [state, Effect.none()];
       return [
         {
           ...state,
@@ -171,9 +183,15 @@ export function carouselReducer<T = unknown>(
         {
           ...state,
           slides: newSlides,
-          currentIndex: validIndex
+          currentIndex: validIndex,
+          isTransitioning: false,
+          transitionId: (state.transitionId ?? 0) + 1
         },
-        Effect.none<CarouselAction>()
+        state.isAutoPlaying
+          ? newSlides.length > 1
+            ? createAutoPlayTickEffect(state.autoPlayInterval)
+            : Effect.cancel(AUTOPLAY_EFFECT_ID)
+          : Effect.none<CarouselAction>()
       ];
     }
 
@@ -192,11 +210,16 @@ function handleSlideChange<T>(
   newIndex: number,
   deps?: CarouselDependencies<T>
 ): [CarouselState<T>, EffectType<CarouselAction>] {
+  if (newIndex === state.currentIndex || newIndex < 0 || newIndex >= state.slides.length) {
+    return [state, Effect.none<CarouselAction>()];
+  }
+
   const newSlide = state.slides[newIndex];
+  const transitionId = (state.transitionId ?? 0) + 1;
 
   const effects: EffectType<CarouselAction>[] = [
     Effect.run<CarouselAction>(async (dispatch) => {
-      dispatch({ type: 'transitionStarted' });
+      dispatch({ type: 'transitionStarted', transitionId });
     })
   ];
 
@@ -212,7 +235,9 @@ function handleSlideChange<T>(
   return [
     {
       ...state,
-      currentIndex: newIndex
+      currentIndex: newIndex,
+      isTransitioning: true,
+      transitionId
     },
     Effect.batch(...effects)
   ];

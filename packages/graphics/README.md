@@ -71,7 +71,8 @@ pnpm add @composable-svelte/graphics @composable-svelte/core svelte
 Root component that manages the Babylon.js engine and renders the 3D scene.
 
 **Props:**
-- `store`: Store<GraphicsState, GraphicsAction>
+- `store`: `GraphicsStore` (`Pick<ChildView<GraphicsState, GraphicsAction>, 'state' | 'dispatch' | 'subscribe'>`) — accepts standalone stores from `createStore` or managed child views from `defineViews`/`FeatureViews`.
+- `createAdapter?`: `() => GraphicsAdapter` (optional) — creates a fresh adapter for this attachment. When omitted, `<Scene>` creates a `BabylonAdapter`. The scene owns and disposes the adapter returned by the factory; return a new instance for each mount or replacement. `initialize(canvas)` must resolve `{ renderer: 'webgl', capabilities }`, and `dispose()` must release its resources. A retired scene waits for an in-flight initialization to settle, then disposes the result once.
 - `width?`: string | number (default: '100%')
 - `height?`: string | number (default: '600px')
 
@@ -86,7 +87,7 @@ below, which is a separate renderer.
 Configures the scene camera.
 
 **Props:**
-- `store`: Store<GraphicsState, GraphicsAction>
+- `store`: `GraphicsStore`
 - `type?`: 'perspective' | 'orthographic' (default: 'perspective')
 - `position`: [x, y, z]
 - `lookAt`: [x, y, z]
@@ -100,7 +101,7 @@ Configures the scene camera.
 Renders a 3D mesh in the scene.
 
 **Props:**
-- `store`: Store<GraphicsState, GraphicsAction>
+- `store`: `GraphicsStore`
 - `id`: string
 - `geometry`: GeometryConfig
 - `material`: MaterialConfig
@@ -150,7 +151,7 @@ Normals are computed for you when omitted.
 Adds lighting to the scene.
 
 **Props:**
-- `store`: Store<GraphicsState, GraphicsAction>
+- `store`: `GraphicsStore`
 - `id?`: string — stable identity. Generated per component instance when
   omitted, so existing markup is unaffected; supply one to address the light
   from outside the component. Must be unique.
@@ -199,6 +200,70 @@ type GraphicsAction =
   | { type: 'setBackgroundColor'; color: string }
   // ... more actions
 ```
+
+## Managed Application Integration
+
+`@composable-svelte/graphics` functions both standalone and as a managed native companion with `@composable-svelte/core/application` (`defineApplication`, `ManagedIntegrationBuilder`, `defineViews`, `FeatureOutlet`).
+
+The [managed integration guide](./MANAGED.md) records ownership, operation policy,
+troubleshooting, and the runnable installed-package recipe.
+
+All graphics components accept `GraphicsStore`, which structurally unifies standalone `Store<GraphicsState, GraphicsAction>` and managed `ChildView<GraphicsState, GraphicsAction>`.
+
+### Managed Feature Recipe
+
+```svelte
+<!-- GraphicsFeature.svelte -->
+<script lang="ts">
+  import { Scene, Camera, Mesh, Light, WebGLOverlay, type GraphicsState, type GraphicsAction } from '@composable-svelte/graphics';
+  import type { PresentationFeatureViewProps } from '@composable-svelte/core/application';
+
+  let { store, surface }: PresentationFeatureViewProps<GraphicsState, GraphicsAction> = $props();
+</script>
+
+<div use:surface>
+  <Scene {store} width={640} height={480}>
+    <Camera {store} position={[0, 5, 10]} lookAt={[0, 0, 0]} />
+    <Light {store} type="directional" intensity={1} direction={[0, -1, 0]} />
+    <Mesh
+      {store}
+      id="cube"
+      geometry={{ type: 'box', size: 1 }}
+      material={{ color: '#ff4444' }}
+      position={[0, 0, 0]}
+    />
+  </Scene>
+  <WebGLOverlay owner={store} />
+</div>
+```
+
+```svelte
+<!-- App.svelte -->
+<script lang="ts">
+  import { ApplicationRoot, ApplicationHost, FeatureViews, FeatureOutlet } from '@composable-svelte/core/application';
+  import { definition, views } from './model.js';
+</script>
+
+<ApplicationRoot {definition} options={{ dependencies: {}, initial: { input: undefined } }}>
+  {#snippet children(app)}
+    <ApplicationHost {app}>
+      <FeatureViews store={app.store} definition={views}>
+        {#snippet children(captured)}
+          <FeatureOutlet view={captured.graphics} />
+        {/snippet}
+      </FeatureViews>
+    </ApplicationHost>
+  {/snippet}
+</ApplicationRoot>
+```
+
+### Prompt Retirement Cleanup
+
+When a managed view is retired (for example, when the parent reducer transitions state and sets the child slot to `undefined` or `null`):
+- **Immediate Cancellation**: Components observe the terminal `undefined` state synchronously through subscription rather than waiting for Svelte DOM unmount or effect teardown.
+- **In-flight Babylon Async Initialization**: If Babylon is still asynchronously initializing its engine when the view is retired, delivery is cancelled immediately. When the engine resolution eventually settles, it is promptly disposed (exactly once), and no late callbacks or `rendererInitialized` actions are dispatched.
+- **WebGLOverlay Immediate Teardown**: When bound to a managed `owner`, `WebGLOverlay` immediately halts its animation loop and destroys WebGL shaders and textures upon retirement, preventing callback leaks.
+- **Sibling Isolation**: Multiple scenes (sibling features or multiple outlets) maintain independent engine instances and render loops. Disposing or retiring one scene leaves sibling RAF loops and WebGL contexts intact.
 
 ## Examples
 
@@ -352,9 +417,10 @@ in charge of it, call those methods from an effect.
 <img bind:this={hero} src="/hero.jpg" alt="Hero" onload={applyEffect} />
 ```
 
-The single prop is `options` (`OverlayOptions`): `targetFPS`, `maxTextureSize`,
-`memoryBudget`, `debug`, `handleContextLoss`, `onContextLost`,
-`onContextRestored` and `onError`.
+**Props:**
+- `options?`: `OverlayOptions` — `targetFPS`, `maxTextureSize`, `memoryBudget`, `debug`, `handleContextLoss`, `onContextLost`, `onContextRestored` and `onError`.
+- `owner?`: `{ readonly state: unknown; subscribe(listener: (state: unknown) => void): () => void }` — managed view or store driving this overlay's lifetime. When the owner becomes `undefined`, the overlay immediately halts its loop and destroys GPU resources.
+- `attachOverlayToOwner(overlay, owner)` is also exported for programmatic binding.
 
 `maxTextureSize` **downscales** a source larger than it, rather than refusing
 one — for `<img>`, `<video>` and `<canvas>` alike, at registration and on every
@@ -441,10 +507,7 @@ fixed presets do not cover.
 
 ### Also exported
 
-`syncScene` and `initialBaseline`, with the `SceneAdapter` and `SceneBaseline`
-types — the seam between store state and a renderer. They are what
-`<Scene>` drives internally, and what a second backend would implement or a test
-would substitute.
+`GraphicsStore` (the structural binding interface), `GraphicsAdapter` (with required `initialize(canvas)` and `dispose()` lifecycle methods), `attachOverlayToOwner` (for attaching `WebGLOverlay` to a managed view), and `syncScene` and `initialBaseline` with the `SceneAdapter` and `SceneBaseline` types — the seam between store state and a renderer. They are what `<Scene>` drives internally, and what a second backend would implement or a test would substitute.
 
 ## Renderer
 
@@ -466,6 +529,23 @@ initialisation. That is unbuilt, and recorded as a gap rather than claimed.
   <p>Renderer: {$store.renderer.activeRenderer}</p>
 {/if}
 ```
+
+### Graphics regression checks
+
+Run `pnpm test`, `pnpm run typecheck`, and `pnpm run check` for the package gates.
+`pnpm run test:browser` additionally qualifies shader pixels against Chromium
+WebGL (install the Playwright Chromium browser before this check). The GPU check
+is required when changing shader presets; a headless fake GL does not execute GLSL.
+
+A `RenderLoop` can restart after `stop()`. `destroy()` permanently releases its
+visibility listener and makes subsequent `start()` calls throw. A restarted loop
+begins with a fresh FPS measurement rather than reporting a previous run's rate.
+
+### Animation time and deterministic replay
+
+`startAnimation` leaves `AnimationState.startTime` as `null` until the first `tick` action supplies the time origin. The framework schedules that frame; application code still supplies only animation content and the start action. Reducers do not read the wall clock. Subsequent recorded ticks determine progress, and restarting an animation resets its time origin on the next tick. A zero-duration animation completes on that first tick.
+
+Code inspecting animation state must now handle `startTime: number | null`. Existing serialized numeric timestamps, including zero, remain authoritative. Tests that drive time manually should dispatch an initial tick before advancing relative time. The first rendered frame starts at the animation's initial pose; elapsed time no longer includes the delay between the start action and that frame.
 
 ## License
 

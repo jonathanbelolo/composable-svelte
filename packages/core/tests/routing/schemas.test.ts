@@ -95,6 +95,26 @@ describe('number schema', () => {
 		expect(schema.parse(undefined)).toBe(42);
 	});
 
+	it('returns default for null', () => {
+		const schema = number({ default: 42 });
+		expect(schema.parse(null)).toBe(42);
+	});
+
+	it('rejects empty and whitespace strings even with default', () => {
+		const schema = number({ default: 42 });
+		expect(() => schema.parse('')).toThrow('Number cannot be empty');
+		expect(() => schema.parse('   ')).toThrow('Number cannot be empty');
+		expect(() => schema.parse('\t')).toThrow('Number cannot be empty');
+		expect(() => schema.parse('\n')).toThrow('Number cannot be empty');
+	});
+
+	it('rejects repeated-query arrays with empty or whitespace first element even with default', () => {
+		const schema = number({ default: 42 });
+		expect(() => schema.parse([''])).toThrow('Number cannot be empty');
+		expect(() => schema.parse(['   '])).toThrow('Number cannot be empty');
+		expect(() => schema.parse(['', '42'])).toThrow('Number cannot be empty');
+	});
+
 	it('throws on invalid number', () => {
 		const schema = number();
 		expect(() => schema.parse('not-a-number')).toThrow('Invalid number');
@@ -443,6 +463,45 @@ describe('literal schema', () => {
 	it('rejects non-matching number literal', () => {
 		const schema = literal(42);
 		expect(() => schema.parse('99')).toThrow('Value must be 42');
+	});
+
+	describe('numeric literal zero and blank discrimination', () => {
+		it('accepts matching numeric 0 and representations', () => {
+			const schema = literal(0);
+			expect(schema.parse(0)).toBe(0);
+			expect(schema.parse('0')).toBe(0);
+			expect(schema.parse(['0'])).toBe(0);
+			expect(schema.parse(['0', '1'])).toBe(0);
+		});
+
+		it('rejects empty string and whitespace for literal 0', () => {
+			const schema = literal(0);
+			expect(() => schema.parse('')).toThrow('Value must be 0');
+			expect(() => schema.parse('   ')).toThrow('Value must be 0');
+			expect(() => schema.parse('\t')).toThrow('Value must be 0');
+			expect(() => schema.parse('\n')).toThrow('Value must be 0');
+		});
+
+		it('rejects repeated-query arrays with empty or whitespace elements for literal 0', () => {
+			const schema = literal(0);
+			expect(() => schema.parse([''])).toThrow('Value must be 0');
+			expect(() => schema.parse(['   '])).toThrow('Value must be 0');
+			expect(() => schema.parse(['', '0'])).toThrow('Value must be 0');
+		});
+
+		it('rejects blank and whitespace for non-zero numeric literals', () => {
+			const schema = literal(42);
+			expect(() => schema.parse('')).toThrow('Value must be 42');
+			expect(() => schema.parse('   ')).toThrow('Value must be 42');
+			expect(() => schema.parse([''])).toThrow('Value must be 42');
+		});
+
+		it('preserves empty string literal semantics', () => {
+			const schema = literal('');
+			expect(schema.parse('')).toBe('');
+			expect(schema.parse([''])).toBe('');
+			expect(() => schema.parse('   ')).toThrow('Value must be ');
+		});
 	});
 
 	// ========================================================================

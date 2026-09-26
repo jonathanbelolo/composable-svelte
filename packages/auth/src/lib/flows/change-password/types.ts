@@ -31,6 +31,20 @@ export interface ChangePasswordState {
 	 * this device kept the session it had.
 	 */
 	session: SessionSnapshot | null;
+	/**
+	 * Which outcome the last reduction accepted, or `null`.
+	 *
+	 * A one-reduction output: set by the arm that accepts a change result
+	 * while `submitting`, and cleared by every other action. `createAuthFeature`
+	 * reports `changePasswordOutcome` from it.
+	 */
+	settled: 'changed' | 'failed' | null;
+	/**
+	 * Monotonically increasing count of successful password changes settled by
+	 * this flow. Increments only when `changeSucceeded` settles an in-flight
+	 * submission, enabling durable handoff tracking across component unmounts.
+	 */
+	completionCount: number;
 }
 
 export type ChangePasswordAction =

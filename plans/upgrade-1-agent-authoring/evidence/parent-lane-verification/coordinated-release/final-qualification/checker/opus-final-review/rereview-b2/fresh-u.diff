@@ -1,0 +1,109 @@
+@@ -11,11 +11,13 @@
+ - Bundled `maps`, `graphics`, `charts` and `auth` developer-feedback profiles with exact core 0.13.1, companion 0.3.0 and Svelte 5.55.3 approvals.
+ - TypeScript instantiation expressions such as `chartReducer<Row>` are analyzed as their underlying value, like other erased type syntax, instead of being reported as unsupported.
+ - Object-literal getters that only return a local binding, and `new Promise` with one local synchronous executor, are analyzed. Promise settle functions must stay in local bindings and must not reach templates, components, DOM handlers or packages. Resolved values, rejected values and values thrown by `throw` statements reachable while the executor runs must be plain data. Other getters, `Promise` combinators, `.then` chains and async executors are still reported as unsupported.
++- Values bound by `{#each}` items, `{@const}` and `{:then}` are analyzed like the equivalent script bindings, so authority reaching a template through them is reported. Earlier releases did not model these values. `{:catch}` values stay unmodeled, like script `catch` bindings.
+ 
+ ### Changed
+ 
+ - The starter policy approves exactly core 0.13.1; its supported range is a pairing bound, not an approval.
+ - Default values in snippet parameters and in `{#each}`, `{@const}`, `{:then}` and `{:catch}` destructuring are now reported as unsupported (`template-binding-default`). Earlier releases skipped them without analysis. Patterns without defaults are unaffected.
++- Computed keys in the same template binding patterns are now reported as unsupported (`template-binding-computed-key`). Earlier releases skipped the key expression without analysis.
+ 
+ ## [0.13.0] - 2026-09-24
+ 
+@@ -120,6 +120,12 @@
+   `{@const}` destructuring and `{:then}`/`{:catch}` destructuring. They are reported as `template-binding-default`.
+   Pass the value explicitly or apply the default in script. The same patterns without
+   defaults are supported.
++- Computed keys in the same template binding patterns (`{#each rows as {[key]: value}}`)
++  are unsupported and reported as `template-binding-computed-key`. Use a literal key or
++  destructure in script.
++- Values bound by `{#each}` items, `{@const}` and `{:then}` are analyzed like the script
++  bindings `for (const item of items)`, `const x = value` and `const x = await promise`.
++  Values bound by `{:catch}` are not modeled, like values reaching a script `catch` binding.
+ 
+ Independent source review and functional tests remain required. The result always
+ includes `manualReviewRequired: true` and the bounded qualification scope. Preserve
+@@ -61,6 +61,11 @@
+         errors.push({code: 'unsupported-construct', construct: 'template-binding-default', path: module.path, span: unit.nodeSpan(node),
+           message: 'Defaults in snippet parameters and in {#each}, {@const} and {#await} destructuring are not analyzed; pass the value explicitly or apply the default in script.'});
+       }
++      // A computed key in such a pattern is a runtime expression that is likewise never evaluated.
++      if (unit.kind === 'binding' && ts.isComputedPropertyName(node) && node.parent && ts.isBindingElement(node.parent) && node.parent.propertyName === node) {
++        errors.push({code: 'unsupported-construct', construct: 'template-binding-computed-key', path: module.path, span: unit.nodeSpan(node),
++          message: 'Computed keys in snippet parameters and in {#each}, {@const} and {#await} destructuring are not analyzed; use a literal key or destructure in script.'});
++      }
+       const record = {node, unit, module, function: fn, class: cls, snippet:snippetFor(unit), runtime, id: id(module, unit, node)};
+       info.set(node, record);
+       nodes.push(record);
+@@ -1190,6 +1190,27 @@
+         if (val.size) domain.write(instance, propertyNameKey(member.name), val);
+       }
+     }
++  }
++
++  // Template bindings reuse the script binding flow: `{#each xs as p}` binds like `for (const p of xs)`, `{@const p = v}`
++  // like `const p = v`, and `{:then p}` like `const p = await promise`. Catch values stay unmodeled, like catch bindings.
++  function templateBindingError(module, marker, message) {
++    const key = `${module.path}:${marker.span?.start?.offset ?? 0}:template-binding-correlation:${message}`;
++    if (errorKeys.has(key)) return;
++    errorKeys.add(key);
++    errors.push({code: 'unsupported-construct', construct: 'template-binding-correlation', path: module.path, span: marker.span ?? ZERO_SPAN, message});
++  }
++  function seedTemplateBinding(module, marker) {
++    const unitAt = (kind, node) => node ? module.units.find((unit) => unit.kind === kind && unit.start === node.start && unit.end === node.end) : null;
++    const bind = (pattern, source, project) => {
++      const declaration = unitAt('binding', pattern)?.sourceFile.statements[0]?.declarationList?.declarations[0];
++      const root = unitAt('template', source)?.sourceFile.statements[0]?.expression;
++      if (!declaration || !root) { templateBindingError(module, marker, 'Template binding has no inspectable source value.'); return; }
++      bindPattern(declaration.name, project(value(root), root), declaration);
++    };
++    if (marker.kind === 'each-block' && marker.context) bind(marker.context, marker.expression, (items, root) => readMember(items, '*', root));
++    else if (marker.kind === 'const-tag') for (const declaration of marker.node.declaration?.declarations ?? []) bind(declaration.id, declaration.init, (item) => item);
++    else if (marker.kind === 'await-block' && marker.value) bind(marker.value, marker.expression, (promise) => awaitValue(promise));
+   }
+ 
+   const api = {domain, authority, seedBinding, seedNode, invokeLocal, callableTargets, isActiveNode, reportUnsupported: addError, property, member: readMember, bindingValue, value};
+@@ -1209,6 +1230,7 @@
+       }
+       for (const [classId, record] of context.classes) seedClass(classId, record);
+       for (const declaration of declarations) seedDeclaration(declaration);
++      for (const module of context.modules) for (const marker of module.markers ?? []) seedTemplateBinding(module, marker);
+       for (const {node,runtime} of context.nodes) if (runtime && (ts.isForOfStatement(node) || ts.isForInStatement(node))) {
+         const item = ts.isForOfStatement(node) ? readMember(value(node.expression),'*',node) : empty();
+         if (ts.isVariableDeclarationList(node.initializer)) for (const declaration of node.initializer.declarations) bindPattern(declaration.name,item,declaration);
+@@ -77,3 +77,33 @@
+   assert.equal(script.complete, true, JSON.stringify(script.errors));
+   assert.ok(script.findings.includes('location-write'), JSON.stringify(script));
+ });
++
++test('computed keys in template binding patterns are refused; literal keys and computed names in types are not', (t) => {
++  const store = `import {createStore, Effect} from '@composable-svelte/core';\nconst store = createStore({initialState: {}, reducer: (s: any) => [s, Effect.none()]});`;
++  const refused = [
++    app(``, `{#each [{}] as {[(window.location.href = '/x')]: f}}<p>{f}</p>{/each}`),
++    app(``, `{#each [{}] as {[String(history.pushState(null, '', '/x'))]: f}}<p>{f}</p>{/each}`),
++    app(store, `{#each [{}] as {[String(store.subscribe(() => {}))]: f}}<p>{f}</p>{/each}`),
++    app(resolver, `{#each [{}] as {[String(fire({ok: 1}))]: f}}<p>{f}</p>{/each}`),
++    app(`const obj: any = {};`, `{#if true}{@const {[(window.location.href = '/x')]: f} = obj}<p>{f}</p>{/if}`),
++    app(`const q = Promise.resolve({});`, `{#await q then {[(window.location.href = '/x')]: f}}<p>{f}</p>{/await}`),
++    app(`const q = Promise.resolve({});`, `{#await q}{:catch {[(window.location.href = '/x')]: f}}<p>{f}</p>{/await}`),
++    app(``, `{#snippet s({[(window.location.href = '/x')]: f}: any)}<p>{f}</p>{/snippet}\n{@render s({})}`)
++  ];
++  for (const files of refused) {
++    const result = analyze(t, files);
++    assert.equal(result.complete, false, files['App.svelte']);
++    assert.ok(result.errors.includes('template-binding-computed-key'), `${files['App.svelte']}\n${JSON.stringify(result)}`);
++  }
++  // The same effects written as template expressions are still reported, and literal keys and type-level computed names stay clean.
++  const direct = analyze(t, app(``, `<p>{String(history.pushState(null, '', '/x'))}</p>`));
++  assert.ok(direct.findings.includes('history-write'), JSON.stringify(direct));
++  for (const files of [
++    app(`const rows = [{a: 1}];`, `{#each rows as {'a': v, a: w}}<p>{v}{w}</p>{/each}`),
++    app(``, `{#snippet s(x: {[Symbol.iterator]: () => any; ['a']: number})}<p>{x.a}</p>{/snippet}\n{@render s({a: 1} as any)}`)
++  ]) {
++    const result = analyze(t, files);
++    assert.equal(result.complete, true, JSON.stringify(result.errors));
++    assert.deepEqual(result.errors, []);
++  }
++});

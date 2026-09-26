@@ -3,8 +3,7 @@
  * TileProviderControl - UI control for switching map tile providers
  */
 
-import type { Store } from '@composable-svelte/core';
-import type { MapState, MapAction, TileProvider } from '../types/map.types.js';
+import type { MapStore, TileProvider } from '../types/map.types.js';
 import { getAvailableTileProviders, type TileProviderConfig } from '../utils/tile-providers.js';
 
 // Props
@@ -13,7 +12,7 @@ let {
   position = 'top-right',
   class: className = ''
 }: {
-  store: Store<MapState, MapAction>;
+  store: MapStore;
   position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | undefined;
   class?: string | undefined;
 } = $props();
@@ -22,10 +21,11 @@ let {
 const providers = getAvailableTileProviders();
 
 // Current provider
-const currentProvider = $derived($store.tileProvider);
+const currentProvider = $derived($store?.tileProvider);
 
 // Handle provider change
 function handleChange(event: Event) {
+  if (store.state === undefined) return;
   const select = event.target as HTMLSelectElement;
   const provider = select.value as TileProvider;
 
@@ -52,6 +52,7 @@ const positionClass = $derived({
     id="tile-provider-select"
     class="tile-provider-select"
     value={currentProvider}
+    disabled={$store === undefined}
     onchange={handleChange}
   >
     {#each providers as provider}

@@ -1,0 +1,421 @@
+{
+  "schema": "composable-final-checker/auth-derivative-controls/v1",
+  "label": "PRE-REGISTRATION: installed pre-registration checker 70dac58a (8 registered policies, auth not registered); cleared R6 Core/Auth local tarballs; derivative from FINAL App-B snapshot 2f289af3",
+  "at": "2026-09-26T14:51:25.141Z",
+  "checker": {
+    "bin": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-final-deriv-j1NC/checker-host-p8/node_modules/@composable-svelte/architecture/bin/composable-svelte-architecture.mjs",
+    "source": "packages/architecture working source"
+  },
+  "policies": {
+    "exact": {
+      "path": "/private/tmp/composable-final-checker/profile-phase/auth-derivative/final/pre-registration/policies/exact-proposed-bundled-auth.json",
+      "sha256": "ab100ba510f5cdc4931bca33e0dc398d21f1382010b51ed44242d30dc6846662"
+    },
+    "candidate": {
+      "path": "/private/tmp/composable-final-checker/profile-phase/auth-derivative/final/pre-registration/policies/candidate-auth.json",
+      "sha256": "4c12b0bed1ce3fe43b0bec57d76e1c758bff2bcc0ad4e26fff76b698c357eda2"
+    },
+    "appb": {
+      "path": "/private/tmp/composable-final-checker/profile-phase/auth-derivative/final/pre-registration/policies/external-app-b-auth-charts.json",
+      "sha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de"
+    }
+  },
+  "derivative": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-final-deriv-j1NC/derived-installed",
+  "original": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-final-deriv-j1NC/app-b-original-installed",
+  "failures": 0,
+  "rows": [
+    {
+      "label": "POSITIVE exact proposed Auth-only bytes on derivative",
+      "project": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-final-deriv-j1NC/derived-installed",
+      "ok": true,
+      "exit": 0,
+      "isQualificationPass": true,
+      "policy": {
+        "id": "bundled-auth",
+        "sha256": "ab100ba510f5cdc4931bca33e0dc398d21f1382010b51ed44242d30dc6846662"
+      },
+      "enforced": 5,
+      "violations": 0,
+      "packageSpecifiers": [
+        "@composable-svelte/auth",
+        "@composable-svelte/auth/application",
+        "@composable-svelte/auth/components",
+        "@composable-svelte/auth/flows",
+        "@composable-svelte/auth/testing",
+        "@composable-svelte/core",
+        "@composable-svelte/core/application",
+        "svelte"
+      ],
+      "errors": []
+    },
+    {
+      "label": "POSITIVE candidate-auth (policyId differs) on derivative",
+      "project": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-final-deriv-j1NC/derived-installed",
+      "ok": true,
+      "exit": 0,
+      "isQualificationPass": true,
+      "policy": {
+        "id": "candidate-auth",
+        "sha256": "4c12b0bed1ce3fe43b0bec57d76e1c758bff2bcc0ad4e26fff76b698c357eda2"
+      },
+      "enforced": 5,
+      "violations": 0,
+      "packageSpecifiers": [
+        "@composable-svelte/auth",
+        "@composable-svelte/auth/application",
+        "@composable-svelte/auth/components",
+        "@composable-svelte/auth/flows",
+        "@composable-svelte/auth/testing",
+        "@composable-svelte/core",
+        "@composable-svelte/core/application",
+        "svelte"
+      ],
+      "errors": []
+    },
+    {
+      "label": "NEG envelope expects checker 0.13.0",
+      "project": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-final-deriv-j1NC/derived-installed",
+      "ok": true,
+      "exit": 0,
+      "isQualificationPass": false,
+      "policy": {
+        "id": "bundled-auth",
+        "sha256": "ab100ba510f5cdc4931bca33e0dc398d21f1382010b51ed44242d30dc6846662"
+      },
+      "enforced": 5,
+      "violations": 0,
+      "packageSpecifiers": [
+        "@composable-svelte/auth",
+        "@composable-svelte/auth/application",
+        "@composable-svelte/auth/components",
+        "@composable-svelte/auth/flows",
+        "@composable-svelte/auth/testing",
+        "@composable-svelte/core",
+        "@composable-svelte/core/application",
+        "svelte"
+      ],
+      "errors": []
+    },
+    {
+      "label": "NEG wrong --policy-sha256",
+      "project": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-final-deriv-j1NC/derived-installed",
+      "ok": true,
+      "exit": 21,
+      "isQualificationPass": false,
+      "policy": {
+        "id": null,
+        "sha256": "ab100ba510f5cdc4931bca33e0dc398d21f1382010b51ed44242d30dc6846662"
+      },
+      "enforced": 0,
+      "violations": 0,
+      "errors": [
+        {
+          "code": "policy-pin-mismatch",
+          "construct": null,
+          "path": null,
+          "line": null,
+          "message": "policy bytes do not match the supplied sha256 pin"
+        }
+      ]
+    },
+    {
+      "label": "NEG wrong expected core 0.13.0",
+      "project": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-final-deriv-j1NC/derived-installed",
+      "ok": true,
+      "exit": 21,
+      "isQualificationPass": false,
+      "policy": {
+        "id": "bundled-auth",
+        "sha256": "ab100ba510f5cdc4931bca33e0dc398d21f1382010b51ed44242d30dc6846662"
+      },
+      "enforced": 0,
+      "violations": 0,
+      "packageSpecifiers": [
+        "@composable-svelte/auth",
+        "@composable-svelte/auth/application",
+        "@composable-svelte/auth/components",
+        "@composable-svelte/auth/flows",
+        "@composable-svelte/auth/testing",
+        "@composable-svelte/core",
+        "@composable-svelte/core/application",
+        "svelte"
+      ],
+      "errors": [
+        {
+          "code": "core-version-mismatch",
+          "construct": null,
+          "path": null,
+          "line": null,
+          "message": "installed core 0.13.1 is not the expected 0.13.0"
+        }
+      ]
+    },
+    {
+      "label": "NEG auth pin 0.3.1",
+      "project": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-final-deriv-j1NC/derived-installed",
+      "ok": true,
+      "exit": 21,
+      "isQualificationPass": false,
+      "policy": {
+        "id": "bundled-auth",
+        "sha256": "3eb9c9f9123b838add63c66b55d5da85af46227dabc7a76bb61322ada15072d8"
+      },
+      "enforced": 0,
+      "violations": 0,
+      "packageSpecifiers": [
+        "@composable-svelte/auth",
+        "@composable-svelte/auth/application",
+        "@composable-svelte/auth/flows",
+        "@composable-svelte/core",
+        "@composable-svelte/core/application",
+        "svelte"
+      ],
+      "errors": [
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/components/ChangePasswordView.svelte",
+          "line": 2,
+          "message": "installed package name or version does not match external approval: @composable-svelte/auth (@composable-svelte/auth@0.3.0 !== @composable-svelte/auth@0.3.1)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/components/LoginView.svelte",
+          "line": 2,
+          "message": "installed package name or version does not match external approval: @composable-svelte/auth (@composable-svelte/auth@0.3.0 !== @composable-svelte/auth@0.3.1)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/components/MfaView.svelte",
+          "line": 2,
+          "message": "installed package name or version does not match external approval: @composable-svelte/auth (@composable-svelte/auth@0.3.0 !== @composable-svelte/auth@0.3.1)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/controlled-backend.ts",
+          "line": 1,
+          "message": "installed package name or version does not match external approval: @composable-svelte/auth (@composable-svelte/auth@0.3.0 !== @composable-svelte/auth@0.3.1)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/model.ts",
+          "line": 15,
+          "message": "installed package name or version does not match external approval: @composable-svelte/auth (@composable-svelte/auth@0.3.0 !== @composable-svelte/auth@0.3.1)"
+        }
+      ]
+    },
+    {
+      "label": "NEG auth approval absent",
+      "project": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-final-deriv-j1NC/derived-installed",
+      "ok": true,
+      "exit": 21,
+      "isQualificationPass": false,
+      "policy": {
+        "id": "bundled-auth",
+        "sha256": "da6bfe5fdac1f10378e8e6a440b2b8dd82185aad55aa34ffa21f3661cd3efa59"
+      },
+      "enforced": 0,
+      "violations": 0,
+      "packageSpecifiers": [
+        "@composable-svelte/auth",
+        "@composable-svelte/auth/application",
+        "@composable-svelte/auth/flows",
+        "@composable-svelte/core",
+        "@composable-svelte/core/application",
+        "svelte"
+      ],
+      "errors": [
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/components/ChangePasswordView.svelte",
+          "line": 2,
+          "message": "package lacks external opaque-package approval: @composable-svelte/auth"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/components/LoginView.svelte",
+          "line": 2,
+          "message": "package lacks external opaque-package approval: @composable-svelte/auth"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/components/MfaView.svelte",
+          "line": 2,
+          "message": "package lacks external opaque-package approval: @composable-svelte/auth"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/controlled-backend.ts",
+          "line": 1,
+          "message": "package lacks external opaque-package approval: @composable-svelte/auth"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/model.ts",
+          "line": 15,
+          "message": "package lacks external opaque-package approval: @composable-svelte/auth"
+        }
+      ]
+    },
+    {
+      "label": "NEG svelte pin 5.57.0",
+      "project": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-final-deriv-j1NC/derived-installed",
+      "ok": true,
+      "exit": 21,
+      "isQualificationPass": false,
+      "policy": {
+        "id": "bundled-auth",
+        "sha256": "b309e44bf01ea868fafa897c49261cd2bf8083458495b117260eeef3797a7c04"
+      },
+      "enforced": 0,
+      "violations": 0,
+      "packageSpecifiers": [
+        "@composable-svelte/auth",
+        "@composable-svelte/auth/application",
+        "@composable-svelte/auth/components",
+        "@composable-svelte/auth/flows",
+        "@composable-svelte/auth/testing",
+        "@composable-svelte/core",
+        "@composable-svelte/core/application"
+      ],
+      "errors": [
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/main.ts",
+          "line": 1,
+          "message": "installed package name or version does not match external approval: svelte (svelte@5.55.3 !== svelte@5.57.0)"
+        }
+      ]
+    },
+    {
+      "label": "NEG incomplete analysis (missing root)",
+      "project": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-final-deriv-j1NC/derived-installed",
+      "ok": true,
+      "exit": 21,
+      "isQualificationPass": false,
+      "policy": {
+        "id": "bundled-auth",
+        "sha256": "5cdeee5b9fd5d87ba9dc1d6999ecfea89bfaa3200a1c231722ac87388f62e8eb"
+      },
+      "enforced": 0,
+      "violations": 0,
+      "packageSpecifiers": [
+        "@composable-svelte/auth",
+        "@composable-svelte/auth/application",
+        "@composable-svelte/auth/components",
+        "@composable-svelte/auth/flows",
+        "@composable-svelte/auth/testing",
+        "@composable-svelte/core",
+        "@composable-svelte/core/application",
+        "svelte"
+      ],
+      "errors": [
+        {
+          "code": "missing-root",
+          "construct": null,
+          "path": "src/missing-root.ts",
+          "line": null,
+          "message": "root is not an existing regular file"
+        }
+      ]
+    },
+    {
+      "label": "NEG ORIGINAL Auth+Charts App-B under exact Auth-only policy (Charts unapproved)",
+      "project": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-final-deriv-j1NC/app-b-original-installed",
+      "ok": true,
+      "exit": 21,
+      "isQualificationPass": false,
+      "policy": {
+        "id": "bundled-auth",
+        "sha256": "ab100ba510f5cdc4931bca33e0dc398d21f1382010b51ed44242d30dc6846662"
+      },
+      "enforced": 0,
+      "violations": 0,
+      "packageSpecifiers": [
+        "@composable-svelte/auth",
+        "@composable-svelte/auth/application",
+        "@composable-svelte/auth/components",
+        "@composable-svelte/auth/flows",
+        "@composable-svelte/auth/testing",
+        "@composable-svelte/core",
+        "@composable-svelte/core/application",
+        "svelte"
+      ],
+      "errors": [
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/components/ChartView.svelte",
+          "line": 2,
+          "message": "package lacks external opaque-package approval: @composable-svelte/charts"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/model.ts",
+          "line": 21,
+          "message": "package lacks external opaque-package approval: @composable-svelte/charts"
+        }
+      ]
+    },
+    {
+      "label": "CONTROL original App-B under external Auth+Charts policy",
+      "project": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-final-deriv-j1NC/app-b-original-installed",
+      "ok": true,
+      "exit": 0,
+      "isQualificationPass": true,
+      "policy": {
+        "id": "external-app-b-auth-charts",
+        "sha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de"
+      },
+      "enforced": 5,
+      "violations": 0,
+      "packageSpecifiers": [
+        "@composable-svelte/auth",
+        "@composable-svelte/auth/application",
+        "@composable-svelte/auth/components",
+        "@composable-svelte/auth/flows",
+        "@composable-svelte/auth/testing",
+        "@composable-svelte/charts",
+        "@composable-svelte/core",
+        "@composable-svelte/core/application",
+        "svelte"
+      ],
+      "errors": []
+    },
+    {
+      "label": "CONTROL derivative under Auth+Charts policy (unused Charts approval is harmless)",
+      "project": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-final-deriv-j1NC/derived-installed",
+      "ok": true,
+      "exit": 0,
+      "isQualificationPass": true,
+      "policy": {
+        "id": "external-app-b-auth-charts",
+        "sha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de"
+      },
+      "enforced": 5,
+      "violations": 0,
+      "packageSpecifiers": [
+        "@composable-svelte/auth",
+        "@composable-svelte/auth/application",
+        "@composable-svelte/auth/components",
+        "@composable-svelte/auth/flows",
+        "@composable-svelte/auth/testing",
+        "@composable-svelte/core",
+        "@composable-svelte/core/application",
+        "svelte"
+      ],
+      "errors": []
+    }
+  ]
+}

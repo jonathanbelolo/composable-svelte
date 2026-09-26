@@ -175,6 +175,10 @@ export const selectReducer: Reducer<
 
 		case 'optionSelected': {
 			const { value } = action;
+			const option = state.options.find((o) => o.value === value);
+			if (option?.disabled) {
+				return [state, Effect.none()];
+			}
 
 			// For single select, set value and close
 			const newState: SelectState<any> = {
@@ -206,6 +210,11 @@ export const selectReducer: Reducer<
 			}
 
 			const { value } = action;
+			const option = state.options.find((o) => o.value === value);
+			if (option?.disabled) {
+				return [state, Effect.none()];
+			}
+
 			const currentSelected = Array.isArray(state.selected) ? state.selected : [];
 
 			const isSelected = currentSelected.includes(value);

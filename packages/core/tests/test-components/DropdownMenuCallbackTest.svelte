@@ -12,6 +12,6 @@
 
 <DropdownMenu items={ITEMS} {onSelect}>
 	{#snippet children()}
-		<button type="button">Open</button>
+		<span>Open</span>
 	{/snippet}
 </DropdownMenu>

@@ -1,0 +1,319 @@
+{
+  "schema": "dependency-correction-handoff/1",
+  "generatedAt": "2026-09-26T14:13:24+00:00",
+  "author": "Opus 5.5 (claude-opus-5-5)",
+  "authorization": "parent-authorized implementation of DEPENDENCY-EXTENSION-ASSESSMENT.md; candidate only; no repack/commit/push/publish",
+  "candidateRoot": "/private/tmp/companion-runtime-release/candidate",
+  "assessment": "/private/tmp/companion-runtime-release/DEPENDENCY-EXTENSION-ASSESSMENT.md",
+  "report": "/private/tmp/companion-runtime-release/DEPENDENCY-CORRECTION.md",
+  "appliedDiff": {
+    "path": "/private/tmp/companion-runtime-release/dependency-correction/APPLIED-CHANGE.diff",
+    "sha256": "82b23795752bfc0c4eac77400376e71e2aaf1906af9c937c27b6ab4394ee0e94"
+  },
+  "baselineFolder": "/private/tmp/companion-runtime-release/dependency-correction/baseline (read-only copies of every modified path, pre-correction bytes)",
+  "paths": [
+    {
+      "path": "packages/auth/README.md",
+      "change": "modified",
+      "shipsInArchive": "auth",
+      "sha256Before": "e5f118647f3edaae283abafa0b297a4f12851d8743a5f3b783e2a87e0977b340",
+      "sha256After": "32dfa7e539d3c1bf47e48e873d8237523eb35d4c9b89c051f420f0abdc5de480",
+      "baselineCopy": "/private/tmp/companion-runtime-release/dependency-correction/baseline/packages/auth/README.md"
+    },
+    {
+      "path": "packages/auth/tests/managed-auth-dependency-extension.types.ts",
+      "change": "added",
+      "shipsInArchive": null,
+      "sha256Before": null,
+      "sha256After": "f93a8c37ba7d33d9345744b9e8487789b0f44f4b598fe4cd87a1bf11044f1424",
+      "baselineCopy": null
+    },
+    {
+      "path": "packages/core/CHANGELOG.md",
+      "change": "modified",
+      "shipsInArchive": "core",
+      "sha256Before": "27b8e21ca2949cf58b65ad662cd8da3c553660ceb8d4e8482194864df3c3d316",
+      "sha256After": "a06299329da9ab8ca7691dd3716ed28956613eeeb573804bddf49549fcb0ed93",
+      "baselineCopy": "/private/tmp/companion-runtime-release/dependency-correction/baseline/packages/core/CHANGELOG.md"
+    },
+    {
+      "path": "packages/core/dist/navigation/managed-integration.d.ts",
+      "change": "modified",
+      "shipsInArchive": "core",
+      "sha256Before": "69ece6112991c6efb430805e97dc24522e055b84c2c48e430f65577f69126c28",
+      "sha256After": "a3c40f9462718a44bd5efdde4bff01ce1270e2cda9dfd27ed70c112c4523e10f",
+      "baselineCopy": "/private/tmp/companion-runtime-release/dependency-correction/baseline/packages/core/dist/navigation/managed-integration.d.ts"
+    },
+    {
+      "path": "packages/core/dist/navigation/managed-integration.d.ts.map",
+      "change": "modified",
+      "shipsInArchive": "core",
+      "sha256Before": "e8af1b7a91800672bcf8ca72186dfc708866e00c06be8311adf303f1f5e797fc",
+      "sha256After": "944ea71ec68817969f637c6d36a7d94759301994d73206810a0ac6ee82f61be7",
+      "baselineCopy": "/private/tmp/companion-runtime-release/dependency-correction/baseline/packages/core/dist/navigation/managed-integration.d.ts.map"
+    },
+    {
+      "path": "packages/core/dist/types.d.ts",
+      "change": "modified",
+      "shipsInArchive": "core",
+      "sha256Before": "9e435b9187bec2753bfd4766e13803c36d55d3c0b39db34ba20fa6a9eb259b67",
+      "sha256After": "ae221395587f510d50953b192bcc8a020e172d9e9bcea7ca9b76a12bfac50ba6",
+      "baselineCopy": "/private/tmp/companion-runtime-release/dependency-correction/baseline/packages/core/dist/types.d.ts"
+    },
+    {
+      "path": "packages/core/dist/types.d.ts.map",
+      "change": "modified",
+      "shipsInArchive": "core",
+      "sha256Before": "52f2fec41a1c3318612a9b5c00e5cae5597bb09e0467c5797bf838966d72824d",
+      "sha256After": "8a84e016e991790cf674e294be3581ff9c84754aaacbd8dcdbc469f44a7f2676",
+      "baselineCopy": "/private/tmp/companion-runtime-release/dependency-correction/baseline/packages/core/dist/types.d.ts.map"
+    },
+    {
+      "path": "packages/core/docs/consumer.md",
+      "change": "modified",
+      "shipsInArchive": "core",
+      "sha256Before": "56d387f93e4ddb68eb09a5a6de4a875ec8c3538581b1cee137b1b9bab396a6c3",
+      "sha256After": "232b7b46fa2f01d81c9aafb34bd2dbd58d0d44a9e88cacd56b110bcc46fdd9c1",
+      "baselineCopy": "/private/tmp/companion-runtime-release/dependency-correction/baseline/packages/core/docs/consumer.md"
+    },
+    {
+      "path": "packages/core/src/lib/navigation/managed-integration.ts",
+      "change": "modified",
+      "shipsInArchive": null,
+      "sha256Before": "a3aa12289b99bcd9b3701ace2519554466a554482ffa65199eb641f6632ed10b",
+      "sha256After": "05fb61783193aa7e11bd2f46179e55144d9023149e4da0806bc455e10705dd21",
+      "baselineCopy": "/private/tmp/companion-runtime-release/dependency-correction/baseline/packages/core/src/lib/navigation/managed-integration.ts"
+    },
+    {
+      "path": "packages/core/src/lib/types.ts",
+      "change": "modified",
+      "shipsInArchive": null,
+      "sha256Before": "60df5635e7abb563bed200195adacf5a01f4fe7dcc9884a955a8fbaf03f0c66f",
+      "sha256After": "a1ea53585a6621d6d9939fe2396f1f389e10b5d414c5e806e84c4e7b511c05aa",
+      "baselineCopy": "/private/tmp/companion-runtime-release/dependency-correction/baseline/packages/core/src/lib/types.ts"
+    },
+    {
+      "path": "packages/core/tests/managed-dependency-extension.emitted.types.ts",
+      "change": "added",
+      "shipsInArchive": null,
+      "sha256Before": null,
+      "sha256After": "f6db2d91518986d13c9ff8b0b5aa16f9416c401898f550cd2977c252c29bb9ff",
+      "baselineCopy": null
+    },
+    {
+      "path": "packages/core/tests/managed-dependency-extension.types.ts",
+      "change": "added",
+      "shipsInArchive": null,
+      "sha256Before": null,
+      "sha256After": "32c141613cfdfa0f915562b4b88d21d15f83a3dc93e8bb573ff7d70f0ca8f040",
+      "baselineCopy": null
+    },
+    {
+      "path": "packages/core/tsconfig.application-public-managed-types-emitted.json",
+      "change": "modified",
+      "shipsInArchive": null,
+      "sha256Before": "f35a44e54a739b9a2f2083764a20c3c98ef6855b07ee6d61f4f247a8a7b66bac",
+      "sha256After": "91df1dda9317998d002fdaa5544d5ae3f15273e552ff2580e19543b9596f1d76",
+      "baselineCopy": "/private/tmp/companion-runtime-release/dependency-correction/baseline/packages/core/tsconfig.application-public-managed-types-emitted.json"
+    }
+  ],
+  "treeVerification": {
+    "scope": "every regular file under candidate/ excluding node_modules directories and symlinks",
+    "filesBefore": 6998,
+    "filesAfter": 7001,
+    "added": [
+      "packages/auth/tests/managed-auth-dependency-extension.types.ts",
+      "packages/core/tests/managed-dependency-extension.emitted.types.ts",
+      "packages/core/tests/managed-dependency-extension.types.ts"
+    ],
+    "modified": [
+      "packages/auth/README.md",
+      "packages/core/CHANGELOG.md",
+      "packages/core/dist/navigation/managed-integration.d.ts",
+      "packages/core/dist/navigation/managed-integration.d.ts.map",
+      "packages/core/dist/types.d.ts",
+      "packages/core/dist/types.d.ts.map",
+      "packages/core/docs/consumer.md",
+      "packages/core/src/lib/navigation/managed-integration.ts",
+      "packages/core/src/lib/types.ts",
+      "packages/core/tsconfig.application-public-managed-types-emitted.json"
+    ],
+    "removed": [],
+    "unrelatedPathsChanged": 0,
+    "beforeSnapshot": "/private/tmp/companion-runtime-release/dependency-correction/evidence/tree-before.json",
+    "afterSnapshot": "/private/tmp/companion-runtime-release/dependency-correction/evidence/tree-after.json",
+    "baselineRestoreProof": "scratch copy with baseline/ restored and new files removed hashes identical to tree-before.json (6998 files)"
+  },
+  "coreSignatureChange": {
+    "packages/core/src/lib/types.ts:219-220": "ManagedReductionAdapter<State, Action, Dependencies> = <Supplied extends Dependencies>(input: ManagedReductionInput<State, Action, Supplied>) => \u2026",
+    "packages/core/src/lib/navigation/managed-integration.ts:383": "reduce<Supplied extends D = D>(state: S, action: A, deps: Supplied, context: Context, core: Reducer<S, A, Supplied> = this.reducer): Result<S, A>",
+    "commentsChanged": false,
+    "castsAnyUnknownAdded": false,
+    "newRuntimeAbstraction": false
+  },
+  "runtimeEquality": {
+    "r4CoreArchive": {
+      "path": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-core-0.13.1.tgz",
+      "sha256": "30e044e139e831033e06fdf626db979875efa2f7c29d72dece33a21db112d18b"
+    },
+    "buildCommand": "svelte-package -o dist && node ../../scripts/emit-svelte-declaration-bridges.mjs dist (in scratch mirrors with the package tsconfig, svelte.config.js, postcss.config.cjs, tailwind.config.ts)",
+    "buildOracle": {
+      "unchangedSourceBuildVsR4Dist": {
+        "files": 1163,
+        "differ": [],
+        "onlyR4": [],
+        "onlyBuild": []
+      }
+    },
+    "correctedBuildVsR4Dist": {
+      "files": 1163,
+      "differ": [
+        "navigation/managed-integration.d.ts",
+        "navigation/managed-integration.d.ts.map",
+        "types.d.ts",
+        "types.d.ts.map"
+      ],
+      "onlyR4": [],
+      "onlyBuild": [],
+      "nonDeclarationFilesCompared": 471,
+      "nonDeclarationFilesDiffer": [],
+      "declarationMapsDifferOnly": "mappings"
+    },
+    "candidateDistVsCorrectedBuild": {
+      "files": 1163,
+      "differ": []
+    },
+    "allEmittedRuntimeJsAndNonJsAssetsByteIdenticalToR4": true,
+    "evidence": [
+      "/private/tmp/companion-runtime-release/dependency-correction/evidence/compare-r4-vs-build-before.json",
+      "/private/tmp/companion-runtime-release/dependency-correction/evidence/compare-r4-vs-build-after.json",
+      "/private/tmp/companion-runtime-release/dependency-correction/evidence/compare-build-after-vs-candidate-dist.json",
+      "/private/tmp/companion-runtime-release/dependency-correction/evidence/dist-declaration.diff"
+    ]
+  },
+  "shippedArchiveImpact": {
+    "core": {
+      "version": "0.13.1",
+      "fileListEqualToR4": true,
+      "files": 1258,
+      "changedShippedFiles": [
+        "CHANGELOG.md",
+        "dist/navigation/managed-integration.d.ts",
+        "dist/navigation/managed-integration.d.ts.map",
+        "dist/types.d.ts",
+        "dist/types.d.ts.map",
+        "docs/consumer.md"
+      ],
+      "requires": "repack + requalification by coordinator after fresh independent review"
+    },
+    "auth": {
+      "version": "0.3.0",
+      "fileListEqualToR4": true,
+      "files": 404,
+      "changedShippedFiles": [
+        "README.md"
+      ],
+      "requires": "repack (README only; dist unchanged) + requalification by coordinator"
+    },
+    "otherArchives": "unchanged (charts, chat, code, media, maps, graphics); R4 and R5 manifests re-verified by sha256"
+  },
+  "checks": [
+    {
+      "name": "core src tsc --noEmit (composite/incremental off, no tsbuildinfo written)",
+      "exit": 0,
+      "log": "/private/tmp/companion-runtime-release/dependency-correction/evidence/core-tsc-src.after.stdout"
+    },
+    {
+      "name": "core focused src-level dependency-extension types test",
+      "after": "exit 0",
+      "before(original src)": "exit 2: positives only (lines 51, 58 TS2345); all negatives still rejected",
+      "logs": [
+        "/private/tmp/companion-runtime-release/dependency-correction/evidence/core-src-types.after.stdout",
+        "/private/tmp/companion-runtime-release/dependency-correction/evidence/core-src-types.before.stdout"
+      ]
+    },
+    {
+      "name": "core public emitted-declaration check (tsconfig.application-public-managed-types-emitted.json, outDir redirected to scratch)",
+      "after": "exit 0",
+      "before(R4 dist)": "exit 2: positive line 42 only",
+      "logs": [
+        "/private/tmp/companion-runtime-release/dependency-correction/evidence/core-public-emitted.after.stdout",
+        "/private/tmp/companion-runtime-release/dependency-correction/evidence/core-public-emitted.before.stdout"
+      ]
+    },
+    {
+      "name": "existing core *.types.ts + 10 _reduce seam tests (plain tsc) before vs after",
+      "result": "identical 10 pre-existing tsc-only errors (ImportMeta.env; .svelte ApplicationRoot seen as any)",
+      "logs": [
+        "/private/tmp/companion-runtime-release/dependency-correction/evidence/inference.before.errors",
+        "/private/tmp/companion-runtime-release/dependency-correction/evidence/inference.after.errors"
+      ]
+    },
+    {
+      "name": "core svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings",
+      "exit": 0,
+      "result": "1674 files, 0 errors, 0 warnings",
+      "log": "/private/tmp/companion-runtime-release/dependency-correction/evidence/core-svelte-check.after.log"
+    },
+    {
+      "name": "auth focused dependency-extension types test (core via public dist)",
+      "after": "exit 0",
+      "before(R4 core dist)": "exit 2: TS2769 at composition line 48 only",
+      "logs": [
+        "/private/tmp/companion-runtime-release/dependency-correction/evidence/auth-types.after.stdout",
+        "/private/tmp/companion-runtime-release/dependency-correction/evidence/auth-types.before.stdout"
+      ]
+    },
+    {
+      "name": "auth svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings",
+      "exit": 0,
+      "result": "745 files, 0 errors, 0 warnings",
+      "log": "/private/tmp/companion-runtime-release/dependency-correction/evidence/auth-svelte-check.after.log"
+    },
+    {
+      "name": "auth src tsc --noEmit (composite/incremental off)",
+      "exit": 0,
+      "log": "/private/tmp/companion-runtime-release/dependency-correction/evidence/auth-tsc-src.after.stdout"
+    },
+    {
+      "name": "core repo doc/changelog/coverage/freshness/published/export gates (8 files, vitest.node.config.ts)",
+      "result": "123 passed / 5 failed + front-door load error, per-test statuses identical before vs after; all failures from absent .claude/, guides/, CLAUDE.md in this candidate tree",
+      "logs": [
+        "/private/tmp/companion-runtime-release/dependency-correction/evidence/core-repo-gates.before.log",
+        "/private/tmp/companion-runtime-release/dependency-correction/evidence/core-repo-gates.after.log",
+        "/private/tmp/companion-runtime-release/dependency-correction/evidence/core-repo-gates.before.tests",
+        "/private/tmp/companion-runtime-release/dependency-correction/evidence/core-repo-gates.after.tests"
+      ]
+    },
+    {
+      "name": "new doc fences compiled directly (doc-typecheck path mapping to built dist)",
+      "after": "exit 0",
+      "before(R4 dist)": "TS2769 at each .with line",
+      "logs": [
+        "/private/tmp/companion-runtime-release/dependency-correction/evidence/doc-fences.after.stdout",
+        "/private/tmp/companion-runtime-release/dependency-correction/evidence/doc-fences.before.stdout"
+      ]
+    },
+    {
+      "name": "installed-layout public d.ts tests (R4 archives overlaid with candidate shipped files, installed as real packages)",
+      "after": "exit 2 with exactly the 3 intended negatives: n1(12) TS2769 fetchAccount missing; n1(21) TS2769 fetchRows missing (reverse direction); n1(27) TS2322 fetchActivity missing",
+      "before(pristine R4)": "additionally r1, r2, p1, n1(25), both doc fences fail TS2769",
+      "dir": "/private/tmp/companion-runtime-release/dependency-correction/installed-consumer",
+      "overlayProof": "/private/tmp/companion-runtime-release/dependency-correction/evidence/installed-overlay.json"
+    }
+  ],
+  "incidental": [
+    "vitest updated its pre-existing duration cache packages/core/node_modules/.vite/vitest/da39a3ee5e6b4b0d3255bfef95601890afd80709/results.json (not shipped, not in tree scope)",
+    "empty packages/core/node_modules/.vite-temp created by vitest was removed",
+    "pre-existing symlink packages/core/node_modules/node_modules (13:45, before this work) left untouched"
+  ],
+  "notDone": [
+    "repack",
+    "publish",
+    "commit",
+    "push",
+    "main edits",
+    "broad test suites",
+    "version bumps"
+  ]
+}

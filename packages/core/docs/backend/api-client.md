@@ -546,6 +546,17 @@ clients that failed together do not retry together. A `Retry-After` header
 replaces the computed delay, capped at `maxDelay`. A caller that detaches
 during the sleep ends it; the attempt is not resent.
 
+`Retry-After` field names are case-insensitive. Values accept complete nonnegative
+integer seconds or an HTTP date (IMF-fixdate, obsolete RFC850, or asctime). The ISO
+extension accepts `YYYY-MM-DD` at UTC midnight or a full date-time with an explicit
+`Z` or `±HH:MM` timezone, with optional fractional seconds. Invalid calendar dates
+are rejected. HTTP leap seconds normalize to the next representable second;
+the ISO extension accepts seconds 00–59. RFC850 two-digit years use the latest
+matching year at or before the timestamp fifty calendar years ahead, including
+across century boundaries. **Compatibility correction:** natural-language dates and ISO
+date-times without a timezone are no longer accepted through permissive
+`Date.parse`; send an HTTP date or an explicit-zone ISO value instead.
+
 ## Deduplication
 
 Identical concurrent requests on one client are coalesced into one fetch, and
@@ -1006,6 +1017,13 @@ case 'trackEvent':
 ```
 
 ### Effect.apiAll()
+
+All requests start in parallel. The first settled rejection produces one failure
+action; other requests stay observed and are not automatically aborted. Their
+cancellation remains governed by their own request signals. Request order does
+not determine which failure wins. Existing `APIError` identity is preserved;
+foreign `Error` values are normalized with the original error retained as a
+non-enumerable `cause` for diagnostics.
 
 Parallel API calls:
 

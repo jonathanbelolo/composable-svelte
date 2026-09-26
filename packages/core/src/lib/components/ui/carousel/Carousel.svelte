@@ -1,4 +1,5 @@
 <script lang="ts" generics="T = unknown">
+  import { onDestroy, untrack } from 'svelte';
   import { createStore } from '../../../store.svelte.js';
   import { animateCarouselTrack } from '../../../animation/animate.js';
   import { carouselReducer } from './carousel.reducer.js';
@@ -62,13 +63,12 @@
     }
   });
 
-  // Start auto-play if configured (only run once on mount)
-  let autoPlayInitialized = false;
+  onDestroy(() => store.destroy());
+
+  // Track only the configuration prop, not state read internally by dispatch.
   $effect(() => {
-    if (autoPlayInterval > 0 && !autoPlayInitialized) {
-      autoPlayInitialized = true;
-      store.dispatch({ type: 'autoPlayStarted' });
-    }
+    const interval = autoPlayInterval;
+    untrack(() => store.dispatch({ type: 'autoPlayStarted', interval }));
   });
 
   // Captured once, never reactive — the track's position before any animation,
@@ -93,18 +93,26 @@
   // re-triggers the effect it lives in.
   let trackElement: HTMLElement | null = $state(null);
   let lastAnimatedIndex: number | undefined = undefined;
+  let lastAnimatedElement: HTMLElement | null = null;
+
+  const animatedIndex = $derived($store.currentIndex);
+  const animatedTransitionId = $derived($store.transitionId);
 
   $effect(() => {
-    const index = $store.currentIndex;
-    if (!trackElement || lastAnimatedIndex === index) return;
+    const index = animatedIndex;
+    const transitionId = animatedTransitionId;
+    if (!trackElement || (lastAnimatedIndex === index && lastAnimatedElement === trackElement)) return;
 
     const first = lastAnimatedIndex === undefined;
     lastAnimatedIndex = index;
+    lastAnimatedElement = trackElement;
     if (first) return; // the markup already placed the track
 
-    animateCarouselTrack(trackElement, -index * 100, transitionDuration).then(() => {
-      queueMicrotask(() => store.dispatch({ type: 'transitionCompleted' }));
+    let active = true;
+    animateCarouselTrack(trackElement, -index * 100, untrack(() => transitionDuration)).then(() => {
+      queueMicrotask(() => { if (active) store.dispatch({ type: 'transitionCompleted', transitionId }); });
     });
+    return () => { active = false; };
   });
 
   function handlePrevious() {
@@ -146,11 +154,11 @@
 
   // Compute whether prev/next buttons should be disabled
   const canGoPrevious = $derived(
-    loop || $store.currentIndex > 0
+    $store.slides.length > 1 && (loop || $store.currentIndex > 0)
   );
 
   const canGoNext = $derived(
-    loop || $store.currentIndex < $store.slides.length - 1
+    $store.slides.length > 1 && (loop || $store.currentIndex < $store.slides.length - 1)
   );
 
   const currentSlide = $derived($store.slides[$store.currentIndex]);

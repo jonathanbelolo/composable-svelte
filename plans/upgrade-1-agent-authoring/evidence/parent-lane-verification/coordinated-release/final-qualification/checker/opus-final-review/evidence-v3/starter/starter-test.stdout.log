@@ -1,0 +1,15 @@
+
+> test
+> vitest run
+
+6:20:04 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-final-starter-A1Cf/starter - using default configuration.
+
+ RUN  v4.0.7 /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-final-starter-A1Cf/starter
+
+ ✓ tests/counter.test.ts (2 tests) 4ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  18:20:04
+   Duration  1.28s (transform 895ms, setup 0ms, collect 1.20s, tests 4ms, environment 0ms, prepare 3ms)
+

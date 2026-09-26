@@ -64,6 +64,7 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
 
   // Form Components - Advanced
   { id: 'combobox', name: 'Combobox', category: 'Form Components - Advanced', description: 'Searchable select with async loading' },
+  { id: 'command', name: 'Command', category: 'Form Components - Advanced', description: 'Fast, composable command palette with search, filtering, and keyboard navigation' },
   { id: 'calendar', name: 'Calendar', category: 'Form Components - Advanced', description: 'Date and range picker calendar' },
   { id: 'file-upload', name: 'File Upload', category: 'Form Components - Advanced', description: 'Drag & drop file upload with progress tracking' },
   { id: 'login-form', name: 'Login Form', category: 'Form Components - Advanced', description: 'Password sign-in with a structured failure the surface can branch on - from @composable-svelte/auth' },

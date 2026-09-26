@@ -1,7 +1,7 @@
 /**
  * The one email rule, and every schema that is supposed to be using it.
  *
- * Extracting `emailField()` was meant to make four copies into one. Nothing
+ * Extracting `emailField()` was meant to make repeated copies into one. Nothing
  * pinned that: reverting a single schema to its old inline
  * `z.string().min(1).email()` would have broken no test, because only
  * `magic-link-request` exercises an address through a flow. This asserts the
@@ -15,6 +15,7 @@ import { loginSchema } from '../src/lib/flows/login/schema.js';
 import { signupSchema } from '../src/lib/flows/signup/schema.js';
 import { forgotPasswordSchema } from '../src/lib/flows/forgot-password/schema.js';
 import { magicLinkSchema } from '../src/lib/flows/magic-link-request/schema.js';
+import { changeEmailSchema } from '../src/lib/flows/change-email/schema.js';
 
 const PASSWORD = 'correct-horse-battery-staple';
 
@@ -23,7 +24,8 @@ const SCHEMAS = [
 	['login', loginSchema, { password: PASSWORD, rememberMe: false }],
 	['signup', signupSchema, { password: PASSWORD, confirmPassword: PASSWORD }],
 	['forgot-password', forgotPasswordSchema, {}],
-	['magic-link-request', magicLinkSchema, {}]
+	['magic-link-request', magicLinkSchema, {}],
+	['change-email', changeEmailSchema, {}]
 ] as const;
 
 describe('emailField', () => {

@@ -62,6 +62,7 @@ export interface FileUploadState {
 export type FileUploadAction =
   | { type: 'filesSelected'; files: File[] }
   | { type: 'filesValidated'; validFiles: UploadedFile[]; errors: ValidationError[] }
+  | { type: 'previewReady'; fileId: string; previewUrl: string }
   | { type: 'fileRemoved'; fileId: string }
   | { type: 'uploadStarted'; fileId: string }
   | { type: 'uploadProgress'; fileId: string; progress: number }
@@ -88,6 +89,8 @@ export interface FileValidationConfig {
  * Dependencies for the FileUpload reducer
  */
 export interface FileUploadDependencies {
+  /** Acquire image previews when enabled (default true). */
+  previews?: boolean | undefined;
   /** Callback when files change */
   onFilesChange?: ((files: UploadedFile[]) => void) | undefined;
   /** Callback to handle file upload (returns promise) */
@@ -100,7 +103,7 @@ export interface FileUploadDependencies {
    * so `uploadProgress` had no dispatcher and the bar sat at 0% throughout.
    */
   onUpload?:
-    | ((file: File, onProgress: (percent: number) => void) => Promise<void>)
+    | ((file: File, onProgress: (percent: number) => void, signal?: AbortSignal) => Promise<void>)
     | undefined;
   /** File validation configuration */
   validation?: FileValidationConfig | undefined;
@@ -142,7 +145,7 @@ export interface FileUploadProps {
    * broken while the component kept its own one-parameter copy of this type.
    */
   onUpload?:
-    | ((file: File, onProgress: (percent: number) => void) => Promise<void>)
+    | ((file: File, onProgress: (percent: number) => void, signal?: AbortSignal) => Promise<void>)
     | undefined;
   /** Custom class for container */
   class?: string | undefined;
@@ -175,7 +178,7 @@ export function generateFileId(): string {
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.max(0, Math.min(sizes.length - 1, Math.floor(Math.log(bytes) / Math.log(k))));
   return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }

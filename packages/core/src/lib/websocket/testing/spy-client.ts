@@ -12,7 +12,8 @@ import type {
   ConnectionStats,
   MessageListener,
   EventListener,
-  Unsubscribe
+  Unsubscribe,
+  WebSocketError
 } from '../types.js';
 
 export interface RecordedConnection {
@@ -29,22 +30,22 @@ export interface RecordedDisconnection {
 
 export interface SpyWebSocketClient<T = unknown> extends WebSocketClient<T> {
   /**
-   * All connection attempts.
+   * All connection attempts, including calls rejected by the wrapped client.
    */
   readonly connections: RecordedConnection[];
 
   /**
-   * All disconnections.
+   * All disconnect attempts, including calls rejected by the wrapped client.
    */
   readonly disconnections: RecordedDisconnection[];
 
   /**
-   * All reconnect() calls, with their reason.
+   * All reconnect attempts, including calls rejected or ignored by the wrapped client.
    */
-  readonly reconnections: Array<{ readonly reason: string; readonly timestamp: number }>;
+  readonly reconnections: Array<{ readonly reason: string; readonly cause?: WebSocketError; readonly timestamp: number }>;
 
   /**
-   * All sent messages.
+   * All sent message attempts, including messages that failed to send.
    */
   readonly sentMessages: T[];
 
@@ -87,7 +88,7 @@ export function createSpyWebSocket<T = unknown>(
 ): SpyWebSocketClient<T> {
   const connections: RecordedConnection[] = [];
   const disconnections: RecordedDisconnection[] = [];
-  const reconnections: Array<{ reason: string; timestamp: number }> = [];
+  const reconnections: Array<{ reason: string; cause?: WebSocketError; timestamp: number }> = [];
   const sentMessages: T[] = [];
   const receivedMessages: WebSocketMessage<T>[] = [];
 
@@ -105,9 +106,13 @@ export function createSpyWebSocket<T = unknown>(
     return realClient.disconnect(code, reason);
   }
 
-  function reconnect(reason = 'Reconnect requested'): void {
-    reconnections.push({ reason, timestamp: Date.now() });
-    realClient.reconnect(reason);
+  function reconnect(reason = 'Reconnect requested', cause?: WebSocketError): void {
+    reconnections.push({
+      reason,
+      ...(cause !== undefined ? { cause } : {}),
+      timestamp: Date.now()
+    });
+    realClient.reconnect(reason, cause);
   }
 
   async function send(message: T): Promise<void> {
@@ -115,11 +120,43 @@ export function createSpyWebSocket<T = unknown>(
     return realClient.send(message);
   }
 
+  const consumers = new Set<{ listener: MessageListener<T> }>();
+  let stopRecording: Unsubscribe | null = null;
+  let deliveryDepth = 0;
+  function releaseRecording(): void {
+    if (consumers.size === 0 && deliveryDepth === 0) {
+      const stop = stopRecording;
+      stopRecording = null;
+      stop?.();
+    }
+  }
+  /**
+   * Subscribe to messages from the WebSocket.
+   *
+   * Dispatches via a deterministic snapshot of consumers ([...consumers]), ensuring
+   * that consumers added during delivery do not receive the in-flight message and
+   * avoiding unbounded Set mutation loops. Consumers removed during dispatch are skipped.
+   */
   function subscribe(listener: MessageListener<T>): Unsubscribe {
-    return realClient.subscribe((message) => {
-      receivedMessages.push(message);
-      listener(message);
-    });
+    const consumer = { listener };
+    consumers.add(consumer);
+    try {
+      if (stopRecording === null) {
+        stopRecording = realClient.subscribe(message => {
+          if (consumers.size === 0) return;
+          receivedMessages.push(message);
+          deliveryDepth++;
+          try {
+            for (const current of [...consumers]) {
+              if (!consumers.has(current)) continue;
+              try { current.listener(message); }
+              catch (error) { console.error('[SpyWebSocket] Error in listener:', error); }
+            }
+          } finally { deliveryDepth--; releaseRecording(); }
+        });
+      }
+    } catch (error) { consumers.delete(consumer); throw error; }
+    return () => { consumers.delete(consumer); releaseRecording(); };
   }
 
   function subscribeToEvents(listener: EventListener): Unsubscribe {

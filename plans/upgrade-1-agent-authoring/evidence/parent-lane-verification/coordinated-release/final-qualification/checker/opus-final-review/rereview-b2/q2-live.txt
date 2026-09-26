@@ -1,0 +1,43 @@
+F1 each no as                      {"complete":true,"errors":[],"findings":[]}
+F2 each no as, index               {"complete":false,"errors":["EachBlock.index@1"],"findings":[]}
+F3 each as, idx, key               {"complete":true,"errors":[],"findings":[]}
+F4 each typed ctx                  {"complete":true,"errors":[],"findings":[]}
+F5 each paren expr                 {"complete":true,"errors":[],"findings":[]}
+F6 each else                       {"complete":true,"errors":[],"findings":[]}
+F7 await no then                   {"complete":true,"errors":[],"findings":[]}
+F8 await then short                {"complete":true,"errors":[],"findings":[]}
+F9 await :then no value            {"complete":true,"errors":[],"findings":[]}
+F10 await :then v empty            {"complete":true,"errors":[],"findings":[]}
+F11 await then v empty             {"complete":true,"errors":[],"findings":[]}
+F12 await catch only               {"complete":true,"errors":[],"findings":[]}
+F13 const typed                    {"complete":true,"errors":[],"findings":[]}
+F14 const satisfies                {"complete":true,"errors":[],"findings":[]}
+F15 const in each                  {"complete":true,"errors":[],"findings":[]}
+F16 each string                    {"complete":true,"errors":[],"findings":[]}
+F17 each Array(n)                  {"complete":true,"errors":[],"findings":[]}
+F18 each new Array                 {"complete":true,"errors":[],"findings":[]}
+F19 each Array.from                {"complete":true,"errors":[],"findings":[]}
+F20 each {length}                  {"complete":true,"errors":[],"findings":[]}
+F21 each keys spread               {"complete":true,"errors":[],"findings":[]}
+F22 each Object.keys               {"complete":true,"errors":[],"findings":[]}
+F23 each entries                   {"complete":true,"errors":[],"findings":[]}
+F24 each map/filter                {"complete":true,"errors":[],"findings":[]}
+F25 each split                     {"complete":true,"errors":[],"findings":[]}
+F26 each props                     {"complete":true,"errors":[],"findings":[]}
+F27 each derived                   {"complete":true,"errors":[],"findings":[]}
+F28 each ?? []                     {"complete":true,"errors":[],"findings":[]}
+F29 each local fn range            {"complete":true,"errors":[],"findings":[]}
+F30 each Map entries               {"complete":true,"errors":[],"findings":[]}
+F31 each Map direct                {"complete":true,"errors":[],"findings":[]}
+F32 each sort copy                 {"complete":true,"errors":[],"findings":[]}
+F33 then fetch-free async          {"complete":true,"errors":[],"findings":[]}
+F34 then props promise             {"complete":true,"errors":[],"findings":[]}
+F35 each nested const              {"complete":true,"errors":[],"findings":[]}
+F36 each in snippet                {"complete":true,"errors":[],"findings":[]}
+F37 each SvelteMap                 {"graphErrors":["unresolved-package-import"]}
+F38 each Date array                {"complete":true,"errors":[],"findings":[]}
+F39 each JSON.parse                {"complete":true,"errors":[],"findings":[]}
+F40 const Math                     {"complete":true,"errors":[],"findings":[]}
+F41 const Intl fmt                 {"complete":true,"errors":[],"findings":[]}
+F42 each $state class              {"complete":true,"errors":[],"findings":[]}
+F43 each bind item                 {"complete":true,"errors":[],"findings":[]}

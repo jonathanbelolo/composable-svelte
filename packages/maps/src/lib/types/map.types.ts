@@ -3,11 +3,18 @@
  * @description Type definitions for interactive map components
  */
 
+import type { ChildView } from '@composable-svelte/core/application';
 import type { TileProvider } from '../utils/tile-providers.js';
 import type { GeoJSON as GeoJSONType } from 'geojson';
 
 // Re-export TileProvider for convenience
 export type { TileProvider };
+
+/**
+ * A store or managed child view that can drive Map components.
+ * Structural projection containing only state, dispatch, and subscribe.
+ */
+export type MapStore = Pick<ChildView<MapState, MapAction>, 'state' | 'dispatch' | 'subscribe'>;
 
 /**
  * Longitude, Latitude coordinate pair
@@ -162,6 +169,7 @@ export type MapAction =
   | { type: 'panEnd' }
   | { type: 'zoomIn' }
   | { type: 'zoomOut' }
+  | { type: 'mapClicked'; lngLat: LngLat }
 
   // Marker actions
   | { type: 'addMarker'; marker: Marker }
@@ -174,6 +182,10 @@ export type MapAction =
   | { type: 'addLayer'; layer: Layer }
   | { type: 'removeLayer'; id: string }
   | { type: 'toggleLayerVisibility'; id: string }
+  | { type: 'setLayerVisibility'; id: string; visible: boolean }
+  | { type: 'setLayerData'; id: string; data: GeoJSON | string }
+  /** Updates layer properties. Changes to type, data, or interactive recreate the layer. */
+  | { type: 'updateLayer'; id: string; updates: Partial<Omit<Layer, 'id'>> }
   | { type: 'updateLayerStyle'; id: string; style: Partial<LayerStyle> }
   | { type: 'clearLayers' }
 
@@ -245,6 +257,16 @@ export interface MapAdapter {
   on(event: string, handler: Function): void;
   off(event: string, handler: Function): void;
   destroy(): void;
+
+  /**
+   * Optional flight identifier tracked by GL adapters to differentiate
+   * current flight completion from synchronous moveend events of superseded flights.
+   * When supplied, increment before calling the engine and attach the same value
+   * as `flightId` to its moveend event data. Built-in adapters implement this.
+   * Custom adapters omitting this capability retain legacy completion behavior
+   * and cannot distinguish a superseded synchronous completion.
+   */
+  currentFlightId?: number | string | undefined;
 }
 
 /**

@@ -56,6 +56,13 @@ export interface DropdownState {
  * Combobox state.
  */
 export interface ComboboxState<T = string> {
+	/** Framework correlation for delayed transitions; omitted by legacy state values. */
+	transitionGeneration?: number | undefined;
+	/** Framework correlation for query changes and repeated loads of the same query. */
+	searchGeneration?: number | undefined;
+	/** Framework correlation for async option loading requests. */
+	loadGeneration?: number | undefined;
+
 	/**
 	 * All available options (from local data or last async load).
 	 */
@@ -103,19 +110,19 @@ export interface ComboboxState<T = string> {
 export type ComboboxAction<T = string> =
 	// Dropdown lifecycle actions
 	| { type: 'opened' } // User wants to open dropdown
-	| { type: 'openingCompleted' } // Animation finished, now fully open
+	| { type: 'openingCompleted'; generation?: number } // Animation finished, now fully open
 	| { type: 'closed' } // User wants to close dropdown
-	| { type: 'closingCompleted' } // Animation finished, now fully closed
+	| { type: 'closingCompleted'; generation?: number } // Animation finished, now fully closed
 	| { type: 'toggled' }
 	// Selection and search
 	| { type: 'optionSelected'; value: T }
 	| { type: 'searchChanged'; query: string }
-	| { type: 'searchDebounced'; query: string } // Internal: after debounce delay
+	| { type: 'searchDebounced'; query: string; generation?: number } // Internal: after debounce delay
 	| { type: 'optionsChanged'; options: ComboboxOption<T>[] } // External options changed
 	// Async loading
-	| { type: 'loadingStarted' }
-	| { type: 'loadingCompleted'; options: ComboboxOption<T>[] }
-	| { type: 'loadingFailed'; error: string }
+	| { type: 'loadingStarted' } // Legacy externally-driven loads; framework loads use correlated searchDebounced.
+	| { type: 'loadingCompleted'; options: ComboboxOption<T>[]; query?: string; generation?: number }
+	| { type: 'loadingFailed'; error: string; query?: string; generation?: number }
 	// Keyboard navigation
 	| { type: 'highlightChanged'; index: number }
 	| { type: 'arrowDown' }

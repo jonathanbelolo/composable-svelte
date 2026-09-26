@@ -1,0 +1,13 @@
+import {integrate} from '../../src/lib/navigation/integrate.js';
+import {optionalSlot} from '../../src/lib/navigation/managed-integration.js';
+import {Effect} from '../../src/lib/effect.js';
+import type {Reducer} from '../../src/lib/types.js';
+import type {PresentationAction} from '../../src/lib/navigation/types.js';
+import {targetFor} from '../../src/lib/application/renderer/target-registry.js';
+export type Child={opacity:string};export type ChildAction={type:'noop'};
+export type State={child:Child|null};export type Action={type:'child';action:PresentationAction<ChildAction>}|{type:'remove'}|{type:'replace'};
+export const slot=optionalSlot<State,Action>()('child');
+const child:Reducer<Child,ChildAction>=s=>[s,Effect.none()];
+const root:Reducer<State,Action>=(s,a)=>[a.type==='remove'?{child:null}:a.type==='replace'?{child:{opacity:'0.4'}}:s,Effect.none()];
+export const definition=integrate(root).managed().with(slot,child,{replaceOn:a=>a.type==='replace'}).build();
+export const target=targetFor(slot,['opacity']);

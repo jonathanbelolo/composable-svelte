@@ -6,6 +6,9 @@
     "declaration": false,
     "declarationMap": false,
     "composite": false,
+    "paths": {
+      "@composable-svelte/maps": ["."]
+    },
     "types": [
       "svelte",
       "node",
@@ -14,7 +17,8 @@
   },
   "include": [
     "src/**/*",
-    "tests/**/*"
+    "tests/**/*",
+    "fixtures/**/*"
   ],
   "exclude": [
     "dist",

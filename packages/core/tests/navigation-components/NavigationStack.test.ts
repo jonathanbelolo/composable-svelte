@@ -1,10 +1,10 @@
 import { render } from 'vitest-browser-svelte';
 import { page, userEvent } from 'vitest/browser';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
+import { tick } from 'svelte';
 import NavigationStack from '../../src/lib/navigation-components/NavigationStack.svelte';
-import { createStore } from '../../src/lib/store.svelte.js';
-import { scopeToDestination } from '../../src/lib/navigation/scope-to-destination.js';
-import { Effect } from '../../src/lib/effect.js';
+import { createManagedChildView } from '../helpers/managed-child-view.js';
+import { assertPresentationView } from '../../src/lib/navigation/managed-integration.js';
 
 // ============================================================================
 // Test Fixtures
@@ -15,38 +15,40 @@ interface ScreenState {
   title: string;
 }
 
-interface ParentState {
-  destination: { type: 'test'; state: { stack: ScreenState[] } } | null;
-}
+const handles: Array<{ destroy(): void }> = [];
 
-type ParentAction =
-  | { type: 'show' }
-  | { type: 'destination'; action: any };
+afterEach(() => {
+  for (const handle of handles) {
+    handle.destroy();
+  }
+  handles.length = 0;
+});
+
+function makeTestStore(stack: ScreenState[]) {
+  const handle = createManagedChildView({ stack });
+  handles.push(handle);
+  return handle.view;
+}
 
 // ============================================================================
 // NavigationStack Component Tests
 // ============================================================================
 
 describe('NavigationStack Component', () => {
-  it('shows when store is non-null and stack is not empty', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
-      initialState: {
-        destination: {
-          type: 'test',
-          state: {
-            stack: [{ id: '1', title: 'Screen 1' }]
-          }
-        }
-      },
-      reducer: (state) => [state, Effect.none()]
+  it('renders a live null business state rather than treating it as retirement', async () => {
+    const managed = createManagedChildView<null>(null);
+    handles.push(managed);
+    expect(managed.view.state).toBeNull();
+    render(NavigationStack, {
+      store: managed.view,
+      stack: [{ id: '1', title: 'Screen 1' }],
+      onBack: () => {}
     });
+    await expect.element(page.getByRole('navigation')).toBeInTheDocument();
+  });
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+  it('shows when store is non-null and stack is not empty', async () => {
+    const scopedStore = makeTestStore([{ id: '1', title: 'Screen 1' }]);
 
     render(NavigationStack, {
         store: scopedStore,
@@ -58,9 +60,9 @@ describe('NavigationStack Component', () => {
     await expect.element(nav).toBeInTheDocument();
   });
 
-  it('hides when store is null', async () => {
+  it('hides when store is undefined', async () => {
     render(NavigationStack, {
-        store: null,
+        store: undefined,
         stack: [],
         onBack: () => {}
       });
@@ -71,23 +73,7 @@ describe('NavigationStack Component', () => {
   });
 
   it('hides when stack is empty', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
-      initialState: {
-        destination: {
-          type: 'test',
-          state: { stack: [] }
-        }
-      },
-      reducer: (state) => [state, Effect.none()]
-    });
-
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
-
+    const scopedStore = makeTestStore([]);
     render(NavigationStack, {
         store: scopedStore,
         stack: [],
@@ -100,28 +86,10 @@ describe('NavigationStack Component', () => {
   });
 
   it('shows back button when stack has multiple screens', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
-      initialState: {
-        destination: {
-          type: 'test',
-          state: {
-            stack: [
-              { id: '1', title: 'Screen 1' },
-              { id: '2', title: 'Screen 2' }
-            ]
-          }
-        }
-      },
-      reducer: (state) => [state, Effect.none()]
-    });
-
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
-
+    const scopedStore = makeTestStore([
+      { id: '1', title: 'Screen 1' },
+      { id: '2', title: 'Screen 2' }
+    ]);
     render(NavigationStack, {
         store: scopedStore,
         stack: [
@@ -136,25 +104,7 @@ describe('NavigationStack Component', () => {
   });
 
   it('hides back button when stack has only one screen', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
-      initialState: {
-        destination: {
-          type: 'test',
-          state: {
-            stack: [{ id: '1', title: 'Screen 1' }]
-          }
-        }
-      },
-      reducer: (state) => [state, Effect.none()]
-    });
-
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
-
+    const scopedStore = makeTestStore([{ id: '1', title: 'Screen 1' }]);
     render(NavigationStack, {
         store: scopedStore,
         stack: [{ id: '1', title: 'Screen 1' }],
@@ -167,29 +117,10 @@ describe('NavigationStack Component', () => {
 
   it('calls onBack when back button is clicked', async () => {
     let backCalled = false;
-
-    const parentStore = createStore<ParentState, ParentAction>({
-      initialState: {
-        destination: {
-          type: 'test',
-          state: {
-            stack: [
-              { id: '1', title: 'Screen 1' },
-              { id: '2', title: 'Screen 2' }
-            ]
-          }
-        }
-      },
-      reducer: (state) => [state, Effect.none()]
-    });
-
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
-
+    const scopedStore = makeTestStore([
+      { id: '1', title: 'Screen 1' },
+      { id: '2', title: 'Screen 2' }
+    ]);
     render(NavigationStack, {
         store: scopedStore,
         stack: [
@@ -208,28 +139,10 @@ describe('NavigationStack Component', () => {
   });
 
   it('respects showBackButton=false prop', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
-      initialState: {
-        destination: {
-          type: 'test',
-          state: {
-            stack: [
-              { id: '1', title: 'Screen 1' },
-              { id: '2', title: 'Screen 2' }
-            ]
-          }
-        }
-      },
-      reducer: (state) => [state, Effect.none()]
-    });
-
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
-
+    const scopedStore = makeTestStore([
+      { id: '1', title: 'Screen 1' },
+      { id: '2', title: 'Screen 2' }
+    ]);
     render(NavigationStack, {
         store: scopedStore,
         stack: [
@@ -245,25 +158,7 @@ describe('NavigationStack Component', () => {
   });
 
   it('applies custom classes', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
-      initialState: {
-        destination: {
-          type: 'test',
-          state: {
-            stack: [{ id: '1', title: 'Screen 1' }]
-          }
-        }
-      },
-      reducer: (state) => [state, Effect.none()]
-    });
-
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
-
+    const scopedStore = makeTestStore([{ id: '1', title: 'Screen 1' }]);
     render(NavigationStack, {
         store: scopedStore,
         stack: [{ id: '1', title: 'Screen 1' }],
@@ -276,25 +171,7 @@ describe('NavigationStack Component', () => {
   });
 
   it('respects unstyled prop', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
-      initialState: {
-        destination: {
-          type: 'test',
-          state: {
-            stack: [{ id: '1', title: 'Screen 1' }]
-          }
-        }
-      },
-      reducer: (state) => [state, Effect.none()]
-    });
-
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
-
+    const scopedStore = makeTestStore([{ id: '1', title: 'Screen 1' }]);
     render(NavigationStack, {
         store: scopedStore,
         stack: [{ id: '1', title: 'Screen 1' }],
@@ -310,26 +187,7 @@ describe('NavigationStack Component', () => {
   it('does not prevent body scroll (inline component)', async () => {
     // Store initial body overflow value
     const initialOverflow = document.body.style.overflow;
-
-    const parentStore = createStore<ParentState, ParentAction>({
-      initialState: {
-        destination: {
-          type: 'test',
-          state: {
-            stack: [{ id: '1', title: 'Screen 1' }]
-          }
-        }
-      },
-      reducer: (state) => [state, Effect.none()]
-    });
-
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
-
+    const scopedStore = makeTestStore([{ id: '1', title: 'Screen 1' }]);
     render(NavigationStack, {
         store: scopedStore,
         stack: [{ id: '1', title: 'Screen 1' }],
@@ -339,5 +197,20 @@ describe('NavigationStack Component', () => {
     // Check body overflow is NOT set to hidden (stack doesn't lock scroll)
     const bodyStyle = document.body.style.overflow;
     expect(bodyStyle).toBe(initialOverflow);
+  });
+
+  it('hides when managed view is retired after keyed removal and lacks dismiss authority', async () => {
+    const stack = [{ id: '1', title: 'Screen 1' }];
+    const managed = createManagedChildView({ stack });
+    handles.push(managed);
+
+    expect('dismiss' in managed.view).toBe(false);
+    expect(() => assertPresentationView(managed.view)).toThrow('Expected a managed presentation view');
+
+    render(NavigationStack, { store: managed.view, stack, onBack: () => {} });
+    await expect.element(page.getByRole('navigation')).toBeInTheDocument();
+    managed.remove();
+    await tick();
+    expect(page.getByRole('navigation').elements().length).toBe(0);
   });
 });

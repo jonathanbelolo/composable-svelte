@@ -1,3 +1,7 @@
+import type { EffectRuntime } from './execution/runtime.js';
+import type { OwnerToken, SlotDescriptor, Lifecycle, ReplaceIntent, OwnerPath } from './execution/identity.js';
+import type { ExecutionScheduler } from './execution/scheduler.js';
+
 /**
  * Core type definitions for Composable Svelte.
  *
@@ -27,21 +31,36 @@ export type Selector<State, Value> = (state: State) => Value;
 /**
  * Function that executes an effect and may dispatch actions.
  *
- * Every executor receives a `signal`. For `Effect.cancellable` it is the
- * effect's own, aborted by `Effect.cancel(id)`, by a newer effect under the
- * same id, by a cancellation of one of its groups, or by `destroy()`. For a
- * `run`, `debounced`, `throttled` or `afterDelay` that carries a group (an
- * effect produced under a presentation, say) it is the effect's own, aborted
- * with the group or by `destroy()`; for one without, it is the store's
- * lifetime signal, aborted by `destroy()` only — such an effect cannot be
- * cancelled individually, but an executor that awaits something can still
- * stop when the store goes away. `Effect.map` forwards it. It is typed
- * optional so an executor written without it still typechecks; the store
- * always passes one, TestStore too.
+ * Every executor started by Store or TestStore receives a `signal`.
+ * `Effect.cancellable` receives its own signal, aborted by `Effect.cancel(id)`,
+ * replacement under the same id, cancellation of an owning group, or `destroy()`.
+ * In legacy execution, a `run`, `debounced`, `throttled` or `afterDelay` with a
+ * group receives its own signal, aborted with the group or by `destroy()`;
+ * without a group, it receives the store's lifetime signal, aborted only by
+ * `destroy()`. Managed execution gives each executor its own signal, including
+ * ungrouped work. Live work is aborted when its owner or group is retired or the
+ * store is destroyed; normal completion retires ownership without aborting the
+ * signal. `Effect.map` forwards the signal.
+ *
+ * The public signature keeps `signal` optional for compatibility with direct
+ * executor invocation outside Store/TestStore, where a caller may omit it.
+ * A callback may ignore the second parameter regardless of that optionality.
+ * When using this signature, pass `signal ?? null` to fetch or narrow the
+ * signal before passing it to a dependency that requires an AbortSignal.
  *
  * Observing it is optional: dispatches from a cancelled effect and from a
  * destroyed store are dropped regardless, so cancellation is correct without
  * cooperation. Using the signal additionally stops the work in flight.
+ *
+ * Under legacy execution (default), dispatch remains accepted from later
+ * callbacks after an executor returns. Under managed execution
+ * (`execution: { mode: 'managed' }`), an executor owns its dispatch capability
+ * until its returned promise settles; a synchronous executor returning `void`
+ * completes at the next promise checkpoint. Dispatch during the executor is
+ * supported; callbacks invoked after completion are dropped and diagnosed.
+ * Keep asynchronous work in the returned promise. Callback-based sources with
+ * an independent lifetime belong in `Effect.subscription`, whose synchronous
+ * setup returns cleanup.
  *
  * @template Action - The action type
  */
@@ -70,7 +89,7 @@ export type SubscriptionCleanup = () => void | Promise<void>;
  *
  * @template Action - The action type that can be dispatched
  */
-export type Effect<Action> =
+export type Effect<Action> = { readonly origin?: OwnerToken | undefined } & (
   | { readonly _tag: 'None' }
   | { readonly _tag: 'Run'; readonly execute: EffectExecutor<Action>; readonly groups?: EffectGroups }
   | { readonly _tag: 'FireAndForget'; readonly execute: () => void | Promise<void> }
@@ -99,7 +118,7 @@ export type Effect<Action> =
    * Cancel every effect in a group: abort its signal, disarm its timer, run
    * its subscription's cleanup, drop its later dispatches. Carries no action.
    */
-  | { readonly _tag: 'CancelGroup'; readonly group: string };
+  | { readonly _tag: 'CancelGroup'; readonly group: string });
 
 /**
  * The cancellation groups an executor-bearing effect belongs to.
@@ -113,6 +132,13 @@ export type Effect<Action> =
  * child is gone — the audit's N8, which R1 closed on the case *name* only
  * (R1-REVIEW 1.8). `Effect.inGroup` adds one by hand; `Effect.cancelGroup`
  * cancels one. Ids (`Effect.cancellable`, `Effect.cancel`) are untouched.
+ *
+ * Under legacy execution (default), group cancellation matches globally by
+ * string name. Under managed execution (`execution: { mode: 'managed' }`),
+ * groups and effect IDs are owner-local (scoped to the originating owner token).
+ * Root group cancellation does not cancel child groups of the same name, and
+ * removing or replacing a child composed through supported lifecycle composition
+ * invalidates its owner and cancels all of its resources, including its groups.
  */
 export type EffectGroups = readonly string[] | undefined;
 
@@ -170,6 +196,51 @@ export type Reducer<State, Action, Dependencies = any> = (
 ) => readonly [State, Effect<Action>];
 
 /**
+ * Store execution options for opt-in managed mode.
+ */
+export interface ManagedReductionInput<State, Action, Dependencies> {
+  readonly state: State;
+  readonly action: Action;
+  readonly dependencies: Dependencies;
+  readonly lifecycle: Lifecycle;
+  readonly reducer: Reducer<State, Action, Dependencies>;
+}
+/** Explicit work for an owner allocated by this turn; never rebind existing work. */
+export interface CreatedOwnerEffect<Action> {
+  readonly path: OwnerPath;
+  readonly effect: Effect<Action>;
+}
+/** One child-domain action reduced by one exact owner during a managed turn. */
+export interface OwnerActionDelivery {
+  readonly owner: OwnerToken;
+  readonly action: unknown;
+}
+/** Provisional internal composition seam; applications supply ordinary reducers. */
+export type ManagedReductionAdapter<State, Action, Dependencies> = <Supplied extends Dependencies>(
+  input: ManagedReductionInput<State, Action, Supplied>
+) => readonly [State, Effect<Action>, (readonly ReplaceIntent[])?, (readonly CreatedOwnerEffect<Action>[])?, (readonly OwnerActionDelivery[])?];
+
+export interface StoreExecutionConfig<State = any, Action = any, Dependencies = any> {
+  readonly mode?: 'legacy' | 'managed' | undefined;
+  readonly scheduler?: ExecutionScheduler | undefined;
+  /** Managed-only retained root throttle channels; positive safe integer, default 1024.
+   * Owned channels and identifier bytes are outside this entry-count limit.
+   * Exceeding it reports RootThrottleCapacityError without evicting history.
+   */
+  readonly rootThrottleCapacity?: number | undefined;
+  readonly slots?: SlotDescriptor<State> | undefined;
+  /** Internal pure adapter: invoke the feature reducer once, stamp original owners. */
+  readonly _reduce?: ManagedReductionAdapter<State, Action, Dependencies> | undefined;
+  /** Internal pure first-state planner. Existing epochs are supplied; no reducer runs. */
+  readonly _initial?: ((state: State, dependencies: Dependencies, lifecycle: Lifecycle) => readonly CreatedOwnerEffect<Action>[]) | undefined;
+  /** Provisional application-owned activation policy, fixed at construction. */
+  readonly _initialization?: (
+    | { readonly mode: 'attached'; readonly startup?: Action | undefined; readonly startupDecision?: undefined }
+    | { readonly mode: 'attached'; readonly startup?: undefined; readonly startupDecision: (state: State, dependencies: Dependencies) => Action | undefined }
+  ) | undefined;
+}
+
+/**
  * Configuration for creating a Store.
  *
  * @template State - The state type
@@ -196,7 +267,7 @@ export interface StoreConfig<State, Action, Dependencies = any> {
   /**
    * Maximum number of actions to keep in history.
    * When limit is reached, oldest actions are removed.
-   * Default: unlimited (all actions retained).
+   * Default: unlimited in legacy mode; 100 in managed mode.
    * Set to 0 to disable history tracking.
    */
   maxHistorySize?: number;
@@ -215,6 +286,11 @@ export interface StoreConfig<State, Action, Dependencies = any> {
      */
     deferEffects?: boolean;
   };
+
+  /**
+   * Execution configuration for the store runtime.
+   */
+  execution?: StoreExecutionConfig<State, Action, Dependencies> | undefined;
 
   // TODO: Middleware support deferred to Phase 5
   // middleware?: Middleware<State, Action>[];
@@ -314,10 +390,16 @@ export interface Store<State, Action> {
    * Clean up resources: aborts every in-flight cancellable and the store's
    * lifetime signal (every other executor kind sees it), clears pending
    * delays, debounces and throttles so none fires, runs subscription
-   * cleanups, and removes listeners. A later `dispatch` is dropped; the first
+   * cleanups, and removes listeners. Idempotent: repeated calls do nothing.
+   * A later `dispatch` is dropped; the first
    * is warned about once per store.
    */
   destroy(): void;
+
+  /**
+   * Internal execution runtime seam for test observation and diagnostics.
+   */
+  readonly _runtime?: EffectRuntime<Action> | undefined;
 }
 
 /**

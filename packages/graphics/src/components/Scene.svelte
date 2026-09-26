@@ -6,19 +6,20 @@
 
 import { onMount } from 'svelte';
 import type { Snippet } from 'svelte';
-import type { Store } from '@composable-svelte/core';
-import type { GraphicsState, GraphicsAction } from '../core/types.js';
+import type { GraphicsStore } from '../core/types.js';
 import { BabylonAdapter } from '../adapters/babylon-adapter.js';
-import { initialBaseline, syncScene } from '../core/scene-sync.js';
+import { initialBaseline, syncScene, type GraphicsAdapter } from '../core/scene-sync.js';
 
 // Props
 let {
   store,
+  createAdapter,
   width = '100%',
   height = '600px',
   children
 }: {
-  store: Store<GraphicsState, GraphicsAction>;
+  store: GraphicsStore;
+  createAdapter?: (() => GraphicsAdapter) | undefined;
   width?: string | number | undefined;
   height?: string | number | undefined;
   children?: Snippet | undefined;
@@ -26,33 +27,66 @@ let {
 
 // Canvas element
 let canvas: HTMLCanvasElement | null = $state(null);
-let adapter: BabylonAdapter | null = $state(null);
 
-// Setup Babylon.js on mount
+// Subscribe manually: the callback drives a renderer, and an effect that both
+// reads the store and mutates the scene would follow its own output. Native
+// initialization can outlive unmount, so release is also handled on settle.
 onMount(() => {
   if (!canvas) return;
 
-  let unsubscribe: (() => void) | undefined;
-  /**
-   * Unmounting during `await adapter.initialize(...)` used to leave the engine
-   * running. The cleanup below ran first, against an adapter whose `engine` and
-   * `scene` were still null — so `dispose()` did nothing — and the awaited
-   * initialisation then went on to build an engine, a render loop and a resize
-   * listener that nothing owned and nothing could reach.
-   */
+  let unsubscribe: (() => void) | null = null;
   let cancelled = false;
+  let isDisposed = false;
+  let initializationSettled = false;
+  let baseline = initialBaseline();
+
+  if (!store.state) {
+    // Owner is already retired at mount; do not initialize native engine
+    cancelled = true;
+    isDisposed = true;
+    return;
+  }
+
+  const pending: GraphicsAdapter = createAdapter?.() ?? new BabylonAdapter();
+  // Keep this local reference even after retirement. A late async initialize
+  // may create an engine after the ordinary cleanup has already run.
+
+  function releaseAdapter() {
+    if (isDisposed) return;
+    isDisposed = true;
+    pending.dispose();
+  }
+
+  function disposeScene() {
+    if (isDisposed) return;
+    cancelled = true;
+    if (unsubscribe) {
+      unsubscribe();
+      unsubscribe = null;
+    }
+    // Initialization may still be creating native resources. Its own settle
+    // path releases the adapter in that case, exactly once.
+    if (initializationSettled) releaseAdapter();
+  }
+
+  // Subscribe immediately to observe owner retirement synchronously
+  unsubscribe = store.subscribe((state) => {
+    if (!state) {
+      // Owner retirement: cancel native work promptly
+      disposeScene();
+      return;
+    }
+    if (isDisposed || cancelled || !initializationSettled) return;
+    baseline = syncScene(state, baseline, pending);
+  });
 
   (async () => {
-    // Held locally as well as in `adapter`, because the cleanup sets that to
-    // null and this is the reference that must be disposed either way.
-    const pending = new BabylonAdapter();
-    adapter = pending;
-
     try {
       const result = await pending.initialize(canvas);
+      initializationSettled = true;
 
-      if (cancelled) {
-        pending.dispose();
+      if (cancelled || isDisposed || !store.state) {
+        releaseAdapter();
         return;
       }
 
@@ -62,11 +96,15 @@ onMount(() => {
         capabilities: result.capabilities
       });
 
-      unsubscribe = setupSceneSync();
+      if (store.state && !isDisposed && !cancelled) {
+        baseline = syncScene(store.state, baseline, pending);
+      }
     } catch (error) {
+      const reportError = !cancelled && !!store.state;
+      initializationSettled = true;
+      disposeScene();
+      if (!reportError) return;
       const errorMessage = error instanceof Error ? error.message : 'Failed to initialize renderer';
-      pending.dispose();
-      if (cancelled) return;
       store.dispatch({
         type: 'rendererError',
         error: errorMessage
@@ -76,37 +114,13 @@ onMount(() => {
   })();
 
   return () => {
-    cancelled = true;
-    unsubscribe?.();
-    adapter?.dispose();
-    adapter = null;
+    disposeScene();
   };
 });
 
-/**
- * Setup manual subscription for scene sync.
- *
- * A manual subscription rather than an `$effect`: the callback drives a renderer,
- * and an effect that both reads the store and mutates the scene loops.
- *
- * The diffing itself lives in `core/scene-sync.ts`, so it can be tested against
- * a spy adapter — under jsdom Babylon cannot initialise, and nothing has ever
- * mounted this component.
- */
-function setupSceneSync() {
-  if (!adapter) return;
-
-  let baseline = initialBaseline();
-  const sceneAdapter = adapter;
-
-  return store.subscribe((state) => {
-    baseline = syncScene(state, baseline, sceneAdapter);
-  });
-}
-
 // Format width/height
-const widthStyle = typeof width === 'number' ? `${width}px` : width;
-const heightStyle = typeof height === 'number' ? `${height}px` : height;
+const widthStyle = $derived(typeof width === 'number' ? `${width}px` : width);
+const heightStyle = $derived(typeof height === 'number' ? `${height}px` : height);
 </script>
 
 <div class="scene-container" style="width: {widthStyle}; height: {heightStyle};">

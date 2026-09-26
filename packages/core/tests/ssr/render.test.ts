@@ -28,8 +28,9 @@ import { createStore } from '../../src/lib/store.svelte';
 import { Effect } from '../../src/lib/effect';
 import type { Reducer } from '../../src/lib/types';
 
+const renderedHead = vi.hoisted(() => ({ value: '<title>head</title>' }));
 vi.mock('svelte/server', () => ({
-  render: vi.fn(() => ({ body: '<div>body</div>', head: '<title>head</title>' }))
+  render: vi.fn(() => ({ body: '<div>body</div>', head: renderedHead.value }))
 }));
 
 interface State {
@@ -195,3 +196,31 @@ describe('renderToHTML fails closed on a state it cannot serialize (SS7)', () =>
 	});
 });
 
+
+describe('explicit document head ownership', () => {
+  it('lets the component own the title and escapes the document language', () => {
+    const html = renderToHTML({} as never, {}, { title: null, lang: 'fr" onload="bad' });
+    expect(html.match(/<title>/g)).toHaveLength(1);
+    expect(html).toContain('<title>head</title>');
+    expect(html).toContain('<html lang="fr&quot; onload=&quot;bad">');
+    expect(html).not.toContain('<html lang="fr" onload=');
+  });
+
+  it('preserves the default and explicit document-title behavior', () => {
+    expect(renderToHTML({} as never, {})).toContain('<title>Composable Svelte App</title>');
+    expect(renderToHTML({} as never, {})).toContain('<html lang="en">');
+    const html = renderToHTML({} as never, {}, { title: '<unsafe>&"' });
+    expect(html).toContain('<title>&lt;unsafe&gt;&amp;&quot;</title>');
+    expect(html).toContain('<title>head</title>');
+  });
+});
+
+
+it('explicit null does not invent a title when the component has none', () => {
+  const original = renderedHead.value;
+  try {
+    renderedHead.value = '';
+    expect(renderToHTML({} as never, {}, { title: null })).not.toContain('<title>');
+    expect(renderToHTML({} as never, {})).toContain('<title>Composable Svelte App</title>');
+  } finally { renderedHead.value = original; }
+});

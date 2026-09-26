@@ -1,0 +1,12 @@
+suite exit=0
+inspect exit=0
+archive 6095ae2fa24d7fe895db616d9cdc82b6380950cd2945ab9dc22f5fb85b3ff304 sha512-kHetoCXaLxIDL/I5JPjOn4MyzGmEQbHKDBQo6HLVpI51g9NwU9/eMC6WTzYnrX22MKwJclp/KMHrsNxCAKQfFA==
+profiles exit=0
+starter controls exit=0
+smoke exit=0
+auth controls exit=0
+bundled:auth on derivative exit=0
+bundled:starter on derivative exit=21
+bundled:auth qualification exit=22 (expect 22)
+author-apps exit=0
+DONE

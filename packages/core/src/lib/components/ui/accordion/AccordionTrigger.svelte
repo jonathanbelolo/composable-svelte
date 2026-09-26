@@ -96,6 +96,7 @@
 
 <button
 	type="button"
+	id={itemContext.triggerId}
 	class={cn(
 		'flex w-full items-center justify-between py-4 text-sm font-medium',
 		'hover:underline',
@@ -103,7 +104,7 @@
 		className
 	)}
 	aria-expanded={isExpanded}
-	aria-controls={`accordion-content-${itemContext.id}`}
+	aria-controls={itemContext.contentId}
 	disabled={itemContext.disabled}
 	onclick={handleClick}
 	onkeydown={handleKeyDown}

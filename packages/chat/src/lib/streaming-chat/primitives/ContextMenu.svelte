@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Store } from '@composable-svelte/core';
+	import type { ViewStore } from '../../internal/view-store.js';
 	import type { Message, StreamingChatState, StreamingChatAction } from '../types.js';
 
 	/**
@@ -9,7 +9,8 @@
 	 */
 	interface Props {
 		message: Message;
-		store: Store<StreamingChatState, StreamingChatAction>;
+		/** A standalone `Store`, or a managed feature view. */
+		store: ViewStore<StreamingChatState, StreamingChatAction>;
 		onAddReaction?: (() => void) | undefined;
 	}
 
@@ -55,13 +56,10 @@
 
 	// Add/remove click listener when menu opens/closes
 	$effect(() => {
-		if (isOpen) {
-			setTimeout(() => document.addEventListener('click', handleClickOutside), 0);
-		} else {
-			document.removeEventListener('click', handleClickOutside);
-		}
-
+		if (!isOpen) return;
+		const timer = setTimeout(() => document.addEventListener('click', handleClickOutside), 0);
 		return () => {
+			clearTimeout(timer);
 			document.removeEventListener('click', handleClickOutside);
 		};
 	});
@@ -112,7 +110,7 @@
 				<button
 					class="context-menu__item"
 					onclick={handleRegenerate}
-					disabled={$store.isWaitingForResponse}
+					disabled={$store?.isWaitingForResponse}
 				>
 					<svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
 						<path d="M1 4V1M1 1H4M1 1L4.5 4.5C5.66667 5.66667 7.33333 6.66667 9.5 6.66667C12.5 6.66667 14.3333 5 15 4M15 12V15M15 15H12M15 15L11.5 11.5C10.3333 10.3333 8.66667 9.33333 6.5 9.33333C3.5 9.33333 1.66667 11 1 12" stroke="currentColor" stroke-width="1.5"/>

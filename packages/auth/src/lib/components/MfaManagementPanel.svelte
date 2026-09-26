@@ -15,6 +15,7 @@
 	 * Pattern A: it animates nothing.
 	 */
 	import type { Snippet } from 'svelte';
+	import type { PresentationView } from '@composable-svelte/core/application';
 
 	import RecoveryCodes from './RecoveryCodes.svelte';
 	import { isReauthenticationRequired } from '../errors/helpers.js';
@@ -24,21 +25,12 @@
 		MfaOperation
 	} from '../flows/mfa-management/types.js';
 
-	interface Props {
+	interface StandaloneBinding {
+		mode?: 'standalone' | undefined;
 		store: {
 			readonly state: MfaManagementState;
 			dispatch(action: MfaManagementAction): void;
 		};
-		/**
-		 * Whether the account has an authenticator, from `fetchAccount`.
-		 *
-		 * `undefined` means not known yet, and the panel then says so rather than
-		 * guessing — unlike `ChangePasswordForm`, which can default its wording
-		 * because both of its branches offer the same button. Here the two
-		 * branches offer *different* buttons, and guessing wrong would put a
-		 * "Turn off" next to an authenticator that was never on.
-		 */
-		mfaEnabled?: boolean | undefined;
 		/** Called after either operation succeeds, so the surface can re-read the account. */
 		onChanged?: (() => void) | undefined;
 		/**
@@ -54,6 +46,32 @@
 					methods: readonly ('password' | 'totp' | 'recovery_code')[];
 			  }) => void)
 			| undefined;
+	}
+
+	/**
+	 * The `mfaManagement` view from `createAuthFeature`. Successes and a
+	 * `reauthentication_required` refusal are reported by the feature as
+	 * `mfaOutcome`, so neither callback exists here. A demand stays visible in
+	 * the panel, since the panel cannot tell whether the parent routes it.
+	 */
+	interface ManagedBinding {
+		mode: 'managed';
+		store: PresentationView<MfaManagementState, MfaManagementAction>;
+		onChanged?: never;
+		onReauthenticationRequired?: never;
+	}
+
+	interface PresentationProps {
+		/**
+		 * Whether the account has an authenticator, from `fetchAccount`.
+		 *
+		 * `undefined` means not known yet, and the panel then says so rather than
+		 * guessing — unlike `ChangePasswordForm`, which can default its wording
+		 * because both of its branches offer the same button. Here the two
+		 * branches offer *different* buttons, and guessing wrong would put a
+		 * "Turn off" next to an authenticator that was never on.
+		 */
+		mfaEnabled?: boolean | undefined;
 		/** Rendered on the off branch, where turning it on lives. */
 		enrol?: Snippet | undefined;
 		headingLevel?: 1 | 2 | 3 | 4 | undefined;
@@ -62,33 +80,47 @@
 		class?: string | undefined;
 	}
 
+	type Props = PresentationProps & (StandaloneBinding | ManagedBinding);
+
 	let {
-		store,
 		mfaEnabled,
-		onChanged,
-		onReauthenticationRequired,
 		enrol,
 		headingLevel = 2,
 		footer,
-		class: className = ''
+		class: className = '',
+		...binding
 	}: Props = $props();
 
-	const status = $derived(store.state.status);
-	const error = $derived(store.state.error);
-	const operation = $derived(store.state.operation);
-	const recoveryCodes = $derived(store.state.recoveryCodes);
+	/**
+	 * What keys the rendered subtree, as in `EmailVerification`: managed, the view
+	 * itself, so a departing subtree's click lands on the owner it was rendered
+	 * for; standalone, one owner for the component's life.
+	 */
+	type Owner = symbol | PresentationView<MfaManagementState, MfaManagementAction>;
+	const standaloneOwner = Symbol('standalone');
+	const owner: Owner = $derived(binding.mode === 'managed' ? binding.store : standaloneOwner);
+	const viewOf = (key: Owner) => (typeof key === 'symbol' ? binding.store : key);
+
+	/** `undefined` only for a managed view whose owner has retired. */
+	const flow: MfaManagementState | undefined = $derived(binding.store.state);
+	const status = $derived(flow?.status);
+	const error = $derived(flow?.error ?? null);
+	const operation = $derived(flow?.operation ?? null);
+	const recoveryCodes = $derived(flow?.recoveryCodes ?? null);
 
 	const isDisabling = $derived(status === 'disabling');
 	const isRegenerating = $derived(status === 'regenerating');
 	const isBusy = $derived(isDisabling || isRegenerating);
 
 	/**
-	 * The last value actually reported, so only a *change* is reported onward.
+	 * The last value actually reported, so only a *change* is reported onward —
+	 * per owner: a fresh managed owner has observed nothing yet.
 	 *
 	 * Not `$state`: nothing renders from it, and making it reactive would put
 	 * the effect below in a loop with itself.
 	 */
 	let lastObserved: boolean | undefined = undefined;
+	let lastObservedOwner: Owner | null = null;
 
 	/**
 	 * Tell the flow when the account's answer **changes**.
@@ -110,10 +142,17 @@
 	 * resetting a status against a stale boolean is not.
 	 */
 	$effect(() => {
+		const key = owner;
+		if (key !== lastObservedOwner) {
+			lastObservedOwner = key;
+			lastObserved = undefined;
+		}
 		const current = mfaEnabled;
 		if (current === undefined || current === lastObserved) return;
+		const view = viewOf(key);
+		if (view.state === undefined) return;
 		lastObserved = current;
-		store.dispatch({ type: 'mfaObserved', enabled: current });
+		view.dispatch({ type: 'mfaObserved', enabled: current });
 	});
 
 	/**
@@ -131,7 +170,9 @@
 	let reportedChange = false;
 
 	$effect(() => {
-		const state = store.state;
+		// Managed, the feature reports successes as `mfaOutcome` instead.
+		if (binding.mode === 'managed') return;
+		const state = binding.store.state;
 		// The two successes: MFA is off, or a fresh set of codes is on screen.
 		// `recoveryCodes` is cleared when either operation starts, so this cannot
 		// re-fire for the same set.
@@ -142,7 +183,7 @@
 		}
 		if (reportedChange) return;
 		reportedChange = true;
-		onChanged?.();
+		binding.onChanged?.();
 	});
 
 	/**
@@ -154,10 +195,11 @@
 	let reportedDemand = false;
 
 	$effect(() => {
-		const state = store.state;
+		if (binding.mode === 'managed') return;
+		const state = binding.store.state;
 		const current = state.error;
 		if (
-			onReauthenticationRequired === undefined ||
+			binding.onReauthenticationRequired === undefined ||
 			!isReauthenticationRequired(current) ||
 			state.operation === null
 		) {
@@ -166,7 +208,7 @@
 		}
 		if (reportedDemand) return;
 		reportedDemand = true;
-		onReauthenticationRequired({ operation: state.operation, methods: current.methods });
+		binding.onReauthenticationRequired({ operation: state.operation, methods: current.methods });
 	});
 
 	/**
@@ -175,13 +217,26 @@
 	 * A demand a consumer is handling is not one — they are routing to a prompt,
 	 * and a red "something went wrong" on the way there is both wrong and
 	 * alarming. The `mfa_required` lesson.
+	 *
+	 * Managed, there is no handler to see: `mfaOutcome` is optional state a
+	 * parent may or may not read. Hiding the demand there would leave a panel
+	 * that silently did nothing for a parent that ignores it, so managed shows it
+	 * — the backend's message with "Nothing was turned off." — and the buttons
+	 * stay enabled for the retry. A parent that routes to a prompt shows that
+	 * beside it; the retry clears it.
 	 */
+	const handlesReauth = $derived(
+		binding.mode !== 'managed' && binding.onReauthenticationRequired !== undefined
+	);
+
 	const showsError = $derived(
 		error !== null &&
-			!(onReauthenticationRequired !== undefined && isReauthenticationRequired(error))
+			!(handlesReauth && isReauthenticationRequired(error))
 	);
 </script>
 
+{#if flow}
+{#each [owner] as key (key)}
 <div class="mfa-management {className}">
 	<svelte:element this={`h${headingLevel}`} class="mfa-management__title">
 		Two-factor authentication
@@ -212,12 +267,6 @@
 				your password.
 			{/if}
 		</p>
-		<!--
-			The way back on, on the branch where it belongs. Without it this is the
-			dead-end species: a panel saying a thing is off, with no way to change
-			that. A surface that has nowhere to send them passes nothing and gets a
-			plain statement instead of a broken button.
-		-->
 		{#if enrol}
 			<div class="mfa-management__enrol">{@render enrol()}</div>
 		{/if}
@@ -231,7 +280,7 @@
 				codes={recoveryCodes}
 				replaced
 				headingLevel={headingLevel === 4 ? 4 : ((headingLevel + 1) as 2 | 3 | 4)}
-				onAcknowledged={() => store.dispatch({ type: 'recoveryCodesAcknowledged' })}
+				onAcknowledged={() => viewOf(key).dispatch({ type: 'recoveryCodesAcknowledged' })}
 			/>
 		{/if}
 
@@ -240,7 +289,7 @@
 				type="button"
 				class="mfa-management__secondary"
 				disabled={isBusy}
-				onclick={() => store.dispatch({ type: 'regenerateRequested' })}
+				onclick={() => viewOf(key).dispatch({ type: 'regenerateRequested' })}
 			>
 				{isRegenerating ? 'Issuing new codes…' : 'Get new recovery codes'}
 			</button>
@@ -248,7 +297,7 @@
 				type="button"
 				class="mfa-management__destructive"
 				disabled={isBusy}
-				onclick={() => store.dispatch({ type: 'disableRequested' })}
+				onclick={() => viewOf(key).dispatch({ type: 'disableRequested' })}
 			>
 				{isDisabling ? 'Turning off…' : 'Turn off'}
 			</button>
@@ -269,6 +318,8 @@
 		<div class="mfa-management__footer">{@render footer()}</div>
 	{/if}
 </div>
+{/each}
+{/if}
 
 <style>
 	/* Scoped CSS over core's theme tokens — see `LoginForm` for why not Tailwind. */

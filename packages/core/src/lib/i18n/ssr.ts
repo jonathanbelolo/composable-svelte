@@ -48,6 +48,7 @@
 
 import type {
   I18nState,
+  I18nAction,
   I18nDependencies,
   TranslationNamespace,
   LocaleDetector
@@ -231,7 +232,11 @@ export async function initI18nOnServer(config: SSRConfig): Promise<I18nSSRData> 
  * Hydrate i18n on the client.
  *
  * This function restores the server-rendered i18n state on the client,
- * ensuring zero-FOIT (Flash Of Incorrect Translation).
+ * ensuring zero-FOIT (Flash Of Incorrect Translation). The root reducer must
+ * forward I18nAction to i18nReducer. For wrapped child actions, supply mapAction
+ * as the third argument. Hydrate before rendering translated client content.
+ * Existing client namespaces win cache collisions (including compiled messages);
+ * server namespaces fill missing entries. Hydration does not persist a preference.
  *
  * @example
  * ```svelte
@@ -255,28 +260,31 @@ export async function initI18nOnServer(config: SSRConfig): Promise<I18nSSRData> 
  * </script>
  * ```
  */
+type HydrationAction = Extract<I18nAction, { type: 'i18n/hydrate' }>;
+
+/** Direct root unions accept hydration; other unions must provide their normal action mapper. */
 export function hydrateI18nOnClient<S extends { i18n: I18nState }, A>(
   store: { state: S; dispatch: (action: A) => void },
-  ssrData: I18nSSRData
+  ssrData: I18nSSRData,
+  ...mapping: HydrationAction extends A
+    ? [mapAction?: (action: HydrationAction) => A]
+    : [mapAction: (action: HydrationAction) => A]
+): void;
+export function hydrateI18nOnClient<S extends { i18n: I18nState }, A>(
+  store: { state: S; dispatch: (action: A) => void },
+  ssrData: I18nSSRData,
+  mapAction?: (action: Extract<I18nAction, { type: 'i18n/hydrate' }>) => A
 ): void {
-  // Merge SSR state with current store state
-  const currentState = store.state;
-  const newState = {
-    ...currentState,
-    i18n: {
+  const action: Extract<I18nAction, { type: 'i18n/hydrate' }> = {
+    type: 'i18n/hydrate',
+    state: {
       ...ssrData.state,
-      // Preserve any client-side state that may have been set during hydration
-      translations: {
-        ...currentState.i18n?.translations,
-        ...ssrData.state.translations
-      }
+      translations: { ...ssrData.translations, ...ssrData.state.translations }
     }
   };
-
-  // Note: This assumes the store has a way to replace state
-  // In practice, you'd dispatch an action to update the i18n state
-  // The exact implementation depends on your store architecture
-  // For now, this is a conceptual implementation
+  // Existing two-argument callers include I18nAction directly in their root
+  // union. Wrapped child actions supply their normal composition mapping.
+  store.dispatch(mapAction ? mapAction(action) : action as A);
 }
 
 
@@ -417,7 +425,9 @@ export function rerouteWithLocale(
   locale: string
 ): string {
   const segments = pathname.split('/').filter(Boolean);
-  // Remove locale from path if present
-  const filtered = segments.filter((s) => s !== locale);
-  return '/' + filtered.join('/');
+  // Remove leading locale prefix from path if present
+  if (segments[0] === locale) {
+    segments.shift();
+  }
+  return '/' + segments.join('/');
 }

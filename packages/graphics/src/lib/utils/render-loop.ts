@@ -15,7 +15,9 @@ export type RenderCallback = (deltaTime: number) => void;
 
 export class RenderLoop {
 	private running = false;
+	private destroyed = false;
 	private rafId: number | null = null;
+	private loopId = 0;
 	private lastFrameTime = 0;
 	private targetFPS = 60;
 	private frameInterval: number;
@@ -61,13 +63,15 @@ export class RenderLoop {
 	}
 
 	/**
-	 * Stop the loop and release the visibility listener.
+	 * Permanently destroy the loop and release the visibility listener.
+	 * Calling start after destroy throws; use stop for a restartable pause.
 	 *
 	 * Separate from `stop()`, which only cancels the pending frame: the listener
 	 * has to go too, or a mounted-and-unmounted overlay leaves one behind every
 	 * time.
 	 */
 	destroy(): void {
+		this.destroyed = true;
 		this.stop();
 
 		if (this.onVisibilityChange) {
@@ -82,19 +86,24 @@ export class RenderLoop {
 	 * @param callback - Function to call each frame with delta time
 	 */
 	start(callback: RenderCallback): void {
+		if (this.destroyed) throw new Error('Cannot start a destroyed render loop');
 		if (this.running) {
 			console.warn('[WebGLOverlay] Render loop already running');
 			return;
 		}
 
+		this.currentFPS = 0;
+		this.worstReportedFPS = Number.POSITIVE_INFINITY;
+		this.tabVisible = !document.hidden;
 		this.running = true;
 		this.callback = callback;
 		this.lastFrameTime = performance.now();
 		this.fpsStartTime = performance.now();
 		this.frameCount = 0;
+		const currentLoopId = ++this.loopId;
 
 		const loop = (currentTime: number) => {
-			if (!this.running) return;
+			if (!this.running || this.loopId !== currentLoopId) return;
 
 			// Skip rendering if tab is hidden
 			if (!this.tabVisible) {
@@ -108,8 +117,16 @@ export class RenderLoop {
 			if (deltaTime >= this.frameInterval) {
 				// Call render callback with delta time
 				if (this.callback) {
-					this.callback(deltaTime);
+					try {
+						this.callback(deltaTime);
+					} catch (error) {
+						// Preserve native error reporting while making the failed generation restartable.
+						if (this.loopId === currentLoopId) this.stop();
+						throw error;
+					}
 				}
+
+				if (!this.running || this.loopId !== currentLoopId) return;
 
 				// Update FPS counter
 				this.updateFPS(currentTime);
@@ -118,7 +135,9 @@ export class RenderLoop {
 				this.lastFrameTime = currentTime - (deltaTime % this.frameInterval);
 			}
 
-			this.rafId = requestAnimationFrame(loop);
+			if (this.running && this.loopId === currentLoopId) {
+				this.rafId = requestAnimationFrame(loop);
+			}
 		};
 
 		this.rafId = requestAnimationFrame(loop);
@@ -129,6 +148,7 @@ export class RenderLoop {
 	 */
 	stop(): void {
 		this.running = false;
+		this.loopId++;
 		if (this.rafId !== null) {
 			cancelAnimationFrame(this.rafId);
 			this.rafId = null;

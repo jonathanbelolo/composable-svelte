@@ -1,10 +1,13 @@
-import { render } from 'vitest-browser-svelte';
+import { flushSync, mount, unmount, type Component } from 'svelte';
 import { page, userEvent } from 'vitest/browser';
-import { describe, it, expect } from 'vitest';
+import { onTestFinished, describe, it, expect } from 'vitest';
 import Sidebar from '../../src/lib/navigation-components/Sidebar.svelte';
 import { createStore } from '../../src/lib/store.svelte.js';
-import { scopeToDestination } from '../../src/lib/navigation/scope-to-destination.js';
+import { ManagedIntegrationBuilder, optionalSlot, type PresentationView } from '../../src/lib/navigation/managed-integration.js';
+import type { Reducer, Store } from '../../src/lib/types.js';
+import type { PresentationAction } from '../../src/lib/navigation/types.js';
 import { Effect } from '../../src/lib/effect.js';
+import { resetBodyScroll } from '../helpers/body-scroll.js';
 
 // ============================================================================
 // Test Fixtures
@@ -22,7 +25,46 @@ interface ParentState {
 
 type ParentAction =
   | { type: 'show' }
-  | { type: 'destination'; action: any };
+  | { type: 'destination'; action: PresentationAction<TestAction> };
+
+const destinationSlot = optionalSlot<ParentState, ParentAction>()('destination');
+const childReducer: Reducer<NonNullable<ParentState['destination']>, TestAction> = (state) => [state, Effect.none()];
+const presentationBinders = new WeakMap<object, () => PresentationView<NonNullable<ParentState['destination']>, TestAction> | undefined>();
+
+function createManagedStore(config: {
+  initialState: ParentState;
+  reducer: Reducer<ParentState, ParentAction>;
+}): Store<ParentState, ParentAction> {
+  const composition = new ManagedIntegrationBuilder<ParentState, ParentAction, undefined>(config.reducer)
+    .with(destinationSlot, childReducer)
+    .build();
+  const store = createStore({ initialState: config.initialState, ...composition });
+  presentationBinders.set(store, () => composition.bind(store, destinationSlot));
+  onTestFinished(() => store.destroy());
+  return store;
+}
+
+function bindPresentation(store: Store<ParentState, ParentAction>): PresentationView<NonNullable<ParentState['destination']>, TestAction> | undefined {
+  const bind = presentationBinders.get(store);
+  if (!bind) throw new Error('Expected a managed test store');
+  return bind();
+}
+
+function renderManaged<const Props extends Record<string, unknown>>(component: Component<Props>, props: Props) {
+  const target = document.createElement('div');
+  document.body.append(target);
+  const instance = mount(component, { target, props });
+  flushSync();
+  let disposed = false;
+  const cleanup = async () => {
+    if (disposed) return;
+    disposed = true;
+    await unmount(instance);
+    target.remove();
+  };
+  onTestFinished(cleanup);
+  return { unmount: cleanup };
+}
 
 // ============================================================================
 // Sidebar Component Tests
@@ -30,28 +72,24 @@ type ParentAction =
 
 describe('Sidebar Component', () => {
   it('shows when store is non-null', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
       reducer: (state) => [state, Effect.none()]
     });
+    onTestFinished(() => parentStore.destroy());
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Sidebar, { store: scopedStore });
+    renderManaged(Sidebar, { store: scopedStore });
 
     const sidebar = page.getByRole('navigation');
     await expect.element(sidebar).toBeInTheDocument();
   });
 
-  it('hides when store is null', async () => {
-    render(Sidebar, { store: null });
+  it('hides when store is undefined', async () => {
+    renderManaged(Sidebar, { store: undefined });
 
     // Check that no complementary element exists
     const sidebars = page.getByRole('navigation').elements();
@@ -61,7 +99,7 @@ describe('Sidebar Component', () => {
   it('dismisses sidebar when Escape pressed', async () => {
     let dismissCalled = false;
 
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
@@ -76,15 +114,11 @@ describe('Sidebar Component', () => {
         return [state, Effect.none()];
       }
     });
+    onTestFinished(() => parentStore.destroy());
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Sidebar, { store: scopedStore });
+    renderManaged(Sidebar, { store: scopedStore });
 
     // Sidebar should be visible
     const sidebar = page.getByRole('navigation');
@@ -93,15 +127,11 @@ describe('Sidebar Component', () => {
     // Press Escape
     await userEvent.keyboard('{Escape}');
 
-    // Give time for event to process
-    await new Promise(resolve => setTimeout(resolve, 50));
-
-    // Verify dismiss was called
-    expect(dismissCalled).toBe(true);
+    await expect.poll(() => dismissCalled).toBe(true);
   });
 
   it('respects disableEscapeKey prop', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
@@ -115,15 +145,11 @@ describe('Sidebar Component', () => {
         return [state, Effect.none()];
       }
     });
+    onTestFinished(() => parentStore.destroy());
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Sidebar, { store: scopedStore, disableEscapeKey: true });
+    renderManaged(Sidebar, { store: scopedStore, disableEscapeKey: true });
 
     // Press Escape
     await userEvent.keyboard('{Escape}');
@@ -134,21 +160,17 @@ describe('Sidebar Component', () => {
   });
 
   it('applies custom width', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
       reducer: (state) => [state, Effect.none()]
     });
+    onTestFinished(() => parentStore.destroy());
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Sidebar, { store: scopedStore, width: '300px' });
+    renderManaged(Sidebar, { store: scopedStore, width: '300px' });
 
     const sidebar = page.getByRole('navigation');
     const style = sidebar.element().getAttribute('style');
@@ -156,63 +178,51 @@ describe('Sidebar Component', () => {
   });
 
   it('applies left border by default', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
       reducer: (state) => [state, Effect.none()]
     });
+    onTestFinished(() => parentStore.destroy());
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Sidebar, { store: scopedStore });
+    renderManaged(Sidebar, { store: scopedStore });
 
     const sidebar = page.getByRole('navigation');
     await expect.element(sidebar).toHaveClass(/border-r/);
   });
 
   it('applies right border when side="right"', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
       reducer: (state) => [state, Effect.none()]
     });
+    onTestFinished(() => parentStore.destroy());
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Sidebar, { store: scopedStore, side: 'right' });
+    renderManaged(Sidebar, { store: scopedStore, side: 'right' });
 
     const sidebar = page.getByRole('navigation');
     await expect.element(sidebar).toHaveClass(/border-l/);
   });
 
   it('applies custom classes', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
       reducer: (state) => [state, Effect.none()]
     });
+    onTestFinished(() => parentStore.destroy());
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Sidebar, {
+    renderManaged(Sidebar, {
         store: scopedStore,
         class: 'custom-sidebar-content'
       });
@@ -222,21 +232,17 @@ describe('Sidebar Component', () => {
   });
 
   it('respects unstyled prop', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
       reducer: (state) => [state, Effect.none()]
     });
+    onTestFinished(() => parentStore.destroy());
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    const scopedStore = bindPresentation(parentStore);
 
-    render(Sidebar, { store: scopedStore, unstyled: true });
+    renderManaged(Sidebar, { store: scopedStore, unstyled: true });
 
     const sidebar = page.getByRole('navigation');
     const className = sidebar.element().className;
@@ -244,27 +250,42 @@ describe('Sidebar Component', () => {
   });
 
   it('does not prevent body scroll (persistent sidebar)', async () => {
-    // Store initial body overflow value
-    const initialOverflow = document.body.style.overflow;
+    const originalOverflow = document.body.style.overflow;
+    const originalPaddingRight = document.body.style.paddingRight;
+    resetBodyScroll();
+    expect(document.body.style.overflow).toBe('');
 
-    const parentStore = createStore<ParentState, ParentAction>({
+    const parentStore = createManagedStore({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
       reducer: (state) => [state, Effect.none()]
     });
+    onTestFinished(() => parentStore.destroy());
 
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
+    try {
+      // Closed state: sidebar is hidden and body scroll remains unlocked
+      const closedScreen = renderManaged(Sidebar, { store: undefined });
+      try {
+        expect(document.body.style.overflow).toBe('');
+      } finally {
+        await closedScreen.unmount();
+      }
 
-    render(Sidebar, { store: scopedStore });
+      // Open state: sidebar is shown and body scroll remains unlocked (persistent sidebar)
+      const scopedStore = bindPresentation(parentStore);
 
-    // Check body overflow is NOT set to hidden (sidebars don't lock scroll)
-    const bodyStyle = document.body.style.overflow;
-    expect(bodyStyle).toBe(initialOverflow);
+      const screen = renderManaged(Sidebar, { store: scopedStore });
+      try {
+        expect(document.body.style.overflow).toBe('');
+      } finally {
+        await screen.unmount();
+      }
+      expect(document.body.style.overflow).toBe('');
+    } finally {
+      parentStore.destroy();
+      document.body.style.overflow = originalOverflow;
+      document.body.style.paddingRight = originalPaddingRight;
+    }
   });
 });

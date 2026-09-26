@@ -4,115 +4,90 @@
  * Simplified using WebGLOverlay API
  */
 
-import { onMount, getContext } from 'svelte';
-import { animateFadeOut } from '@composable-svelte/core/animation';
-import type { CustomShaderEffect } from '@composable-svelte/graphics';
+import { getContext, untrack, onMount } from 'svelte';
+import { animateFadeOut, animateFadeIn } from '@composable-svelte/core/animation';
+import type { ShaderEffect } from '@composable-svelte/graphics';
+import { GALLERY_CONTEXT_KEY, type ShaderGalleryContext } from './gallery-context';
 
-let {
-  id,
-  src,
-  alt,
-  shader
-}: {
+let { id, src, alt, shader }: {
   id: string;
   src: string;
   alt: string;
-  // Optional: the gallery's "None" option produces no shader, and that is a
-  // state the app can actually reach.
-  shader?: string | CustomShaderEffect | undefined;
+  shader?: ShaderEffect | undefined;
 } = $props();
-
-// Get gallery context
-const gallery = getContext<{
-  registerImageElement: (
-    id: string,
-    element: HTMLImageElement,
-    src: string,
-    shader: string | CustomShaderEffect | undefined,
-    onTextureLoaded?: () => void
-  ) => void;
-  unregisterImageElement: (id: string) => void;
-  updateImageShader: (id: string, shader: string | CustomShaderEffect | undefined) => void;
-  updateImagePosition: (id: string) => void;
-}>('shader-gallery');
-
-let imgRef: HTMLImageElement | null = $state(null);
+const gallery = getContext<ShaderGalleryContext | undefined>(GALLERY_CONTEXT_KEY);
 let wrapperRef: HTMLDivElement | null = $state(null);
-let webglLoaded = $state(false);
+let imgRef: HTMLImageElement | null = $state(null);
+let registration = $state.raw<{
+  id: string;
+  element: HTMLImageElement;
+  shader: ShaderEffect | undefined;
+  fade: AbortController;
+  reveal: AbortController;
+} | null>(null);
 
-// The DOM image fades out once the WebGL texture has taken over. That is a
-// state-driven lifecycle, so it belongs to Motion One rather than a CSS
-// transition the store cannot see — and `animateFadeOut` honours
-// `prefers-reduced-motion` by writing the end state, which a `transition` on a
-// class toggle could not.
-//
-// A plain `let`, never `$state`: a reactive guard would re-trigger the effect it
-// lives in.
-let hasFadedOut = false;
-let isRegistered = $state(false);
-
-// Watch for shader changes and update WebGL overlay
+// DOM source lifetimes are kept in this rendering integration. The overlay
+// owns texture creation and position tracking; the reducer receives no DOM.
 $effect(() => {
-  if (isRegistered && gallery) {
-    gallery.updateImageShader(id, shader);
-  }
-});
-
-$effect(() => {
-  if (hasFadedOut || !webglLoaded || !imgRef) return;
-  hasFadedOut = true;
-  animateFadeOut(imgRef);
-});
-
-onMount(() => {
-  if (!imgRef || !gallery) return;
-
-  // Register image when loaded
-  const handleLoad = () => {
-    if (!imgRef) return;
-    // Pass callback to fade out DOM image only after WebGL texture is loaded
-    gallery.registerImageElement(id, imgRef, src, shader, () => {
-      webglLoaded = true;
-    });
-    isRegistered = true;
+  const currentId = id;
+  const currentSrc = src;
+  const element = imgRef;
+  if (!element || !gallery) return;
+  let active = true;
+  let registered = false;
+  let faded = false;
+  const fade = new AbortController();
+  const reveal = new AbortController();
+  const load = () => {
+    if (!active || registered || !element.complete || element.naturalWidth === 0) return;
+    const currentShader = untrack(() => shader);
+    registered = untrack(() => gallery.registerImageElement(
+      currentId, element, currentSrc, currentShader,
+      () => {
+        if (!active || faded || gallery.isFallback()) return;
+        faded = true;
+        void animateFadeOut(element, { signal: fade.signal });
+      }
+    ));
+    if (registered) registration = { id: currentId, element, shader: currentShader, fade, reveal };
   };
-
-  if (imgRef.complete) {
-    handleLoad();
-  } else {
-    imgRef.addEventListener('load', handleLoad);
-  }
-
-  // Re-sync the WebGL overlay to the wrapper's new position on hover.
-  //
-  // This used to be a 300ms `requestAnimationFrame` loop on each handler,
-  // "matching the CSS transition duration" — the `transition: transform 0.3s`
-  // on `.shader-image-wrapper:hover`. That transition is gone: it was
-  // pseudo-class-driven, which the animation policy prohibits, so the transform
-  // now lands in a single frame. The loops were spending ~18 frames each
-  // tracking something that had already finished, and the two comments naming
-  // the transition outlived it.
-  const syncOverlayPosition = () => {
-    if (gallery && isRegistered) gallery.updateImagePosition(id);
-  };
-
-  const handleMouseEnter = syncOverlayPosition;
-  const handleMouseLeave = syncOverlayPosition;
-
-  if (wrapperRef) {
-    wrapperRef.addEventListener('mouseenter', handleMouseEnter);
-    wrapperRef.addEventListener('mouseleave', handleMouseLeave);
-  }
-
+  element.addEventListener('load', load);
+  untrack(load);
   return () => {
-    gallery.unregisterImageElement(id);
-    if (imgRef) {
-      imgRef.removeEventListener('load', handleLoad);
-    }
-    if (wrapperRef) {
-      wrapperRef.removeEventListener('mouseenter', handleMouseEnter);
-      wrapperRef.removeEventListener('mouseleave', handleMouseLeave);
-    }
+    active = false;
+    fade.abort();
+    reveal.abort();
+    element.removeEventListener('load', load);
+    if (registered) gallery.unregisterImageElement(currentId, element);
+    registration = null;
+  };
+});
+
+$effect(() => {
+  const current = registration;
+  const currentShader = shader;
+  if (current && gallery && !Object.is(current.shader, currentShader)) {
+    untrack(() => gallery.updateImageShader(current.id, currentShader));
+    current.shader = currentShader;
+  }
+});
+$effect(() => {
+  const current = registration;
+  if (current && gallery?.isFallback()) {
+    current.fade.abort();
+    void animateFadeIn(current.element, { duration: 0, signal: current.reveal.signal });
+  }
+});
+function syncOverlayPosition(): void {
+  if (registration) gallery?.updateImagePosition(registration.id);
+}
+onMount(() => {
+  const wrapper = wrapperRef;
+  wrapper?.addEventListener('mouseenter', syncOverlayPosition);
+  wrapper?.addEventListener('mouseleave', syncOverlayPosition);
+  return () => {
+    wrapper?.removeEventListener('mouseenter', syncOverlayPosition);
+    wrapper?.removeEventListener('mouseleave', syncOverlayPosition);
   };
 });
 </script>
@@ -138,10 +113,12 @@ onMount(() => {
 </style>
 
 <div class="shader-image-wrapper" bind:this={wrapperRef}>
+  {#key JSON.stringify([id, src])}
   <img
     bind:this={imgRef}
     {src}
     {alt}
     crossorigin="anonymous"
   />
+  {/key}
 </div>

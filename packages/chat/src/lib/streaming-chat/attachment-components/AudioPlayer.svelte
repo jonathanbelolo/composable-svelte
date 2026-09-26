@@ -30,6 +30,38 @@
 	let isSeeking = $state(false);
 	let isLoading = $state(true);
 	let error = $state<string | null>(null);
+	let sourceUrl: string | undefined;
+	let playbackToken = 0;
+	let seekCleanup: (() => void) | null = null;
+
+	function endSeek() {
+		if (seekCleanup) {
+			seekCleanup();
+			seekCleanup = null;
+		}
+		isSeeking = false;
+	}
+
+	$effect(() => {
+		const url = attachment.url;
+		if (sourceUrl === url) return;
+
+		const isFirstRun = sourceUrl === undefined;
+		sourceUrl = url;
+		if (isFirstRun) return;
+
+		playbackToken++;
+		endSeek();
+		if (audioRef) {
+			audioRef.pause();
+			audioRef.currentTime = 0;
+		}
+		error = null;
+		isLoading = true;
+		isPlaying = false;
+		currentTime = 0;
+		duration = 0;
+	});
 
 	onMount(() => {
 		// Read *from* the element, not to it: these assignments used to set the
@@ -39,6 +71,16 @@
 			volume = audioRef.volume;
 			playbackRate = audioRef.playbackRate;
 		}
+
+		return () => {
+			playbackToken++;
+		endSeek();
+			if (audioRef) {
+				audioRef.pause();
+				audioRef.removeAttribute('src');
+				audioRef.load();
+			}
+		};
 	});
 
 	function togglePlay() {
@@ -47,7 +89,10 @@
 		if (isPlaying) {
 			audioRef.pause();
 		} else {
+			const token = ++playbackToken;
 			audioRef.play().catch((err) => {
+				if (token !== playbackToken || sourceUrl !== attachment.url) return;
+				if (err?.name === 'AbortError') return;
 				error = 'Failed to play audio';
 				console.error('Audio playback error:', err);
 			});
@@ -84,7 +129,28 @@
 	}
 
 	function handleSeekStart() {
+		endSeek();
 		isSeeking = true;
+
+		const win = audioRef?.ownerDocument.defaultView;
+		if (!win) { endSeek(); return; }
+		const onRelease = () => endSeek();
+
+		win.addEventListener('mouseup', onRelease);
+		win.addEventListener('touchend', onRelease);
+		win.addEventListener('touchcancel', onRelease);
+		win.addEventListener('pointerup', onRelease);
+		win.addEventListener('pointercancel', onRelease);
+		win.addEventListener('blur', onRelease);
+
+		seekCleanup = () => {
+			win.removeEventListener('mouseup', onRelease);
+			win.removeEventListener('touchend', onRelease);
+			win.removeEventListener('touchcancel', onRelease);
+			win.removeEventListener('pointerup', onRelease);
+			win.removeEventListener('pointercancel', onRelease);
+			win.removeEventListener('blur', onRelease);
+		};
 	}
 
 	function handleSeek(event: Event) {
@@ -96,7 +162,7 @@
 	}
 
 	function handleSeekEnd() {
-		isSeeking = false;
+		endSeek();
 	}
 
 	function handleVolumeChange(event: Event) {
@@ -193,10 +259,15 @@
 					max={duration || 0}
 					value={currentTime}
 					oninput={handleSeek}
+					onchange={handleSeekEnd}
 					onmousedown={handleSeekStart}
 					onmouseup={handleSeekEnd}
 					ontouchstart={handleSeekStart}
 					ontouchend={handleSeekEnd}
+					ontouchcancel={handleSeekEnd}
+					onpointerdown={handleSeekStart}
+					onpointerup={handleSeekEnd}
+					onpointercancel={handleSeekEnd}
 					disabled={isLoading}
 					style="--progress: {progress}%"
 				/>

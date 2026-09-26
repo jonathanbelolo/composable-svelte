@@ -175,7 +175,8 @@ function fromStorage(storage: Storage<PendingOAuth>, writable: boolean): Pending
 			try {
 				const pending = storage.getItem(KEY);
 				storage.removeItem(KEY);
-				return isPendingOAuth(pending) ? pending : null;
+				if (!isPendingOAuth(pending)) return null;
+				return { ...pending, returnTo: normaliseReturnTo(pending.returnTo) };
 			} catch {
 				// Answering `null` lands on `oauth_state_mismatch`, whose meaning is
 				// "cannot verify" — which is the honest verdict when the store cannot

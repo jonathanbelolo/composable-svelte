@@ -61,7 +61,15 @@ export type SignupAction =
 	/** Effect feedback: it did not work. */
 	| { type: 'signupFailed'; error: AuthError }
 	/** Clear the failure without touching the fields. */
-	| { type: 'errorDismissed' };
+	| { type: 'errorDismissed' }
+	/**
+	 * The user took the `email_taken` "Sign in instead" offer.
+	 *
+	 * The flow does nothing with it; where sign-in lives is its composer's
+	 * decision. `createAuthFeature` retires this flow and presents a sign-in.
+	 * Standalone, `SignupForm` calls `onSignIn` instead of dispatching it.
+	 */
+	| { type: 'signInRequested' };
 
 export interface SignupDependencies {
 	/** Only `signup` is needed here; the flow does nothing else. */

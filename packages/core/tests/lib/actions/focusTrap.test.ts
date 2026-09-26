@@ -160,6 +160,25 @@ describe('focusTrap action', () => {
     document.body.removeChild(previousButton);
   });
 
+  it('captures options at mount and intentionally exposes no update hook', async () => {
+    const first = document.createElement('button');
+    const second = document.createElement('button');
+    document.body.append(first, second);
+
+    const options = { autoFocus: false, returnFocus: first };
+    const result = focusTrap(container, options);
+    expect('update' in result).toBe(false);
+
+    options.returnFocus = second;
+    second.focus();
+    result.destroy();
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    expect(document.activeElement).toBe(first);
+    first.remove();
+    second.remove();
+  });
+
   it('ignores non-Tab keys', async () => {
     const result = focusTrap(container, { autoFocus: true });
     cleanup = result.destroy;

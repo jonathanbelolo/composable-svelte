@@ -1,0 +1,15 @@
+{
+  "appliedAt": "2026-09-25T11:16:40.679591+00:00",
+  "originalPatchSha256": "7cf973f05dbec7582449e3a2ce9bbce11d5e86ed78cf6e957bdb24b4dae97a31",
+  "appliedPatchSha256": "68c13c3c5d0f6822fc592cfe4de20d1781528424fc8c7ec53f3362bf32283208",
+  "normalization": "Media manifest hunk regenerated against source manifest; JSON equality proved only recipes allowlist addition",
+  "tarSha256": "39c4bd7c70b623bbf4eef3a040df4b5927e9f06bf674bc3f6a81ce8c47ae77c9",
+  "mainVerification": "pending",
+  "scope": "T5 only",
+  "remaining": [
+    "final version and peer assignment",
+    "final archive qualification",
+    "shared skills/checker profiles",
+    "physical MediaRecorder M12"
+  ]
+}

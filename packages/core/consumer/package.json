@@ -10,11 +10,11 @@
     "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
     "build": "vite build",
     "test": "vitest run",
-    "test:browser": "playwright test",
+    "test:browser": "playwright test --config playwright.config.ts && playwright test --config playwright.lifetime.config.ts",
     "test:ssr": "node scripts/ssr.mjs"
   },
   "dependencies": {
-    "@composable-svelte/core": "^0.12.2",
+    "@composable-svelte/core": "0.13.1",
     "svelte": "5.57.0"
   },
   "devDependencies": {

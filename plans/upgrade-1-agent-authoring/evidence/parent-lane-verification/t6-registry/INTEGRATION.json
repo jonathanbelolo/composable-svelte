@@ -1,0 +1,11 @@
+{
+  "integratedAt": "2026-09-25T13:40:19.422534+00:00",
+  "patchSHA256": "23e9b288d796d646b5879ef561a89f3592520ebfa450911ada54c45afec51456",
+  "paths": 5,
+  "review": "Opus 5.5 NO BLOCKERS",
+  "verification": "Parent focused node tests 12/12 passed after integration; worker full suite 525/525 twice and exact installed archive checks recorded separately",
+  "productionProfiles": [
+    "starter"
+  ],
+  "remaining": "Four review notes retained as future companion-profile gates; final versions and actual companion profiles not yet implemented"
+}

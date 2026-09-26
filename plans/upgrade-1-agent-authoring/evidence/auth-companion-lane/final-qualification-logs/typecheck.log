@@ -1,0 +1,3 @@
+
+> @composable-svelte/auth@0.2.1 typecheck /Users/jonathanbelolo/.codex/worktrees/fe42/composable-svelte/packages/auth
+> tsc --noEmit

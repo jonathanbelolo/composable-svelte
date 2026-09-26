@@ -127,6 +127,8 @@ describe('DataTable - User Flows', () => {
       // Verify we're on page 1
       let paginationInfo = container.querySelector('[data-testid="page-indicator"]');
       expect(paginationInfo?.textContent).toContain('Page 1 of 3');
+      expect(container.querySelector('[data-testid="table-row-1"]')?.textContent).toContain('Laptop');
+      expect(container.querySelector('[data-testid="table-row-6"]')).toBeNull();
 
       // Click next page button
       const nextBtn = container.querySelectorAll('button[aria-label*="next"]')[0];
@@ -141,6 +143,8 @@ describe('DataTable - User Flows', () => {
       // Should show different products
       const rows = container.querySelectorAll('[data-testid^="table-row-"]');
       expect(rows.length).toBe(5);
+      expect(container.querySelector('[data-testid="table-row-6"]')?.textContent).toContain('Chair');
+      expect(container.querySelector('[data-testid="table-row-1"]')).toBeNull();
     });
 
     test('changes page size when dropdown is changed', async () => {

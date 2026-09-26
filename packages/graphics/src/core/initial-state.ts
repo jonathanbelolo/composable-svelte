@@ -28,10 +28,10 @@ let sceneCounter = 0;
 /**
  * Ids handed out so far, so a duplicate can be reported.
  *
- * The whole point of `sceneId` is that two scenes under one store must not
- * share one — a shared id makes their frame loops cancel each other, which is
- * the defect this field exists to fix. The escape hatch that lets a consumer
- * supply an id reopened it in silence; now it says so.
+ * Two scenes composed under one effect owner must not share a scene id: their
+ * cancellable frame effects would use the same key. Distinct managed owners
+ * have separate effect maps, so a repeated id across them is harmless. This
+ * global set can warn of a possible collision but cannot inspect ownership.
  */
 const issuedSceneIds = new Set<string>();
 
@@ -66,8 +66,8 @@ function takeSceneId(requested: string | undefined): string {
 
   if (issuedSceneIds.has(requested)) {
     console.warn(
-      `[graphics] sceneId "${requested}" is already in use; two scenes sharing ` +
-        'an id will cancel each other\'s animation frame loop'
+      `[graphics] sceneId "${requested}" is already in use; scenes with this id ` +
+        'under the same effect owner may cancel each other\'s animation frame loop'
     );
   }
   issuedSceneIds.add(requested);

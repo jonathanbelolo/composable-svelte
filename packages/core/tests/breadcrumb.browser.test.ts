@@ -6,7 +6,7 @@
 
 import { expect, test, describe } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import type { Snippet } from 'svelte';
+import { type Snippet, createRawSnippet } from 'svelte';
 import {
 	Breadcrumb,
 	BreadcrumbList,
@@ -202,36 +202,25 @@ describe('BreadcrumbSeparator', () => {
 		expect(path?.getAttribute('d')).toBe('m9 18 6-6-6-6');
 	});
 
-	// Note: Testing custom children with snippets is complex in Svelte 5
-	// The component correctly renders children when provided, as shown in the demo
-	// This test verifies the default behavior when no children are provided
-	test('renders default icon when no children provided (verified via demo)', async () => {
-		const { container } = render(BreadcrumbSeparator, {});
-		await waitForUpdates();
-
-		const li = container.querySelector('li');
-		expect(li).toBeTruthy();
-
-		// Should have the default SVG when no children are provided
-		const svg = li?.querySelector('svg');
-		expect(svg).toBeTruthy();
-
-		// Verify it's the chevron icon
-		const path = svg?.querySelector('path');
-		expect(path?.getAttribute('d')).toBe('m9 18 6-6-6-6');
+	test('renders custom separator content instead of the default icon', async () => {
+		const children = createRawSnippet(() => ({ render: () => '<span data-separator="custom">/</span>' }));
+		const { container } = render(BreadcrumbSeparator, { children });
+		await expect.poll(() => container.querySelector('[data-separator="custom"]')?.textContent).toBe('/');
+		expect(container.querySelector('svg')).toBeNull();
 	});
 });
 
 describe('BreadcrumbEllipsis', () => {
-	test('renders span with aria attributes', async () => {
+	test('exposes screen-reader text while hiding only the decorative icon', async () => {
 		const { container } = render(BreadcrumbEllipsis, {});
 		await waitForUpdates();
 
-		const span = container.querySelector('span[role="presentation"]');
+		const span = container.querySelector('span');
 		expect(span).toBeTruthy();
-		expect(span?.getAttribute('role')).toBe('presentation');
-		expect(span?.getAttribute('aria-hidden')).toBe('true');
-		expect(span?.getAttribute('aria-label')).toBe('More');
+		expect(span?.hasAttribute('role')).toBe(false);
+		expect(span?.hasAttribute('aria-hidden')).toBe(false);
+		expect(span?.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+		expect(span?.querySelector('.sr-only')?.textContent).toBe('More');
 		expect(span?.className).toContain('flex');
 		expect(span?.className).toContain('h-9');
 		expect(span?.className).toContain('w-9');
@@ -271,7 +260,7 @@ describe('BreadcrumbEllipsis', () => {
 			});
 		await waitForUpdates();
 
-		const span = container.querySelector('span[role="presentation"]');
+		const span = container.querySelector('span');
 		expect(span?.className).toContain('custom-ellipsis');
 	});
 });

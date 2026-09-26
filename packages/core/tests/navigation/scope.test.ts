@@ -209,7 +209,7 @@ describe('scopeTo()', () => {
 			});
 		});
 
-		it('creates dismiss function that works correctly', () => {
+		it('does not expose dismissal on a case scoped store', () => {
 			const store = createMockStore({
 				count: 0,
 				destination: { type: 'addItem', state: { name: 'Test', quantity: 5 } },
@@ -217,15 +217,7 @@ describe('scopeTo()', () => {
 			});
 
 			const scopedStore = scopeTo(store).into('destination').case('addItem');
-
-			// Call dismiss
-			scopedStore?.dismiss();
-
-			// The field's PresentationAction; the case is not named (N1).
-			expect(store.dispatch).toHaveBeenCalledWith({
-				type: 'destination',
-				action: { type: 'dismiss' }
-			});
+			expect(scopedStore).not.toHaveProperty('dismiss');
 		});
 	});
 
@@ -277,7 +269,7 @@ describe('scopeTo()', () => {
 			});
 		});
 
-		it('dismiss works for optional fields', () => {
+		it('does not expose dismissal on an optional scoped store', () => {
 			const store = createMockStore({
 				count: 0,
 				destination: null,
@@ -285,15 +277,7 @@ describe('scopeTo()', () => {
 			});
 
 			const scopedStore = scopeTo(store).into('modal').optional();
-
-			// Call dismiss
-			scopedStore?.dismiss();
-
-			// Verify dismiss action
-			expect(store.dispatch).toHaveBeenCalledWith({
-				type: 'modal',
-				action: { type: 'dismiss' }
-			});
+			expect(scopedStore).not.toHaveProperty('dismiss');
 		});
 	});
 
@@ -457,79 +441,6 @@ describe('scopeTo()', () => {
 		});
 	});
 
-	describe('dismiss() behavior', () => {
-		it('dismiss is the field\'s PresentationAction; the case is not named', () => {
-			const store = {
-				state: {
-					destination: { type: 'addItem', state: { name: 'Test' } }
-				},
-				dispatch: vi.fn()
-			} as unknown as Store<ParentState, any>;
-
-			const scopedStore = scopeTo(store).into('destination').case('addItem');
-
-			expect(scopedStore).not.toBeNull();
-			scopedStore!.dismiss();
-
-			// { type: 'dismiss' } -> { type: 'destination', action: dismiss }; a
-			// case-wrapped dismiss is what ifLetPresentation ignores.
-			expect(store.dispatch).toHaveBeenCalledWith({
-				type: 'destination',
-				action: { type: 'dismiss' }
-			});
-		});
-
-		it('does not wrap dismiss with case type for optional fields', () => {
-			const store = {
-				state: {
-					modal: { name: 'Test' }
-				},
-				dispatch: vi.fn()
-			} as unknown as Store<any, any>;
-
-			const scopedStore = scopeTo(store).into('modal').optional();
-
-			expect(scopedStore).not.toBeNull();
-			scopedStore!.dismiss();
-
-			// Should wrap: { type: 'dismiss' } -> { type: 'modal', action: dismiss } (no case type)
-			expect(store.dispatch).toHaveBeenCalledWith({
-				type: 'modal',
-				action: { type: 'dismiss' }
-			});
-		});
-
-		it('wraps dismiss through nested paths, without the case', () => {
-			interface NestedState {
-				outer: {
-					inner: { type: 'caseA'; state: { value: string } } | null;
-				} | null;
-			}
-
-			const store = {
-				state: {
-					outer: {
-						inner: { type: 'caseA', state: { value: 'test' } }
-					}
-				},
-				dispatch: vi.fn()
-			} as unknown as Store<NestedState, any>;
-
-			const scopedStore = scopeTo(store).into('outer').into('inner').case('caseA');
-
-			expect(scopedStore).not.toBeNull();
-			scopedStore!.dismiss();
-
-			// Should wrap through all levels
-			expect(store.dispatch).toHaveBeenCalledWith({
-				type: 'outer',
-				action: {
-					type: 'inner',
-					action: { type: 'dismiss' }
-				}
-			});
-		});
-	});
 });
 
 describe('types (P5)', () => {

@@ -14,7 +14,7 @@
  */
 
 export interface CookieJar {
-	/** A `fetch` that carries the jar. Pass to `createHttpAuthDeps` indirectly via `globalThis`. */
+	/** A `fetch` that carries the jar. Injected explicitly into client deps or called directly. */
 	fetch: typeof fetch;
 	/** The `Cookie` header this jar would send, or `''`. */
 	header(): string;
@@ -23,7 +23,7 @@ export interface CookieJar {
 	clear(): void;
 }
 
-export function createCookieJar(base: typeof fetch = globalThis.fetch): CookieJar {
+export function createCookieJar(base: typeof fetch = globalThis.fetch, now: () => number = Date.now): CookieJar {
 	const held = new Map<string, string>();
 	const seen: string[] = [];
 
@@ -49,7 +49,7 @@ export function createCookieJar(base: typeof fetch = globalThis.fetch): CookieJa
 			const expired = lower.some((a) => {
 				if (!a.startsWith('expires=')) return false;
 				const when = Date.parse(a.slice('expires='.length));
-				return Number.isFinite(when) && when <= Date.now();
+				return Number.isFinite(when) && when <= now();
 			});
 
 			if (value === '' || maxAgeZero || expired) held.delete(name);
@@ -65,7 +65,7 @@ export function createCookieJar(base: typeof fetch = globalThis.fetch): CookieJa
 	const jarFetch = (async (input: FetchInput, init?: RequestInit): Promise<Response> => {
 		const cookie = header();
 		const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
-		if (cookie !== '') headers.set('cookie', cookie);
+		if (cookie !== '' && !headers.has('cookie')) headers.set('cookie', cookie);
 
 		const response = await base(input, { ...init, headers });
 		absorb(response);

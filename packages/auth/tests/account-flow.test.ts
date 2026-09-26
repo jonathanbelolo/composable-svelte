@@ -294,11 +294,14 @@ describe('changing the password', () => {
 		});
 	});
 
-	it('spends one request when submitted twice', async () => {
+	it('cancels and replaces in-flight request when submitted twice rather than deduplicating', async () => {
 		const slow = deferred<SessionSnapshot | null>();
+		const signals: AbortSignal[] = [];
 		const changePassword = vi
-			.fn<ChangePasswordDependencies['changePassword']>()
-			.mockReturnValue(slow.promise);
+			.fn<ChangePasswordDependencies['changePassword']>(async (_password, signal) => {
+				if (signal) signals.push(signal);
+				return slow.promise;
+			});
 		const store = passwordStore({ changePassword });
 
 		await submitPassword(store);
@@ -308,7 +311,10 @@ describe('changing the password', () => {
 		await store.receive({ type: 'form' });
 		await store.receive({ type: 'form' });
 
+		// Password change cancels prior in-flight request instead of deduplicating calls.
 		expect(changePassword).toHaveBeenCalledTimes(2);
+		expect(signals[0]?.aborted).toBe(true);
+		expect(signals[1]?.aborted).toBe(false);
 
 		slow.resolve(null);
 		await store.receive({ type: 'changeSucceeded' });

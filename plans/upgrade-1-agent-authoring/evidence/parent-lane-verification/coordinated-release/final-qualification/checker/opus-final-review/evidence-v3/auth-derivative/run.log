@@ -1,0 +1,13 @@
+ok   POSITIVE exact proposed Auth-only bytes on derivative exit=0 pass=true 
+ok   POSITIVE candidate-auth (policyId differs) on derivative exit=0 pass=true 
+ok   NEG envelope expects checker 0.13.0 exit=0 pass=false 
+ok   NEG wrong --policy-sha256 exit=21 pass=false policy-pin-mismatch
+ok   NEG wrong expected core 0.13.0 exit=21 pass=false core-version-mismatch
+ok   NEG auth pin 0.3.1 exit=21 pass=false unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import
+ok   NEG auth approval absent exit=21 pass=false unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import,unresolved-package-import
+ok   NEG svelte pin 5.57.0 exit=21 pass=false unresolved-package-import
+ok   NEG incomplete analysis (missing root) exit=21 pass=false missing-root
+ok   NEG ORIGINAL Auth+Charts App-B under exact Auth-only policy (Charts unapproved) exit=21 pass=false unresolved-package-import,unresolved-package-import
+ok   CONTROL original App-B under external Auth+Charts policy exit=0 pass=true 
+ok   CONTROL derivative under Auth+Charts policy (unused Charts approval is harmless) exit=0 pass=true 
+failures 0

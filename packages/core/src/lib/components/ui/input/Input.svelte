@@ -1,5 +1,6 @@
 <script lang="ts" generics="Action = unknown">
 	import { cn } from '../../../utils.js';
+	import { isServer } from '../../../ssr/utils.js';
 	import type { Dispatch } from '../../../types.js';
 	import type { HTMLInputAttributes } from 'svelte/elements';
 
@@ -39,6 +40,8 @@
 	 * ```
 	 */
 
+	type InputAction<A> = A extends object ? Omit<A, 'value'> : A;
+
 	interface InputProps<Action> extends Omit<HTMLInputAttributes, 'class'> {
 		/**
 		 * Input type.
@@ -46,9 +49,14 @@
 		type?: 'text' | 'email' | 'password' | 'number' | 'tel' | 'url' | 'search' | undefined;
 
 		/**
-		 * Current value (supports two-way binding).
+		 * Current value (supports two-way binding). Numeric clear emits an empty string; invalid partial edits emit nothing.
 		 */
 		value?: string | number;
+
+		/**
+		 * Bad input status (e.g. invalid numeric entry like incomplete exponent).
+		 */
+		badInput?: boolean | undefined;
 
 		/**
 		 * Disabled state.
@@ -74,7 +82,7 @@
 		 * Reducer action to dispatch on input (Composable Architecture pattern).
 		 * The action will be enriched with the current value.
 		 */
-		action?: Action | undefined;
+		action?: Action | InputAction<Action> | undefined;
 
 		/**
 		 * Dispatch function from store (required if action is provided).
@@ -90,6 +98,7 @@
 	let {
 		type = 'text',
 		value = $bindable(''),
+		badInput = $bindable(false),
 		disabled = false,
 		error = false,
 		errorId,
@@ -107,25 +116,44 @@
 
 	const errorClasses = 'border-destructive focus-visible:ring-destructive';
 
-	const inputClasses = $derived(cn(baseClasses, error && errorClasses, className));
+	const inputClasses = $derived(cn(baseClasses, (error || badInput) && errorClasses, className));
 
 	// ARIA: Automatically set aria-describedby if errorId provided
 	const ariaDescribedBy = $derived(error && errorId ? errorId : describedBy);
+
+	let inputElement: HTMLInputElement | undefined = $state();
+	$effect(() => {
+		if (!inputElement) return;
+		// Preserve numeric lexical edits while reflecting external model changes.
+		const next = value == null ? '' : String(value);
+		if (type === 'number' && next !== '' && inputElement.value !== '' &&
+			Number(inputElement.value) === Number(next)) {
+			badInput = inputElement.validity.badInput;
+			return;
+		}
+		if (inputElement.value !== next) inputElement.value = next;
+		badInput = inputElement.validity.badInput;
+	});
 
 	/**
 	 * Handle input change event.
 	 * Updates bindable value and dispatches action if provided.
 	 */
 	function handleInput(e: Event & { currentTarget: HTMLInputElement }) {
+		badInput = e.currentTarget.validity.badInput;
+		if (type === 'number' && e.currentTarget.validity.badInput) {
+			oninput?.(e);
+			return;
+		}
 		// Update bindable value
-		value = type === 'number' ? Number(e.currentTarget.value) : e.currentTarget.value;
+		value = type === 'number' && e.currentTarget.value !== '' ? Number(e.currentTarget.value) : e.currentTarget.value;
 
 		// Dispatch action if provided (Composable Architecture pattern)
 		if (action && dispatch) {
 			// Enrich action with value
 			const enrichedAction =
 				typeof action === 'object' && action !== null
-					? { ...action, value: e.currentTarget.value }
+					? { ...action, value }
 					: action;
 			dispatch(enrichedAction as Action);
 		}
@@ -139,6 +167,7 @@
 	 * Dispatches blur-specific action if provided.
 	 */
 	function handleBlur(e: FocusEvent & { currentTarget: HTMLInputElement }) {
+		badInput = e.currentTarget.validity.badInput;
 		// Call traditional handler
 		onblur?.(e);
 
@@ -149,10 +178,11 @@
 
 <input
 	{type}
-	bind:value
+	bind:this={inputElement}
+	value={isServer() ? (value ?? '') : undefined}
 	{disabled}
 	class={inputClasses}
-	aria-invalid={error}
+	aria-invalid={error || badInput}
 	aria-describedby={ariaDescribedBy}
 	oninput={handleInput}
 	onblur={handleBlur}

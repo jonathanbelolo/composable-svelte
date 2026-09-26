@@ -68,11 +68,19 @@ export const ZOOM_STEP = 1.5;
  * @see {@link ChartAction} for action types
  * @see {@link createInitialChartState} for state initialization
  */
-export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
-  state,
-  action,
-  _deps
-) => {
+export interface ChartReducer extends Reducer<ChartState<unknown>, ChartAction<unknown>, unknown> {
+  <TRow = unknown>(
+    state: ChartState<TRow>,
+    action: ChartAction<TRow>,
+    deps?: unknown
+  ): [ChartState<TRow>, Effect<ChartAction<TRow>>];
+}
+
+export const chartReducer: ChartReducer = function chartReducer<TRow = unknown>(
+  state: ChartState<TRow>,
+  action: ChartAction<TRow>,
+  _deps?: unknown
+): [ChartState<TRow>, Effect<ChartAction<TRow>>] {
   switch (action.type) {
     // ========================================================================
     // Data Actions
@@ -151,7 +159,7 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
 
     case 'selectRange': {
       const selectedIndices: number[] = [];
-      const selectedData: any[] = [];
+      const selectedData: TRow[] = [];
 
       state.filteredData.forEach((d, i) => {
         // Assuming numeric index-based selection
@@ -197,7 +205,7 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
       // between them, and the reducer duly selected all of it. The user saw
       // points highlighted that their brush never touched.
       const indices: number[] = [];
-      const selectedData: any[] = [];
+      const selectedData: TRow[] = [];
       const seen = new Set<number>();
 
       for (const index of action.indices) {
@@ -371,9 +379,12 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
     // ========================================================================
 
     case 'zoom': {
+      // A direct gesture takes authority from an earlier animated request.
+      const { targetTransform, ...restState } = state;
       return [
         {
-          ...state,
+          ...restState,
+          isAnimating: false,
           transform: action.transform
         },
         Effect.none()

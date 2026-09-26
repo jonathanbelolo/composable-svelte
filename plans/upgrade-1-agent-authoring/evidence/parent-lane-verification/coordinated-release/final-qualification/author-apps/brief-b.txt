@@ -1,0 +1,23 @@
+Build the following small app in this isolated workspace using ONLY installed public package artifacts and their shipped docs. You are a fresh author: no root repository source, private skills, migration history, prior app implementations, or outside working directories. Read the installed core application contract and relevant installed public package references. Full scoped file/tool autonomy, normal iteration allowed, no time cutoff; never publish, push, or modify package implementation. Do not widen or edit qualification policies. If installed public information is insufficient, record an explicit missing-reference report in PUBLIC-REFERENCE-GAPS.md rather than retrieving private repo knowledge.
+
+Required brief B: authenticated account dashboard
+
+Build a small account dashboard using Auth and Charts. The user signs in, handles an MFA challenge if requested, views an account chart, changes a password and logs out. A controlled backend should make successful requests, reauthentication requirements and delayed responses reproducible. The app must explicitly own navigation and account loading while using package-owned auth composition and real chart row types. Keep the scope to these representative flows; do not reconstruct every Auth component demo.
+
+Acceptance observations: accepted sign-in changes the app route; rejected/stale results do not; password/session results follow documented acceptance rather than inferred object identity; logout or a subject change removes the former account's views and pending work; typed chart interactions route through the owning feature. SSR creates independent request roots and performs no client-only work. Include at least one delayed response after retirement in an application-level test.
+
+This probes the substantially new Auth reference and account-owned presentation across packages. It is not a request for another Auth implementation or a production identity backend.
+
+Required outputs and review
+
+Retain each final app, its tests, the exact package/lock/CLI versions, the iteration and repair log, and a concise account of information missing from installed references. No manual root checkout assistance is allowed; if the author asks for repository-only knowledge, record and repair the public-reference gap rather than quietly supplying it.
+
+The independent final reviewer assesses correctness, explicit ownership, freshness, code factoring and unnecessary application glue. In particular inspect repeated Store facades, copied package reducers, root action-stream listeners, callback-based managed business routing, ownership casts and duplicated lifecycle orchestration. Record justified application-specific state or freshness bookkeeping rather than treating every extra line as a defect. Line counts may describe results but are not acceptance thresholds.
+
+Run intended bundled developer profiles and independently pinned external qualification controls against the same final app and artifacts. An inactive checker rule is not automatically enforced; use the named independent review plus type/runtime evidence for those obligations. Fix concrete package/guidance defects in their owning scope and repeat only affected qualification. Completion is about the resulting app and reference usability after normal iteration.
+
+Artifact/transport instructions
+
+Coordinator provides exact frozen runtime packages already installed and records their immutable hashes outside the app. Preserve installed package implementations. Local tarball dependency references honestly identify candidate transport; do not replace them with public registry downloads. Add optional integrations only when used and retain lockfile. Final checker and externally controlled policy may arrive after initial authoring; no acceptance or qualification claim is permitted before coordinator final controls. Preserve all source, tests, browser/SSR command logs, dependency/CLI versions, and an ITERATION-LOG.md recording fixes and public-reference gaps. Write HANDOFF.md describing completed behavior, exact tests, remaining limitations and instructions to run. Do not add broad product features beyond this brief.
+
+Auth+Charts combination has no bundled development profile. Coordinator will supply a separately reviewed exact external Auth+Charts policy for final development/qualification checks. Do not widen the individual auth/charts profiles or create an all-packages profile.

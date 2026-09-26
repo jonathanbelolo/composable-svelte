@@ -9,6 +9,14 @@ Interactive data visualization components built with Observable Plot and D3.
 
 ---
 
+## UPGRADE 1 AGENT ENTRY
+
+For an application built with the integrated Upgrade 1 companion packages, begin with the [managed package reference](../../../packages/charts/MANAGED.md) and its executable recipe. The same reference is included in the package at `node_modules/@composable-svelte/charts/MANAGED.md`; use the installed version's declarations and instructions as the API authority.
+
+Use genuine child views and keep row types explicit with `chartReducer<Row>`. Route typed native interactions through the child reducer and let the packaged component release its chart resources on retirement.
+
+The standalone store and callback examples below describe standalone usage. For an owned application feature, follow the managed recipe rather than copying the standalone setup and adding ad hoc lifetime glue. Candidate qualification and npm publication are separate; verify the installed package version contains this managed surface.
+
 ## PACKAGE OVERVIEW
 
 **Package**: `@composable-svelte/charts`
@@ -39,7 +47,20 @@ All charts use pure reducers with type-safe actions following Composable Archite
 
 ---
 
-## QUICK START
+## MANAGED APPLICATIONS
+
+Keep `ChartState<TRow>` and `ChartAction<TRow>` in the parent composition, use
+`chartReducer<TRow>`, and pass the genuine child view supplied by `defineViews`
+to the chart component. Read business selection and zoom actions in the parent
+reducer. The chart package owns its rendering, resize, and interaction bindings;
+retirement releases them. Do not fabricate a Store facade or create a second root
+store to satisfy component props.
+
+The standalone examples below use an explicit row type at the reducer boundary
+so action payloads and component accessors retain the data shape. For an empty
+initial dataset, declare the row type explicitly rather than inferring `never`.
+
+## QUICK START (STANDALONE)
 
 ```svelte
 <script lang="ts">
@@ -57,7 +78,7 @@ All charts use pure reducers with type-safe actions following Composable Archite
   // Create chart store
   const chartStore = createStore({
     initialState: createInitialChartState({ data }),
-    reducer: chartReducer,
+    reducer: chartReducer<(typeof data)[number]>,
     dependencies: {}
   });
 </script>
@@ -83,14 +104,14 @@ All charts use pure reducers with type-safe actions following Composable Archite
 
 ### Props
 
-- `store: Store<ChartState, ChartAction>` - Chart store (required)
+- `store: ChartStore<TRow>` - Typed standalone store or managed child view (required); managed retirement releases the chart attachment
 - `type: 'scatter' | 'line' | 'bar' | 'area' | 'histogram'` - Chart type (default: 'scatter')
 - `width: number` - Chart width (optional, responsive if omitted)
 - `height: number` - Chart height (optional, defaults to 400px)
-- `x: string | ((d) => any)` - X accessor (optional; Observable Plot has its own
+- `x: ChartAccessor<TRow>` - Known row key or typed callback; X accessor (optional; Observable Plot has its own
   defaults, and the summary and data table degrade to the row's own keys without it)
-- `y: string | ((d) => any)` - Y accessor (optional, same)
-- `color: string | ((d) => any)` - Color accessor (optional)
+- `y: ChartAccessor<TRow>` - Known row key or typed callback; Y accessor (optional, same)
+- `color: ChartAccessor<TRow>` - Known row key or typed callback; color accessor (optional)
 - `size: number` - Mark size (optional)
 - `xDomain: [number, number] | 'auto'` - X domain (optional)
 - `yDomain: [number, number] | 'auto'` - Y domain (optional)
@@ -453,7 +474,7 @@ const data = [
 
 const chartStore = createStore({
   initialState: createInitialChartState({ data }),
-  reducer: chartReducer,
+  reducer: chartReducer<(typeof data)[number]>,
   dependencies: {}
 });
 ```
@@ -666,7 +687,7 @@ const data = [
 
 const chartStore = createStore({
   initialState: createInitialChartState({ data }),
-  reducer: chartReducer,
+  reducer: chartReducer<(typeof data)[number]>,
   dependencies: {}
 });
 </script>
@@ -709,7 +730,7 @@ const data: DataPoint[] = [
 
 const chartStore = createStore({
   initialState: createInitialChartState({ data }),
-  reducer: chartReducer,
+  reducer: chartReducer<(typeof data)[number]>,
   dependencies: {}
 });
 </script>
@@ -743,7 +764,7 @@ const data = [
 
 const chartStore = createStore({
   initialState: createInitialChartState({ data }),
-  reducer: chartReducer,
+  reducer: chartReducer<(typeof data)[number]>,
   dependencies: {}
 });
 
@@ -783,7 +804,7 @@ let data = $state<Array<{ time: number; value: number }>>([]);
 
 const chartStore = createStore({
   initialState: createInitialChartState({ data }),
-  reducer: chartReducer,
+  reducer: chartReducer<(typeof data)[number]>,
   dependencies: {}
 });
 
@@ -833,12 +854,12 @@ const data = [{ x: 1, y: 10 }, { x: 2, y: 25 }]; // Shared data
 
 const chartStore1 = createStore({
   initialState: createInitialChartState({ data }),
-  reducer: chartReducer,
+  reducer: chartReducer<(typeof data)[number]>,
   dependencies: {}
 });
 const chartStore2 = createStore({
   initialState: createInitialChartState({ data }),
-  reducer: chartReducer,
+  reducer: chartReducer<(typeof data)[number]>,
   dependencies: {}
 });
 
@@ -862,8 +883,8 @@ function syncSelection(selected: any[]) {
 
 ```svelte
 <script lang="ts">
-const masterStore = createStore({ initialState: masterState, reducer: chartReducer, dependencies: {} });
-const detailStore = createStore({ initialState: detailState, reducer: chartReducer, dependencies: {} });
+const masterStore = createStore({ initialState: masterState, reducer: chartReducer<(typeof masterState.data)[number]>, dependencies: {} });
+const detailStore = createStore({ initialState: detailState, reducer: chartReducer<(typeof detailState.data)[number]>, dependencies: {} });
 
 $effect(() => {
   const transform = $masterStore.transform;
@@ -969,9 +990,11 @@ Disable animations for large datasets or frequent updates:
 import { TestStore } from '@composable-svelte/core/test';
 import { chartReducer, createInitialChartState } from '@composable-svelte/charts';
 
+type Point = { x: number; y: number };
+
 const store = new TestStore({
-  initialState: createInitialChartState({ data: [] }),
-  reducer: chartReducer,
+  initialState: createInitialChartState<Point>({ data: [] }),
+  reducer: chartReducer<Point>,
   dependencies: {}
 });
 

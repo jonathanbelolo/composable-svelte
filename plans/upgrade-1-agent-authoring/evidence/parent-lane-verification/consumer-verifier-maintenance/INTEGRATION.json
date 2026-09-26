@@ -1,0 +1,8 @@
+{
+  "path": "scripts/verify-consumer.mjs",
+  "beforeSHA256": "6ee70efbc3b1aab8141ace46e72f3c973138ad2bde0ffd4cec73fc5aa84a6a33",
+  "afterSHA256": "a83273c69fc4a9f6de241a78c29fad33522553c1a2e1c397bdf418b50fb60c24",
+  "scope": "Identity-mapper positive/negative controls; packed recipe/fixture Markdown traversal",
+  "verification": "Independent Opus executed candidate controls, type regression mutations, all-eight-package packed docs audit: 82 documents / 297 relative links. Full combined consumer run awaits final Auth archives.",
+  "limitations": "Existing small Markdown regex is not a complete CommonMark parser; review records edge cases absent from current packed corpus. No version or runtime API changes."
+}

@@ -1,0 +1,7 @@
+
+> test:ssr
+> node scripts/ssr.mjs
+
+4:59:08 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-p9-starter-jcOD/starter - using default configuration.
+4:59:08 PM [vite] (client) Forced re-optimization of dependencies
+SSR smoke renders the expected initial state

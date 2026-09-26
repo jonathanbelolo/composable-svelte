@@ -1,0 +1,7 @@
+missing-on-disk: 50 all optional+platform-gated: true []
+node_modules/@composable-svelte/chat 0.5.0 file:../artifacts-a/composable-svelte-chat-0.5.0.tgz sha512-2NRgynTn48rUSHiC7HWoEW/RzUIkujLSo1bo9baZ4MAXoji0HNtq4wl++HdAhvKkdpnYBfiUXAu/UXnXIMByng==
+node_modules/@composable-svelte/code 0.5.0 file:../artifacts-a/composable-svelte-code-0.5.0.tgz sha512-P5KwTCAxc6uPof/lzjQoOIyjR+RHvh2IUk1Ywp5ln2OrMV073tM7+bcA63Ne7UPIdGpt+93q9HMkoSgRrBJD7g==
+node_modules/@composable-svelte/core 0.13.1 file:../artifacts-a/composable-svelte-core-0.13.1.tgz sha512-b+Il+IqyrK4A7oRN/F5Z16XItAwZ0JBZaBefukX95Hx5VbVf26UvjE0tKpsR+WDKcCL7pP1gqo3y677CgjW1vA==
+node_modules/@composable-svelte/media 0.5.0 file:../artifacts-a/composable-svelte-media-0.5.0.tgz sha512-p1xYL/9hkCfitPYkb5Ss5nYb60IOebLTzyFww43++alSW9yZc0fUMJqoTx8iduwEIvFMfaHQbS+9nkwF4ULeHg==
+root devDependencies {"@playwright/test":"1.56.1","@sveltejs/vite-plugin-svelte":"6.2.1","@types/node":"22.18.6","jsdom":"28.1.0","playwright":"1.56.1","svelte-check":"4.3.3","typescript":"5.9.3","vite":"7.3.6","vitest":"4.0.7"}
+jsdom entry {"v":"28.1.0","resolved":"https://registry.npmjs.org/jsdom/-/jsdom-28.1.0.tgz","integrity":"sha512-0+MoQNYyr2rBHqO1xilltfDjV9G7ymYGlAUazgcDLQaUf8JDHbuGwsxN6U9qWaElZ4w1B2r7yEGIL3GdeW3Rug=="}

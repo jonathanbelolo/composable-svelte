@@ -372,6 +372,62 @@ describe('finishing a sign-in', () => {
 		store.assertNoPendingActions();
 	});
 
+	it('normalises returnTo at the callback boundary when consumer storage provides an unsafe URL', async () => {
+		const completeOAuth = vi.fn(async () => session);
+		const customStorage: PendingOAuthStorage = {
+			put: () => {},
+			take: () => ({
+				intent: 'signIn',
+				provider: 'github',
+				state: 'st_1',
+				returnTo: 'https://evil.example/steal'
+			})
+		};
+		const store = callbackStore({
+			completeOAuth,
+			pendingOAuth: customStorage
+		});
+
+		await store.send(
+			{ type: 'callbackReceived', params: params({ code: 'c_1', state: 'st_1' }) },
+			(s) => {
+				expect(s.status).toBe('exchanging');
+			}
+		);
+		await store.receive({ type: 'exchangeSucceeded' }, (s) => {
+			expect(s.status).toBe('completed');
+			expect(s.returnTo).toBeNull();
+		});
+	});
+
+	it('normalises returnTo at the callback boundary on link success when consumer storage provides an unsafe URL', async () => {
+		const linkOAuthProvider = vi.fn(async () => {});
+		const customStorage: PendingOAuthStorage = {
+			put: () => {},
+			take: () => ({
+				intent: 'link',
+				provider: 'github',
+				state: 'st_1',
+				returnTo: '//attacker.example/link-hijack'
+			})
+		};
+		const store = callbackStore({
+			linkOAuthProvider,
+			pendingOAuth: customStorage
+		});
+
+		await store.send(
+			{ type: 'callbackReceived', params: params({ code: 'c_1', state: 'st_1' }) },
+			(s) => {
+				expect(s.status).toBe('exchanging');
+			}
+		);
+		await store.receive({ type: 'exchangeSucceeded' }, (s) => {
+			expect(s.status).toBe('completed');
+			expect(s.returnTo).toBeNull();
+		});
+	});
+
 	it('never reaches the backend with a state it could not verify', async () => {
 		// The security arm. A gate that reported instead of gating would pass
 		// every other test in this file.

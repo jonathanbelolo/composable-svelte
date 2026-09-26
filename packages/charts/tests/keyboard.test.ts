@@ -161,7 +161,7 @@ describe('the documented keys do what they say', () => {
 	});
 
 	it('zooms with + and -, and resets with 0', async () => {
-		const { store, press } = mountChart();
+		const { store, press } = mountChart({ enableZoom: true });
 		await settle();
 
 		press('+');
@@ -180,20 +180,20 @@ describe('the documented keys do what they say', () => {
 	});
 
 	it('accepts = and _ as the unshifted faces of + and -', async () => {
-		const { store, press } = mountChart();
+		const { store, press } = mountChart({ enableZoom: true });
 		await settle();
 
 		press('=');
 		expect(store.state.targetTransform!.k).toBeCloseTo(1.5);
 
-		const { store: second, press: pressSecond } = mountChart();
+		const { store: second, press: pressSecond } = mountChart({ enableZoom: true });
 		await settle();
 		pressSecond('_');
 		expect(second.state.targetTransform!.k).toBeCloseTo(1 / 1.5);
 	});
 
 	it('pans with Shift+Arrows instead of moving the cursor', async () => {
-		const { store, press } = mountChart();
+		const { store, press } = mountChart({ enableZoom: true });
 		await settle();
 
 		press('ArrowRight', { shiftKey: true });

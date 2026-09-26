@@ -1,0 +1,21 @@
+{
+  "status": "candidate-r3-core0.13.1-media0.5.0",
+  "packages": [
+    {
+      "name": "@composable-svelte/core",
+      "version": "0.13.1",
+      "path": "/private/tmp/companion-runtime-release/archives-r3/composable-svelte-core-0.13.1.tgz",
+      "sha256": "30e044e139e831033e06fdf626db979875efa2f7c29d72dece33a21db112d18b",
+      "integrity": "sha512-b+Il+IqyrK4A7oRN/F5Z16XItAwZ0JBZaBefukX95Hx5VbVf26UvjE0tKpsR+WDKcCL7pP1gqo3y677CgjW1vA=="
+    },
+    {
+      "name": "@composable-svelte/media",
+      "version": "0.5.0",
+      "path": "/private/tmp/companion-runtime-release/archives-r3/composable-svelte-media-0.5.0.tgz",
+      "sha256": "c0bfa6528fb6cd3dc68f2769237d3053514f76f79bc5197316b230eb07b78298",
+      "integrity": "sha512-p1xYL/9hkCfitPYkb5Ss5nYb60IOebLTzyFww43++alSW9yZc0fUMJqoTx8iduwEIvFMfaHQbS+9nkwF4ULeHg=="
+    }
+  ],
+  "lockSha256": "6a3281a8ded2b5f702031f90c87b6ebe34f5bb701576709385d6d577f2ce8d69",
+  "svelte": "5.55.3"
+}

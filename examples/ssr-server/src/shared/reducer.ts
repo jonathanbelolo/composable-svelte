@@ -1,190 +1,77 @@
-/**
- * Application reducer.
- * Shared between server and client.
- */
-
+/** Pure business decisions shared by SSR and hydration. */
 import { Effect } from '@composable-svelte/core';
+import type { Reducer } from '@composable-svelte/core';
 import { createURLSyncEffect } from '@composable-svelte/core/routing';
-import type { Reducer, EffectType } from '@composable-svelte/core';
-import { i18nReducer, type I18nDependencies } from '@composable-svelte/core/i18n';
-import type { AppState, AppAction } from './types';
-import { destinationURL } from './routing';
+import { i18nReducer, type I18nAction, type I18nDependencies } from '@composable-svelte/core/i18n';
+import type { AppState, AppAction, Post, Comment } from './types';
+import { destinationURL, formatLocalizedURL } from './routing';
+import { computeMeta } from './meta';
 
 export interface AppDependencies extends I18nDependencies {
-  fetchPosts: () => Promise<any[]>;
-  fetchComments?: (postId: number) => Promise<any[]>;
+  fetchPosts: () => Promise<Post[]>;
+  fetchComments?: (postId: number) => Promise<Comment[]>;
 }
 
-/**
- * Compute page meta based on destination.
- * This demonstrates reducer-driven meta tags!
- */
-function computeMeta(state: AppState): AppState['meta'] {
-  switch (state.destination.type) {
-    case 'list':
-      return {
-        title: 'Blog Posts - Composable Svelte SSR',
-        description: 'Server-Side Rendered blog with Composable Svelte and Fastify',
-        canonical: 'https://example.com/'
-      };
-
-    case 'post': {
-      const post = state.posts.find((p) => p.id === state.destination.state.postId);
-      return post
-        ? {
-            title: `${post.title} - Composable Svelte Blog`,
-            description: post.content.slice(0, 160),
-            ogImage: `/og/post-${post.id}.jpg`,
-            canonical: `https://example.com/posts/${post.id}`
-          }
-        : state.meta;
-    }
-
-    case 'comments': {
-      const post = state.posts.find((p) => p.id === state.destination.state.postId);
-      const commentCount = state.comments.filter((c) => c.postId === state.destination.state.postId).length;
-      return post
-        ? {
-            title: `Comments on "${post.title}" - Composable Svelte Blog`,
-            description: `Read ${commentCount} comments on ${post.title}`,
-            canonical: `https://example.com/posts/${post.id}/comments`
-          }
-        : state.meta;
-    }
-
-    default:
-      return state.meta;
-  }
+// Core owns the browser resource. The reducer supplies only route decisions.
+const urlSyncEffect = createURLSyncEffect<AppState, AppAction>(
+  state => formatLocalizedURL(destinationURL(state.destination), state.i18n.currentLocale),
+  { serializeQuery: (state: unknown) =>
+    typeof state === 'object' && state !== null && 'routeSearch' in state && typeof state.routeSearch === 'string'
+      ? state.routeSearch.replace(/^\?/, '') : '' }
+);
+function isI18nAction(action: AppAction): action is I18nAction {
+  return action.type.startsWith('i18n/');
 }
 
-/**
- * Create URL sync effect.
- * This updates the browser URL when state changes.
- * Only runs on client (window is not defined on server).
- */
-const urlSyncEffect: (state: AppState) => EffectType<AppAction> =
-  typeof window !== 'undefined'
-    ? createURLSyncEffect<AppState, AppAction>((state) => destinationURL(state.destination))
-    : () => Effect.none<AppAction>();
-
-const coreReducer: Reducer<AppState, AppAction, AppDependencies> = (
-  state,
-  action,
-  deps
-) => {
+const decisions: Reducer<AppState, AppAction, AppDependencies> = (state, action, deps) => {
   switch (action.type) {
     case 'postsLoaded':
-      return [
-        {
-          ...state,
-          posts: action.posts,
-          isLoading: false,
-          error: null
-        },
-        Effect.none()
-      ];
-
+      return [{ ...state, posts: action.posts, isLoading: false, error: null }, Effect.none()];
     case 'commentsLoaded':
-      return [
-        {
-          ...state,
-          comments: action.comments
-        },
-        Effect.none()
-      ];
-
+      return [{ ...state, comments: [
+        ...state.comments.filter(comment => comment.postId !== action.postId),
+        ...action.comments.filter(comment => comment.postId === action.postId)
+      ] }, Effect.none()];
     case 'navigate': {
-      // Update destination and recompute meta tags
-      const newState = {
-        ...state,
-        destination: action.destination
-      };
-
-      // Recompute meta based on new destination
-      const updatedState = {
-        ...newState,
-        meta: computeMeta(newState)
-      };
-
-      // If navigating to comments, fetch comments if needed
-      if (
-        action.destination.type === 'comments' &&
-        deps.fetchComments &&
-        !state.comments.some((c) => c.postId === action.destination.state.postId)
-      ) {
-        return [
-          updatedState,
-          Effect.run(async (dispatch) => {
-            try {
-              const comments = await deps.fetchComments!(action.destination.state.postId);
-              dispatch({ type: 'commentsLoaded', comments });
-            } catch (error) {
-              console.error('Failed to load comments:', error);
-            }
-          })
-        ];
+      const next = { ...state, destination: action.destination };
+      if (action.destination.type === 'comments' && deps.fetchComments &&
+          !state.comments.some(comment => comment.postId === action.destination.state.postId)) {
+        const postId = action.destination.state.postId;
+        const fetchComments = deps.fetchComments;
+        return [next, Effect.run(async dispatch => {
+          const comments = await fetchComments(postId);
+          dispatch({ type: 'commentsLoaded', postId, comments });
+        })];
       }
-
-      return [updatedState, Effect.none()];
+      return [next, Effect.none()];
     }
-
+    case 'historyNavigated': {
+      const [i18n, effect] = action.locale === state.i18n.currentLocale
+        ? [state.i18n, Effect.none<I18nAction>()] as const
+        : i18nReducer(state.i18n, { type: 'i18n/setLocale', locale: action.locale, preloadNamespaces: ['common'] }, deps);
+      return [{ ...state, destination: action.destination, routeSearch: action.search, i18n }, effect];
+    }
     case 'loadPostsFailed':
-      return [
-        {
-          ...state,
-          isLoading: false,
-          error: action.error
-        },
-        Effect.none()
-      ];
-
+      return [{ ...state, isLoading: false, error: action.error }, Effect.none()];
     case 'refreshPosts':
-      return [
-        {
-          ...state,
-          isLoading: true,
-          error: null
-        },
-        Effect.run(async (dispatch) => {
-          try {
-            const posts = await deps.fetchPosts();
-            dispatch({ type: 'postsLoaded', posts });
-          } catch (error) {
-            dispatch({
-              type: 'loadPostsFailed',
-              error: error instanceof Error ? error.message : 'Failed to load posts'
-            });
-          }
-        })
-      ];
-
-    default: {
-      // Handle i18n actions by checking if type starts with 'i18n/'
-      if (typeof action.type === 'string' && action.type.startsWith('i18n/')) {
-        // Pass the action directly to i18n reducer
-        const [newI18nState, i18nEffect] = i18nReducer(state.i18n, action as any, deps);
-        return [{ ...state, i18n: newI18nState }, i18nEffect];
+      return [{ ...state, isLoading: true, error: null }, Effect.run(async dispatch => {
+        try { dispatch({ type: 'postsLoaded', posts: await deps.fetchPosts() }); }
+        catch (error) { dispatch({ type: 'loadPostsFailed', error: error instanceof Error ? error.message : 'Failed to load posts' }); }
+      })];
+    default:
+      if (isI18nAction(action)) {
+        const [i18n, effect] = i18nReducer(state.i18n, action, deps);
+        return [{ ...state, i18n }, effect];
       }
-
       return [state, Effect.none()];
-    }
   }
 };
 
-/**
- * Wrapped reducer that includes URL sync.
- */
-export const appReducer: Reducer<AppState, AppAction, AppDependencies> = (
-  state,
-  action,
-  deps
-) => {
-  // Run core reducer
-  const [newState, coreEffect] = coreReducer(state, action, deps);
-
-  // Add URL sync effect
-  const urlEffect = urlSyncEffect(newState);
-
-  // Batch effects
-  return [newState, Effect.batch(coreEffect, urlEffect)];
+export const appReducer: Reducer<AppState, AppAction, AppDependencies> = (state, action, deps) => {
+  const [next, effect] = decisions(state, action, deps);
+  const withMeta = { ...next, meta: computeMeta(next.destination, next.posts, next.comments, next.i18n.currentLocale) };
+  // Traversal and data updates must not manufacture another history entry.
+  const navigation = action.type === 'navigate' && destinationURL(state.destination) !== destinationURL(next.destination)
+    ? urlSyncEffect(withMeta) : Effect.none<AppAction>();
+  return [withMeta, Effect.batch(effect, navigation)];
 };

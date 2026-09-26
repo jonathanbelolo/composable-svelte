@@ -1,4 +1,4 @@
-import type { ContactFormState, ContactFormAction } from '../features/contact-form/contact-form.types.js';
+import type { ContactFormData, ContactFormState, ContactFormAction } from '../features/contact-form/contact-form.types.js';
 
 /**
  * App-level state
@@ -24,6 +24,11 @@ export interface AppState {
 	 * Success message (shown after successful submission)
 	 */
 	successMessage: string | null;
+
+	/**
+	 * In-flight submission snapshot preserved to reject stale completions.
+	 */
+	pendingSubmission?: ContactFormData | null;
 }
 
 /**
@@ -36,4 +41,9 @@ export type AppAction =
 	  }
 	| {
 			type: 'successMessageDismissed';
+	  }
+	| {
+			type: 'submissionRecorded';
+			snapshot: ContactFormData;
+			timestamp: Date;
 	  };

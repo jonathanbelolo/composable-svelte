@@ -16,6 +16,7 @@ import { createStore } from '@composable-svelte/core';
 
 import EmailVerification from '../src/lib/components/EmailVerification.svelte';
 import VerificationTokenSwap from './test-components/VerificationTokenSwap.svelte';
+import EmailVerificationWrapperChurn from './test-components/EmailVerificationWrapperChurn.svelte';
 import {
 	createInitialEmailVerificationState,
 	emailVerificationReducer
@@ -383,7 +384,121 @@ describe('when the link is dead', () => {
 			h.cleanup();
 		}
 	});
+
+	it('exchanges once and keeps focus when a standalone consumer rebuilds its wrapper', async () => {
+		// A wrapper whose identity follows the flow's state is an ordinary
+		// standalone call site. Keying on it would reopen the once-only guard on
+		// every failure — fail, re-dispatch, fail — and remount the focused DOM.
+		//
+		// Only the first exchange fails. A second one never settles, so a
+		// regression is one extra call and a stuck `verifying`, not an endless
+		// fail/retry loop that keeps the timers busy.
+		const verifyEmail = failOnceThenHang();
+		const store = createStore({
+			initialState: createInitialEmailVerificationState('ada@example.com'),
+			reducer: emailVerificationReducer,
+			dependencies: { verifyEmail, resendVerification: vi.fn(async () => undefined) }
+		});
+		const target = mountTarget();
+		const component = mount(EmailVerificationWrapperChurn, { target, props: { store, token: 'stale' } });
+
+		try {
+			await vi.waitFor(() => expect(verifyEmail).toHaveBeenCalled());
+			for (let turn = 0; turn < 10; turn++) await new Promise<void>((done) => setTimeout(done, 0));
+			flushSync();
+			expect(verifyEmail, 'a failed token was exchanged again').toHaveBeenCalledTimes(1);
+			expect(target.querySelector('[data-error-code]')).not.toBeNull();
+
+			const resend = [...target.querySelectorAll('button')].find((b) =>
+				b.textContent?.includes('Send another link')
+			)!;
+			resend.focus();
+			component.refresh();
+			flushSync();
+			const after = [...target.querySelectorAll('button')].find((b) =>
+				b.textContent?.includes('Send another link')
+			);
+			expect(after, 'a new wrapper remounted the standalone DOM').toBe(resend);
+			expect(document.activeElement).toBe(resend);
+
+			resend.click();
+			await vi.waitFor(() => {
+				flushSync();
+				expect(target.textContent).toContain('Sent.');
+			});
+			expect(verifyEmail).toHaveBeenCalledTimes(1);
+		} finally {
+			unmount(component);
+			target.remove();
+			store.destroy();
+		}
+	});
+
+	it('dispatches to the store a standalone consumer switched to, without a second exchange', async () => {
+		// One component instance, one owner: switching stores keeps the DOM and
+		// the once-per-component token guard, but a click must reach the store
+		// the consumer passes now, not the one it passed at mount.
+		const verifyA = failOnceThenHang();
+		const resendA = vi.fn(async (_email: string) => undefined);
+		const a = createStore({
+			initialState: createInitialEmailVerificationState('a@example.com'),
+			reducer: emailVerificationReducer,
+			dependencies: { verifyEmail: verifyA, resendVerification: resendA }
+		});
+		const verifyB = failOnceThenHang();
+		const resendB = vi.fn(async (_email: string) => undefined);
+		const b = createStore({
+			initialState: createInitialEmailVerificationState('b@example.com'),
+			reducer: emailVerificationReducer,
+			dependencies: { verifyEmail: verifyB, resendVerification: resendB }
+		});
+		const target = mountTarget();
+		const component = mount(EmailVerificationWrapperChurn, { target, props: { store: a, token: 'stale' } });
+
+		try {
+			await vi.waitFor(() => expect(verifyA).toHaveBeenCalledTimes(1));
+			for (let turn = 0; turn < 10; turn++) await new Promise<void>((done) => setTimeout(done, 0));
+			flushSync();
+			const resend = [...target.querySelectorAll('button')].find((button) =>
+				button.textContent?.includes('Send another link')
+			)!;
+			expect(target.textContent).toContain('a@example.com');
+
+			component.use(b);
+			flushSync();
+			for (let turn = 0; turn < 10; turn++) await new Promise<void>((done) => setTimeout(done, 0));
+			flushSync();
+			expect(target.textContent, 'the switched store is rendered').toContain('b@example.com');
+			expect(verifyB, 'the token was already handed over by this component').not.toHaveBeenCalled();
+			expect(b.state.status).toBe('idle');
+			const after = [...target.querySelectorAll('button')].find((button) =>
+				button.textContent?.includes('Send another link')
+			);
+			expect(after, 'a store switch remounted the standalone DOM').toBe(resend);
+
+			resend.click();
+			await vi.waitFor(() => expect(resendB).toHaveBeenCalledTimes(1));
+			expect(resendB).toHaveBeenCalledWith('b@example.com', expect.anything());
+			expect(resendA, 'the click reached the store passed at mount').not.toHaveBeenCalled();
+			expect(a.state.resendStatus).toBe('idle');
+			expect(verifyA).toHaveBeenCalledTimes(1);
+		} finally {
+			unmount(component);
+			target.remove();
+			a.destroy();
+			b.destroy();
+		}
+	});
 });
+
+/** A verifier whose first exchange fails and whose later ones never settle. */
+function failOnceThenHang() {
+	let calls = 0;
+	return vi.fn((_token: string, _signal?: AbortSignal): Promise<SessionSnapshot | null> => {
+		calls += 1;
+		return calls === 1 ? Promise.reject(EXPIRED) : new Promise<never>(() => {});
+	});
+}
 
 describe('Pattern A: it animates nothing', () => {
 	it('resolves no transition or animation on its controls', async () => {

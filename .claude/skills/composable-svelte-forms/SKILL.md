@@ -115,6 +115,9 @@ const coreReducer: Reducer<AppState, AppAction> = (state, action) => {
 
     case 'successMessageDismissed':
       return [{ ...state, successMessage: null }, Effect.none()];
+
+    default:
+      return [state, Effect.none()];
   }
 };
 

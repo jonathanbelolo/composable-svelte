@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import SheetPrimitive from './primitives/SheetPrimitive.svelte';
-  import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
+  import { assertPresentationView, type PresentationView } from '../navigation/managed-integration.js';
   import type { PresentationState } from '../navigation/types.js';
   import type { SpringConfig } from '../animation/spring-config.js';
   import { cn } from '../utils.js';
@@ -12,9 +12,9 @@
 
   interface SheetProps<State, Action> {
     /**
-     * Scoped store for the sheet content.
+     * Managed presentation view for the sheet content.
      */
-    store: ScopedDestinationStore<State, Action> | null;
+    store?: PresentationView<State, Action> | undefined;
 
     /**
      * Presentation state for animation lifecycle.
@@ -105,7 +105,7 @@
       [
         {
           visible: boolean;
-          store: ScopedDestinationStore<State, Action> | null;
+          store: PresentationView<State, Action> | undefined;
           height: string;
         }
       ]
@@ -131,6 +131,13 @@
     children: renderContent
   }: SheetProps<unknown, unknown> = $props();
 
+  const admittedStore = $derived.by(() => {
+    if (store !== undefined) {
+      assertPresentationView(store);
+    }
+    return store;
+  });
+
   // ============================================================================
   // Computed Classes
   // ============================================================================
@@ -155,7 +162,7 @@
 <!-- ============================================================================ -->
 
 <SheetPrimitive
-  {store}
+  store={admittedStore}
   {presentation}
   {onPresentationComplete}
   {onDismissalComplete}
@@ -165,7 +172,7 @@
   {side}
   {height}
 >
-  {#snippet children({ visible, store, height, bindBackdrop, bindContent, initialOpacity })}
+  {#snippet children({ visible, store: primitiveStore, height, bindBackdrop, bindContent, initialOpacity })}
     {#if backdropClasses}
       <div
         use:bindBackdrop
@@ -188,7 +195,7 @@
       {...ariaDescribedby !== undefined ? { 'aria-describedby': ariaDescribedby } : {}}
       data-dialog-type="sheet"
     >
-      {@render renderContent?.({ visible, store, height })}
+      {@render renderContent?.({ visible, store: primitiveStore, height })}
     </div>
   {/snippet}
 </SheetPrimitive>

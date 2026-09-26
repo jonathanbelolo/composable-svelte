@@ -1,0 +1,79 @@
+
+> @composable-svelte/auth@0.2.1 test /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/auth
+> vitest run && vitest run --config vitest.ssr.config.ts
+
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/auth
+
+ ✓ |chromium| tests/password-input.test.ts (12 tests) 1010ms
+     ✓ starts hidden and reveals on click  869ms
+ ✓ |chromium| tests/signup-form.test.ts (14 tests) 841ms
+ ✓ |chromium| tests/auth-guard-anonymous.test.ts (6 tests) 985ms
+     ✓ does not re-fire on dispatches that leave it anonymous  427ms
+ ✓ |chromium| tests/account.test.ts (14 tests) 1077ms
+     ✓ signs out, which nothing in this package could do before  450ms
+ ✓ |chromium| tests/oauth.test.ts (17 tests) 1136ms
+     ✓ every branch a user can be stuck on has something to click  413ms
+ ✓ |chromium| tests/account-management.test.ts (18 tests) 1522ms
+     ✓ turns it off, and stops claiming it is on before the account is re-read  602ms
+ ✓ |chromium| tests/magic-link.test.ts (15 tests) 597ms
+ ✓ |chromium| tests/login-form.test.ts (16 tests) 1717ms
+     ✓ reports each keystroke into the flow store  636ms
+ ✓ |chromium| tests/password-recovery.test.ts (14 tests) 1342ms
+     ✓ says the same thing whether or not the address exists  308ms
+ ✓ |chromium| tests/managed-forms.test.ts (8 tests) 219ms
+ ✓ |chromium| tests/managed-auth-sibling-ownership.test.ts (1 test) 230ms
+ ✓ |chromium| tests/logout-liveness.test.ts (3 tests) 98ms
+ ✓ |chromium| tests/mock-auth-deps.test.ts (31 tests) 14ms
+ ✓ |chromium| tests/transport-stream.test.ts (16 tests) 3ms
+ ✓ |chromium| tests/login-flow.test.ts (11 tests) 59ms
+ ✓ |chromium| tests/remaining-boundaries.browser.test.ts (6 tests) 14ms
+ ✓ |chromium| tests/email-verification.test.ts (11 tests) 624ms
+ ✓ |chromium| tests/submission-feedback.test.ts (38 tests) 1643ms
+ ✓ |chromium| tests/mfa-flow.test.ts (48 tests) 14ms
+ ✓ |chromium| tests/mfa.test.ts (24 tests) 1915ms
+ ✓ |chromium| tests/oauth-flow.test.ts (24 tests) 7ms
+ ✓ |chromium| tests/account-management-flow.test.ts (20 tests) 7ms
+ ✓ |chromium| tests/account-flow.test.ts (14 tests) 6ms
+ ✓ |chromium| tests/auth-feature.test.ts (30 tests) 2214ms
+ ✓ |chromium| tests/account-lifecycle.test.ts (17 tests) 8ms
+ ✓ |chromium| tests/password-recovery-flow.test.ts (13 tests) 5ms
+ ✓ |chromium| tests/http-signup.test.ts (31 tests) 5ms
+ ✓ |chromium| tests/signup-flow.test.ts (15 tests) 7ms
+ ✓ |chromium| tests/injected-transport.test.ts (5 tests) 2ms
+ ✓ |chromium| tests/email-verification-flow.test.ts (17 tests) 4ms
+ ✓ |chromium| tests/http-error-mapping.test.ts (24 tests) 3ms
+ ✓ |chromium| tests/subject.test.ts (16 tests) 1ms
+ ✓ |chromium| tests/oauth-http.test.ts (27 tests) 5ms
+ ✓ |chromium| tests/session-http.test.ts (16 tests) 2ms
+ ✓ |chromium| tests/session-reducer.test.ts (15 tests) 4ms
+ ✓ |chromium| tests/account-lifecycle-flow.test.ts (17 tests) 6ms
+ ✓ |chromium| tests/auth-error.test.ts (15 tests) 2ms
+ ✓ |chromium| tests/components.smoke.browser.test.ts (4 tests) 2ms
+ ✓ |chromium| tests/magic-link-flow.test.ts (13 tests) 7ms
+ ✓ |chromium| tests/email-field.test.ts (6 tests) 2ms
+ ✓ |chromium| tests/auth-guard-relogin.test.ts (2 tests) 2ms
+ ✓ |chromium| tests/malformed-2xx.test.ts (2 tests) 2ms
+ ✓ |chromium| tests/session-established.test.ts (9 tests) 3ms
+ ✓ |chromium| tests/remaining-boundaries.test.ts (20 tests) 2ms
+ ✓ |chromium| tests/session-error-wording.test.ts (8 tests) 2ms
+ ✓ |chromium| tests/gate-unresolved.test.ts (3 tests) 2ms
+ ✓ |chromium| tests/managed-auth-composition.test.ts (32 tests) 2980ms
+
+ Test Files  47 passed (47)
+      Tests  738 passed (738)
+   Start at  05:27:26
+   Duration  5.97s (transform 0ms, setup 0ms, collect 23.76s, tests 20.35s, environment 0ms, prepare 154.19s)
+
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/auth
+
+ ✓ tests/ssr/reset-password-token.test.ts (4 tests) 4ms
+ ✓ tests/ssr/login-form-ssr.test.ts (30 tests) 11ms
+ ✓ tests/ssr/managed-auth-composition.node.test.ts (3 tests) 124ms
+
+ Test Files  3 passed (3)
+      Tests  37 passed (37)
+   Start at  05:27:33
+   Duration  1.58s (transform 2.65s, setup 0ms, collect 3.85s, tests 139ms, environment 0ms, prepare 10ms)
+

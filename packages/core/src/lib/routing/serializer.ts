@@ -47,8 +47,8 @@ export interface SerializerConfig<Dest extends { type: string; state: any }> {
  * Serialize destination state to URL path.
  *
  * Converts a destination state object to a URL path string using
- * the provided serializer configuration. This is a pure function
- * with no side effects.
+ * the provided serializer configuration. Unknown destination types emit a
+ * warning on each call and return the configured base path.
  *
  * @param destination - The destination state to serialize, or null for root
  * @param config - Serializer configuration with base path and type-specific serializers

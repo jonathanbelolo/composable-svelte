@@ -1,20 +1,46 @@
 import { describe, it, expect } from 'vitest';
-import { render } from 'vitest-browser-svelte';
-import ModalTest from './test-components/ModalTest.svelte';
+import { dropdownMenuReducer } from '../../src/lib/components/ui/dropdown-menu/dropdown-menu.reducer.js';
+import {
+	createInitialDropdownMenuState,
+	type DropdownMenuState
+} from '../../src/lib/components/ui/dropdown-menu/dropdown-menu.types.js';
 
-describe('presentationCompleted arriving outside `presenting`', () => {
-	it('is refused, rather than building a `presented` state with no content', async () => {
-		render(ModalTest, { startOpen: false });
-		const store = (window as never as Record<string, any>).__modalTestStore;
+describe('dropdownMenuReducer presentation guard', () => {
+	it('refuses presentationCompleted when idle rather than building presented state without content', () => {
+		const initialState = createInitialDropdownMenuState([]);
+		expect(initialState.presentation).toEqual({ status: 'idle' });
 
-		expect(store.state.presentation).toEqual({ status: 'idle' });
+		const [nextState] = dropdownMenuReducer(
+			initialState,
+			{ type: 'presentation', event: { type: 'presentationCompleted' } },
+			{}
+		);
+		expect(nextState.presentation).toEqual({ status: 'idle' });
+	});
 
-		// `ModalPrimitive` only fires this from its `presenting` branch, so a
-		// component cannot produce it here — but a reducer is reachable directly,
-		// and without the guard the spread yields `{ status: 'presented' }` with
-		// no `content`, which is not a `PresentationState`.
-		store.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } });
+	it('refuses presentationCompleted in stale wrong-phase (dismissing)', () => {
+		const dismissingState: DropdownMenuState = {
+			...createInitialDropdownMenuState([]),
+			presentation: { status: 'dismissing', content: true }
+		};
 
-		expect(store.state.presentation).toEqual({ status: 'idle' });
+		const [nextState] = dropdownMenuReducer(
+			dismissingState,
+			{ type: 'presentation', event: { type: 'presentationCompleted' } },
+			{}
+		);
+		expect(nextState.presentation).toEqual({ status: 'dismissing', content: true });
+	});
+
+	it('accepts presentationCompleted when presenting and transitions to presented', () => {
+		const [presentingState] = dropdownMenuReducer(createInitialDropdownMenuState([]), { type: 'opened' }, {});
+		expect(presentingState.presentation).toEqual({ status: 'presenting', content: true });
+
+		const [presentedState] = dropdownMenuReducer(
+			presentingState,
+			{ type: 'presentation', event: { type: 'presentationCompleted' } },
+			{}
+		);
+		expect(presentedState.presentation).toEqual({ status: 'presented', content: true });
 	});
 });

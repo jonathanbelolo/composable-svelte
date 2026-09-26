@@ -1,0 +1,61 @@
+
+> @composable-svelte/media@0.4.1 test /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/media
+> vitest run && vitest run --config vitest.ssr.config.ts
+
+5:35:19 AM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/media - using default configuration.
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/media
+
+5:35:19 AM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/media - using default configuration.
+5:35:19 AM [vite] (client) Re-optimizing dependencies because vite config has changed
+ ✓ |chromium| tests/media-ui-mounted.test.ts (11 tests) 79ms
+ ✓ |chromium| tests/audio-player-keyboard.test.ts (10 tests) 87ms
+ ✓ |chromium| tests/voice-input-reacquire.test.ts (20 tests) 96ms
+ ✓ |chromium| tests/media-ui-boundaries.test.ts (14 tests) 9ms
+ ✓ |chromium| tests/video-embed.test.ts (16 tests) 11ms
+ ✓ |chromium| tests/voice-input-ownership.test.ts (23 tests) 336ms
+ ✓ |chromium| tests/voice-input-transcription-once.test.ts (4 tests) 329ms
+ ✓ |chromium| tests/voice-input-button-toggle.test.ts (2 tests) 6ms
+ ✓ |chromium| tests/voice-input-error-message.test.ts (6 tests) 13ms
+ ✓ |chromium| tests/audio-mounted.test.ts (18 tests) 98ms
+ ✓ |chromium| tests/audio-player-dependencies.test.ts (12 tests) 389ms
+ ✓ |chromium| tests/voice-input-panel-entrance.test.ts (4 tests) 429ms
+ ✓ |chromium| tests/video-detection.test.ts (21 tests) 2ms
+ ✓ |chromium| tests/voice-reducer-lifetime.test.ts (19 tests) 496ms
+   ✓ initial quiet polls never send, while speech followed by silence sends one utterance  379ms
+ ✓ |chromium| tests/voice-input-conversation-start.test.ts (4 tests) 490ms
+     ✓ starts the VAD loop once permission arrives  302ms
+ ✓ |chromium| tests/audio-boundaries.test.ts (12 tests) 2ms
+ ✓ |chromium| tests/readme-recipes.test.ts (3 tests) 9ms
+ ✓ |chromium| tests/voice-input-transcript-history.test.ts (5 tests) 2327ms
+     ✓ survives an unrelated dispatch  366ms
+     ✓ accumulates across several transcripts and frames  850ms
+     ✓ still clears when the mode genuinely changes  486ms
+     ✓ keeps history when a deactivate is immediately undone  367ms
+ ✓ |chromium| tests/voice-input-vad-lifecycle.test.ts (6 tests) 2868ms
+     ✓ runs while conversation mode is active  353ms
+     ✓ stops when voice input is deactivated  653ms
+     ✓ stops when the store is destroyed  653ms
+     ✓ installs nothing when the recorder refuses to start  303ms
+     ✓ stops after a processing failure, rather than looping on it  654ms
+ ✓ |chromium| tests/voice-input-conversation-continues.test.ts (4 tests) 8611ms
+     ✓ stays in conversation mode and keeps recording  2004ms
+     ✓ CONTROL: the window is long enough to reach auto-send at all  2002ms
+     ✓ resets the silence counter after sending, so the threshold is a real interval  2002ms
+     ✓ stops everything when the user finally ends it  2604ms
+
+ Test Files  20 passed (20)
+      Tests  214 passed (214)
+   Start at  05:35:19
+   Duration  11.24s (transform 0ms, setup 0ms, collect 15.06s, tests 16.69s, environment 0ms, prepare 23.22s)
+
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/media
+
+ ✓ tests/ssr/media-ssr.test.ts (8 tests) 11ms
+
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+   Start at  05:35:31
+   Duration  1.36s (transform 940ms, setup 0ms, collect 1.27s, tests 11ms, environment 0ms, prepare 4ms)
+

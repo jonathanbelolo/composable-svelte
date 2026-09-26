@@ -22,6 +22,7 @@ import { existsSync, statSync, mkdtempSync, rmSync, writeFileSync, utimesSync } 
 import { basename } from 'node:path';
 import { tmpdir } from 'node:os';
 import { walkFiles, listDirs } from './walk.js';
+import { packageCapabilities } from './package-capabilities.js';
 import { fileURLToPath } from 'node:url';
 import { join, relative } from 'node:path';
 
@@ -47,7 +48,7 @@ export function newest(dir: string): { at: number; file: string } | null {
 }
 
 const packages = listDirs(packagesDir).filter((name) =>
-	existsSync(join(packagesDir, name, 'src'))
+	existsSync(join(packagesDir, name, 'src')) && packageCapabilities(join(packagesDir, name)).requiresDist
 );
 
 describe('built output is not stale', () => {

@@ -1,0 +1,44 @@
+[
+  {
+    "path": "README.md",
+    "before": "bafd7b3ec2453b9f4d7c515d0a0a5e72abeb8bde5895615cf21ea925806e88d7",
+    "after": "e9d38314b360068838dd8b634c83b7b86474732ca720592d13b0fe916af379b2",
+    "mainStillMatchesBaseline": true
+  },
+  {
+    "path": "test/inspect-archive.mjs",
+    "before": "62a7f4a7b21c961fd14bfd0052c0b21ecb0a6f5177276ef594d7ce0345c87f31",
+    "after": "0569d4d51672e7e984616b87a16234d60afbd1858e2518cb4e7607aa41904463",
+    "mainStillMatchesBaseline": true
+  },
+  {
+    "path": "src/qualification.test.mjs",
+    "before": "cabef33eb6cc78f82217b3e635b4da453536f4349e829e0a44ca98088bd0d4c8",
+    "after": "67dd468f0356de028d536d181e4095c2a606fc6fc7efbd2aea2a3ae12aba4cd4",
+    "mainStillMatchesBaseline": true
+  },
+  {
+    "path": "src/bundled-policy.test.mjs",
+    "before": "5854445f7c9024f9f34b7c10d0d387772782ab3b6999e7dc0b787504877d1a45",
+    "after": "9d07fbaf2d914c217d647050e21ea5ce0b15f0cc41d07fb8eb5723e91a72afe3",
+    "mainStillMatchesBaseline": true
+  },
+  {
+    "path": "src/bundled-policy.mjs",
+    "before": "a53d056ea6d956e921ccaa17bd383aed21f3451e6e7bf9c7c2cd83194ed3ce81",
+    "after": "6efe18bfae4eb4a3ed0089098b4bc90272c14b26531478559a3eaa41ed68454d",
+    "mainStillMatchesBaseline": true
+  },
+  {
+    "path": "src/check.mjs",
+    "before": "b1b41784bb1eacf7a7fbab2db19fb47992b31ba0c9133bef2d370408129505aa",
+    "after": "7ca110b723aeecb1a8a84d43d254f8f034d25b3ddb184e422e02b9fb362fc4d4",
+    "mainStillMatchesBaseline": true
+  },
+  {
+    "path": "src/check.test.mjs",
+    "before": "b8d2d3e7b2246a06348fe8af04317213136d5e254e2530ce4b6a92e4e75b3157",
+    "after": "fb6650950d58ee1480f36775314ec8c44224ecb39fbaca51be2054cc9dc40356",
+    "mainStillMatchesBaseline": true
+  }
+]

@@ -9,6 +9,7 @@
 		animateDropdownIn,
 		animateDropdownOut
 	} from '../../../animation/animate.js';
+	import { createDismissalBoundary } from '../../../actions/dismissalBoundary.js';
 
 	/**
 	 * Select component - Dropdown select with search and multi-select support.
@@ -93,6 +94,7 @@
 		class: className,
 		onchange
 	}: SelectProps = $props();
+	const registerDismissal = createDismissalBoundary();
 
 	// Create select store with reducer
 	const store = createStore({
@@ -123,9 +125,18 @@
 	let dropdownElement: HTMLElement | null = $state(null);
 	let searchInputElement: HTMLInputElement | null = $state(null);
 
+	const hasSelection = $derived($store.selected !== null && $store.selected !== undefined &&
+		(!multiple || !Array.isArray($store.selected) || $store.selected.length > 0));
+
+	// Focus after Svelte mounts the input, for mouse and keyboard opening alike.
+	const isOpen = $derived($store.isOpen);
+	$effect(() => {
+		if (isOpen && searchable) searchInputElement?.focus();
+	});
+
 	// Get display text for selected value(s)
 	const displayText = $derived.by(() => {
-		if (!$store.selected) return placeholder;
+		if (!hasSelection) return placeholder;
 
 		if (multiple && Array.isArray($store.selected)) {
 			if ($store.selected.length === 0) return placeholder;
@@ -151,26 +162,25 @@
 		if (disabled) return;
 		store.dispatch({ type: 'toggled' });
 
-		// Focus search input when opening
-		if (!$store.isOpen && searchable) {
-			setTimeout(() => searchInputElement?.focus(), 10);
-		}
 	}
 
 	function handleTriggerKeyDown(event: KeyboardEvent) {
 		if (disabled) return;
 
-		// When dropdown is open, let window handler handle all keys
+		// Open controls delegate navigation to their containing element.
 		if ($store.isOpen) return;
 
 		if (event.key === 'Enter' || event.key === ' ') {
 			event.preventDefault();
+			event.stopPropagation();
 			store.dispatch({ type: 'opened' });
 		} else if (event.key === 'ArrowDown') {
 			event.preventDefault();
+			event.stopPropagation();
 			store.dispatch({ type: 'opened' });
 		} else if (event.key === 'ArrowUp') {
 			event.preventDefault();
+			event.stopPropagation();
 			store.dispatch({ type: 'opened' });
 		}
 	}
@@ -203,11 +213,6 @@
 					searchInputElement?.blur();
 				}
 				break;
-			case 'Escape':
-				event.preventDefault();
-				store.dispatch({ type: 'escape' });
-				searchInputElement?.blur();
-				break;
 		}
 	}
 
@@ -233,23 +238,21 @@
 		store.dispatch({ type: 'cleared' });
 	}
 
-	// Close on click outside
-	function handleClickOutside(event: MouseEvent) {
-		// The whole container, not trigger + dropdown: the clear button is a
-		// sibling of the trigger, so a narrower test would treat clearing as an
-		// outside click and close the dropdown.
-		if (containerElement && !containerElement.contains(event.target as Node)) {
-			store.dispatch({ type: 'closed' });
-		}
-	}
-
+	const isVisible = $derived($store.isOpen || $store.presentation.status === 'dismissing');
 	$effect(() => {
-		if (!$store.isOpen) return;
-
-		document.addEventListener('click', handleClickOutside);
-		return () => {
-			document.removeEventListener('click', handleClickOutside);
-		};
+		if (!isVisible || !containerElement) return;
+		return registerDismissal({
+			node: containerElement,
+			identity: () => store,
+			onPointerOutside: () => {
+				if ($store.isOpen) store.dispatch({ type: 'closed' });
+			},
+			onEscape: () => {
+				if (!$store.isOpen) return;
+				store.dispatch({ type: 'escape' });
+				triggerElement?.focus();
+			}
+		});
 	});
 
 	// Rotate the caret on the dropdown's own timeline. A utility-class transition
@@ -281,7 +284,11 @@
 			// first run only seeds the guard.
 			return;
 		}
-		animateChevron(chevronElement, open);
+		const controller = new AbortController();
+		animateChevron(chevronElement, open, undefined, controller.signal);
+		return () => {
+			controller.abort();
+		};
 	});
 
 	// Drive the dropdown's own lifecycle. `dropdownElement` was bound and read by
@@ -295,36 +302,49 @@
 
 	$effect(() => {
 		const presentation = $store.presentation;
-		if (!dropdownElement) return;
+		if (!dropdownElement) return undefined;
 
 		if (presentation.status === 'idle') {
 			lastAnimated = null;
-			return;
+			return undefined;
 		}
 
 		const { status, content } = presentation;
-		if (lastAnimated?.status === status && lastAnimated.content === content) return;
+		if (lastAnimated?.status === status && lastAnimated.content === content) return undefined;
 		lastAnimated = { status, content };
 
 		if (status === 'presenting') {
-			animateDropdownIn(dropdownElement).then(() => {
-				queueMicrotask(() =>
-					store.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } })
-				);
+			const controller = new AbortController();
+			animateDropdownIn(dropdownElement, controller.signal).then(() => {
+				if (controller.signal.aborted) return;
+				queueMicrotask(() => {
+					if (controller.signal.aborted) return;
+					store.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } });
+				});
 			});
+			return () => {
+				controller.abort();
+			};
 		} else if (status === 'dismissing') {
-			animateDropdownOut(dropdownElement).then(() => {
-				queueMicrotask(() =>
-					store.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })
-				);
+			const controller = new AbortController();
+			animateDropdownOut(dropdownElement, controller.signal).then(() => {
+				if (controller.signal.aborted) return;
+				queueMicrotask(() => {
+					if (controller.signal.aborted) return;
+					store.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } });
+				});
 			});
+			return () => {
+				controller.abort();
+			};
 		}
+		return undefined;
 	});
 </script>
 
-<svelte:window onkeydown={handleDropdownKeyDown} />
-
-<div bind:this={containerElement} class="relative inline-block w-full">
+<!-- Keyboard navigation is delegated from the interactive descendants. -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div bind:this={containerElement} class="relative inline-block w-full" onkeydown={handleDropdownKeyDown}>
 	<!-- Trigger -->
 	<div class="relative">
 		<button
@@ -339,7 +359,7 @@
 				// Reserve room for the overlaid controls. Keyed on the same
 				// condition as the clear button so the text area reflows exactly
 				// as it did when they shared a flex row.
-				$store.selected && !disabled ? 'pr-[3.25rem]' : 'pr-7',
+				hasSelection && !disabled ? 'pr-[3.25rem]' : 'pr-7',
 				className
 			)}
 			aria-haspopup="listbox"
@@ -348,7 +368,7 @@
 			onclick={handleTriggerClick}
 			onkeydown={handleTriggerKeyDown}
 		>
-			<span class={cn('truncate', !$store.selected && 'text-muted-foreground')}>
+			<span class={cn('truncate', !hasSelection && 'text-muted-foreground')}>
 				{displayText}
 			</span>
 		</button>
@@ -357,7 +377,7 @@
 		     <button> is invalid HTML — the parser closes the outer one, so a
 		     server-rendered Select hydrated against a different tree. -->
 		<div class="absolute inset-y-0 right-0 flex items-center gap-2 pr-3">
-			{#if $store.selected && !disabled}
+			{#if hasSelection && !disabled}
 				<button
 					type="button"
 					class="text-muted-foreground hover:text-foreground"

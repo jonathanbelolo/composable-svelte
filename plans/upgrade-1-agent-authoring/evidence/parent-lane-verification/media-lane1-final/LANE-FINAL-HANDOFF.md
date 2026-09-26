@@ -1,0 +1,32 @@
+# Code, Media and Chat lane handoff
+
+All hashes below are SHA-256. Nothing was published or committed in this lane.
+Core is frozen at `/private/tmp/companion-core-owner-delta/composable-svelte-core-0.13.0.tgz` (`230233b99c4f04117f302d3bb6a408ba3d13a347ee9694919c318a4a0a354355`). Parent already integrated the reviewed Core patch and Media runtime patch into main.
+
+## Immutable package candidates and patches
+
+| Package | Candidate npm archive | SHA-256 | Apply delta | Patch SHA-256 |
+|---|---|---|---|---|
+| Code | `/private/tmp/t5-code/composable-svelte-code-0.4.1.tgz` | `cec04f1702044e8ddd50eee3e83780737075cf0f09d465f0e323caa93f1086ff` | `CODE-FINAL.runtime-and-t5.patch` | `1f5825c2652a838fab820d305b0a399a86b710518331fe2c1db4cb7cbb1d4a94` |
+| Media | `/private/tmp/t5-media/composable-svelte-media-0.4.1.tgz` | `39c4bd7c70b623bbf4eef3a040df4b5927e9f06bf674bc3f6a81ce8c47ae77c9` | `MEDIA-T5-ONLY.patch` | `7cf973f05dbec7582449e3a2ce9bbce11d5e86ed78cf6e957bdb24b4dae97a31` |
+| Chat | `/private/tmp/t5-chat/composable-svelte-chat-0.4.1.tgz` | `191596e3c4c32df71383e6a7633e30ec4343034abefb62c028124bba683622ae` | `CHAT-FINAL.runtime-and-t5.patch` | `6c381aafaf589b17dd7e58a34891cb8716501db5aca4d5b02c86d6779e0d4a23` |
+
+Every patch `git apply --check`s against its matching baseline in an isolated temporary repository. Code and Chat patches use this worktree's HEAD as baseline. Media T5 is based on the previously reviewed Media archive SHA `245cd275f8ba1c34e4df2985aa3d1672e111eee83d54bba6f07728683aa5e628`; it contains **only** README, `package.json` allowlist and `recipes/managed/*`, with no runtime source or dist delta. Code, Media and Chat `dist/` trees in these T5 archives are byte-identical to their last reviewed runtime archives (`459db6...`, `245cd...`, `d0bfe...` respectively). The older Code archives `a7e4...` and `de62...` are superseded.
+
+Each npm archive now ships `recipes/managed/README.md`, an actual managed component recipe, and a deterministic Chromium test. The package README links it; `package.json` includes `recipes` in the npm allowlist. In an installed consumer at Svelte 5.30, Code recipe passed 1/1, Media recipe 2/2, Chat recipe 1/1. `svelte-check` with a local Svelte and TypeScript toolchain found 0 errors/0 warnings for each recipe. The Code and Media browser tests initially used files copied from the T5 npm archives; the Chat test was repeated from files extracted directly from the final T5 archive. These files contain ownership, operation, troubleshooting and limits. The physical microphone test remains a separate release-verification harness, not a fake-proof recipe.
+
+## Runtime review and tests
+
+- Independent Opus 5.5 Code review of F1/F2/F4 repairs found no blocking issue. Its one low selection-state issue was corrected: the update listener now reads the live CodeMirror selection/history after a synchronous parent veto. Standalone and managed cursor assertions were added. Code build/typecheck/check: 0 errors/0 warnings; full browser 26 files/226 tests; SSR 5 tests. `CODE-MIGRATION.md` documents the review disposition and in-flight cap 256.
+- Independent Chat review found no need for an owner-action observer: chat has no native command action listener; the parent reducer owns business handoff. Follow-up fixed optional Prism stub warnings, retired typing emitters, attachment URL ownership across store swaps, and variant draft-reset coverage. Chat build/typecheck/check: 0 errors/0 warnings; browser 339 and SSR 11. Exact frozen Core+Chat installed optional-peer phases A/B passed no-peer Node/type/dev SSR/prod SSR/client/Chromium checks and positive Prism control, including a deliberate old-stub mutation. Adding final Code+Prism (C) and final Media (D) yielded production SSR/client/type/Chromium success with no page or console issues. Native plain Node cannot load Media's `.svelte` root export, so direct Node's optional Media lookup still degrades; Vite SSR and browser resolve it.
+- Media runtime remains frozen at the previously integrated patch, browser 214/214 and SSR 8/8. Its T5 delta changes no runtime bytes. A physical MediaRecorder end-of-audio check remains open; `media-packed-fixture/real-device.html` is a runnable manual harness with pass criteria in its README. Do not claim physical hardware completion from the fake device tests.
+
+## Installed Code compatibility
+
+The final T5 Code+Media dist with frozen Core was tested at Svelte 5.30.0 with the minimum `@xyflow/svelte` 1.4.1 and fresh-resolved 1.7.0, plus qualified newer Svelte 5.55.3/xyflow1.4.1. Each has one physical Svelte/Core copy and `npm ls --all` exit 0, declaration check 0/0, Vite client build, managed Chromium 2/2, production Vite SSR build and Node render. SSR lengths at 5.30: Code 9134/9149 bytes and Media 1084 bytes for xyflow1.4.1/1.7.0. This supports **Code peer `svelte: ^5.30.0`**. Core, Media and Chat retain separately justified Svelte floors.
+
+At Svelte 5.25.0, both xyflow versions declare that peer compatible and pass client/type/browser, but direct production SSR of a minimal `SvelteFlow` import throws `ReferenceError: $$render_inner is not defined` on Node render. The same error occurs with the full Code fixture, so it is not a Code wrapper issue. Minimal files remain at `/private/tmp/codefinal-floor141/src/DirectFlow.svelte` and `direct-flow-server.ts`, with built `dist-direct/direct-flow-server.js`; the 1.7.0 variant is at `/private/tmp/codefinal-floor-resolved/`. The consumer uses one Svelte/core copy and no peer mismatches. Production SSR passed at 5.30.0, 5.35.0, 5.40.0, 5.43.3, 5.55.3. The search stopped at the conservative fully verified 5.30 floor.
+
+## Parent-owned finalization
+
+Root owns final versions and cross-package peer floors, package locks, global skills/starter/checker, integration on main, and release. Code needs the accepted `svelte: ^5.30.0` and a Core version that contains `observeChildActions`/`isManagedChildView`; Chat and Media need the coordinated Core peer version. Do not publish an old `0.4.1` tarball unchanged after version assignment: repack and reverify exact archive integrity from final main. Media T5 applies after the already integrated Media runtime patch. Optional-peer script accepts `COMPOSABLE_CORE_TARBALL` and `COMPOSABLE_CHAT_TARBALL` for frozen-archive verification; C/D phase scripts and receipts were run in `/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/chat-optional-peers-17Cytq/app`.

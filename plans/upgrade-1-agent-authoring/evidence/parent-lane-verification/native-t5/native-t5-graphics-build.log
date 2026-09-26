@@ -1,0 +1,6 @@
+
+> @composable-svelte/graphics@0.2.1 build /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics
+> svelte-package -i src -o dist && node ../../scripts/emit-svelte-declaration-bridges.mjs dist
+
+src -> dist
+Emitted 5 NodeNext Svelte declaration bridges

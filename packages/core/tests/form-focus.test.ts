@@ -84,6 +84,15 @@ describe('fieldFocused in the reducer', () => {
 			expect(state.focusedField).toBeNull();
 			expect(state.fields.name?.touched, 'blur is what touches').toBe(true);
 		});
+		// Legacy TestStore assertions observe current state, so synchronous validation
+		// may already have completed by the time the started action is received.
+		await store.receive({ type: 'fieldValidationStarted', field: 'name' });
+		await store.receive({ type: 'fieldValidationCompleted', field: 'name', error: 'too short' }, state => {
+			expect(state.fields.name?.error).toBe('too short');
+			expect(state.fields.name?.isValidating).toBe(false);
+			expect(state.focusedField).toBeNull();
+		});
+		await store.finish();
 	});
 
 	it('is not cleared by a blur of some other field', async () => {
@@ -95,6 +104,10 @@ describe('fieldFocused in the reducer', () => {
 		await store.send({ type: 'fieldBlurred', field: 'name' }, (state) => {
 			expect(state.focusedField).toBe('email');
 		});
+		await store.receive({ type: 'fieldValidationStarted', field: 'name' });
+		await store.receive({ type: 'fieldValidationCompleted', field: 'name', error: 'too short' });
+		expect(store.state.focusedField).toBe('email');
+		await store.finish();
 	});
 });
 

@@ -1,0 +1,19 @@
+{
+  "baseline": "7861fbe8",
+  "candidate": "5beaea29f648d9e7869b8198f70cc318f82deeff",
+  "patchSha256": "838d06a787b7e25a2e7ab0f8f20a4d653bc5a71876c2a7a0ab3320d9e0c5de52",
+  "integrated": true,
+  "mainWorkspaceTests": {
+    "build": "passed",
+    "svelteCheck": "0 errors, 0 warnings",
+    "browser": 738,
+    "nodeSSR": 37,
+    "result": "passed on settled optimizer rerun",
+    "initialFailure": "Vite optimized esm-env mid-run; missing optimized chunks and effect_orphan; no source change before successful rerun"
+  },
+  "scope": "first managed auth slice and focused flow correctness fixes",
+  "fullLaneComplete": false,
+  "integratedThrough": "39a07643",
+  "shippedConsumerPatchSha256": "b86b821d81058240d191f61ce7d17da09245077e2e6c9184539a8faf2926943a",
+  "latestAuthTarSha256": "f5739de38020dcf3b48abd2223a29a8c0a63e2d50b59bd7d7f28edbda7cd4798"
+}

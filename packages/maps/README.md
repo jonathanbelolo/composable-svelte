@@ -28,8 +28,8 @@ pnpm add @composable-svelte/maps
 ```
 
 **Peer dependencies**:
-- `@composable-svelte/core` ^0.12.0
-- `svelte` ^5.0.0
+- `@composable-svelte/core` ^0.13.1
+- `svelte` ^5.20.0
 
 ## Quick Start
 
@@ -127,6 +127,58 @@ with a 401 that looks like a broken map.
 `MapAdapter` is the whole contract. Implement it and pass it as `adapter` — the
 same route `MapboxAdapter` takes, and the one the tests use to drive
 `MapPrimitive` without a WebGL context.
+
+The component owns the adapter it attaches, including a supplied adapter. It
+removes event listeners and calls `destroy()` when the component unmounts or its
+managed owner retires. Create a fresh adapter for a replacement map view.
+The attached adapter and store are fixed for that component instance; key the
+component if a standalone caller needs to replace either one.
+
+### Managed map view
+
+For the ownership contract, operation policy, troubleshooting, and a runnable
+installed-package recipe, see [Managed integration](./MANAGED.md). The full
+component reference is in [API.md](./API.md).
+
+`Map`, `MapPrimitive`, `GeoJSONLayer`, `HeatmapLayer`, `MapPopup`, and
+`TileProviderControl` accept a managed child view directly. In a
+`defineViews` render component, pass the provided `store` prop to `Map`; the
+application root owns the map state and actions. A retired view releases the
+map engine promptly, even if an outgoing transition keeps the DOM mounted.
+The outgoing map canvas therefore disappears when its owner retires; an exit
+transition can animate the surrounding static layout but does not keep a live
+map engine running.
+For application business events, dispatch a typed child action from the render
+component and handle its presented action in the parent reducer. The
+`onMapClick` prop remains available for standalone use.
+
+For example, this is the map render component supplied to `defineViews`:
+
+```svelte
+<script lang="ts">
+  import { Map, type MapState, type MapAction } from '@composable-svelte/maps';
+  import type { PresentationFeatureViewProps } from '@composable-svelte/core/application';
+
+  let { store, surface }: PresentationFeatureViewProps<MapState, MapAction> = $props();
+</script>
+
+<div use:surface>
+  <Map {store} onMapClick={(lngLat) => store.dispatch({ type: 'mapClicked', lngLat })} />
+</div>
+```
+
+Pass that same `store` to declarative layers, popups, and the tile provider
+control inside the render component. Their pending work stops when the view
+retires. Native marker drag, popup close, and feature click or hover currently
+do not dispatch corresponding store actions; use the documented `mapClicked`
+action for map clicks.
+`MapPopup` copies its child markup into the native popup when it opens. Later
+changes to child content and event handlers inside that markup are not copied;
+`isOpen` and `position` prop changes are synchronized.
+
+The parent reducer handles the presented `mapClicked` action. The package's
+Chromium test suite (`pnpm test:browser` from the package directory) exercises
+this pattern with a real MapLibre engine.
 
 ## Tile Providers
 
@@ -268,3 +320,19 @@ MIT © Jonathan Belolo
 - [Maplibre GL Documentation](https://maplibre.org/maplibre-gl-js/docs/)
 - [Mapbox GL Documentation](https://docs.mapbox.com/mapbox-gl-js/api/)
 - [Phase 12 Plan](https://github.com/jonathanbelolo/composable-svelte/blob/main/plans/phase-12/PHASE-12-PLAN.md)
+
+### Custom adapter camera completion
+
+The built-in MapLibre and Mapbox adapters tag each flight with an increasing
+`currentFlightId` and pass `{ flightId }` through engine event data. This lets
+MapPrimitive distinguish synchronous completion of an interrupted old flight
+from completion of its replacement, including duration-zero flights. Custom
+adapters can implement the same optional MapAdapter capability: update the ID
+before invoking the engine and preserve each flight's ID in its `moveend` data.
+Adapters omitting it retain legacy completion behavior and cannot provide this
+interrupted-flight distinction. Ordinary untagged user movement still updates
+the viewport. A viewport observer can replace a target or unmount the map safely.
+
+Pending layers belong to their adapter's map and style listener. Removal, style
+replacement, and destruction retire obsolete callbacks; callers do not install
+style-ready listeners or retry layer addition themselves.

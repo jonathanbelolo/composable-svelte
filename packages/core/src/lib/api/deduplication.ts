@@ -11,7 +11,7 @@ import { stableStringify } from '../utils/stable-stringify.js';
  * A request's identity for deduplication and caching.
  *
  * Everything that changes what the server would answer: the method, the
- * resolved URL (base URL joined, query excluded), the query parameters, the
+ * resolved URL (base joined, canonical query included, fragment excluded), the
  * headers as they will be sent — the client's defaults merged with the
  * request's, names lower-cased, **after** the request interceptors — the
  * body, and the retry policy, since two callers with different policies
@@ -28,8 +28,9 @@ import { stableStringify } from '../utils/stable-stringify.js';
  */
 export interface RequestIdentity {
 	readonly method: HTTPMethod;
-	/** Base URL joined and normalised; no query string. */
+	/** Base joined with canonical query and no fragment when produced by finalizeRequest. */
 	readonly url: string;
+	/** Optional separate query identity for direct callers; finalizeRequest includes it in url. */
 	readonly params: Record<string, string | number | boolean | null | undefined> | undefined;
 	/** Names lower-cased, interceptors applied. */
 	readonly headers: Record<string, string>;

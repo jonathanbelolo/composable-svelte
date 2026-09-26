@@ -5,12 +5,14 @@
 	 * Renders PDF attachments using PDF.js with navigation controls.
 	 * Supports zoom, page navigation, and responsive rendering.
 	 */
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
 	import type { MessageAttachment } from '../types.js';
 
 	// Lazy-load pdfjs-dist to avoid Node.js dependency issues in tests
-	type PDFDocumentProxy = any;
-	type PDFLib = any;
+	type PDFLib = typeof import('pdfjs-dist');
+	type PDFDocumentProxy = import('pdfjs-dist').PDFDocumentProxy;
+	type PDFDocumentLoadingTask = import('pdfjs-dist').PDFDocumentLoadingTask;
+	type RenderTask = import('pdfjs-dist').RenderTask;
 
 	interface Props {
 		/** PDF attachment to display */
@@ -32,69 +34,115 @@
 	let scale = $state(1.5);
 	let isLoading = $state(true);
 	let error = $state<string | null>(null);
+	// One loading task owns the PDF worker and its eventual document. Destroying
+	// both the task and proxy would retire the same PDF.js resources twice.
+	let loadingTask: PDFDocumentLoadingTask | null = null;
+	let activeRender: RenderTask | null = null;
+	let documentGeneration = 0;
+	let renderGeneration = 0;
+	let disposed = false;
 
-	// Configure PDF.js worker
-	onMount(async () => {
-		try {
-			// Lazy-load pdfjs-dist
-			pdfjsLib = await import('pdfjs-dist');
-
-			// Set worker source from CDN
-			pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
-			await loadPDF();
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to load PDF library';
-			isLoading = false;
+	function retireDocument() {
+		const task = loadingTask;
+		loadingTask = null;
+		pdf = null;
+		if (task) {
+			// PDF.js destruction is asynchronous, including when loading failed.
+			void task.destroy().catch((cause: unknown) => {
+				console.error('PDF cleanup error:', cause);
+			});
 		}
+	}
+
+	async function cancelRender() {
+		const task = activeRender;
+		if (!task) return;
+		task.cancel();
+		try { await task.promise; } catch { /* Cancellation settles canvas ownership. */ }
+		if (activeRender === task) activeRender = null;
+	}
+
+	onMount(() => {
+		void import('pdfjs-dist').then((lib) => {
+			if (disposed) return;
+			lib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${lib.version}/pdf.worker.min.mjs`;
+			pdfjsLib = lib;
+		}).catch((cause: unknown) => {
+			if (disposed) return;
+			error = cause instanceof Error ? cause.message : 'Failed to load PDF library';
+			isLoading = false;
+		});
+		return () => {
+			disposed = true;
+			documentGeneration++;
+			renderGeneration++;
+			void cancelRender();
+			retireDocument();
+		};
 	});
 
-	async function loadPDF() {
-		if (!pdfjsLib) return;
+	$effect(() => {
+		const lib = pdfjsLib;
+		const url = attachment.url;
+		if (lib) untrack(() => { void loadPDF(lib, url); });
+	});
 
+	async function loadPDF(lib: PDFLib, url: string) {
+		const generation = ++documentGeneration;
+		renderGeneration++;
+		isLoading = true;
+		error = null;
+		currentPage = 1;
+		totalPages = 0;
+		scale = 1.5;
+		// Cancel synchronously; await before any new render may reuse the canvas.
+		const cancelled = cancelRender();
+		retireDocument();
+		await cancelled;
+		if (disposed || generation !== documentGeneration) return;
 		try {
-			isLoading = true;
-			error = null;
-
-			const loadingTask = pdfjsLib.getDocument(attachment.url);
-			pdf = await loadingTask.promise;
-			totalPages = pdf.numPages;
-
-			// Order matters, and it was the other way round. `renderPage` bails on
-			// `!canvasRef`, and the `<canvas>` lives behind `{#if !isLoading}` — so
-			// rendering before clearing the flag meant the canvas did not exist
-			// yet, the call returned immediately, and nothing retriggered it. Every
-			// PDF opened blank, showing "Page 1 of N" over an empty canvas, and
-			// painted only once the reader pressed a control.
+			const task = lib.getDocument(url);
+			loadingTask = task;
+			const document = await task.promise;
+			if (disposed || generation !== documentGeneration) return;
+			pdf = document;
+			totalPages = document.numPages;
+			// The canvas is conditional: publish loading completion before rendering.
 			isLoading = false;
 			await tick();
+			if (disposed || generation !== documentGeneration) return;
 			await renderPage(currentPage);
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to load PDF';
+		} catch (cause) {
+			if (disposed || generation !== documentGeneration) return;
+			error = cause instanceof Error ? cause.message : 'Failed to load PDF';
 			isLoading = false;
 		}
 	}
 
 	async function renderPage(pageNum: number) {
-		if (!pdf || !canvasRef) return;
-
+		const document = pdf;
+		const canvas = canvasRef;
+		const requestedScale = scale;
+		if (!document || !canvas || disposed) return;
+		const generation = ++renderGeneration;
+		await cancelRender();
+		if (disposed || generation !== renderGeneration) return;
 		try {
-			const page = await pdf.getPage(pageNum);
-			const viewport = page.getViewport({ scale });
-
-			const context = canvasRef.getContext('2d');
+			const page = await document.getPage(pageNum);
+			if (disposed || generation !== renderGeneration) return;
+			const viewport = page.getViewport({ scale: requestedScale });
+			const context = canvas.getContext('2d');
 			if (!context) return;
-
-			// Set canvas dimensions
-			canvasRef.width = viewport.width;
-			canvasRef.height = viewport.height;
-
-			// Render PDF page
-			await page.render({
-				canvasContext: context,
-				viewport: viewport
-			}).promise;
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to render page';
+			canvas.width = viewport.width;
+			canvas.height = viewport.height;
+			const task = page.render({ canvas, canvasContext: context, viewport });
+			activeRender = task;
+			try { await task.promise; }
+			finally { if (activeRender === task) activeRender = null; }
+		} catch (cause) {
+			if (disposed || generation !== renderGeneration) return;
+			if (cause instanceof Error && cause.name === 'RenderingCancelledException') return;
+			error = cause instanceof Error ? cause.message : 'Failed to render page';
 		}
 	}
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, onDestroy } from 'svelte';
 	import type { Snippet } from 'svelte';
 
 	import { cn } from '../../utils.js';
@@ -13,7 +13,8 @@
 	let { class: className, children }: Props = $props();
 
 	const ctx = getContext<AlertDialogContext | undefined>(ALERT_DIALOG_KEY);
-	ctx?.registerDescription();
+	const unregister = ctx?.registerDescription();
+	if (unregister) onDestroy(unregister);
 </script>
 
 <p id={ctx?.descriptionId} class={cn('text-sm text-muted-foreground', className)}>

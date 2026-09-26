@@ -47,6 +47,14 @@ export interface ChangeEmailState {
 	 * ada@work.example".
 	 */
 	pendingEmail: string | null;
+	/**
+	 * Which operation the last reduction accepted, or `null`.
+	 *
+	 * A one-reduction output: set by the arm that accepts a request or resend
+	 * result, and cleared by every other action. `createAuthFeature` reports
+	 * `changeEmailOutcome` from it.
+	 */
+	settled: 'request' | 'resend' | null;
 }
 
 export type ChangeEmailAction =

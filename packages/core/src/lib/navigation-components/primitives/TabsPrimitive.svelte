@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import type { ScopedDestinationStore } from '../../navigation/scope-to-destination.js';
+  import type { ChildView } from '../../navigation/managed-integration.js';
 
   // ============================================================================
   // Props
@@ -9,9 +9,9 @@
   interface TabsPrimitiveProps<State, Action> {
     /**
      * Scoped store for the tabs content.
-     * When null, tabs are hidden. When non-null, tabs are visible.
+     * Missing or retired views hide the tabs.
      */
-    store: ScopedDestinationStore<State, Action> | null;
+    store: ChildView<State, Action> | undefined;
 
     /**
      * Tab labels for rendering tab buttons.
@@ -35,7 +35,7 @@
       [
         {
           visible: boolean;
-          store: ScopedDestinationStore<State, Action> | null;
+          store: ChildView<State, Action> | undefined;
           tabs: string[];
           activeTab: number;
           onTabChange: (index: number) => void;
@@ -56,7 +56,7 @@
   // Derived State
   // ============================================================================
 
-  const visible = $derived(store !== null);
+  const visible = $derived(store !== undefined && store.state !== undefined);
 
   // Note: Tabs are inline navigation components
   // - No portal (rendered inline)

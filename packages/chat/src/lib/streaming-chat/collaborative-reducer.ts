@@ -101,6 +101,7 @@ export function collaborativeReducer(
 							action.userId,
 							(message) => {
 								// Handle incoming WebSocket messages
+								if (message === null || typeof message !== 'object') return;
 								const msg = message as any;
 								if (msg.type === 'user_joined') {
 									dispatch({ type: 'userJoined', user: msg.user });
@@ -112,6 +113,11 @@ export function collaborativeReducer(
 										userId: msg.userId,
 										presence: msg.presence
 									});
+								} else if (msg.type === 'heartbeat') {
+									if (typeof msg.userId === 'string' && typeof msg.timestamp === 'number' && Number.isFinite(msg.timestamp)) {
+										// Liveness is measured in this client's clock domain, not a remote peer's.
+										dispatch({ type: 'heartbeatReceived', userId: msg.userId, timestamp: getTimestamp() });
+									}
 								} else if (msg.type === 'typing_started') {
 									dispatch({
 										type: 'userStartedTyping',

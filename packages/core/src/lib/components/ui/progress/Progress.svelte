@@ -60,7 +60,7 @@
 
 	// Clamp value between 0 and max
 	const percentage = $derived(
-		value !== undefined ? Math.min(Math.max((value / max) * 100, 0), 100) : 0
+		value !== undefined ? Math.min(Math.max((value / max) * 100, 0), 100) : 100
 	);
 
 	const containerClasses = $derived(
@@ -84,5 +84,7 @@
 	aria-valuenow={value}
 	{...restProps}
 >
-	<div class={indicatorClasses} style="width: {percentage}%"></div>
+	{#key value === undefined}
+		<div class={indicatorClasses} style="width: {percentage}%"></div>
+	{/key}
 </div>

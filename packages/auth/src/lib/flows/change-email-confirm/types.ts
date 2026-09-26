@@ -21,6 +21,10 @@ export type ChangeEmailConfirmStatus = 'idle' | 'confirming' | 'confirmed';
 export interface ChangeEmailConfirmState {
 	status: ChangeEmailConfirmStatus;
 	/**
+	 * The token currently being confirmed, or seeded from page load.
+	 */
+	token?: string | null | undefined;
+	/**
 	 * Why confirming failed, or `null`.
 	 *
 	 * `token_expired` is the ordinary one — a link opened a week late — and the
@@ -30,12 +34,24 @@ export interface ChangeEmailConfirmState {
 	error: AuthError | null;
 	/** The address now on the account, once confirmed. `null` before that. */
 	email: string | null;
+	/**
+	 * Which operation the last reduction accepted, or `null`.
+	 *
+	 * A one-reduction output: set by the arm that accepts a confirmation result,
+	 * and cleared by every other action. `createAuthFeature` reports
+	 * `changeEmailConfirmOutcome` from it.
+	 */
+	settled: 'confirmed' | 'failed' | null;
+	/** Attempt counter; increments on new request or in-flight token replacement to drop late results. Resets to 0 on idle tokenProvided. AbortSignal cancellation is the primary guard; attempt comparison acts as backup. */
+	attempt?: number | undefined;
 }
 
 export type ChangeEmailConfirmAction =
-	| { type: 'confirmationRequested'; token: string }
-	| { type: 'confirmationSucceeded'; email: string }
-	| { type: 'confirmationFailed'; error: AuthError }
+	| { type: 'tokenProvided'; token: string | null }
+	| { type: 'confirmationRequested'; token: string; attempt?: number | undefined }
+	| { type: 'confirmationSucceeded'; email: string; attempt?: number | undefined }
+	| { type: 'confirmationFailed'; error: AuthError; attempt?: number | undefined }
+	| { type: 'signInRequested' }
 	| { type: 'errorDismissed' };
 
 export interface ChangeEmailConfirmDependencies {

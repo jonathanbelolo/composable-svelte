@@ -54,6 +54,23 @@ export const store = createStore<NodeCanvasState, NodeCanvasAction, NodeCanvasDe
 </div>
 ```
 
+### In a managed feature
+
+`store` also takes a managed view — the `store` a feature view receives from
+`FeatureViews` / `FeatureOutlet`, or the result of `scopeTo` /
+`composition.bind`. Render the canvas directly:
+`defineViews(composition, { canvas: { render: NodeCanvas } })`.
+
+On a managed view, `liftAction` defaults to the identity. Viewport commands
+(`setViewport`, `zoomIn`, `zoomOut`, `fitView`, `centerView`) reach the canvas
+without an `unliftAction`, however the parent wraps canvas actions and whatever
+`liftAction` is passed: a managed view's commands never go through
+`unliftAction`. It is only for a standalone parent store that wraps them.
+
+Commands run in dispatch order against the live canvas. One dispatched before
+the canvas has mounted is dropped, not replayed. Seed a saved viewport through
+state instead (`viewport`, with `fitView={false}`).
+
 ## Documentation
 
 See the [NodeCanvas section of the package README](https://www.npmjs.com/package/@composable-svelte/code#nodecanvas)

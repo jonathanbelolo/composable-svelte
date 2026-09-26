@@ -11,6 +11,8 @@
 	export interface AccordionItemContext {
 		readonly id: string;
 		readonly disabled: boolean;
+		readonly triggerId: string;
+		readonly contentId: string;
 	}
 
 	export function setAccordionItemContext(context: AccordionItemContext) {
@@ -27,8 +29,8 @@
 </script>
 
 <script lang="ts">
-	import type { Snippet } from 'svelte';
-	import { getAccordionContext } from './Accordion.svelte';
+	import { untrack, type Snippet } from 'svelte';
+	import { getAccordionContext, isAccordionActive } from './Accordion.svelte';
 	import { cn } from '../../../utils.js';
 
 	/**
@@ -73,18 +75,43 @@
 	}: AccordionItemProps = $props();
 
 	const store = getAccordionContext();
+	const active = isAccordionActive();
+	const uid = $props.id();
+	const triggerId = `${uid}-trigger`;
+	const contentId = `${uid}-content`;
 
 	// Check if this item is expanded (for template data-state attribute)
 	const isExpanded = $derived($store.expandedIds.includes(id));
 
-	// Set context for trigger and content. `disabled` is exposed via a getter
-	// so children stay reactive when the parent mutates the prop after mount.
+	// Register/unregister item lifecycle with store
+	$effect(() => {
+		const currentId = id;
+		untrack(() => store.dispatch({ type: 'itemRegistered', id: currentId, disabled }));
+		return () => {
+			if (active()) untrack(() => store.dispatch({ type: 'itemUnregistered', id: currentId }));
+		};
+	});
+
+	// Sync disabled updates without unregistering (prevents wiping expansion)
+	$effect(() => {
+		const currentDisabled = disabled;
+		const currentId = untrack(() => id);
+		untrack(() => store.dispatch({ type: 'itemRegistered', id: currentId, disabled: currentDisabled }));
+	});
+
+	// Set context for trigger and content.
 	setAccordionItemContext({
 		get id() {
 			return id;
 		},
 		get disabled() {
 			return disabled;
+		},
+		get triggerId() {
+			return triggerId;
+		},
+		get contentId() {
+			return contentId;
 		}
 	});
 </script>

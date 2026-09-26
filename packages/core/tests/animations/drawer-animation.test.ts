@@ -1,3 +1,4 @@
+import { waitForState } from '../helpers/wait-for-state.js';
 /**
  * Browser tests for Drawer animation lifecycle.
  *
@@ -21,34 +22,6 @@ const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
  * Wait for store state to match a condition.
  * This hooks directly into the store's reactivity system - NO POLLING!
  */
-function waitForState<State>(
-	store: { subscribe: (listener: (state: State) => void) => () => void },
-	condition: (state: State) => boolean,
-	options: { timeout?: number; description?: string } = {}
-): Promise<State> {
-	const { timeout = 2000, description = 'state condition' } = options;
-
-	return new Promise((resolve, reject) => {
-		let unsubscribe: (() => void) | null = null;
-		let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-		// Set up timeout
-		timeoutId = setTimeout(() => {
-			unsubscribe?.();
-			reject(new Error(`Timeout waiting for ${description} after ${timeout}ms`));
-		}, timeout);
-
-		// Subscribe to state changes
-		unsubscribe = store.subscribe((state) => {
-			if (condition(state)) {
-				// Condition met! Clean up and resolve
-				if (timeoutId) clearTimeout(timeoutId);
-				unsubscribe?.();
-				resolve(state);
-			}
-		});
-	});
-}
 
 describe('Drawer Animation Lifecycle', () => {
 	it('should animate in when presenting', async () => {

@@ -3,11 +3,18 @@
   "compilerOptions": {
     "allowImportingTsExtensions": true,
     "noEmit": true,
-    "paths": {
-      "@composable-svelte/core": ["../../packages/core/src"],
-      "@composable-svelte/core/*": ["../../packages/core/src/*"]
-    }
+    "types": [
+      "svelte",
+      "vite/client"
+    ]
   },
-  "include": ["src/**/*.ts", "src/**/*.svelte", "tests/**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.svelte",
+    "tests/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

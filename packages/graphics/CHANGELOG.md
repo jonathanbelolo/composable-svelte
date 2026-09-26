@@ -9,7 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 WebGPU is `WebGPUEngine` with its own async initialisation, and it is not built.
 See the README.
 
-## [Unreleased]
+## [0.3.0] - 2026-09-26
+
+### Added
+
+- `Scene`, `Camera`, `Mesh`, and `Light` accept narrow structural `GraphicsStore` bindings (`Pick<ChildView<GraphicsState, GraphicsAction>, 'state' | 'dispatch' | 'subscribe'>`), enabling native companion integration with `@composable-svelte/core/application` (`defineViews`, `FeatureViews`, `FeatureOutlet`) while continuing to accept standalone Stores.
+- `GraphicsAdapter` interface exported from `@composable-svelte/graphics` with required asynchronous `initialize(canvas)` and `dispose()` lifecycle methods. `<Scene createAdapter={() => new CustomAdapter()}>` owns one newly created adapter per attachment, including retirement and remount.
+- `WebGLOverlay` accepts an `owner` prop implementing structural subscription. Exported `attachOverlayToOwner(overlay, owner)` utility for programmatic attachment.
+- The managed overlay lifetime prop is named `owner`; a draft `store` alias was removed before release to keep one public lifetime input.
+- Managed owner retirement releases an initialized graphics adapter promptly before DOM unmount, waits for pending initialization before disposing late engines exactly once, and suppresses late callbacks or state delivery to retired views.
+- Real WebGL2 Chromium browser tests covering sibling engine isolation, sibling RAF continuation, WebGL context loss and restore, Babylon texture disposal during retirement, and managed Scene lifecycle.
+- Installed consumer fixture in `fixtures/installed-consumer` exercising `ComponentProps` for all five public graphics components and a real `defineViews` / `FeatureOutlet` recipe.
+
+### Changed
+
+- Animation timing is anchored by the first `tick`, making `startAnimation` reduction deterministic. `AnimationState.startTime` is now `number | null`; consumers inspecting it must handle the pending state. Existing numeric timestamps retain their meaning.
+- Requires `@composable-svelte/core` `^0.13.1` and Svelte `^5.20.0` as peers.
+- `RenderLoop.destroy()` is terminal: a later `start()` throws, while `stop()` still allows restart and resets FPS sampling.
+
+### Fixed
+
+- Shader presets preserve source alpha for glitch/chromatic effects, guard ripple centers against NaN, and reset the fullscreen quad between bounded draws.
+- `UpdateScheduler` replaces an existing registration with the same id; `PositionTracker` follows capture-phase scroll and window resize.
+- `getContext()` returns the restored context manager's context, `BabylonAdapter.resize()` refreshes orthographic bounds, and WebGL2 capability probing releases its temporary context.
 
 ## [0.2.1] - 2026-09-18
 

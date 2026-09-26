@@ -1,0 +1,95 @@
+{
+  "status": "R4-cleared-runtime-authoring-input",
+  "packages": [
+    {
+      "name": "@composable-svelte/core",
+      "version": "0.13.1",
+      "filename": "composable-svelte-core-0.13.1.tgz",
+      "path": "/private/tmp/composable-final-authoring/artifacts-b/composable-svelte-core-0.13.1.tgz",
+      "bytes": 995049,
+      "sha256": "30e044e139e831033e06fdf626db979875efa2f7c29d72dece33a21db112d18b",
+      "sha512": "6fe225f88ab2acae00ee844dfc5e59d7a5c8b40c19d0905968179fba45fde47c7955b55fdba52f8c4d2d2a9b11f960ca7022fba4fd60aa8df2ebbec28235b5bc",
+      "integrity": "sha512-b+Il+IqyrK4A7oRN/F5Z16XItAwZ0JBZaBefukX95Hx5VbVf26UvjE0tKpsR+WDKcCL7pP1gqo3y677CgjW1vA==",
+      "fileCount": 1258,
+      "devDependencySiblings": {},
+      "peerDependencies": {
+        "isomorphic-dompurify": "^2.16.0",
+        "svelte": "^5.20.0",
+        "tailwindcss": "^3.4.0 || ^4.0.0",
+        "vitest": "^3.0.0 || ^4.0.0"
+      },
+      "peerDependenciesMeta": {
+        "isomorphic-dompurify": {
+          "optional": true
+        },
+        "tailwindcss": {
+          "optional": true
+        },
+        "vitest": {
+          "optional": true
+        }
+      },
+      "changedFromR3": [],
+      "addedFromR3": [],
+      "removedFromR3": [],
+      "candidateSourceDriftSinceR3Pack": [
+        "consumer/package.json"
+      ],
+      "status": "provisional (pending coordinator starter/checker qualification)",
+      "sourcePath": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-core-0.13.1.tgz"
+    },
+    {
+      "name": "@composable-svelte/auth",
+      "version": "0.3.0",
+      "filename": "composable-svelte-auth-0.3.0.tgz",
+      "path": "/private/tmp/composable-final-authoring/artifacts-b/composable-svelte-auth-0.3.0.tgz",
+      "bytes": 326410,
+      "sha256": "ac13e9a8874012ed53a87249baed555aeeb34a79654e18d6aaf1921507226e62",
+      "sha512": "5e49694015856beebaef9f4be81d9a7035824bbc6d6470cbf84f3bf6bc1e38a9bb2e3adbc2f5a5205625d1dca3aeef5b0517126345f109237072a5d050e2dbee",
+      "integrity": "sha512-XklpQBWFa+66759L6B2acDWCS7xtZHDL+E879rweOKm7LjrbwvWlIFYl0dyjru9bBRcSY0XxCSNwcqXQUOLb7g==",
+      "fileCount": 404,
+      "devDependencySiblings": {
+        "@composable-svelte/core": "0.13.1"
+      },
+      "peerDependencies": {
+        "@composable-svelte/core": "^0.13.1",
+        "svelte": "^5.20.0"
+      },
+      "peerDependenciesMeta": {},
+      "changedFromR3": [],
+      "addedFromR3": [],
+      "removedFromR3": [],
+      "candidateSourceDriftSinceR3Pack": null,
+      "status": "pending installed qualification/review",
+      "sourcePath": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-auth-0.3.0.tgz"
+    },
+    {
+      "name": "@composable-svelte/charts",
+      "version": "0.3.0",
+      "filename": "composable-svelte-charts-0.3.0.tgz",
+      "path": "/private/tmp/composable-final-authoring/artifacts-b/composable-svelte-charts-0.3.0.tgz",
+      "bytes": 58892,
+      "sha256": "c36b7a06e5a293259cdbebd599a1698cd448c000eac343c66411c1282a73c21d",
+      "sha512": "d448ce9247565ffb448c6f3d0fefce82d701caaada58562a5bec4bb3ee96bc5577872eca7126e22c607170df38b59711de91dc0e07a86562937664bc07d62e77",
+      "integrity": "sha512-1EjOkkdWX/tEjG89D+/OgtcByqraWFYqW+xLs+6WvFV3hy7KcSbiLGBxcN84tZcR3pHcDgeoZWKTdmS8B9Yudw==",
+      "fileCount": 53,
+      "devDependencySiblings": {
+        "@composable-svelte/core": "0.13.1"
+      },
+      "peerDependencies": {
+        "@composable-svelte/core": "^0.13.1",
+        "svelte": "^5.20.0"
+      },
+      "peerDependenciesMeta": {},
+      "changedFromR3": [
+        "fixtures/installed-consumer/verify.mjs"
+      ],
+      "addedFromR3": [],
+      "removedFromR3": [],
+      "candidateSourceDriftSinceR3Pack": null,
+      "status": "pending installed qualification/review",
+      "sourcePath": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-charts-0.3.0.tgz"
+    }
+  ],
+  "svelte": "5.55.3"
+}

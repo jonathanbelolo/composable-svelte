@@ -8,11 +8,10 @@
 		AlertDialogAction,
 		AlertDialogCancel
 	} from '../../src/lib/navigation-components/alert-dialog/index.js';
-	import { scopeToDestination } from '../../src/lib/navigation/scope-to-destination.js';
-	import type { Store } from '../../src/lib/types.js';
+	import type { PresentationView } from '../../src/lib/navigation/managed-integration.js';
 
 	interface Props {
-		parentStore: Store<any, any>;
+		store: PresentationView<any, any> | undefined;
 		/** Render a second dialog, to prove two on one page do not share ids. */
 		twice?: boolean;
 		/** Omit the title and name the dialog directly instead. */
@@ -21,18 +20,12 @@
 		onCancel?: (() => void) | undefined;
 	}
 
-	let { parentStore, twice = false, unlabelled = false, onConfirm, onCancel }: Props = $props();
-
-	const scopedStore = $derived(
-		parentStore.state.destination
-			? scopeToDestination(parentStore, ['destination'], 'test', 'destination')
-			: null
-	);
+	let { store, twice = false, unlabelled = false, onConfirm, onCancel }: Props = $props();
 </script>
 
-{#if scopedStore}
+{#if store?.state !== undefined}
 	{#if unlabelled}
-		<AlertDialog store={scopedStore} ariaLabel="Named directly">
+		<AlertDialog {store} ariaLabel="Named directly">
 			{#snippet children()}
 				<AlertDialogFooter>
 					<AlertDialogCancel onclick={() => onCancel?.()}>Cancel</AlertDialogCancel>
@@ -43,7 +36,7 @@
 			{/snippet}
 		</AlertDialog>
 	{:else}
-		<AlertDialog store={scopedStore}>
+		<AlertDialog {store}>
 			{#snippet children()}
 				<AlertDialogHeader>
 					<AlertDialogTitle>Delete this project?</AlertDialogTitle>
@@ -58,7 +51,7 @@
 			{/snippet}
 		</AlertDialog>
 		{#if twice}
-			<AlertDialog store={scopedStore}>
+			<AlertDialog {store}>
 				{#snippet children()}
 					<AlertDialogHeader>
 						<AlertDialogTitle>Second dialog</AlertDialogTitle>

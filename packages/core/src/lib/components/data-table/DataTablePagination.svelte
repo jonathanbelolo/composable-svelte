@@ -31,10 +31,12 @@
 
 	const state = $derived(store.state);
 	const totalPages = $derived(Math.ceil(state.pagination.total / state.pagination.pageSize));
-	const currentPage = $derived(state.pagination.page + 1); // Display 1-indexed
-	const startItem = $derived(state.pagination.page * state.pagination.pageSize + 1);
+	const currentPage = $derived(state.pagination.total === 0 ? 0 : state.pagination.page + 1); // Display 1-indexed
+	const visibleRows = $derived(state.data.length);
+	const validOptions = $derived([...new Set([...pageSizeOptions, state.pagination.pageSize].filter(value => Number.isSafeInteger(value) && value > 0))]);
+	const startItem = $derived(visibleRows === 0 ? 0 : state.pagination.page * state.pagination.pageSize + 1);
 	const endItem = $derived(
-		Math.min((state.pagination.page + 1) * state.pagination.pageSize, state.pagination.total)
+		visibleRows === 0 ? 0 : Math.min(state.pagination.page * state.pagination.pageSize + visibleRows, state.pagination.total)
 	);
 
 	function goToPage(page: number) {
@@ -43,7 +45,7 @@
 
 	function changePageSize(event: Event) {
 		const target = event.target as HTMLSelectElement;
-		const pageSize = parseInt(target.value, 10);
+		const pageSize = Number(target.value);
 		store.dispatch({ type: 'pageSizeChanged', pageSize });
 	}
 </script>
@@ -58,11 +60,12 @@
 	<div class="flex items-center space-x-2">
 		<p class="text-sm font-medium">Items per page</p>
 		<select
+			aria-label="Items per page"
 			value={state.pagination.pageSize}
 			onchange={changePageSize}
 			class="h-8 w-[70px] rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
 		>
-			{#each pageSizeOptions as option}
+			{#each validOptions as option}
 				<option value={option}>{option}</option>
 			{/each}
 		</select>

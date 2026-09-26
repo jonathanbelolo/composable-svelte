@@ -90,7 +90,19 @@ export const loginReducer: Reducer<LoginState, LoginAction, LoginDependencies> =
 					? { ...withForm, error: null }
 					: withForm;
 
-			if (action.action.type !== 'submissionSucceeded') {
+			// Only the result of a submission in flight. Core refuses a stale
+			// stamped `submissionSucceeded` — a superseded `submissionId`, or one
+			// arriving when nothing is submitting, as after a reset — by returning
+			// its state unchanged. An unstamped one core accepts in any state, so
+			// the flow also requires that a submission was in flight. Without
+			// these checks the flow would start a request with whatever the fields
+			// hold now. The MFA challenge has the same two checks; unlike it, this
+			// flow still lets a new submission supersede one in flight.
+			if (
+				action.action.type !== 'submissionSucceeded' ||
+				withForm.form === state.form ||
+				!state.form.isSubmitting
+			) {
 				return [cleared, formEffect];
 			}
 

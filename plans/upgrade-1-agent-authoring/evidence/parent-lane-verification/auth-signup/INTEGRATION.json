@@ -1,0 +1,39 @@
+{
+  "base": "86200751",
+  "commit": "26abc6e21965975b2eda0b6a91ec79738a5a1248",
+  "patchSha256": "b3897c9902f05f76f898a9d750be18c42326660eb0318375b23d74cee8a67e31",
+  "appliedAt": "2026-09-25T10:53:52.009822+00:00",
+  "paths": [
+    "packages/auth/CHANGELOG.md",
+    "packages/auth/README.md",
+    "packages/auth/consumer/README.md",
+    "packages/auth/consumer/scripts/browser.mjs",
+    "packages/auth/consumer/src/App.svelte",
+    "packages/auth/consumer/src/Props.svelte",
+    "packages/auth/consumer/src/main-controlled.ts",
+    "packages/auth/consumer/src/main.ts",
+    "packages/auth/consumer/src/model.ts",
+    "packages/auth/src/lib/application/feature.ts",
+    "packages/auth/src/lib/application/index.ts",
+    "packages/auth/src/lib/components/SignupForm.svelte",
+    "packages/auth/src/lib/flows/signup/reducer.ts",
+    "packages/auth/src/lib/flows/signup/types.ts",
+    "packages/auth/tests/auth-feature.test.ts",
+    "packages/auth/tests/fixtures/managed-auth-drivers.ts",
+    "packages/auth/tests/managed-auth-sibling-ownership.test.ts",
+    "packages/auth/tests/managed-forms.test.ts",
+    "packages/auth/tests/test-components/ManagedAuthRecipe.svelte",
+    "packages/auth/tests/test-components/ManagedFormProps.svelte",
+    "packages/auth/tests/test-components/ManagedFormSwap.svelte",
+    "packages/auth/tests/test-components/SignupFormStoreSwap.svelte",
+    "plans/upgrade-1-agent-authoring/evidence/auth-companion-lane/C-SIGNUP-PROOF.md"
+  ],
+  "authTarSha256": "705962c52b665faaeea2092b379654fe96283004195b0001eb15672dddf345a8",
+  "mainVerification": {
+    "build": "pass",
+    "typecheck": "pass",
+    "svelteCheck": "0 errors, 0 warnings",
+    "affectedBrowserTests": 84,
+    "ssrTests": 38
+  }
+}

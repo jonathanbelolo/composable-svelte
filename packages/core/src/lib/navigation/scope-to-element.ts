@@ -29,10 +29,19 @@ import type { IdentifiedItem } from '../composition/for-each.js';
  * store, but actually delegates to the parent.
  *
  * **Behavior:**
- * - Returns `null` if the item is not found (component should unmount)
- * - Throws error if item is accessed after removal
+ * - Returns `null` if the item is not found initially (component should unmount)
+ * - Retains last observed child state snapshot during teardown reads when the item is removed
+ * - Drops dispatch calls when the item is missing from the parent state
  * - Subscribe only triggers for changes to this specific item
  * - Dispatch wraps actions with { type, id, action }
+ *
+ * **Legacy Limitations vs Managed Slots:**
+ * This is a lightweight, ID-based legacy helper. It does not integrate with
+ * `ManagedComposition` or typed slot tokens (`keyedSlot`). It does not establish
+ * owner lifecycle tokens, replacement semantics (`replaceOn`), or managed child
+ * startup/teardown effects. If an item is replaced by a new item sharing the same ID,
+ * legacy scoping cannot track identity separation. Use `keyedSlot` for full
+ * identity and lifecycle authority.
  *
  * @template ChildAction - Child item action type (must be specified)
  * @template ParentState - Parent store state type (inferred)
@@ -115,31 +124,38 @@ export function scopeToElement<
     return null;
   }
 
+  let lastKnownState: ChildState = item.state;
+
   // Create scoped store interface
   const scopedStore = {
     /**
      * Get the current state of this specific item.
      *
-     * Throws if the item has been removed from the array.
+     * If the item has been removed from the array, returns the last observed
+     * state snapshot to support safe component teardown without throwing.
      */
     get state(): ChildState {
       const current = getArray(parentStore.state).find((i) => i.id === id);
-      if (!current) {
-        throw new Error(
-          `[scopeToElement] Item with id "${id}" was removed from the array. ` +
-            `Component should have unmounted before accessing state.`
-        );
+      if (current) {
+        lastKnownState = current.state;
+        return current.state;
       }
-      return current.state;
+      return lastKnownState;
     },
 
     /**
      * Dispatch an action for this specific item.
      *
      * Wraps the child action with the item's ID and action type,
-     * then dispatches to the parent store.
+     * then dispatches to the parent store. If the item is missing
+     * from the parent array, the dispatch is dropped.
      */
     dispatch(action: ChildAction): void {
+      const current = parentStore.select(getArray).find((i) => i.id === id);
+      if (!current) {
+        return;
+      }
+      lastKnownState = current.state;
       parentStore.dispatch({
         type: actionType,
         id,
@@ -151,7 +167,7 @@ export function scopeToElement<
      * Select a value from this item's state.
      */
     select<T>(selector: (state: ChildState) => T): T {
-      return selector(this.state);
+      return selector(scopedStore.state);
     },
 
     /**
@@ -161,32 +177,34 @@ export function scopeToElement<
      * not when other items in the array change.
      */
     subscribe(listener: (state: ChildState) => void): () => void {
-      // Call listener with initial state
-      const currentItem = getArray(parentStore.state).find((i) => i.id === id);
-      if (currentItem) {
-        listener(currentItem.state);
-      }
-
-      // Track previous state for comparison
-      let previousState = currentItem ? currentItem.state : null;
-
-      // Subscribe to parent store
+      // Let the parent provide its synchronous initial delivery and observe
+      // listener failures through the same path as subsequent notifications.
+      let hasPrevious = false;
+      let previousState: ChildState;
+      let unsubscribed = false;
       const unsubscribe = parentStore.subscribe((parentState) => {
+        if (unsubscribed) return;
         const current = getArray(parentState).find((i) => i.id === id);
-
-        if (current) {
-          // Item still exists - check if state changed
-          if (current.state !== previousState) {
-            previousState = current.state;
-            listener(current.state);
+        if (!current) {
+          if (!hasPrevious) {
+            hasPrevious = true;
+            previousState = lastKnownState;
+            return listener(lastKnownState);
           }
-        } else {
-          // Item was removed - no notification (component should unmount)
-          previousState = null;
+          return;
+        }
+        lastKnownState = current.state;
+        if (!hasPrevious || current.state !== previousState) {
+          previousState = current.state;
+          hasPrevious = true;
+          return listener(current.state);
         }
       });
 
-      return unsubscribe;
+      return () => {
+        unsubscribed = true;
+        unsubscribe();
+      };
     },
 
     /**
@@ -206,6 +224,7 @@ export function scopeToElement<
             ) {
               const current = getArray(parentState).find((i) => i.id === id);
               if (current) {
+                lastKnownState = current.state;
                 listener((parentAction as any).action, current.state);
               }
             }

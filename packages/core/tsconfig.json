@@ -4,6 +4,8 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "composite": true,
+    "target": "ES2022",
+    "useDefineForClassFields": true,
     "types": ["svelte", "node"]
   },
   "include": ["src/**/*"],

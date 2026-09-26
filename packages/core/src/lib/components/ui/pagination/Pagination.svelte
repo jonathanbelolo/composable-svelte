@@ -70,7 +70,7 @@
 
 	let {
 		totalItems,
-		itemsPerPage = 10,
+		itemsPerPage = $bindable(10),
 		currentPage = $bindable(1),
 		maxPageButtons = 7,
 		showItemsPerPage = false,
@@ -95,6 +95,7 @@
 				onPageChange?.(page);
 			},
 			onItemsPerPageChange: (ipp) => {
+				itemsPerPage = ipp;
 				onItemsPerPageChange?.(ipp);
 			}
 		}

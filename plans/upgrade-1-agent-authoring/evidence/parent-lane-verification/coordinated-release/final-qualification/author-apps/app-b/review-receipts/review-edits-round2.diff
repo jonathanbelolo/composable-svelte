@@ -1,0 +1,133 @@
+--- a/src/lib/model.ts
++++ b/src/lib/model.ts
+@@ -171,13 +171,20 @@
+ 
+ export const appReducer: Reducer<AppState, AppAction, AppDependencies> = (state, action, deps) => {
+   if (action.type === 'navigate') {
+-    const isAuthenticated = authenticatedSubject(state) !== null;
+-    // Business rule: the dashboard is for authenticated accounts, and a signed-in
+-    // account has no sign-in page to return to (it must log out).
+-    if (action.route === 'dashboard' && !isAuthenticated) return [state, Effect.none()];
+-    if (action.route === 'login' && isAuthenticated && state.route === 'dashboard') return [state, Effect.none()];
++    const subject = authenticatedSubject(state);
++    // Business rule: the dashboard is for authenticated accounts that are not
++    // logging out, and a signed-in account has no sign-in page to return to.
++    if (action.route === 'dashboard' && (subject === null || state.auth?.session.status === 'loggingOut')) {
++      return [state, Effect.none()];
++    }
++    if (action.route === 'login' && subject !== null && state.route === 'dashboard') return [state, Effect.none()];
+     if (state.route === action.route) return [state, Effect.none()];
+-    return [{ ...state, route: action.route }, Effect.none()];
++    const next: AppState = { ...state, route: action.route };
++    // The dashboard shows only the current subject's account.
++    if (subject !== null && action.route === 'dashboard' && next.accountSubjectId !== subject.id) {
++      return startAccountLoad(next, subject, deps);
++    }
++    return [next, Effect.none()];
+   }
+ 
+   if (action.type === 'auth') {
+@@ -200,10 +207,11 @@
+       // Documented acceptance: only an accepted handoff moves to the dashboard.
+       if (feature?.handoff?.kind === 'accepted') next = { ...next, route: 'dashboard' };
+       // The account view belongs to one subject. A same-subject handoff (such as a
+-      // rotated password session) keeps it; a different subject replaces it.
++      // rotated password session) keeps it; a different subject replaces it on any
++      // route, and the dashboard always loads the current subject's account.
+       if (
+-        next.route === 'dashboard' &&
+-        next.accountSubjectId !== subject.id
++        next.accountSubjectId !== subject.id &&
++        (next.route === 'dashboard' || next.accountSubjectId !== null)
+       ) {
+         const [loading, load] = startAccountLoad(next, subject, deps);
+         next = loading;
+@@ -246,7 +254,8 @@
+         accountLoading: false,
+         accountData: action.data,
+         accountError: null,
+-        chart: createInitialChartState<AccountActivityRow>({ data: action.data.metrics })
++        chart: createInitialChartState<AccountActivityRow>({ data: action.data.metrics }),
++        selectedMetric: null
+       },
+       Effect.none()
+     ];
+--- a/tests/dashboard.test.ts
++++ b/tests/dashboard.test.ts
+@@ -12,6 +12,7 @@
+ } from '../src/lib/model.js';
+ import { createControlledBackend } from '../src/lib/controlled-backend.js';
+ import type { AccountSnapshot, SessionSnapshot } from '@composable-svelte/auth';
++import type { ChangePasswordAction, LoginAction } from '@composable-svelte/auth/flows';
+ 
+ const flush = async () => {
+   for (let i = 0; i < 20; i++) await Promise.resolve();
+@@ -820,10 +821,10 @@
+     const promise = new Promise<T>((yes) => { resolve = yes; });
+     return { promise, resolve };
+   }
+-  const loginAction = (action: unknown): AppAction =>
+-    ({ type: 'auth', action: { type: 'presented', action: { type: 'login', action: { type: 'presented', action } } } }) as AppAction;
+-  const passwordAction = (action: unknown): AppAction =>
+-    ({ type: 'auth', action: { type: 'presented', action: { type: 'changePassword', action: { type: 'presented', action } } } }) as AppAction;
++  const loginAction = (action: LoginAction): AppAction =>
++    ({ type: 'auth', action: { type: 'presented', action: { type: 'login', action: { type: 'presented', action } } } });
++  const passwordAction = (action: ChangePasswordAction): AppAction =>
++    ({ type: 'auth', action: { type: 'presented', action: { type: 'changePassword', action: { type: 'presented', action } } } });
+   async function until(check: () => boolean, label: string) {
+     for (let i = 0; i < 50 && !check(); i++) await flush();
+     if (!check()) throw new Error(`Timeout waiting for ${label}`);
+@@ -968,6 +969,53 @@
+     await store.send({ type: 'chart', action: { type: 'presented', action: { type: 'focusLast' } } });
+     await store.send({ type: 'chart', action: { type: 'presented', action: { type: 'selectFocused' } } }, (state) => {
+       expect(state.selectedMetric).toEqual(rows[1]);
++    });
++  });
++
++  it('the dashboard is refused while logging out and always shows the current subject', async () => {
++    const backend = createControlledBackend();
++    backend.setDelayLogout(true);
++    const store = makeStore(backend);
++    await signInThroughForm(store, 'ada@example.com');
++    await until(() => store.state.accountData !== null, 'account');
++    await store.send({ type: 'logout' });
++    await until(() => store.state.auth?.session.status === 'loggingOut', 'logging out');
++    // Browser Forward to /dashboard while the former subject is still retained.
++    await store.send({ type: 'navigate', route: 'dashboard' });
++    expect(store.state.route).toBe('login');
++    expect(store.state.accountData).toBeNull();
++    backend.resolveDelayedLogout();
++    await until(() => store.state.auth?.session.status === 'anonymous', 'anonymous');
++
++    // Account state owned by another subject is replaced before the dashboard shows it.
++    const seeded = createTestStore({
++      initialState: {
++        ...createInitialAppState({
++          route: 'login',
++          initialData: { subjectId: 'sub-other', email: 'other@example.com', displayName: 'Other', role: 'Member', metrics: [] }
++        }),
++        auth: {
++          ...auth.initialState(),
++          session: {
++            status: 'authenticated',
++            subject: { kind: 'authenticated', id: 'sub-ada-1', attributes: { display_name: 'Ada Lovelace' } },
++            epoch: 1,
++            error: null,
++            expiresAt: null
++          }
++        }
++      },
++      reducer: composition.reducer,
++      execution: composition.execution,
++      dependencies: createControlledBackend()
+     });
++    seeded.exhaustivity = 'off';
++    await seeded.send({ type: 'navigate', route: 'dashboard' }, (state) => {
++      expect(state.route).toBe('dashboard');
++      expect(state.accountData).toBeNull();
++      expect(state.accountSubjectId).toBe('sub-ada-1');
++    });
++    await until(() => seeded.state.accountData !== null, 'current subject account');
++    expect(seeded.state.accountData?.subjectId).toBe('sub-ada-1');
+   });
+ });

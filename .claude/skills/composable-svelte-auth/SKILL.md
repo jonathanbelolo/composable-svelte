@@ -10,6 +10,14 @@ sign-in attempt, a structured failure union, and thin components over both.
 
 ---
 
+## UPGRADE 1 AGENT ENTRY
+
+For an application built with the integrated Upgrade 1 companion packages, begin with the [managed package reference](../../../packages/auth/consumer/README.md) and its executable recipe. The same reference is included in the package at `node_modules/@composable-svelte/auth/consumer/README.md`; use the installed version's declarations and instructions as the API authority.
+
+Use the package-owned `createAuthFeature()` composition and its typed slots. Keep session lifetime in the auth feature and application navigation in the parent reducer. Managed components receive genuine presentation views; consume accepted business outcomes in the parent reducer instead of wiring standalone success callbacks.
+
+The standalone store and callback examples below describe standalone usage. For an owned application feature, follow the managed recipe rather than copying the standalone setup and adding ad hoc lifetime glue. Candidate qualification and npm publication are separate; verify the installed package version contains this managed surface.
+
 ## PACKAGE OVERVIEW
 
 **What exists today.** Session resolution, seeded-user passwordless login,

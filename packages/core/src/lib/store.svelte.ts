@@ -1,3 +1,5 @@
+import { registerManagedRoot } from './execution/store-access.js';
+import { isOwnerLive } from './execution/identity.js';
 /**
  * Store implementation for Composable Svelte.
  *
@@ -16,6 +18,9 @@ import type {
   EffectExecutor
 } from './types.js';
 import { isServer } from './ssr/utils.js';
+import { ProductionScheduler } from './execution/scheduler.js';
+import { EffectRuntime } from './execution/runtime.js';
+import { TurnQueue } from './execution/turn-queue.js';
 
 /**
  * Create a Store for a feature.
@@ -32,7 +37,16 @@ import { isServer } from './ssr/utils.js';
 export function createStore<State, Action, Dependencies = any>(
   config: StoreConfig<State, Action, Dependencies>
 ): Store<State, Action> {
+  if (config.execution?.mode !== 'managed' && config.execution &&
+      (config.execution.scheduler !== undefined || config.execution.slots !== undefined || config.execution._reduce !== undefined || config.execution._initial !== undefined || config.execution._initialization !== undefined || config.execution.rootThrottleCapacity !== undefined)) {
+    throw new TypeError('Managed execution options require execution.mode: managed');
+  }
+  if (config.execution?.mode === 'managed') {
+    return createManagedStore(config);
+  }
+
   // $state.raw tracks reassignment only (no deep proxy) — ideal for immutable reducer state
+  let currentState = config.initialState;
   let state = $state.raw(config.initialState);
 
   // Action history for debugging/time-travel
@@ -195,20 +209,23 @@ export function createStore<State, Action, Dependencies = any>(
 
     // Run reducer (pure function)
     const [newState, effect] = config.reducer(
-      state,
+      currentState,
       action,
       config.dependencies as Dependencies
     );
 
     // Update state (Svelte reactivity kicks in)
-    const stateChanged = !Object.is(state, newState);
+    const stateChanged = !Object.is(currentState, newState);
     if (stateChanged) {
+      // Teardown effects can read an earlier Svelte reactive snapshot.
+      // Reduction and imperative observers always use the latest committed value.
+      currentState = newState;
       state = newState;
 
       // Notify subscribers
       subscribers.forEach(listener => {
         try {
-          listener(state);
+          listener(currentState);
         } catch (error) {
           console.error('[Composable Svelte] Subscriber error:', error);
         }
@@ -218,7 +235,7 @@ export function createStore<State, Action, Dependencies = any>(
     // Notify action subscribers
     actionSubscribers.forEach(listener => {
       try {
-        listener(action, state);
+        listener(action, currentState);
       } catch (error) {
         console.error('[Composable Svelte] Action subscriber error:', error);
       }
@@ -284,6 +301,7 @@ export function createStore<State, Action, Dependencies = any>(
   }
 
   function executeEffect(effect: Effect<Action>): void {
+    if (destroyed) return;
     // Check if we should defer effects (SSR)
     const deferEffects = config.ssr?.deferEffects ?? true; // Default to true
     if (isServer() && deferEffects) {
@@ -311,47 +329,40 @@ export function createStore<State, Action, Dependencies = any>(
         break;
 
       case 'Cancellable': {
-        // Cancel existing effect with same id
+        // Detach every predecessor before invoking abort handlers or cleanup.
+        // Reentrant work then owns new entries and must not be cleared by this
+        // older operation after its user-code boundary.
         const existing = inFlightEffects.get(effect.id);
-        if (existing) {
-          existing.abort();
-        }
-
-        // Cancel existing subscription with same id
-        // Deleted unconditionally: the entry used to be removed only inside the
-        // truthy branch, so a subscription whose setup returned nothing could
-        // never be cancelled at all.
-        runCleanup(subscriptionCleanups.get(effect.id));
+        const previousCleanup = subscriptionCleanups.get(effect.id);
+        const previousTimer = debounceTimers.get(effect.id);
+        const previousThrottle = throttleState.get(effect.id);
+        inFlightEffects.delete(effect.id);
         subscriptionCleanups.delete(effect.id);
-
-        // Clear debounce timer with same id
-        const existingTimer = debounceTimers.get(effect.id);
-        if (existingTimer) {
-          clearTimer(existingTimer);
-          debounceTimers.delete(effect.id);
-        }
-
-        // Clear throttle with same id
-        const existingThrottle = throttleState.get(effect.id);
-        if (existingThrottle?.timeout) {
-          clearTimer(existingThrottle.timeout);
-        }
+        debounceTimers.delete(effect.id);
         throttleState.delete(effect.id);
+        if (previousTimer !== undefined) clearTimer(previousTimer);
+        if (previousThrottle?.timeout !== undefined) clearTimer(previousThrottle.timeout);
 
-        // Effect.cancel() carries no work of its own — cancel and stop here.
-        if (effect.cancelOnly) {
+        // Enroll a replacement before user code, as Subscription does. A newer
+        // reentrant cancellable can retire it before its executor starts.
+        const controller = effect.cancelOnly ? undefined : new AbortController();
+        let leave = (): void => {};
+        const retire = () => {
+          leave();
+          if (controller && inFlightEffects.get(effect.id) === controller) inFlightEffects.delete(effect.id);
+        };
+        if (controller) {
+          inFlightEffects.set(effect.id, controller);
+          leave = joinGroups(effect.groups, () => controller.abort());
+          controller.signal.addEventListener('abort', retire, { once: true });
+        }
+        existing?.abort();
+        runCleanup(previousCleanup);
+        if (!controller) break;
+        if (destroyed || controller.signal.aborted || inFlightEffects.get(effect.id) !== controller) {
+          controller.abort();
           break;
         }
-
-        // Otherwise, set up new cancellable effect. Its groups' disposer
-        // aborts the same controller `Effect.cancel(id)` would.
-        const controller = new AbortController();
-        inFlightEffects.set(effect.id, controller);
-        let leave = (): void => {};
-        leave = joinGroups(effect.groups, () => {
-          leave();
-          controller.abort();
-        });
 
         // The signal is handed to the executor so it can cooperate — pass it to
         // `fetch`, check it around an await. It used to be created, stored and
@@ -384,15 +395,8 @@ export function createStore<State, Action, Dependencies = any>(
             }
           })
           .finally(() => {
-            leave();
-            // Only if this execution is still the current one. A superseded
-            // effect settling later used to delete its *successor's* controller,
-            // after which `Effect.cancel` for that id found nothing and the live
-            // work ran on uncancelled and ungated — the opposite of the guarantee
-            // `Effect.cancellable` exists to give.
-            if (inFlightEffects.get(effect.id) === controller) {
-              inFlightEffects.delete(effect.id);
-            }
+            controller.signal.removeEventListener('abort', retire);
+            retire();
           });
         break;
       }
@@ -475,44 +479,49 @@ export function createStore<State, Action, Dependencies = any>(
         break;
 
       case 'Subscription': {
-        // Cancel existing subscription with same id
-        runCleanup(subscriptionCleanups.get(effect.id));
-        subscriptionCleanups.delete(effect.id);
-
-        // Dispatch is gated on this subscription still being the live one.
-        //
-        // A real socket's `close()` fires `onclose` on a later task, and consumers
-        // report that through the connection callback — so without the gate a
-        // deliberate disconnect ends with the store believing the connection
-        // failed, and a reconnect has the *old* socket's close clobber the new
-        // one's healthy state. `Cancellable` got this gate and `Subscription` did
-        // not, which is backwards: subscriptions are the ones that outlive their
-        // own cancellation.
+        // Enroll before setup: setup and previous cleanup may synchronously
+        // cancel, destroy, or replace this subscription. A retired callback is
+        // inert even if its socket closes on a later task after reconnect.
+        const previous = subscriptionCleanups.get(effect.id);
         let live = true;
-        const gatedDispatch: Dispatch<Action> = action => {
+        // Enrollment precedes user code; the initial leave is a safe no-op
+        // until joinGroups returns the real membership disposer.
+        let leave = (): void => {};
+        let cleanup: (() => void | Promise<void>) | undefined;
+        const teardown = (): void | Promise<void> => {
           if (!live) return;
-          dispatch(action);
-        };
-
-        try {
-          const cleanup = effect.setup(gatedDispatch);
-          let leave = (): void => {};
-          const teardown = () => {
-            leave();
-            live = false;
-            if (typeof cleanup === 'function') cleanup();
-          };
-          subscriptionCleanups.set(effect.id, teardown);
-          // The group's disposer tears it down once, if it is still the live one.
-          leave = joinGroups(effect.groups, () => {
-            leave();
-            if (subscriptionCleanups.get(effect.id) === teardown) {
-              subscriptionCleanups.delete(effect.id);
-              runCleanup(teardown);
-            }
-          });
-        } catch (error) {
           live = false;
+          leave();
+          if (subscriptionCleanups.get(effect.id) === teardown) subscriptionCleanups.delete(effect.id);
+          const dispose = cleanup;
+          cleanup = undefined;
+          if (typeof dispose === 'function') return dispose();
+        };
+        // Enroll before invoking either old cleanup or new setup: both may dispatch.
+        subscriptionCleanups.set(effect.id, teardown);
+        leave = joinGroups(effect.groups, () => runCleanup(teardown));
+        runCleanup(previous);
+        // Identity is a defensive ownership check alongside the liveness gate.
+        if (!live || destroyed || subscriptionCleanups.get(effect.id) !== teardown) {
+          runCleanup(teardown);
+          break;
+        }
+        const gatedDispatch: Dispatch<Action> = action => {
+          if (live && !destroyed) dispatch(action);
+        };
+        try {
+          const returnedCleanup = effect.setup(gatedDispatch);
+          if (returnedCleanup && typeof (returnedCleanup as unknown as { then?: unknown }).then === 'function') {
+            runCleanup(teardown);
+            Promise.resolve(returnedCleanup).then(value => {
+              if (typeof value === 'function') runCleanup(value);
+            }, () => {});
+            throw new TypeError(`Subscription '${effect.id}' setup must return a cleanup function synchronously; received a Promise`);
+          }
+          if (!live) runCleanup(returnedCleanup);
+          else cleanup = returnedCleanup;
+        } catch (error) {
+          runCleanup(teardown);
           console.error('[Composable Svelte] Subscription setup error:', error);
         }
         break;
@@ -529,7 +538,7 @@ export function createStore<State, Action, Dependencies = any>(
    * Select a derived value from state (non-reactive).
    */
   function select<T>(selector: Selector<State, T>): T {
-    return selector(state);
+    return selector(currentState);
   }
 
   /**
@@ -540,7 +549,7 @@ export function createStore<State, Action, Dependencies = any>(
 
     // Immediately call with current state
     try {
-      listener(state);
+      listener(currentState);
     } catch (error) {
       console.error('[Composable Svelte] Subscriber error:', error);
     }
@@ -564,6 +573,7 @@ export function createStore<State, Action, Dependencies = any>(
    * Clean up resources.
    */
   function destroy(): void {
+    if (destroyed) return;
     destroyed = true;
     lifetime.abort();
 
@@ -609,4 +619,129 @@ export function createStore<State, Action, Dependencies = any>(
     },
     destroy
   };
+}
+
+function createManagedStore<State, Action, Dependencies = any>(
+  config: StoreConfig<State, Action, Dependencies>
+): Store<State, Action> {
+  const execution = config.execution ?? {};
+  const scheduler = execution.scheduler ?? new ProductionScheduler();
+
+
+  let warnedAfterDestroy = false;
+  let turnQueue: TurnQueue<State, Action, Dependencies>;
+  let reactiveState = $state.raw(config.initialState);
+  let reactiveLifecycle = $state.raw<ReturnType<TurnQueue<State, Action, Dependencies>['getLifecycle']>>();
+  let reactiveLive = $state(true);
+
+  const runtime = new EffectRuntime<Action>({
+    scheduler,
+    rootThrottleCapacity: execution.rootThrottleCapacity,
+    dispatch: (action, origin) => {
+      try { turnQueue.enqueue({ action, origin, source: 'effect' }); }
+      catch (error) { runtime.reportFailure(error, 'reduction'); }
+    },
+    ssr: config.ssr,
+    isServer,
+    onError: (error, context) => console.error(`[Composable Svelte] Runtime error (${context}):`, error)
+  });
+
+  turnQueue = new TurnQueue<State, Action, Dependencies>({
+    initialState: config.initialState,
+    reducer: config.reducer,
+    dependencies: config.dependencies as Dependencies,
+    execution: config.execution,
+    maxHistorySize: config.maxHistorySize,
+    runtime,
+    onStateCommitted: newState => {
+      reactiveState = newState;
+      reactiveLifecycle = turnQueue.getLifecycle();
+    },
+    onSubscriberError: error => console.error('[Composable Svelte] Subscriber error:', error)
+  });
+
+  const store: Store<State, Action> = {
+    get state() {
+      return reactiveState;
+    },
+    dispatch(action: Action) {
+      if (runtime.isDisposed) {
+        if (!warnedAfterDestroy) {
+          warnedAfterDestroy = true;
+          console.warn('[Composable Svelte] dispatch after destroy ignored:', (action as { type?: unknown } | null)?.type);
+        }
+        return;
+      }
+      turnQueue.dispatch(action);
+    },
+    select<T>(selector: Selector<State, T>): T {
+      return selector(reactiveState);
+    },
+    subscribe(listener: (state: State) => void) {
+      return turnQueue.subscribe(listener);
+    },
+    subscribeToActions(listener: (action: Action, state: State) => void) {
+      return turnQueue.subscribeToActions(listener);
+    },
+    get history() {
+      return turnQueue.history;
+    },
+    destroy() {
+      try { turnQueue.destroy(); } finally { reactiveLive = false; }
+    },
+    get _runtime() {
+      return runtime;
+    }
+  };
+  reactiveLifecycle = turnQueue.getLifecycle();
+  registerManagedRoot(store, {
+    execution,
+    scheduler,
+    registerResource: options => runtime.resourceScope.createRecord(options),
+    activateInitialization: claim => turnQueue.activateInitialization(claim),
+    releaseInitialization: claim => turnQueue.releaseInitialization(claim),
+    isLive: () => reactiveLive && !turnQueue.isDestroyed && !runtime.isDisposed,
+    lifecycle: () => reactiveLifecycle!,
+    enqueue: (action, origin) => turnQueue.enqueue({ action, origin, source: 'external' }),
+    enqueueObserved: (action, origin, observer) => turnQueue.enqueueObserved(action, origin, observer),
+        enqueueInspection: (resolve, origin, observer) => turnQueue.enqueueInspection(resolve, origin, observer),
+    subscribe(origin, listener) {
+      const report = (error: unknown) => console.error('[Composable Svelte] Subscriber error:', error);
+      const notify = () => {
+        try { void Promise.resolve(listener()).catch(report); }
+        catch (error) { report(error); }
+      };
+      if (turnQueue.isDestroyed || runtime.isDisposed || !isOwnerLive(turnQueue.getLifecycle(), origin)) {
+        notify();
+        return () => {};
+      }
+      const record = runtime.resourceScope.createRecord({
+        ownerToken: origin, kind: 'subscription', description: 'ChildView'
+      });
+      let manuallyStopped = false;
+      const stop = store.subscribe(() => { if (record.live) notify(); });
+      record.addCleanup(() => {
+        stop();
+        // Owner invalidation has one terminal notification; explicit unsubscribe
+        // is silent, matching the ordinary subscription contract.
+        if (!manuallyStopped) notify();
+      });
+      return () => { manuallyStopped = true; record.dispose(); };
+    },
+    // Backs observeChildActions. Pre-attachment is a drop: nothing is
+    // buffered for an owner with no listener. Retirement and unsubscribe are silent.
+    subscribeActions(origin, listener) {
+      if (turnQueue.isDestroyed || runtime.isDisposed || !isOwnerLive(turnQueue.getLifecycle(), origin))
+        return () => {};
+      const record = runtime.resourceScope.createRecord({
+        ownerToken: origin, kind: 'subscription', description: 'ChildView actions'
+      });
+      const stop = turnQueue.subscribeOwnerDeliveries((owner, action) => {
+        if (owner === origin && record.live) listener(action);
+      });
+      record.addCleanup(stop);
+      return () => record.dispose();
+    }
+  });
+  return store;
 }

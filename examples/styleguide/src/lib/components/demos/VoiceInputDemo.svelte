@@ -1,11 +1,11 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import { createStore } from '@composable-svelte/core';
 	import {
 		VoiceInput,
 		voiceInputReducer,
 		createInitialVoiceInputState,
-		getVoiceInputAudioManager,
-		type VoiceInputState
+		getVoiceInputAudioManager
 	} from '@composable-svelte/media';
 
 	// Mock transcription function (shared by both stores)
@@ -20,23 +20,34 @@
 		return 'This is a mock transcription of your voice message. In production, this would be actual transcribed text from Whisper or another STT service.';
 	};
 
-	// Create separate stores for push-to-talk and conversation mode demos
-	const pushToTalkStore = createStore({
-		initialState: createInitialVoiceInputState(),
-		reducer: voiceInputReducer,
-		dependencies: {
-			transcribeAudio: mockTranscribe,
-			getAudioManager: getVoiceInputAudioManager
-		}
-	});
+	function createVoiceStore() {
+		return createStore({
+			execution: { mode: 'managed' },
+			initialState: createInitialVoiceInputState(),
+			reducer: voiceInputReducer,
+			dependencies: {
+				transcribeAudio: mockTranscribe,
+				getAudioManager: getVoiceInputAudioManager
+			}
+		});
+	}
 
-	const conversationStore = createStore({
-		initialState: createInitialVoiceInputState(),
-		reducer: voiceInputReducer,
-		dependencies: {
-			transcribeAudio: mockTranscribe,
-			getAudioManager: getVoiceInputAudioManager
-		}
+	// Create independent store instances per simultaneously mounted variant
+	const pushToTalkIconStore = createVoiceStore();
+	const pushToTalkButtonStore = createVoiceStore();
+	const pushToTalkFabStore = createVoiceStore();
+
+	const conversationIconStore = createVoiceStore();
+	const conversationButtonStore = createVoiceStore();
+	const conversationFabStore = createVoiceStore();
+
+	onDestroy(() => {
+		pushToTalkIconStore.destroy();
+		pushToTalkButtonStore.destroy();
+		pushToTalkFabStore.destroy();
+		conversationIconStore.destroy();
+		conversationButtonStore.destroy();
+		conversationFabStore.destroy();
 	});
 
 	// Store transcripts
@@ -48,8 +59,10 @@
 		transcripts = [transcript, ...transcripts];
 	}
 
-	// Debug state display (show conversation store state)
-	const stateDisplay = $derived(JSON.stringify($conversationStore, null, 2));
+	const stateDisplay = $derived(JSON.stringify({
+		pushToTalk: { icon: $pushToTalkIconStore, button: $pushToTalkButtonStore, fab: $pushToTalkFabStore },
+		conversation: { icon: $conversationIconStore, button: $conversationButtonStore, fab: $conversationFabStore }
+	}, null, 2));
 </script>
 
 <div class="page">
@@ -69,7 +82,7 @@
 				<div class="variant">
 					<h4>Icon Variant</h4>
 					<VoiceInput
-						store={pushToTalkStore}
+						store={pushToTalkIconStore}
 						onTranscript={handleTranscript}
 						defaultMode="push-to-talk"
 						variant="icon"
@@ -79,7 +92,7 @@
 				<div class="variant">
 					<h4>Button Variant</h4>
 					<VoiceInput
-						store={pushToTalkStore}
+						store={pushToTalkButtonStore}
 						onTranscript={handleTranscript}
 						defaultMode="push-to-talk"
 						variant="button"
@@ -90,7 +103,7 @@
 				<div class="variant">
 					<h4>FAB Variant</h4>
 					<VoiceInput
-						store={pushToTalkStore}
+						store={pushToTalkFabStore}
 						onTranscript={handleTranscript}
 						defaultMode="push-to-talk"
 						variant="fab"
@@ -99,9 +112,9 @@
 			</div>
 
 			<div class="status-info">
-				<p><strong>Status:</strong> {$pushToTalkStore.status}</p>
-				<p><strong>Permission:</strong> {$pushToTalkStore.permission || 'not requested'}</p>
-				<p><strong>Audio Level:</strong> {$pushToTalkStore.audioLevel}%</p>
+				{#each [{label:'Icon', state:$pushToTalkIconStore}, {label:'Button', state:$pushToTalkButtonStore}, {label:'FAB', state:$pushToTalkFabStore}] as variant}
+					<p><strong>{variant.label}:</strong> {variant.state.status}; permission: {variant.state.permission || 'not requested'}; level: {variant.state.audioLevel}%</p>
+				{/each}
 			</div>
 		</section>
 
@@ -113,25 +126,25 @@
 				<div class="variant">
 					<h4>Icon Variant</h4>
 					<VoiceInput
-						store={conversationStore}
+						store={conversationIconStore}
 						onTranscript={handleTranscript}
 						variant="icon"
 					/>
 					<button
 						class="mode-toggle"
 						onclick={() => {
-							const isActive = $conversationStore.mode === 'conversation';
-							conversationStore.dispatch({ type: 'conversationModeToggled', enabled: !isActive });
+							const isActive = $conversationIconStore.mode === 'conversation';
+							conversationIconStore.dispatch({ type: 'conversationModeToggled', enabled: !isActive });
 						}}
 					>
-						{$conversationStore.mode === 'conversation' ? 'Stop Conversation' : 'Start Conversation'}
+						{$conversationIconStore.mode === 'conversation' ? 'Stop Conversation' : 'Start Conversation'}
 					</button>
 				</div>
 
 				<div class="variant">
 					<h4>Button Variant</h4>
 					<VoiceInput
-						store={conversationStore}
+						store={conversationButtonStore}
 						onTranscript={handleTranscript}
 						variant="button"
 						label="Voice Input"
@@ -139,38 +152,37 @@
 					<button
 						class="mode-toggle"
 						onclick={() => {
-							const isActive = $conversationStore.mode === 'conversation';
-							conversationStore.dispatch({ type: 'conversationModeToggled', enabled: !isActive });
+							const isActive = $conversationButtonStore.mode === 'conversation';
+							conversationButtonStore.dispatch({ type: 'conversationModeToggled', enabled: !isActive });
 						}}
 					>
-						{$conversationStore.mode === 'conversation' ? 'Stop Conversation' : 'Start Conversation'}
+						{$conversationButtonStore.mode === 'conversation' ? 'Stop Conversation' : 'Start Conversation'}
 					</button>
 				</div>
 
 				<div class="variant">
 					<h4>FAB Variant</h4>
 					<VoiceInput
-						store={conversationStore}
+						store={conversationFabStore}
 						onTranscript={handleTranscript}
 						variant="fab"
 					/>
 					<button
 						class="mode-toggle"
 						onclick={() => {
-							const isActive = $conversationStore.mode === 'conversation';
-							conversationStore.dispatch({ type: 'conversationModeToggled', enabled: !isActive });
+							const isActive = $conversationFabStore.mode === 'conversation';
+							conversationFabStore.dispatch({ type: 'conversationModeToggled', enabled: !isActive });
 						}}
 					>
-						{$conversationStore.mode === 'conversation' ? 'Stop' : 'Start'}
+						{$conversationFabStore.mode === 'conversation' ? 'Stop' : 'Start'}
 					</button>
 				</div>
 			</div>
 
 			<div class="status-info">
-				<p><strong>Status:</strong> {$conversationStore.status}</p>
-				<p><strong>Mode:</strong> {$conversationStore.mode || 'none'}</p>
-				<p><strong>VAD Status:</strong> {$conversationStore.vadState?.isSpeaking ? 'Speaking' : 'Listening'}</p>
-				<p><strong>Silence:</strong> {$conversationStore.vadState?.silenceDuration || 0}ms</p>
+				{#each [{label:'Icon', state:$conversationIconStore}, {label:'Button', state:$conversationButtonStore}, {label:'FAB', state:$conversationFabStore}] as variant}
+					<p><strong>{variant.label}:</strong> {variant.state.status}; mode: {variant.state.mode || 'none'}; VAD: {variant.state.vadState?.isSpeaking ? 'Speaking' : 'Listening'}</p>
+				{/each}
 			</div>
 		</section>
 

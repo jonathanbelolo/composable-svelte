@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/lib/components/demos/AlertDemo.svelte",
+    "src/lib/components/demos/AlertDialogDemo.svelte",
+    "src/lib/components/demos/AudioPlayerDemo.svelte",
+    "src/lib/components/demos/DrawerDemo.svelte",
+    "src/lib/components/demos/ModalDemo.svelte",
+    "src/lib/components/demos/NavigationStackDemo.svelte",
+    "src/lib/components/demos/PopoverDemo.svelte",
+    "src/lib/components/demos/SheetDemo.svelte",
+    "src/lib/components/demos/SidebarDemo.svelte",
+    "src/lib/components/demos/TabsDemo.svelte",
+    "src/lib/components/demos/ManagedAudioPlayerModal.svelte",
+    "tests/managed-demo-families.test.ts",
+    "tests/managed-navigation-patterns.test.ts",
+    "tests/overlay-demos.test.ts",
+    "tests/fixtures/DeferredDismissalOwnershipHarness.svelte"
+  ]
+}

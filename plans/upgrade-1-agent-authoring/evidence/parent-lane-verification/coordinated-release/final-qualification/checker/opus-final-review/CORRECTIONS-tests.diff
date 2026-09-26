@@ -1,0 +1,50 @@
+--- profile-phase/pre-auth-registration/architecture/src/instantiation-expression.test.mjs	2026-09-26 15:54:19
++++ packages/architecture/src/instantiation-expression.test.mjs	2026-09-26 17:10:20
+@@ -155,3 +155,22 @@
+   assert.ok(expected.length > 0, 'control must detect the mirror');
+   assert.equal(detector(instantiated, 'lifecycle-mirror').length, expected.length);
+ });
++
++test('code inside an instantiation expression is runtime code: bodies and direct calls are analyzed like their plain forms', (t) => {
++  const inReducer = (pre, body) => ({'entry.ts': `import {createStore, Effect} from '@composable-svelte/core';\n${pre}\nexport const store = createStore({initialState: {}, reducer: (state: any, action: any) => {\n${body}\nreturn [state, Effect.none()]; }});\n`});
++  const pairs = [
++    [`const g = <T,>(x: T) => { location.href = String(x); return x; };`, `const g = (<T,>(x: T) => { location.href = String(x); return x; })<string>;`, `g('/x');`],
++    [`const g = <T,>(x: T) => { fetch('/x'); return x; };`, `const g = (<T,>(x: T) => { fetch('/x'); return x; })<number>;`, `g(1);`],
++    [``, ``, `(crypto.getRandomValues)(new Uint8Array(1));`, `(crypto.getRandomValues<Uint8Array>)(new Uint8Array(1));`],
++    [``, ``, `(document.querySelector)('#x');`, `(document.querySelector<HTMLElement>)('#x');`]
++  ];
++  for (const [plainPre, instantiatedPre, plainBody, instantiatedBody = plainBody] of pairs) {
++    const plain = analyze(t, inReducer(plainPre, plainBody));
++    const instantiated = analyze(t, inReducer(instantiatedPre, instantiatedBody));
++    assert.equal(plain.complete, true, JSON.stringify(plain.errors));
++    assert.ok(plain.findings.length > 0, `control must detect: ${plainPre}${plainBody}`);
++    assert.equal(instantiated.complete, true, JSON.stringify(instantiated.errors));
++    assert.deepEqual(instantiated.findings.map((finding) => finding.detector).sort(), plain.findings.map((finding) => finding.detector).sort(),
++      `${instantiatedPre}${instantiatedBody}`);
++  }
++});
+--- profile-phase/pre-auth-registration/architecture/src/getter-promise-compat.test.mjs	2026-09-26 16:26:54
++++ packages/architecture/src/getter-promise-compat.test.mjs	2026-09-26 17:10:20
+@@ -191,6 +191,22 @@
+   assertRefused(t, module(`export const p = new Promise(function () { (arguments as any)[0](window.location); });\n`), 'arguments-object');
+ });
+ 
++test('each settle kind reaching one call site is checked, and settle functions never reach templates', (t) => {
++  // A call site that may resolve or reject is checked as a rejection too, whatever the order of the alternatives.
++  for (const pick of ['ok ? rej : res', 'ok ? res : rej']) {
++    assertRefused(t, inReducer(``, `new Promise((res, rej) => { const ok = action.ok; const f = ${pick}; f(state); });`), 'promise-rejection');
++  }
++  assertRefused(t, module(`export const p = new Promise((res, rej) => { const f = Math.random() > 0.5 ? res : rej; f({ then(cb: any) { cb(1); } }); });\n`), 'promise-thenable');
++  // Svelte, the DOM and components invoke template values; none of them is an inspected callee.
++  const script = `let fire: any; const p = new Promise(r => { fire = r; });`;
++  assertRefused(t, {'App.svelte': `<script lang="ts">\n${script}\n</script>\n<button onclick={fire}>x</button>\n`}, 'promise-settle-escape');
++  assertRefused(t, {'App.svelte': `<script lang="ts">\n${script}\n</script>\n<input bind:value={fire} />\n`}, 'promise-settle-escape');
++  assertRefused(t, {'App.svelte': `<script lang="ts">\nimport Child from './Child.svelte';\n${script}\n</script>\n<Child onDone={fire} />\n`,
++    'Child.svelte': `<script lang="ts">\nlet {onDone}: any = $props();\n</script>\n<button onclick={() => onDone({ok: 1})}>x</button>\n`}, 'promise-settle-escape');
++  // A closure that settles with local data stays supported in templates.
++  assertSupported(t, {'App.svelte': `<script lang="ts">\n${script}\n</script>\n<button onclick={() => fire({ok: 1})}>x</button>\n`}, []);
++});
++
+ test('only one local synchronous executor passed to new Promise is supported', (t) => {
+   assertRefused(t, module(`import {exec} from 'ext';\nexport const p = new Promise(exec);\n`), 'promise-operation');
+   assertRefused(t, module(`export const p = new Promise(async r => { r(1); });\n`), 'promise-operation');

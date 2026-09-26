@@ -378,6 +378,53 @@ describe('cancellation groups (C6)', () => {
     expect(Effect.prefixGroups(Effect.cancelGroup<number>('g'), 'p')).toEqual({ _tag: 'CancelGroup', group: 'p/g' });
   });
 
+  it('prefixGroups prefixes CancelGroup recursively through nested batches and preserves ungrouped batch reference', () => {
+    const run = Effect.run<number>(() => {});
+    const ff = Effect.fireAndForget<number>(() => {});
+    const ungroupedBatch = Effect.batch(run, ff);
+    expect(Effect.prefixGroups(ungroupedBatch, 'p')).toBe(ungroupedBatch);
+
+    const deep = Effect.batch<number>(
+      Effect.batch(
+        Effect.cancelGroup<number>('nested'),
+        Effect.inGroup(Effect.run<number>(() => {}), 'worker')
+      ),
+      Effect.cancelGroup<number>('sibling')
+    );
+    const prefixedDeep = narrow(Effect.prefixGroups(deep, 'scope'), 'Batch');
+    const innerBatch = narrow(prefixedDeep.effects[0]!, 'Batch');
+    expect(innerBatch.effects[0]).toEqual({ _tag: 'CancelGroup', group: 'scope/nested' });
+    expect(groupsOf(innerBatch.effects[1])).toEqual(['scope/worker']);
+    expect(prefixedDeep.effects[1]).toEqual({ _tag: 'CancelGroup', group: 'scope/sibling' });
+  });
+
+  it('preserves cancellation namespace across sibling scopes and map/prefix composition', () => {
+    const child = Effect.batch(
+      Effect.cancelGroup<number>('task'),
+      Effect.inGroup(Effect.run<number>((d) => d(1)), 'task')
+    );
+
+    // Sibling scopes remain isolated
+    const scopeA = narrow(Effect.prefixGroups(child, 'siblingA'), 'Batch');
+    const scopeB = narrow(Effect.prefixGroups(child, 'siblingB'), 'Batch');
+    expect(scopeA.effects[0]).toEqual({ _tag: 'CancelGroup', group: 'siblingA/task' });
+    expect(scopeB.effects[0]).toEqual({ _tag: 'CancelGroup', group: 'siblingB/task' });
+
+    // Composition with map in both directions
+    const prefixThenMap = narrow(Effect.map(Effect.prefixGroups(child, 'p'), (n) => `num:${n}`), 'Batch');
+    expect(prefixThenMap.effects[0]).toEqual({ _tag: 'CancelGroup', group: 'p/task' });
+    expect(groupsOf(prefixThenMap.effects[1])).toEqual(['p/task']);
+
+    const mapThenPrefix = narrow(Effect.prefixGroups(Effect.map(child, (n) => `num:${n}`), 'p'), 'Batch');
+    expect(mapThenPrefix.effects[0]).toEqual({ _tag: 'CancelGroup', group: 'p/task' });
+    expect(groupsOf(mapThenPrefix.effects[1])).toEqual(['p/task']);
+
+    // nestGroups prefixes CancelGroup and joins parent group to executor effects
+    const nested = narrow(nestGroups(child, 'parent'), 'Batch');
+    expect(nested.effects[0]).toEqual({ _tag: 'CancelGroup', group: 'parent/task' });
+    expect(groupsOf(nested.effects[1])).toEqual(['parent/task', 'parent']);
+  });
+
   it("nestGroups prefixes the child's groups and joins the name, so the subtree and one branch are both cancellable", () => {
     const inner = Effect.inGroup(Effect.run<number>(() => {}), 'addItem');
     expect(groupsOf(nestGroups(inner, 'destination'))).toEqual(['destination/addItem', 'destination']);

@@ -1,9 +1,11 @@
 <script lang="ts">
 	let { startOpen = false }: { startOpen?: boolean } = $props();
 
+	import { onDestroy } from 'svelte';
 	import { createStore } from '../../../src/lib/store.svelte.js';
 	import Drawer from '../../../src/lib/navigation-components/Drawer.svelte';
-	import type { PresentationState } from '../../../src/lib/navigation/types.js';
+	import { optionalSlot, ManagedIntegrationBuilder } from '../../../src/lib/navigation/managed-integration.js';
+	import type { PresentationState, PresentationAction } from '../../../src/lib/navigation/types.js';
 	import { Effect } from '../../../src/lib/effect.js';
 	// The value `Effect` shadows the type of the same name, which lives in
 	// `types.ts`. Aliased so the reducer's return type resolves.
@@ -21,11 +23,14 @@
 	type TestAction =
 		| { type: 'openDrawer' }
 		| { type: 'dismissDrawer' }
+		| { type: 'drawerContent'; action: PresentationAction<{ type: 'inert' }> }
 		| { type: 'presentation'; event: { type: 'presentationCompleted' | 'dismissalCompleted' } };
 
 	// ============================================================================
 	// Reducer
 	// ============================================================================
+
+	const childReducer = (s: string): [string, EffectType<{ type: 'inert' }>] => [s, Effect.none()];
 
 	function testReducer(state: TestState, action: TestAction): [TestState, EffectType<TestAction>] {
 		switch (action.type) {
@@ -50,6 +55,15 @@
 					},
 					Effect.none()
 				];
+
+			case 'drawerContent':
+				if (action.action.type === 'dismiss') {
+					if (state.presentation.status !== 'presented') {
+						return [{ ...state, drawerContent: state.presentation.status === 'idle' ? null : state.presentation.content }, Effect.none()];
+					}
+					return [{ ...state, drawerContent: state.presentation.content, presentation: { ...state.presentation, status: 'dismissing' } }, Effect.none()];
+				}
+				return [state, Effect.none()];
 
 			case 'presentation':
 				if (action.event.type === 'presentationCompleted') {
@@ -85,8 +99,11 @@
 	}
 
 	// ============================================================================
-	// Store
+	// Store & Managed Composition
 	// ============================================================================
+
+	const drawerSlot = optionalSlot<TestState, TestAction>()('drawerContent');
+	const composition = new ManagedIntegrationBuilder<TestState, TestAction, undefined>(testReducer).with(drawerSlot, childReducer).build();
 
 	const store = createStore({
 		// `startOpen` mounts already `presented` — what SSR hydration produces for a
@@ -102,19 +119,11 @@
 					drawerContent: null,
 					presentation: { status: 'idle' as const }
 				}) satisfies TestState,
-		reducer: testReducer
+		...composition
 	});
 
-	// Scoped store for drawer
-	const drawerStore = $derived(
-		store.state.drawerContent
-			? {
-					state: store.state.drawerContent,
-					dispatch: store.dispatch,
-					dismiss: () => store.dispatch({ type: 'dismissDrawer' })
-				}
-			: null
-	);
+	onDestroy(() => store.destroy());
+	const drawerStore = $derived(store.state.drawerContent != null ? composition.bind(store, drawerSlot) : undefined);
 
 	// Expose store for testing (attach to window)
 	if (typeof window !== 'undefined') {

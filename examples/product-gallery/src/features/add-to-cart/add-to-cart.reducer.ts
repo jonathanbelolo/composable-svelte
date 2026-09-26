@@ -38,12 +38,29 @@ export const addToCartReducer: Reducer<
         Effect.none()
       ];
 
-    case 'addButtonTapped':
-      // Parent observes this action and dismisses
+    case 'addButtonTapped': {
+      const isValidProductId =
+        typeof state?.productId === 'string' && state.productId.trim().length > 0;
+      const isValidQuantity =
+        typeof state?.quantity === 'number' &&
+        Number.isInteger(state.quantity) &&
+        state.quantity >= 1;
+
+      if (!isValidProductId || !isValidQuantity) {
+        return [state, Effect.none()];
+      }
+
+      const { productId, quantity } = state;
+      return [
+        state,
+        Effect.run((dispatch) => dispatch({ type: 'addConfirmed', productId, quantity }))
+      ];
+    }
+
+    case 'addConfirmed':
       return [state, Effect.none()];
 
     case 'cancelButtonTapped':
-      // Parent observes this action and dismisses
       return [state, Effect.none()];
 
     default:

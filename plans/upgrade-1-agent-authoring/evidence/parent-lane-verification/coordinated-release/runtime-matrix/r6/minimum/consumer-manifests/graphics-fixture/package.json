@@ -1,0 +1,27 @@
+{
+  "name": "composable-graphics-managed-recipe",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "svelte-check --tsconfig tsconfig.json --fail-on-warnings",
+    "typecheck:nodenext": "tsc --project tsconfig.nodenext.json",
+    "build": "vite build",
+    "ssr": "node ssr.mjs",
+    "test:browser": "vitest run --config browser.config.mjs"
+  },
+  "dependencies": {
+    "@composable-svelte/core": "0.13.1",
+    "@composable-svelte/graphics": "0.3.0",
+    "svelte": "5.20.0"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "6.2.1",
+    "@vitest/browser": "4.0.7",
+    "@vitest/browser-playwright": "4.0.7",
+    "playwright": "1.56.1",
+    "svelte-check": "4.3.3",
+    "typescript": "5.9.3",
+    "vite": "6.4.1",
+    "vitest": "4.0.7"
+  }
+}

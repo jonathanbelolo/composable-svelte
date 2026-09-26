@@ -286,7 +286,7 @@ describe('Async Validation', () => {
 			{ type: 'fieldValidationCompleted', field: 'email', error: 'Email already registered' },
 			(state) => {
 				expect(state.fields.email?.error).toBe('Email already registered');
-				expect(checkEmailAvailability).toHaveBeenCalledWith('taken@test.com');
+				expect(checkEmailAvailability).toHaveBeenCalledWith('taken@test.com', expect.any(AbortSignal));
 			}
 		);
 	});
@@ -489,6 +489,124 @@ describe('Form Submission', () => {
 		expect(onSubmitError).toHaveBeenCalledWith(expect.any(Error));
 		expect(onSubmitError.mock.calls[0]![0].message).toBe('Server error');
 	});
+
+	it('runs async validators on form submit and prevents submission when async validation fails', async () => {
+		const checkEmailAvailability = vi.fn(async (email: string) => {
+			if (email === 'taken@test.com') {
+				throw new Error('Email already registered');
+			}
+		});
+
+		const asyncConfig = createContactFormConfig({
+			mode: 'onSubmit',
+			asyncValidators: {
+				email: checkEmailAvailability
+			}
+		});
+
+		const asyncReducer = createFormReducer(asyncConfig);
+		const asyncStore = createTestStore({
+			initialState: createInitialFormState(asyncConfig, {
+				name: 'John Doe',
+				email: 'taken@test.com',
+				message: 'This is a test message.'
+			}),
+			reducer: asyncReducer,
+			dependencies: {}
+		});
+
+		await asyncStore.send({ type: 'submitTriggered' });
+		await asyncStore.receive({ type: 'formValidationStarted' });
+		await asyncStore.receive({ type: 'formValidationCompleted' });
+
+		expect(asyncStore.state.isValidating).toBe(false);
+		expect(asyncStore.state.fields.email?.error).toBe('Email already registered');
+		expect(asyncStore.state.fields.email?.touched).toBe(true);
+		expect(asyncStore.state.submitCount).toBe(1);
+		expect(asyncConfig.onSubmit).not.toHaveBeenCalled();
+		await asyncStore.assertNoPendingActions();
+	});
+
+	it('submits form when all async validators pass on submit', async () => {
+		const checkEmailAvailability = vi.fn(async () => { });
+
+		const asyncConfig = createContactFormConfig({
+			mode: 'onSubmit',
+			asyncValidators: {
+				email: checkEmailAvailability
+			}
+		});
+
+		const asyncReducer = createFormReducer(asyncConfig);
+		const asyncStore = createTestStore({
+			initialState: createInitialFormState(asyncConfig, {
+				name: 'John Doe',
+				email: 'available@test.com',
+				message: 'This is a test message.'
+			}),
+			reducer: asyncReducer,
+			dependencies: {}
+		});
+
+		await asyncStore.send({ type: 'submitTriggered' });
+		await asyncStore.receive({ type: 'formValidationStarted' });
+		await asyncStore.receive({ type: 'formValidationCompleted' });
+		await asyncStore.receive({ type: 'submissionStarted' });
+		await asyncStore.receive({ type: 'submissionSucceeded' });
+
+		expect(asyncStore.state.isValidating).toBe(false);
+		expect(asyncStore.state.isSubmitting).toBe(false);
+		expect(asyncStore.state.submitCount).toBe(1);
+		expect(checkEmailAvailability).toHaveBeenCalledWith('available@test.com', expect.any(AbortSignal));
+		expect(asyncConfig.onSubmit).toHaveBeenCalledWith({
+			name: 'John Doe',
+			email: 'available@test.com',
+			message: 'This is a test message.'
+		});
+	});
+
+	it('discards stale validation and prevents submission when concurrent edit occurs during validation', async () => {
+		let resolveCheck: () => void = () => { };
+		const slowValidator = vi.fn(
+			() =>
+				new Promise<void>((resolve) => {
+					resolveCheck = resolve;
+				})
+		);
+
+		const asyncConfig = createContactFormConfig({
+			mode: 'onSubmit',
+			asyncValidators: {
+				email: slowValidator
+			}
+		});
+
+		const asyncReducer = createFormReducer(asyncConfig);
+		const asyncStore = createTestStore({
+			initialState: createInitialFormState(asyncConfig, {
+				name: 'John Doe',
+				email: 'initial@test.com',
+				message: 'This is a test message.'
+			}),
+			reducer: asyncReducer,
+			dependencies: {}
+		});
+
+		await asyncStore.send({ type: 'submitTriggered' });
+		await asyncStore.receive({ type: 'formValidationStarted' });
+
+		// Concurrent edit while async validation is in flight
+		await asyncStore.send({ type: 'fieldChanged', field: 'email', value: 'edited@test.com' });
+
+		// Async validator finishes for stale snapshot
+		resolveCheck();
+
+		// The stale validation should be cancelled / ignored, no submission
+		await asyncStore.finish();
+		expect(asyncConfig.onSubmit).not.toHaveBeenCalled();
+		expect(asyncStore.state.data.email).toBe('edited@test.com');
+		expect(asyncStore.state.isValidating).toBe(false);
+	});
 });
 
 // ================================================================
@@ -602,7 +720,7 @@ describe('Cross-Field Validation', () => {
 			schema: registrationSchema,
 			initialData: { password: '', confirmPassword: '' },
 			mode: 'onSubmit',
-			onSubmit: vi.fn(async () => {})
+			onSubmit: vi.fn(async () => { })
 		};
 
 		const reducer = createFormReducer(config);
@@ -654,7 +772,7 @@ describe('Cross-Field Validation', () => {
 		initialData: { password: '', confirmPassword: '' },
 		mode,
 		debounceMs: 0,
-		onSubmit: vi.fn(async () => {})
+		onSubmit: vi.fn(async () => { })
 	});
 
 	function matchStore(data: MatchData, mode: 'all' | 'onBlur' = 'all') {
@@ -771,7 +889,7 @@ describe('Cross-Field Validation', () => {
 				}) as unknown as FormConfig<MatchData>['schema'],
 			initialData: { password: '', confirmPassword: '' },
 			mode: 'onSubmit',
-			onSubmit: vi.fn(async () => {})
+			onSubmit: vi.fn(async () => { })
 		};
 		const store = createTestStore({
 			initialState: createInitialFormState(config, { password: 'a', confirmPassword: 'b' }),
@@ -879,7 +997,7 @@ describe('a schema transform reaches the data', () => {
 
 	type Trimmed = z.infer<typeof trimmed>;
 
-	function trimStore(mode: 'onSubmit' | 'onChange', onSubmit = vi.fn(async () => {})) {
+	function trimStore(mode: 'onSubmit' | 'onChange', onSubmit = vi.fn(async () => { })) {
 		const config: FormConfig<Trimmed> = {
 			schema: trimmed,
 			initialData: { email: '', note: '' },
@@ -947,7 +1065,7 @@ describe('a schema transform reaches the data', () => {
 		// *replaced* `data` would delete anything a consumer kept beside the
 		// validated fields — at the moment of submitting, which is the worst time
 		// to lose it. The parsed values are merged over the existing data instead.
-		const onSubmit = vi.fn(async () => {});
+		const onSubmit = vi.fn(async () => { });
 		const config: FormConfig<Trimmed> = {
 			schema: trimmed,
 			// A key the schema knows nothing about. Cast, because the type says it
@@ -967,7 +1085,7 @@ describe('a schema transform reaches the data', () => {
 		await store.receive({ type: 'formValidationStarted' });
 		await store.receive({ type: 'formValidationCompleted' }, (state) => {
 			expect(
-				(state.data as unknown as { draftId?: string }).draftId,
+				(state.data as unknown as { draftId?: string; }).draftId,
 				'the schema stripped a key the form was holding'
 			).toBe('kept');
 			expect(state.data.email, 'the transform stopped being applied').toBe('ada@example.com');
@@ -990,5 +1108,74 @@ describe('a schema transform reaches the data', () => {
 		});
 
 		expect(onSubmit).not.toHaveBeenCalled();
+	});
+});
+
+
+describe('Submit validation lifecycle (DEF-010)', () => {
+	const valid = { name: 'John Doe', email: 'valid@test.com', message: 'A valid message.' };
+	it('validates the transformed value that will actually be submitted', async () => {
+		const validator = vi.fn(async (_value: string) => { });
+		const config = createContactFormConfig({ mode: 'onSubmit', schema: contactSchema.extend({ email: z.string().trim().toLowerCase().email() }), asyncValidators: { email: validator } });
+		const store = createTestStore({ initialState: createInitialFormState(config, { ...valid, email: '  VALID@Test.com  ' }), reducer: createFormReducer(config), dependencies: {} });
+		await store.send({ type: 'submitTriggered' });
+		await store.receive({ type: 'formValidationStarted' });
+		await store.receive({ type: 'formValidationCompleted' });
+		await store.receive({ type: 'submissionStarted' });
+		await store.receive({ type: 'submissionSucceeded' });
+		await store.finish();
+		expect(validator).toHaveBeenCalledWith('valid@test.com', expect.any(AbortSignal));
+		expect(config.onSubmit).toHaveBeenCalledWith(valid);
+	});
+
+	it('does not let an edit between validation and queued submission submit unvalidated data', async () => {
+		const config = createContactFormConfig({ mode: 'onSubmit' });
+		const reducer = createFormReducer(config);
+		const initial = createInitialFormState(config, valid);
+		const [waiting, validation] = reducer(initial, { type: 'formValidationStarted' }, {});
+		const completed: FormAction<ContactData>[] = [];
+		if (validation._tag === 'Cancellable') {
+			await validation.execute(action => { completed.push(action); }, new AbortController().signal);
+		} else if (validation._tag === 'Run') {
+			await validation.execute(action => { completed.push(action); });
+		} else throw new Error('Expected executable validation');
+		const [approved, pending] = reducer(waiting, completed[0]!, {});
+		if (pending._tag !== 'Batch') throw new Error('Expected field cancellation then queued submission');
+		expect(pending.effects.slice(0, -1).every(member => member._tag === 'Cancellable' && member.cancelOnly)).toBe(true);
+		const queuedSubmit = pending.effects.at(-1);
+		if (queuedSubmit?._tag !== 'Run') throw new Error('Expected queued submission');
+		const queued: FormAction<ContactData>[] = [];
+		await queuedSubmit.execute(action => { queued.push(action); });
+		const [edited] = reducer(approved, { type: 'fieldChanged', field: 'email', value: 'invalid' }, {});
+		const [after, effect] = reducer(edited, queued[0]!, {});
+		expect(after).toBe(edited);
+		expect(effect._tag).toBe('None');
+		expect(config.onSubmit).not.toHaveBeenCalled();
+	});
+
+	it('an older completion cannot clear a newer validation operation', () => {
+		const config = createContactFormConfig({ mode: 'onSubmit' });
+		const reducer = createFormReducer(config);
+		const initial = createInitialFormState(config, valid);
+		const [older] = reducer(initial, { type: 'formValidationStarted' }, {});
+		const [edited] = reducer(older, { type: 'setFieldValue', field: 'email', value: 'new@test.com' }, {});
+		const [newer] = reducer(edited, { type: 'formValidationStarted' }, {});
+		const [after, effect] = reducer(newer, { type: 'formValidationCompleted', fieldErrors: {}, formErrors: [], snapshot: older.data, validationId: older.validationId! }, {});
+		expect(after).toBe(newer);
+		expect(after.isValidating).toBe(true);
+		expect(effect._tag).toBe('None');
+	});
+
+	it('reset cancels a pending validator even when reset reuses the same initial data object', async () => {
+		let resolve!: () => void;
+		const config = createContactFormConfig({ initialData: valid, mode: 'onSubmit', asyncValidators: { email: () => new Promise<void>(done => { resolve = done; }) } });
+		const store = createTestStore({ initialState: createInitialFormState(config), reducer: createFormReducer(config), dependencies: {} });
+		await store.send({ type: 'submitTriggered' });
+		await store.receive({ type: 'formValidationStarted' });
+		await store.send({ type: 'formReset' });
+		resolve();
+		await store.finish();
+		expect(config.onSubmit).not.toHaveBeenCalled();
+		expect(store.state.isValidating).toBe(false);
 	});
 });

@@ -19,19 +19,32 @@
 	 *
 	 * **No `Content` part.** `Alert` is already the box.
 	 *
+	 * Compound children (`AlertDialogTitle`, `AlertDialogDescription`) register dynamically
+	 * in the browser, but have an initial SSR association limit: the root cannot detect
+	 * child component registration before serializing root ARIA attributes in SSR.
+	 * The additive `title` and `description` props provide synchronous SSR-safe slots
+	 * that emit matching `aria-labelledby` and `aria-describedby` IDs without prepasses.
+	 *
+	 * Note: A named slot prop (`title` or `description`) and matching manual part
+	 * (`AlertDialogTitle` or `AlertDialogDescription`) must not be combined.
+	 *
 	 * @example
 	 * ```svelte
-	 * <AlertDialog store={scoped} {presentation}>
+	 * <AlertDialog
+	 *   store={scoped}
+	 *   {presentation}
+	 *   title="Delete this project?"
+	 *   description="This cannot be undone."
+	 * >
 	 *   {#snippet children({ store })}
-	 *     <AlertDialogHeader>
-	 *       <AlertDialogTitle>Delete this project?</AlertDialogTitle>
-	 *       <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
-	 *     </AlertDialogHeader>
 	 *     <AlertDialogFooter>
 	 *       <AlertDialogCancel onclick={() => store?.dispatch({ type: 'cancelled' })}>
 	 *         Cancel
 	 *       </AlertDialogCancel>
-	 *       <AlertDialogAction variant="destructive" onclick={() => store?.dispatch({ type: 'confirmed' })}>
+	 *       <AlertDialogAction
+	 *         variant="destructive"
+	 *         onclick={() => store?.dispatch({ type: 'confirmed' })}
+	 *       >
 	 *         Delete
 	 *       </AlertDialogAction>
 	 *     </AlertDialogFooter>
@@ -42,17 +55,40 @@
 	import { setContext, type Snippet } from 'svelte';
 
 	import Alert from '../Alert.svelte';
-	import type { ScopedDestinationStore } from '../../navigation/scope-to-destination.js';
+	import { assertPresentationView, type PresentationView } from '../../navigation/managed-integration.js';
 	import type { PresentationState } from '../../navigation/types.js';
 	import type { SpringConfig } from '../../animation/spring-config.js';
 	import { ALERT_DIALOG_KEY, type AlertDialogContext } from './context.js';
+	import AlertDialogDescription from './AlertDialogDescription.svelte';
+	import AlertDialogHeader from './AlertDialogHeader.svelte';
+	import AlertDialogTitle from './AlertDialogTitle.svelte';
 
 	interface Props<State, Action> {
-		store: ScopedDestinationStore<State, Action> | null;
+		store?: PresentationView<State, Action> | undefined;
 		presentation?: PresentationState<any> | undefined;
 		onPresentationComplete?: (() => void) | undefined;
 		onDismissalComplete?: (() => void) | undefined;
 		springConfig?: Partial<SpringConfig> | undefined;
+		/**
+		 * Dialog title as a string or no-arg snippet.
+		 *
+		 * Synchronously emits `aria-labelledby` during SSR and renders
+		 * `AlertDialogTitle` inside `AlertDialogHeader`. Empty strings are treated
+		 * as absent.
+		 *
+		 * Do not combine with a manual `AlertDialogTitle` child.
+		 */
+		title?: string | Snippet | undefined;
+		/**
+		 * Dialog description as a string or no-arg snippet.
+		 *
+		 * Synchronously emits `aria-describedby` during SSR and renders
+		 * `AlertDialogDescription` inside `AlertDialogHeader`. Empty strings are
+		 * treated as absent.
+		 *
+		 * Do not combine with a manual `AlertDialogDescription` child.
+		 */
+		description?: string | Snippet | undefined;
 		/**
 		 * A name for the dialog when it renders no `AlertDialogTitle`.
 		 *
@@ -68,7 +104,7 @@
 		disableClickOutside?: boolean | undefined;
 		disableEscapeKey?: boolean | undefined;
 		children?:
-			| Snippet<[{ visible: boolean; store: ScopedDestinationStore<State, Action> | null }]>
+			| Snippet<[{ visible: boolean; store: PresentationView<State, Action> | undefined }]>
 			| undefined;
 	}
 
@@ -78,14 +114,23 @@
 		onPresentationComplete,
 		onDismissalComplete,
 		springConfig,
+		title,
+		description,
 		ariaLabel,
 		unstyled = false,
 		backdropClass,
 		class: className,
 		disableClickOutside = false,
 		disableEscapeKey = false,
-		children
+		children: renderContent
 	}: Props<unknown, unknown> = $props();
+
+	const admittedStore = $derived.by(() => {
+		if (store !== undefined) {
+			assertPresentationView(store);
+		}
+		return store;
+	});
 
 	// Unique per instance, so two dialogs on one page cannot claim each other's
 	// title.
@@ -95,23 +140,43 @@
 
 	// Set by the parts as they initialise. The root emits each attribute only
 	// once something has claimed the id it would point at.
-	let hasTitle = $state(false);
-	let hasDescription = $state(false);
+	let titleCount = $state(0);
+	let descriptionCount = $state(0);
+	const hasTitleProp = $derived(
+		typeof title === 'string' ? title.trim() !== '' : Boolean(title)
+	);
+	const hasDescriptionProp = $derived(
+		typeof description === 'string' ? description.trim() !== '' : Boolean(description)
+	);
+	const hasTitle = $derived(hasTitleProp || titleCount > 0);
+	const hasDescription = $derived(hasDescriptionProp || descriptionCount > 0);
 
 	setContext<AlertDialogContext>(ALERT_DIALOG_KEY, {
 		titleId,
 		descriptionId,
 		registerTitle: () => {
-			hasTitle = true;
+			titleCount += 1;
+			let live = true;
+			return () => {
+				if (!live) return;
+				live = false;
+				titleCount -= 1;
+			};
 		},
 		registerDescription: () => {
-			hasDescription = true;
+			descriptionCount += 1;
+			let live = true;
+			return () => {
+				if (!live) return;
+				live = false;
+				descriptionCount -= 1;
+			};
 		}
 	});
 </script>
 
 <Alert
-	{store}
+	store={admittedStore}
 	{presentation}
 	{onPresentationComplete}
 	{onDismissalComplete}
@@ -126,6 +191,28 @@
 	ariaDescribedby={hasDescription ? descriptionId : undefined}
 >
 	{#snippet children({ visible, store: scoped })}
-		{@render children?.({ visible, store: scoped })}
+		{#if hasTitleProp || hasDescriptionProp}
+			<AlertDialogHeader>
+				{#if hasTitleProp}
+					<AlertDialogTitle>
+						{#if typeof title === 'string'}
+							{title}
+						{:else}
+							{@render title?.()}
+						{/if}
+					</AlertDialogTitle>
+				{/if}
+				{#if hasDescriptionProp}
+					<AlertDialogDescription>
+						{#if typeof description === 'string'}
+							{description}
+						{:else}
+							{@render description?.()}
+						{/if}
+					</AlertDialogDescription>
+				{/if}
+			</AlertDialogHeader>
+		{/if}
+		{@render renderContent?.({ visible, store: scoped })}
 	{/snippet}
 </Alert>

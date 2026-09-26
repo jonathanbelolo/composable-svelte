@@ -17,6 +17,7 @@ import {
 } from '@composable-svelte/core/components/form';
 
 import { toAuthError } from '../../errors/helpers.js';
+import { completesSubmissionInFlight } from '../submission-feedback.js';
 import { changeEmailSchema, emptyChangeEmailFields, type ChangeEmailFields } from './schema.js';
 import type {
 	ChangeEmailAction,
@@ -49,7 +50,8 @@ export function createInitialChangeEmailState(): ChangeEmailState {
 		error: null,
 		resendStatus: 'idle',
 		resendError: null,
-		pendingEmail: null
+		pendingEmail: null,
+		settled: null
 	};
 }
 
@@ -74,6 +76,15 @@ export function changeEmailReducer(
 	action: ChangeEmailAction,
 	deps: ChangeEmailDependencies
 ): readonly [ChangeEmailState, Effect<ChangeEmailAction>] {
+	const base = state.settled === null ? state : { ...state, settled: null };
+	return reduceChangeEmail(base, action, deps);
+}
+
+function reduceChangeEmail(
+	state: ChangeEmailState,
+	action: ChangeEmailAction,
+	deps: ChangeEmailDependencies
+): readonly [ChangeEmailState, Effect<ChangeEmailAction>] {
 	switch (action.type) {
 		case 'form': {
 			const [withForm, formEffect] = scopedFormReducer(state, action, deps);
@@ -85,23 +96,35 @@ export function changeEmailReducer(
 					? { ...withForm, error: null }
 					: withForm;
 
-			if (action.action.type !== 'submissionSucceeded') {
+			// Only the result of a submission in flight; see `submission-feedback.ts`.
+			// A stale one would otherwise request a change to whatever the field now
+			// holds — including the empty field a success leaves behind.
+			if (!completesSubmissionInFlight(state.form, withForm.form, action.action)) {
 				return [cleared, formEffect];
 			}
 
 			const email = cleared.form.data.email;
 
 			return [
-				{ ...cleared, status: 'submitting', error: null },
+				{
+					...cleared,
+					status: 'submitting',
+					error: null,
+					resendStatus: 'idle',
+					resendError: null
+				},
 				Effect.batch(
 					formEffect,
+					Effect.cancel<ChangeEmailAction>(RESEND_EFFECT_ID),
 					Effect.cancellable<ChangeEmailAction>(
 						REQUEST_EFFECT_ID,
 						async (dispatch, signal) => {
 							try {
 								await deps.requestEmailChange(email, signal);
+								if (signal?.aborted) return;
 								dispatch({ type: 'changeRequestSucceeded', email });
 							} catch (error) {
+								if (signal?.aborted) return;
 								dispatch({ type: 'changeRequestFailed', error: toAuthError(error) });
 							}
 						}
@@ -125,9 +148,10 @@ export function changeEmailReducer(
 					error: null,
 					resendStatus: 'idle',
 					resendError: null,
-					pendingEmail: action.email
+					pendingEmail: action.email,
+					settled: state.status === 'submitting' ? 'request' : null
 				},
-				Effect.none()
+				Effect.cancel<ChangeEmailAction>(RESEND_EFFECT_ID)
 			];
 		}
 
@@ -135,7 +159,15 @@ export function changeEmailReducer(
 			// Back to `idle` with `error` doing the talking. `email_taken` and
 			// `reauthentication_required` are the two that land here, and both are
 			// things the user can act on rather than failures.
-			return [{ ...state, status: 'idle', error: action.error }, Effect.none()];
+			return [
+				{
+					...state,
+					status: 'idle',
+					error: action.error,
+					settled: state.status === 'submitting' ? 'request' : null
+				},
+				Effect.none()
+			];
 		}
 
 		case 'resendRequested': {
@@ -150,8 +182,10 @@ export function changeEmailReducer(
 				Effect.cancellable<ChangeEmailAction>(RESEND_EFFECT_ID, async (dispatch, signal) => {
 					try {
 						await deps.resendEmailChange(signal);
+						if (signal?.aborted) return;
 						dispatch({ type: 'resendSucceeded' });
 					} catch (error) {
+						if (signal?.aborted) return;
 						dispatch({ type: 'resendFailed', error: toAuthError(error) });
 					}
 				})
@@ -159,11 +193,29 @@ export function changeEmailReducer(
 		}
 
 		case 'resendSucceeded': {
-			return [{ ...state, resendStatus: 'sent', resendError: null }, Effect.none()];
+			if (state.resendStatus !== 'sending') return [state, Effect.none()];
+			return [
+				{
+					...state,
+					resendStatus: 'sent',
+					resendError: null,
+					settled: 'resend'
+				},
+				Effect.none()
+			];
 		}
 
 		case 'resendFailed': {
-			return [{ ...state, resendStatus: 'idle', resendError: action.error }, Effect.none()];
+			if (state.resendStatus !== 'sending') return [state, Effect.none()];
+			return [
+				{
+					...state,
+					resendStatus: 'idle',
+					resendError: action.error,
+					settled: 'resend'
+				},
+				Effect.none()
+			];
 		}
 
 		case 'pendingEmailObserved': {

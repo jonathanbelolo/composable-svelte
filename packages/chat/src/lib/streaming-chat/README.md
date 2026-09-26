@@ -268,8 +268,12 @@ Every variant takes the same store. `MinimalStreamingChat`:
 
 ```typescript
 interface MinimalStreamingChatProps {
-  /** Store managing chat state */
-  store: Store<StreamingChatState, StreamingChatAction>;
+  /**
+   * Store managing chat state: a standalone `Store`, or the managed `ChildView`
+   * a feature view receives. A retired view renders nothing. See the package
+   * README's "Managed applications".
+   */
+  store: Store<StreamingChatState, StreamingChatAction> | ChildView<StreamingChatState, StreamingChatAction>;
 
   /** Placeholder text for input (default: "Type your message...") */
   placeholder?: string;

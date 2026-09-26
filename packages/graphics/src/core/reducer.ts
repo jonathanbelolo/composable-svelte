@@ -14,6 +14,7 @@ import type {
   MeshConfig,
   LightConfig,
   AnimationConfig,
+  AnimationState,
   Vector3
 } from './types.js';
 import { customGeometryProblem } from './geometry.js';
@@ -44,10 +45,10 @@ const ANIMATION_FRAME_EFFECT = 'graphics.animationFrame';
  * The frame-loop effect id for one scene.
  *
  * Keyed by `sceneId`, not by the module constant alone. A cancellable id is the
- * one part of a reducer's output that is global by construction — the store
+ * one part of a reducer's output shared under one effect owner — that store
  * keeps a single `inFlightEffects` map and `Effect.map` carries the id through
- * every layer of scoping — so a shared constant meant two composed graphics
- * features aborted each other's loop. The first one started froze at its
+ * every layer of scoping — so a shared constant meant two graphics features
+ * composed under that owner aborted each other's loop. The first one started froze at its
  * initial position, permanently, while still reporting `isPlaying: true`.
  */
 function frameEffectId(sceneId: string): string {
@@ -58,8 +59,8 @@ function frameEffectId(sceneId: string): string {
     // cross-feature cancellation this field was added to prevent, and a single
     // such scene runs perfectly so nothing would ever surface it.
     console.warn(
-      '[graphics] state has no sceneId; two scenes without one will cancel ' +
-        "each other's animation frame loop. Build state with createInitialGraphicsState()."
+      '[graphics] state has no sceneId; scenes composed under one effect owner ' +
+        "may cancel each other's animation frame loop. Build state with createInitialGraphicsState()."
     );
     return ANIMATION_FRAME_EFFECT;
   }
@@ -68,30 +69,77 @@ function frameEffectId(sceneId: string): string {
 }
 
 /**
+ * Cancel the frame-loop effect for a scene.
+ */
+function cancelFrame(sceneId: string): EffectType<GraphicsAction> {
+  return Effect.cancel(frameEffectId(sceneId));
+}
+
+/**
  * Schedule the next animation frame, superseding any frame already pending.
  *
- * The executor stays open *until* the frame fires rather than returning as soon
- * as `requestAnimationFrame` is queued. That is what makes it cancellable at
- * all: an effect that completes synchronously is never in flight, so a
- * superseding registration would have nothing to cancel and both callbacks
- * would dispatch. The queued callback still runs — rAF has no cancellation the
- * store can reach — but the store gates a cancelled effect's dispatches, so a
- * superseded chain's `tick` never lands and it stops there instead of
- * scheduling its own successor.
- *
- * No `signal.aborted` check here, deliberately: `store.svelte.ts` wraps the
- * dispatch handed to a cancellable effect and drops actions once the signal
- * aborts, precisely "so cancellation means something even for an executor that
- * ignores the signal entirely". A check here cannot change behaviour, and no
- * test can distinguish it — which is the definition this campaign sweeps by.
+ * The executor stays open until the frame fires or is aborted. When cancelled,
+ * superseded or destroyed, the native animation frame callback is cancelled
+ * via `cancelAnimationFrame` and the abort listener is detached.
  */
 function scheduleFrame(sceneId: string): EffectType<GraphicsAction> {
-  return Effect.cancellable(frameEffectId(sceneId), async (dispatch) => {
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => resolve());
+  return Effect.cancellable(frameEffectId(sceneId), async (dispatch, signal) => {
+    if (signal?.aborted) {
+      return;
+    }
+
+    const fired = await new Promise<boolean>((resolve) => {
+      let handle: number | undefined;
+      let settled = false;
+      let cancelled = false;
+
+      const cancel = () => {
+        if (cancelled) return;
+        if (typeof handle === 'number') {
+          cancelled = true;
+          cancelAnimationFrame(handle);
+        }
+      };
+
+      const settle = (success: boolean) => {
+        if (settled) return;
+        settled = true;
+        signal?.removeEventListener('abort', onAbort);
+        resolve(success);
+      };
+
+      const onAbort = () => {
+        cancel();
+        settle(false);
+      };
+
+      if (signal) {
+        signal.addEventListener('abort', onAbort, { once: true });
+        if (signal.aborted) {
+          onAbort();
+          return;
+        }
+      }
+
+      try {
+        handle = requestAnimationFrame(() => settle(true));
+      } catch (error) {
+        signal?.removeEventListener('abort', onAbort);
+        throw error;
+      }
+
+      if (settled) {
+        if (signal?.aborted) {
+          cancel();
+        }
+      } else if (signal?.aborted) {
+        onAbort();
+      }
     });
 
-    dispatch({ type: 'tick', time: Date.now() });
+    if (fired && !signal?.aborted) {
+      dispatch({ type: 'tick', time: Date.now() });
+    }
   });
 }
 
@@ -274,13 +322,21 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
       // animated mesh left a `loop: true` animation ticking forever against
       // nothing, allocating a fresh `meshes` array every frame and making
       // `syncScene` walk both Maps for no reason.
+      const hadActive = state.animations.some(
+        (a) => a.config.targetId === action.id && a.isPlaying
+      );
+      const remainingAnimations = state.animations.filter(
+        (a) => a.config.targetId !== action.id
+      );
+      const hasOtherActive = remainingAnimations.some((a) => a.isPlaying);
+
       return [
         {
           ...state,
           meshes: state.meshes.filter((m) => m.id !== action.id),
-          animations: state.animations.filter((a) => a.config.targetId !== action.id)
+          animations: remainingAnimations
         },
-        Effect.none()
+        hadActive && !hasOtherActive ? cancelFrame(state.sceneId) : Effect.none()
       ];
     }
 
@@ -471,10 +527,10 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
         return [state, Effect.none()];
       }
 
-      const animation = {
+      const animation: AnimationState = {
         id: action.animation.id,
         config: action.animation,
-        startTime: Date.now(),
+        startTime: null,
         isPlaying: true
       };
 
@@ -505,12 +561,18 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
         return [state, Effect.none()];
       }
 
+      const hadActive = state.animations.some(
+        (a) => a.id === action.id && a.isPlaying
+      );
+      const remainingAnimations = state.animations.filter((a) => a.id !== action.id);
+      const hasOtherActive = remainingAnimations.some((a) => a.isPlaying);
+
       return [
         {
           ...state,
-          animations: state.animations.filter((a) => a.id !== action.id)
+          animations: remainingAnimations
         },
-        Effect.none()
+        hadActive && !hasOtherActive ? cancelFrame(state.sceneId) : Effect.none()
       ];
     }
 
@@ -521,10 +583,11 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
       const updatedAnimations = state.animations.map((anim) => {
         if (!anim.isPlaying) return anim;
 
-        const elapsed = action.time - anim.startTime;
+        const startTime = typeof anim.startTime === 'number' ? anim.startTime : action.time;
+        const elapsed = action.time - startTime;
         // Clamped at both ends, and `duration <= 0` is complete rather than
         // undefined. `elapsed / 0` is NaN when a tick lands in the same
-        // millisecond as the start — both are `Date.now()`, so that is ordinary
+        // millisecond as the start — including its first tick, so that is ordinary
         // — and NaN survives `Math.min(NaN, 1)`, flows into the mesh position,
         // and fails `progress >= 1`, so the animation runs forever writing NaN.
         // Nothing clamped the bottom either, so a tick timestamped before the
@@ -588,11 +651,11 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
             return { ...anim, startTime: action.time - overshoot };
           } else {
             // Stop animation
-            return { ...anim, isPlaying: false };
+            return { ...anim, startTime, isPlaying: false };
           }
         }
 
-        return anim;
+        return anim.startTime === startTime ? anim : { ...anim, startTime };
       });
 
       const hasActiveAnimations = updatedAnimations.some((a) => a.isPlaying);
@@ -647,6 +710,8 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
         return [state, Effect.none()];
       }
 
+      const hadActive = state.animations.some((a) => a.isPlaying);
+
       return [
         {
           ...state,
@@ -654,7 +719,7 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
           lights: [],
           animations: []
         },
-        Effect.none()
+        hadActive ? cancelFrame(state.sceneId) : Effect.none()
       ];
     }
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import AlertPrimitive from './primitives/AlertPrimitive.svelte';
-  import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
+  import { assertPresentationView, type PresentationView } from '../navigation/managed-integration.js';
   import type { PresentationState } from '../navigation/types.js';
   import type { SpringConfig } from '../animation/spring-config.js';
   import { cn } from '../utils.js';
@@ -12,9 +12,9 @@
 
   interface AlertProps<State, Action> {
     /**
-     * Scoped store for the alert content.
+     * Managed presentation view for the alert content.
      */
-    store: ScopedDestinationStore<State, Action> | null;
+    store?: PresentationView<State, Action> | undefined;
 
     /**
      * Presentation state for animation lifecycle.
@@ -95,7 +95,7 @@
       [
         {
           visible: boolean;
-          store: ScopedDestinationStore<State, Action> | null;
+          store: PresentationView<State, Action> | undefined;
         }
       ]
     > | undefined;
@@ -117,6 +117,13 @@
     disableEscapeKey = false,
     children: renderContent
   }: AlertProps<unknown, unknown> = $props();
+
+  const admittedStore = $derived.by(() => {
+    if (store !== undefined) {
+      assertPresentationView(store);
+    }
+    return store;
+  });
 
   // ============================================================================
   // Computed Classes
@@ -142,7 +149,7 @@
 <!-- ============================================================================ -->
 
 <AlertPrimitive
-  {store}
+  store={admittedStore}
   {presentation}
   {onPresentationComplete}
   {onDismissalComplete}
@@ -150,7 +157,7 @@
   {disableClickOutside}
   {disableEscapeKey}
 >
-  {#snippet children({ visible, store, bindBackdrop, bindContent, initialOpacity })}
+  {#snippet children({ visible, store: primitiveStore, bindBackdrop, bindContent, initialOpacity })}
     <div
       use:bindBackdrop
       class={backdropClasses}
@@ -171,7 +178,7 @@
       style:opacity={initialOpacity}
       style:transform="translate(-50%, -50%)"
     >
-      {@render renderContent?.({ visible, store })}
+      {@render renderContent?.({ visible, store: primitiveStore })}
     </div>
   {/snippet}
 </AlertPrimitive>

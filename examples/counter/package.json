@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings"
+    "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
+    "test": "vitest run"
   },
   "dependencies": {
     "@composable-svelte/core": "workspace:*"
@@ -18,6 +19,7 @@
     "svelte": "^5.0.0",
     "svelte-check": "^4.3.3",
     "typescript": "^5.5.4",
-    "vite": "^6.4.1"
+    "vite": "^6.4.1",
+    "vitest": "^4.0.7"
   }
 }

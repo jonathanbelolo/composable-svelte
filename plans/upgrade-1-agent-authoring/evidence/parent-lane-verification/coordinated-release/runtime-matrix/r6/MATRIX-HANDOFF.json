@@ -1,0 +1,103 @@
+{
+  "scope": "All eight companion recipes at minimum/newer checkpoints; core starter and checker architecture/profile/negative controls separately owned; no full release qualification claimed",
+  "harnessSHA256": "01e71e02ca3205096e35902d9eebbba788ee4c169c9a7cf8f64e7ab4359552c9",
+  "manifest": "/private/tmp/companion-runtime-release/archives-r6/MANIFEST.json",
+  "receipts": [
+    {
+      "checkpoint": "minimum",
+      "path": "/private/tmp/companion-runtime-release/matrix-r6/minimum/qualification-receipt.json",
+      "sha256": "f48048f028fd39cde1cca90b8c5896322e15847d52b40b0f668483c76fe71808",
+      "recipes": [
+        {
+          "name": "auth-consumer",
+          "svelte": "5.20.0",
+          "status": "passed"
+        },
+        {
+          "name": "charts-fixture",
+          "svelte": "5.20.0",
+          "status": "passed"
+        },
+        {
+          "name": "graphics-fixture",
+          "svelte": "5.20.0",
+          "status": "passed"
+        },
+        {
+          "name": "maps-fixture",
+          "svelte": "5.20.0",
+          "status": "passed"
+        },
+        {
+          "name": "chat-managed",
+          "svelte": "5.20.0",
+          "status": "passed"
+        },
+        {
+          "name": "code-managed",
+          "svelte": "5.30.0",
+          "status": "passed"
+        },
+        {
+          "name": "media-managed",
+          "svelte": "5.20.0",
+          "status": "passed"
+        },
+        {
+          "name": "chat-code-media",
+          "svelte": "5.30.0",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "checkpoint": "newer",
+      "path": "/private/tmp/companion-runtime-release/matrix-r6/newer/qualification-receipt.json",
+      "sha256": "6e878bc8afed4d268db9b47a89c3d9c718fc6fc880d59a0abf4d8cee9c2a2552",
+      "recipes": [
+        {
+          "name": "auth-consumer",
+          "svelte": "5.55.3",
+          "status": "passed"
+        },
+        {
+          "name": "charts-fixture",
+          "svelte": "5.55.3",
+          "status": "passed"
+        },
+        {
+          "name": "graphics-fixture",
+          "svelte": "5.55.3",
+          "status": "passed"
+        },
+        {
+          "name": "maps-fixture",
+          "svelte": "5.55.3",
+          "status": "passed"
+        },
+        {
+          "name": "chat-managed",
+          "svelte": "5.55.3",
+          "status": "passed"
+        },
+        {
+          "name": "code-managed",
+          "svelte": "5.55.3",
+          "status": "passed"
+        },
+        {
+          "name": "media-managed",
+          "svelte": "5.55.3",
+          "status": "passed"
+        },
+        {
+          "name": "chat-code-media",
+          "svelte": "5.55.3",
+          "status": "passed"
+        }
+      ]
+    }
+  ],
+  "publicDeclarationsReceipt": "/private/tmp/companion-runtime-release/r6-declaration-check/RECEIPT.json",
+  "runtimeEqualityReceipt": "/private/tmp/companion-runtime-release/archives-r6/RUNTIME-EQUALITY.json"
+}

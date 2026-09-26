@@ -1,0 +1,14 @@
+
+> build
+> vite build
+
+4:34:06 PM [vite-plugin-svelte] no Svelte config found at /private/tmp/composable-final-authoring/app-b - using default configuration.
+vite v7.3.6 building client environment for production...
+transforming...
+✓ 1549 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:   0.28 kB
+dist/assets/index-D_Cw6aAa.css   13.28 kB │ gzip:   2.40 kB
+dist/assets/index-BWaGbI-T.js   671.90 kB │ gzip: 207.18 kB
+✓ built in 2.04s

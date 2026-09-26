@@ -5,8 +5,7 @@
  * this file the encoding, size budget, attribute handling and removal of
  * `createCookieStorage` had no test at all, and the mock diverged from it in
  * exactly those places (`plans/hardening/AUDIT-2026-09-03-FINDINGS.md`, D4,
- * D16). R0.3.c lands the harness, a round-trip, and two pins; the behaviour
- * tests arrive with R2.5.
+ * D16). The former defect pins now assert healthy parsing and fresh-instance clearing.
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
@@ -37,37 +36,23 @@ describe('createCookieStorage in a real browser', () => {
 		expect(storage.getItem('k')).toBeNull();
 	});
 
-	it('D5 (pinned defect): one foreign cookie with a raw percent sign makes every read throw', () => {
-		// Pinned, not fixed: the parser decodes every cookie on the page, not
-		// only its own, and does not guard the decode. A cookie set by a server
-		// or another script (`promo=50%off`) makes getItem, has, keys and size
-		// throw URIError for every key. Fails the moment R2.5.a guards the
-		// decode; remove it in that commit. AUDIT-2026-09-03-FINDINGS D5.
+	it('isolates a malformed foreign cookie from healthy reads', () => {
 		document.cookie = 'promo=50%off; Path=/';
 		const storage = createCookieStorage<string>({ prefix: 'own-' });
-
-		expect(() => storage.getItem('k')).toThrow(URIError);
+		storage.setItem('k', 'healthy');
+		expect(storage.getItem('k')).toBe('healthy');
+		expect(storage.has('k')).toBe(true);
+		expect(storage.keys()).toEqual(['k']);
+		expect(storage.size()).toBe(1);
 	});
 
-	it('D6 (pinned defect): clear() by a fresh instance removes nothing', () => {
-		// Pinned, not fixed: the registry that remembers what this storage set is
-		// per instance, and clear() iterates only the registry — so after a
-		// reload, clear() (the documented logout step) leaves every cookie in
-		// place. Fails the moment R2.5.b reads document.cookie instead; remove
-		// it in that commit. AUDIT-2026-09-03-FINDINGS D6.
-		//
-		// The other half of D6 — removeItem() omitting Domain= for a cookie set
-		// with one — cannot be shown here: Chromium refuses Domain=localhost, the
-		// origin this suite runs on (verified by a precondition that failed). R2.5
-		// must cover it on a dotted host, or by reading the fallback at
-		// cookie-storage.ts:239 directly.
+	it('clears visible cookies through a fresh instance', () => {
 		const first = createCookieStorage<string>({ prefix: 'd6-' });
 		first.setItem('session', 'abc');
 		expect(document.cookie).toContain('d6-session=');
-
 		const reloaded = createCookieStorage<string>({ prefix: 'd6-' });
 		reloaded.clear();
-
-		expect(document.cookie).toContain('d6-session=');
+		expect(document.cookie).not.toContain('d6-session=');
+		expect(reloaded.getItem('session')).toBeNull();
 	});
 });

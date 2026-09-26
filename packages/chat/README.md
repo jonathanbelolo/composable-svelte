@@ -37,6 +37,18 @@ pnpm add prismjs                   # Prism.js syntax highlighting
 pnpm add pdfjs-dist                # PDF attachment previews
 ```
 
+Each is loaded on first use with a dynamic `import()`, never by the package
+entry points, and none appears in the published type declarations. Without
+them, code blocks render as plain escaped text, video links stay links, and a
+PDF attachment shows an error in its own preview instead of a page; nothing else
+changes. A peer installed later is picked up on the next load, with no code
+change. Without `prismjs`, a production Vite build (client or `--ssr`) resolves
+the import to an empty stub rather than failing it. The chat recognises the stub
+as "not installed", so code blocks render quietly, with no per-block warning.
+`scripts/verify-optional-peers.mjs` in the repository checks this against a
+packed install with none of the four present, including that the console stays
+clean.
+
 ## Quick Start
 
 <!-- consumer-file: Chat.svelte -->
@@ -278,6 +290,176 @@ path, including the failure path, because the store is what runs it. Reports mad
 from inside a cleanup are ignored, so a socket's `onclose` cannot overwrite the
 state of the connection that replaced it.
 
+## Managed applications
+
+The chat variants (`MinimalStreamingChat`, `StandardStreamingChat`,
+`FullStreamingChat`), the `./streaming-chat` primitives that take a store
+(`ChatMessageWithActions`, `ActionButtons`) and the four collaborative hooks
+accept either a standalone `Store` or the managed `ChildView` a feature view
+receives from `@composable-svelte/core/application` (`FeatureViewProps.store`,
+`composition.bind`, typed `scopeTo`). Pass the view you were given, unchanged.
+`ChatMessage`, `SimpleChatMessage` and the presence, typing and cursor
+components take plain props and need no store.
+
+The chat reducer composes like any other child: `streamingChatReducer` goes in a
+slot, and it reads `StreamingChatDependencies` from the application's
+`dependencies`. This recipe keeps completed replies and reaction changes as
+parent state:
+
+```svelte
+<script lang="ts">
+  import { Effect, type PresentationAction, type Reducer } from '@composable-svelte/core';
+  import {
+    ApplicationRoot, ApplicationHost, FeatureViews, FeatureOutlet,
+    ManagedIntegrationBuilder, optionalSlot, defineApplication, defineViews,
+    type FeatureViewProps
+  } from '@composable-svelte/core/application';
+  import {
+    FullStreamingChat,
+    streamingChatReducer,
+    createInitialStreamingChatState,
+    type StreamingChatAction,
+    type StreamingChatDependencies,
+    type StreamingChatState
+  } from '@composable-svelte/chat';
+
+  // The same dependencies as the standalone Quick Start (`streamMessage`, ...).
+  let { dependencies }: { dependencies: StreamingChatDependencies } = $props();
+
+  type Support = {
+    chat: StreamingChatState | null;
+    replies: { messageId: string; content: string }[];
+    reactions: { messageId: string; emoji: string; on: boolean }[];
+  };
+  type SupportAction =
+    | { type: 'chat'; action: PresentationAction<StreamingChatAction> }
+    | { type: 'openChat' }
+    | { type: 'closeChat' };
+
+  // The chat reduces its own actions first, then the parent sees each one once.
+  // Reactions, deletes and edits only change the chat's local state: sending
+  // them to a server is the parent's job, here or in an effect of its own.
+  const support: Reducer<Support, SupportAction, StreamingChatDependencies> = (state, action) => {
+    switch (action.type) {
+      case 'openChat':
+        return [{ ...state, chat: state.chat ?? createInitialStreamingChatState() }, Effect.none()];
+      case 'closeChat':
+        // Retiring the slot aborts the stream and cancels any upload in flight.
+        return [{ ...state, chat: null }, Effect.none()];
+      case 'chat': {
+        if (action.action.type !== 'presented') return [state, Effect.none()];
+        const child = action.action.action;
+        if (child.type === 'streamComplete') {
+          // The chat ignores a completion with no reply in flight, but the parent
+          // still receives it: archive each reply once, by its message id.
+          const reply = state.chat?.messages.at(-1);
+          return reply?.role === 'assistant' && !state.replies.some((r) => r.messageId === reply.id)
+            ? [{ ...state, replies: [...state.replies, { messageId: reply.id, content: reply.content }] }, Effect.none()]
+            : [state, Effect.none()];
+        }
+        if (child.type === 'addReaction' || child.type === 'removeReaction') {
+          const change = { messageId: child.messageId, emoji: child.emoji, on: child.type === 'addReaction' };
+          return [{ ...state, reactions: [...state.reactions, change] }, Effect.none()];
+        }
+        return [state, Effect.none()];
+      }
+    }
+  };
+
+  const chatSlot = optionalSlot<Support, SupportAction>()('chat');
+  const composition = new ManagedIntegrationBuilder(support).with(chatSlot, streamingChatReducer).build();
+  const application = defineApplication(composition, {
+    initialState: (_input: undefined): Support => ({ chat: null, replies: [], reactions: [] })
+  });
+  const views = defineViews(composition, { chat: { content: chatView } });
+</script>
+
+{#snippet chatView({ store }: FeatureViewProps<StreamingChatState, StreamingChatAction>)}
+  <FullStreamingChat {store} />
+{/snippet}
+
+<ApplicationRoot definition={application} options={{ dependencies, initial: { input: undefined } }}>
+  {#snippet children(app)}
+    <ApplicationHost {app}>
+      <FeatureViews store={app.store} definition={views}>
+        {#snippet children(outlets)}
+          {#if app.store.state.chat}
+            <button onclick={() => app.store.dispatch({ type: 'closeChat' })}>Close chat</button>
+          {:else}
+            <button onclick={() => app.store.dispatch({ type: 'openChat' })}>Open chat</button>
+          {/if}
+          <FeatureOutlet view={outlets.chat} />
+          <p>{app.store.state.replies.length} replies archived</p>
+        {/snippet}
+      </FeatureViews>
+    </ApplicationHost>
+  {/snippet}
+</ApplicationRoot>
+```
+
+- **The stream and uploads belong to the owner.** `streamMessage` runs in a
+  store-owned subscription and each message's uploads in a cancellable effect,
+  exactly as with a standalone store. Removing the slot, replacing it
+  (`replaceOn`) or destroying the root aborts the controller `streamMessage`
+  returned, cancels uploads in flight, and drops any chunk, completion or
+  upload result that arrives afterwards. Sibling chats in one application do
+  not share streams or uploads, although they use the same effect ids.
+- **Retirement.** A managed view's state becomes `undefined` when its owner
+  retires. Every component then renders nothing. `FullStreamingChat` revokes
+  the blob URLs of attachments still waiting in its composer, as it does when it
+  unmounts. Rendered through `FeatureOutlet`, the component is also unmounted; a
+  view you bind by hand and render yourself behaves the same way. A
+  replacement owner is a new view with fresh state (its stream ids start again
+  at `1`, so ownership, not the id, is what rejects its predecessor's late
+  callbacks): bind it again, or render through `FeatureOutlet`.
+- **A chat's `store` can change.** A variant that is not keyed and receives a
+  different `store` clears its unsent draft first, so text typed into one
+  conversation is never sent to another. Files being read when the store
+  changes are added to the store they were picked in, or released if that
+  owner has retired. `FullStreamingChat` does not revoke the previous
+  conversation's pending attachments on the change, since that conversation
+  still holds them. It keeps following the previous store while it stays
+  mounted, and revokes those attachments when that store's owner retires. When
+  it unmounts, it revokes the pending attachments of every conversation it still
+  holds.
+- **The collaborative hooks release themselves** when a managed owner retires:
+  window and input listeners, the heartbeat interval and typing timers go with
+  it, and calling the returned teardown afterwards is harmless. So is calling
+  `useTypingEmitter`'s `start`, `update` or `stop`: once released, they
+  dispatch nothing and start no timer. The socket is
+  the owner's subscription and closes too. With a standalone store nothing
+  retires; call the teardown, as before.
+
+**Business results go through the parent reducer.** The chat reduces each
+action first; the parent then receives it, wrapped as
+`{ type: 'chat', action: { type: 'presented', action } }`, and reads the
+child's updated state. What the chat does itself, and what is left to you:
+
+| Child action | What the chat does | What the parent typically does |
+|---|---|---|
+| `sendMessage` | Appends the message, uploads attachments (`uploadFile`), calls `streamMessage` | Record the prompt; there is no separate `messageSent` |
+| `streamComplete` / `streamError` | Settles the reply or shows the error; ignores a completion with no reply in flight | Persist the reply, which is the child's last message, once per message id |
+| `streamSuperseded` | Nothing: a newer send, edit or regeneration took over | Offer a retry, or ignore it |
+| `copyMessage` → `copySuccess` / `copyError` | Writes to the clipboard | Show a confirmation |
+| `addReaction` / `removeReaction` | Updates the local count | Send it to your server |
+| `deleteMessage`, `submitEditedMessage`, `clearMessages` | Updates the local conversation (an edit re-streams) | Mirror it on your server |
+
+Nothing in the chat sends reactions, deletions or edits anywhere: without a
+parent that does, they last as long as the chat's state.
+
+Operational limits:
+
+- There is no action callback on any chat component, and none is needed under
+  managed composition. Observe business results in the parent reducer, as
+  above, not with `observeChildActions`: it is for native commands, and chat
+  has none.
+- The unsent draft and scroll position are component state. They do not
+  survive a remount, and a hidden chat keeps nothing but its store.
+- The blob URLs of attachments already *sent* are not revoked when the owner
+  retires, because messages may be moved or archived by the parent. Use
+  `uploadFile`, so sent attachments point at your server rather than at the
+  tab's memory.
+
 ## State Management
 
 ### State Shape
@@ -379,6 +561,9 @@ image/video fades are fire-and-forget.
 `packages/core/tests/repo/animation-policy.test.ts` enforces it.
 
 ## Testing
+
+The npm archive includes a [runnable managed recipe](./recipes/managed/README.md)
+and a deterministic stream handoff and retirement test.
 
 <!-- consumer-file: chat.test.ts -->
 ```typescript

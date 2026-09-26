@@ -1,0 +1,1 @@
+{ "extends": "../../tsconfig.json", "include": ["deps-negative.ts"] }

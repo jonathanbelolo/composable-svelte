@@ -8,6 +8,12 @@
  */
 
 import type { Effect as EffectType, EffectGroups, EffectOfTag, EffectExecutor, Dispatch } from './types.js';
+import {
+  claimDismissRequest,
+  isDismissRequest,
+  isLiftedDispatch,
+  markLiftedDispatch
+} from './execution/dismiss-request.js';
 
 /**
  * Extensions other modules attach to the `Effect` namespace at import time.
@@ -352,12 +358,17 @@ const EffectImpl = {
   /**
    * Every group of the effect — and the group a `CancelGroup` names —
    * prefixed with `prefix/`, so a child's groups sit beneath the parent's
-   * name. Used by the lifts; an effect with no groups is returned as it is.
+   * name. Used by the lifts; recurses through batches and prefixes CancelGroup
+   * at every depth. Returns the original reference when nothing inside changes.
    * @param effect - The effect
    * @param prefix - The parent's name
    */
   prefixGroups<A>(effect: EffectType<A>, prefix: string): EffectType<A> {
-    if (effect._tag === 'CancelGroup') return { _tag: 'CancelGroup', group: `${prefix}/${effect.group}` };
+    if (effect._tag === 'CancelGroup') return { ...effect, group: `${prefix}/${effect.group}` };
+    if (effect._tag === 'Batch') {
+      const members = effect.effects.map((member) => EffectImpl.prefixGroups(member, prefix));
+      return members.every((member, i) => member === effect.effects[i]) ? effect : { ...effect, effects: members };
+    }
     return mapGroups(effect, (groups) => (groups ? groups.map((g) => `${prefix}/${g}`) : groups));
   },
 
@@ -383,90 +394,160 @@ const EffectImpl = {
    * ```
    */
   map<A, B>(effect: EffectType<A>, f: (a: A) => B): EffectType<B> {
-    switch (effect._tag) {
-      case 'None':
-        return Effect.none();
-
-      case 'Run':
-        return withGroups(
-          Effect.run<B>(async (dispatch, signal) => {
-            await effect.execute((a) => dispatch(f(a)), signal);
-          }),
-          effect.groups
-        );
-
-      case 'FireAndForget':
-        return Effect.fireAndForget(effect.execute);
-
-      case 'Batch':
-        return Effect.batch(...effect.effects.map(e => Effect.map(e, f)));
-
-      case 'Cancellable':
-        // `Effect.cancel(id)` is a Cancellable carrying no work. Mapping it
-        // through `Effect.cancellable` would drop the marker, so a cancel
-        // returned by a scoped child reducer came out the other side looking like
-        // real work and registered a phantom AbortController under that id.
-        if (effect.cancelOnly) return Effect.cancel(effect.id);
-        return withGroups(
-          Effect.cancellable<B>(effect.id, async (dispatch, signal) => {
-            await effect.execute((a) => dispatch(f(a)), signal);
-          }),
-          effect.groups
-        );
-
-      // Every executor-bearing arm forwards the signal, carries the groups,
-      // and returns the executor's promise. The AfterDelay arm used to call
-      // the executor and drop what it returned, so a delayed effect that
-      // rejected after a lift was an unhandled rejection the store's guard
-      // never saw, and TestStore never tracked (R1-REVIEW 1.5).
-      case 'Debounced':
-        return withGroups(
-          Effect.debounced<B>(effect.id, effect.ms, async (dispatch, signal) => {
-            await effect.execute((a) => dispatch(f(a)), signal);
-          }),
-          effect.groups
-        );
-
-      case 'Throttled':
-        return withGroups(
-          Effect.throttled<B>(effect.id, effect.ms, async (dispatch, signal) => {
-            await effect.execute((a) => dispatch(f(a)), signal);
-          }),
-          effect.groups
-        );
-
-      case 'AfterDelay':
-        return withGroups(
-          Effect.afterDelay<B>(effect.ms, async (dispatch, signal) => {
-            await effect.execute((a) => dispatch(f(a)), signal);
-          }),
-          effect.groups
-        );
-
-      case 'Subscription':
-        return withGroups(
-          EffectImpl.subscription<B>(effect.id, (dispatch) => {
-            const cleanup = effect.setup((a) => dispatch(f(a)));
-            return cleanup;
-          }),
-          effect.groups
-        );
-
-      case 'CancelGroup':
-        // Names a group, carries no action: the same value in either type.
-        return effect;
-
-      default:
-        // Exhaustiveness check
-        const _exhaustive: never = effect;
-        throw new Error(`Unhandled effect type: ${(_exhaustive as any)._tag}`);
-    }
+    // The public lift maps actions. It never claims or forwards a managed
+    // dismiss request: see `LiftPolicy` below.
+    return liftEffect(effect, f, rejectLift);
   }
 };
 
-/** `effect` with `groups` set, or `effect` itself when there is nothing to set. */
-function withGroups<E extends EffectType<any>>(effect: E, groups: EffectGroups): E {
-  return groups && groups.length > 0 ? { ...effect, groups } : effect;
+/**
+ * What a lift does with a managed dismiss request
+ * (`execution/dismiss-request.ts`) that reaches its dispatch. An application
+ * action never meets a policy: it is mapped, exactly as before.
+ *
+ * - `reject` throws. It is what public `Effect.map` means, and so what every
+ *   lift built on it means. The mapper is never called with a request, so no
+ *   stray wrapped action can be built.
+ * - `pass` forwards the request unchanged, and only to a dispatch that is itself
+ *   a framework lift.
+ * - `claim` marks the request claimed — once, synchronously, before anything
+ *   downstream runs — and dispatches `dismissal()`, an ordinary action of the
+ *   lifted type, in its place.
+ *
+ * Internal, as `liftEffect` is: neither belongs in a barrel.
+ */
+export type LiftPolicy<B> =
+  | { readonly kind: 'reject' }
+  | { readonly kind: 'pass' }
+  | { readonly kind: 'claim'; readonly dismissal: () => B };
+
+const rejectLift: LiftPolicy<never> = { kind: 'reject' };
+
+/**
+ * The dispatch a lifted executor or setup is handed, branded as the framework's
+ * so that a request can only travel from one lift to another. For every value
+ * an application can construct it is `dispatch(f(a))`.
+ */
+function liftDispatch<A, B>(f: (a: A) => B, dispatch: Dispatch<B>, policy: LiftPolicy<B>): Dispatch<A> {
+  return markLiftedDispatch((a: A): void => {
+    if (!isDismissRequest(a)) return dispatch(f(a));
+    switch (policy.kind) {
+      case 'claim':
+        claimDismissRequest(a);
+        return dispatch(policy.dismissal());
+
+      case 'pass':
+        if (!isLiftedDispatch(dispatch)) {
+          throw new TypeError(
+            'A managed dismiss request was passed to a dispatch that is not a framework lift: no enclosing managed presentation'
+          );
+        }
+        return (dispatch as Dispatch<unknown>)(a);
+
+      default:
+        // `reject`, and anything that is not a policy at all: fail closed.
+        throw new TypeError(
+          'A managed dismiss request reached a lift that does not claim it (Effect.map, or a legacy lift built on it): no enclosing managed presentation'
+        );
+    }
+  });
+}
+
+/**
+ * The one lift: `effect` with every dispatched action mapped through `f`, and a
+ * managed dismiss request handled by `policy`. Every executor-bearing arm and
+ * every member of a batch gets the same branded dispatch and the same policy.
+ *
+ * Module-level and internal, not a member of the `Effect` namespace. Public
+ * `Effect.map` is this with the reject policy.
+ */
+export function liftEffect<A, B>(effect: EffectType<A>, f: (a: A) => B, policy: LiftPolicy<B>): EffectType<B> {
+  switch (effect._tag) {
+    case 'None':
+      return effect;
+
+    case 'Run':
+      return withMetadata(
+        Effect.run<B>(async (dispatch, signal) => {
+          await effect.execute(liftDispatch(f, dispatch, policy), signal);
+        }),
+        effect
+      );
+
+    case 'FireAndForget':
+      return effect;
+
+    case 'Batch':
+      return { ...effect, effects: effect.effects.map(e => liftEffect(e, f, policy)) };
+
+    case 'Cancellable':
+      // `Effect.cancel(id)` is a Cancellable carrying no work. Mapping it
+      // through `Effect.cancellable` would drop the marker, so a cancel
+      // returned by a scoped child reducer came out the other side looking like
+      // real work and registered a phantom AbortController under that id.
+      if (effect.cancelOnly) return withMetadata(Effect.cancel(effect.id), effect);
+      return withMetadata(
+        Effect.cancellable<B>(effect.id, async (dispatch, signal) => {
+          await effect.execute(liftDispatch(f, dispatch, policy), signal);
+        }),
+        effect
+      );
+
+    // Every executor-bearing arm forwards the signal, carries the groups,
+    // and returns the executor's promise. The AfterDelay arm used to call
+    // the executor and drop what it returned, so a delayed effect that
+    // rejected after a lift was an unhandled rejection the store's guard
+    // never saw, and TestStore never tracked (R1-REVIEW 1.5).
+    case 'Debounced':
+      return withMetadata(
+        Effect.debounced<B>(effect.id, effect.ms, async (dispatch, signal) => {
+          await effect.execute(liftDispatch(f, dispatch, policy), signal);
+        }),
+        effect
+      );
+
+    case 'Throttled':
+      return withMetadata(
+        Effect.throttled<B>(effect.id, effect.ms, async (dispatch, signal) => {
+          await effect.execute(liftDispatch(f, dispatch, policy), signal);
+        }),
+        effect
+      );
+
+    case 'AfterDelay':
+      return withMetadata(
+        Effect.afterDelay<B>(effect.ms, async (dispatch, signal) => {
+          await effect.execute(liftDispatch(f, dispatch, policy), signal);
+        }),
+        effect
+      );
+
+    case 'Subscription':
+      return withMetadata(
+        EffectImpl.subscription<B>(effect.id, (dispatch) => {
+          const cleanup = effect.setup(liftDispatch(f, dispatch, policy));
+          return cleanup;
+        }),
+        effect
+      );
+
+    case 'CancelGroup':
+      // Names a group, carries no action: the same value in either type.
+      return effect;
+
+    default:
+      // Exhaustiveness check
+      const _exhaustive: never = effect;
+      throw new Error(`Unhandled effect type: ${(_exhaustive as any)._tag}`);
+  }
+}
+
+/** Preserve internal ownership and legacy group metadata through action mapping. */
+function withMetadata<E extends EffectType<any>>(effect: E, source: EffectType<any>): E {
+  return { ...effect,
+    ...('groups' in source && source.groups ? { groups: source.groups } : {}),
+    ...(source.origin === undefined ? {} : { origin: source.origin })
+  };
 }
 
 /**
@@ -483,7 +564,7 @@ function mapGroups<A>(effect: EffectType<A>, f: (groups: EffectGroups) => Effect
       return effect;
     case 'Batch': {
       const members = effect.effects.map((member) => mapGroups(member, f));
-      return members.every((member, i) => member === effect.effects[i]) ? effect : { _tag: 'Batch', effects: members };
+      return members.every((member, i) => member === effect.effects[i]) ? effect : { ...effect, effects: members };
     }
     case 'Cancellable':
       if (effect.cancelOnly) return effect;

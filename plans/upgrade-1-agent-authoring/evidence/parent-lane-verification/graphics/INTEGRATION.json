@@ -1,0 +1,226 @@
+{
+  "archives": [
+    {
+      "name": "/private/tmp/companion-maps-lane-baseline/lane-delta-files.tar.gz",
+      "sha256": "5766c44fb747c123eebe1ed5cac646db0e0a5dc4671861224f491339d4b2213c"
+    },
+    {
+      "name": "/private/tmp/companion-maps-lane-baseline/d3-graphics-delta-files.tar.gz",
+      "sha256": "373a6617430df9be9df7c44481c624f7204f4a428e41c9dd99c938a080df4531"
+    }
+  ],
+  "changes": [
+    {
+      "path": "packages/graphics/graphics.browser.config.ts",
+      "before": "17bbf5494ae4e81de0db1ee356de618c3ceed9a2e0aab085042a888cc1f59fa1",
+      "after": "47839eaff52ed40aa001dbca4703b7a70f83eccd0f8d11ad08973b61bd3d9d1b"
+    },
+    {
+      "path": "packages/graphics/tests/babylon-native.browser.ts",
+      "before": null,
+      "after": "dcaf39fcee04cc4af39e6e37ebdb74ce58146d2e5dc853259d2f666c6a02b9f8"
+    },
+    {
+      "path": "packages/graphics/CHANGELOG.md",
+      "before": "9957c65285cb3d50abba217a0ab3ff8a2ec63e90c61f3d28adf72b0b38b9b84e",
+      "after": "f5bae1f509f14d753a5b9f0d711719c3573dc867f9b50103795e8c0378748439"
+    },
+    {
+      "path": "packages/graphics/README.md",
+      "before": "44efeba864cfa70ad7b00ce333edf1f9979ffb75f87f13198faf6f341efa849a",
+      "after": "a25037c984909085d796fb348d5cdf2c086c50d520227705da82969d7de79e4c"
+    },
+    {
+      "path": "packages/graphics/fixtures/installed-consumer/README.md",
+      "before": null,
+      "after": "681920734434eb8f0c5979b4068aa47d5b0049aadc40f0434bbeffc5e08619a3"
+    },
+    {
+      "path": "packages/graphics/fixtures/installed-consumer/browser.config.mjs",
+      "before": null,
+      "after": "d6437d20fe00035daadccaa28c530af2c5de5b45b2f52f1b4fbaedec1ee79b26"
+    },
+    {
+      "path": "packages/graphics/fixtures/installed-consumer/index.html",
+      "before": null,
+      "after": "03796f79bc5ca38a250a47ae9bd880d332ea771207baa82a477962fc000d2944"
+    },
+    {
+      "path": "packages/graphics/fixtures/installed-consumer/src/App.svelte",
+      "before": null,
+      "after": "a2ad0224dc5e1bb1aed332798c5ab816eb6539222b5d3eea545d57621f948d17"
+    },
+    {
+      "path": "packages/graphics/fixtures/installed-consumer/src/GraphicsFeature.svelte",
+      "before": null,
+      "after": "a3cb19292a8931ab5f302b1a3228500668f9b51b1993bb07600bdfc429bc2a34"
+    },
+    {
+      "path": "packages/graphics/fixtures/installed-consumer/src/StandaloneTypes.ts",
+      "before": null,
+      "after": "ed743e5112afc3463948231f2bce5c920d4e4e08e8a8aa7d9fcbcb0c39e5432a"
+    },
+    {
+      "path": "packages/graphics/fixtures/installed-consumer/src/installed.browser.test.ts",
+      "before": null,
+      "after": "7f526f3a1df6539c3fe1f0bfe5b0bb0bcfb349525f3b55bab6f4e8da49e18c24"
+    },
+    {
+      "path": "packages/graphics/fixtures/installed-consumer/src/main.ts",
+      "before": null,
+      "after": "c76543fe1c49182b7ec4353a30135d00e3c439dfdf2577e2435272ff9f35930b"
+    },
+    {
+      "path": "packages/graphics/fixtures/installed-consumer/src/model.ts",
+      "before": null,
+      "after": "3c12e801dc203e4850df57bc143a51a8d8691369b7dcf79918f79bc33066af91"
+    },
+    {
+      "path": "packages/graphics/fixtures/installed-consumer/ssr.mjs",
+      "before": null,
+      "after": "ff451607de345c6d3e724d013175b97e32024df3336cdf9dc89e888ae2b5b119"
+    },
+    {
+      "path": "packages/graphics/fixtures/installed-consumer/tsconfig.json",
+      "before": null,
+      "after": "5301d82c91fb0f5f486cc50d0e8ef83d747665033150566fdb5f38e0eda9f1ab"
+    },
+    {
+      "path": "packages/graphics/fixtures/installed-consumer/tsconfig.nodenext.json",
+      "before": null,
+      "after": "89d23be363526b2fbc0b78d3155dbfbb3b059f7206646d128c1960ce5d6498a0"
+    },
+    {
+      "path": "packages/graphics/fixtures/installed-consumer/verify.mjs",
+      "before": null,
+      "after": "f6be6d249ad44c4ae1ae874d38dd2fbbad30993c36d5aefe03b67dcc00ee9773"
+    },
+    {
+      "path": "packages/graphics/fixtures/installed-consumer/vite.config.mjs",
+      "before": null,
+      "after": "ee012d79f58ca88e9b8e0b0eb2d931d8a2b9fff77af8e4ce9c1249bd7d6871e2"
+    },
+    {
+      "path": "packages/graphics/src/components/Camera.svelte",
+      "before": "a1ef46edb0fb3f15f931db88912e5b72b23f5ccf855d9b9a08b9508cdaec76f6",
+      "after": "5621de51d18b3abf3b9cfde02fa7184ce21d10dabad8af9dba7c1abe95d6e0ab"
+    },
+    {
+      "path": "packages/graphics/src/components/Light.svelte",
+      "before": "dd1fd9dbaeccb9c3fc4c389c298755726d6ce5f5860030fdc91db5d623e0794c",
+      "after": "2a09db0ebf1f218fbb2334c18c87b7ef7600e87b1e37fe68b74cdf595a7f16c3"
+    },
+    {
+      "path": "packages/graphics/src/components/Mesh.svelte",
+      "before": "f59e9ff7dc414e278d24749441c69745079c490a67aeaa1ae4194d6454b8f26b",
+      "after": "e2a1cb2b3a087c1f037fd6c84f9c52f0fc10d9788f179d67abe77e499a2fca0c"
+    },
+    {
+      "path": "packages/graphics/src/components/Scene.svelte",
+      "before": "fdcff800f702678df6bd2ff8ba12736ff0dffbc2cd18f0eaee74baf5fc410879",
+      "after": "a71d93dd267a8fbbe388cea3c8553c6a363809b4ba6bd9d0e4728c87ffccb8f0"
+    },
+    {
+      "path": "packages/graphics/src/core/scene-sync.ts",
+      "before": "3b9caf00607d36f5cace903d4fd868a70d656390de1b521aa6c4bef0f099ae97",
+      "after": "16ac33e5451bd38fd4bd0494b744dfb8c084d29c8b806f7fa59a50f7f9375f59"
+    },
+    {
+      "path": "packages/graphics/src/core/types.ts",
+      "before": "60f71e70c5973c07ed69ceacc65d0d5854d87ebb73699b4f5cfa88f0d80874a3",
+      "after": "4f7358b781a4786b15cdd5e6b5e2c4fc6a17ae671e5cc448a813a8f5bc16379c"
+    },
+    {
+      "path": "packages/graphics/src/index.ts",
+      "before": "340f805b81f2359ce9bb5b5e15071b7e9204addc522667e0d3abc2505113e598",
+      "after": "87bb15d11de9b10daa031702ceb13da52423e7267e950025bf8f4f740558f87c"
+    },
+    {
+      "path": "packages/graphics/src/lib/overlay/WebGLOverlay.svelte",
+      "before": "7a7257e0792119d5d58207b1cc4a5bc80529253190fe4319c2059e65b2bef00f",
+      "after": "4e8f6a80251cc7f72de2e3a0402a29cf6522fb28e6530881b369385a52588d80"
+    },
+    {
+      "path": "packages/graphics/src/lib/overlay/webgl-overlay.ts",
+      "before": "4943d441f7beed48d8ab73a2d9ede7300ed1d6243509010030f9d6874dc04230",
+      "after": "519e4c13dec6e07b4a22616b0537a8bc320faa90c345a5521db469a2f3145306"
+    },
+    {
+      "path": "packages/graphics/tests/fixtures/ManagedGraphicsFeatureHost.svelte",
+      "before": null,
+      "after": "e641bc486bf9dfb681ec93996b10456c38dcf4b8b901596f8900e35e3ae9afc1"
+    },
+    {
+      "path": "packages/graphics/tests/fixtures/ManagedGraphicsRecipeApp.svelte",
+      "before": null,
+      "after": "874c5a37d0ba5c9f728e4b564e40c8ded49afbcfe6b8f6a816fbfff211842cbd"
+    },
+    {
+      "path": "packages/graphics/tests/fixtures/SidebarGraphicsFeatureHost.svelte",
+      "before": null,
+      "after": "786cdcdbfd5294596ce77860a545292eb54310bc2b8cc5d669f9caaa759cf6db"
+    },
+    {
+      "path": "packages/graphics/tests/fixtures/managed-graphics-recipe-model.ts",
+      "before": null,
+      "after": "e9746af71fb685a77b35b2929cbd10e10248dc4359ae1465d917df9703e76807"
+    },
+    {
+      "path": "packages/graphics/tests/fixtures/managed-graphics-recipe-views.ts",
+      "before": null,
+      "after": "af667bb8eeb0e903aa9dc74b261f862660ee2cb40b034c1fe69ade070b14a51d"
+    },
+    {
+      "path": "packages/graphics/tests/graphics-managed-proof.test.svelte.ts",
+      "before": null,
+      "after": "b6dd7a8315f2dffacaaaeaabdac92f52b61f8b514897d4f1fc713e1aed98cf3b"
+    },
+    {
+      "path": "packages/graphics/tests/helpers/fake-scene-adapter.ts",
+      "before": null,
+      "after": "4f5ed63ffe0de6adf8c80311ddc8cf171fc6ea40d677060cd4bb049ec7ddbb6e"
+    },
+    {
+      "path": "packages/graphics/vite.config.ts",
+      "before": "4626610ab455b58092c4c14381cf53240d6a7ef47453882048f6e2932a066644",
+      "after": "97c3c01f6f1a83c693c4d7978f9dea6e226b8df9743ef078cd5666af8a475f67"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/EVIDENCE-GRAPHICS.md",
+      "before": null,
+      "after": "6a77a47ca36ef93c8d3080675a9818a3928af779d5e73cc08a19ceb0af05f3ca"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/OPUS-REVIEW-GRAPHICS-B.md",
+      "before": null,
+      "after": "266f5ea48b479d7af505ad7ad60e515dc1f0acbae7a92dac6b17152fd891af94"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/OPUS-REVIEW-GRAPHICS-C.md",
+      "before": null,
+      "after": "b33acc7a8860c0ecedb585d117326131827957c8ffd4fe4526c6ee582de3a5cd"
+    },
+    {
+      "path": "plans/upgrade-1-agent-authoring/lane-maps-graphics-charts/OPUS-REVIEW-GRAPHICS.md",
+      "before": null,
+      "after": "c2e7a3ebe386b0480fbe7e2e17a7f079adf023848ad9ad209e27bac3af77a24b"
+    }
+  ],
+  "tarSha256": "d678de59bf7279031318d4f05062f275741081116f181e07d5681ab8ec4048e1",
+  "mainVerification": {
+    "build": "pass",
+    "typecheck": "pass",
+    "svelteCheck": "0 errors, 0 warnings",
+    "serialJsdomTests": 549,
+    "nativeBrowserAndShaderTests": 8
+  },
+  "rootFollowups": [
+    "version and peer floors",
+    "shared guidance/checker profiles",
+    "package T5 recipe delivery",
+    "small reviewed API/documentation follow-up"
+  ],
+  "rootCompleted": [
+    "CI required Graphics native browser and shader step"
+  ]
+}

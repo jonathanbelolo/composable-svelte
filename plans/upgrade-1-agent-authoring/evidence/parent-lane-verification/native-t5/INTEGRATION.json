@@ -1,0 +1,14 @@
+{
+  "integratedAt": "2026-09-25T13:38:55.272413+00:00",
+  "archiveSHA256": "1bc0866aa452e2eb2d61688163ddb1b2d00d173d4b664f11c906b6820acc5b06",
+  "manifestSHA256": "ad920e3b49a9f84ae7007967594d7c344e131b1ea2687c9177593bdfdb9e0e74",
+  "paths": 31,
+  "method": "Validated every before and after hash then copied exact scoped payload, no index changes",
+  "verification": {
+    "charts": "17/17 affected tests; build/typecheck/check passed, 0 errors 0 warnings",
+    "graphics": "20/20 affected tests; build/typecheck/check passed, 0 errors 0 warnings",
+    "maps": "Documentation/packaging only; runtime unchanged from previously verified D2",
+    "installedRecipes": "Lane exact-archive checks pass; final versioned replay remains pending"
+  },
+  "publication": "Not authorized by this receipt; candidate versions need coordinated bump and repack"
+}

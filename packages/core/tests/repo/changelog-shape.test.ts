@@ -53,7 +53,7 @@ const ROLLUPS: ReadonlyArray<{ pkg: string; heading: string; why: string }> = [
 	{ pkg: 'maps', heading: '## [0.1.1] and earlier', why: 'predates the changelog' }
 ];
 
-const DATED = /^## \[(\d+\.\d+\.\d+)\] - (\d{4}-\d{2}-\d{2})$/;
+const DATED = /^## \[(\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?)\] - (\d{4}-\d{2}-\d{2})$/;
 const UNRELEASED = '## [Unreleased]';
 
 interface Pkg {
@@ -205,6 +205,16 @@ describe('every published package keeps a changelog', () => {
 });
 
 describe('the check itself', () => {
+	it('recognizes dated prereleases without accepting malformed or undated entries', () => {
+		const entry = '## [0.13.0-next.0] - 2026-09-21';
+		expect(malformed('core', entry)).toEqual([]);
+		expect(newestRelease(entry + '\n## [0.12.2] - 2026-09-18')).toBe('0.13.0-next.0');
+		for (const invalid of ['## [0.13.0-next.0]', '## [0.13.0-] - 2026-09-21', '## [0.13.0-next..0] - 2026-09-21']) {
+			expect(malformed('core', invalid)).toEqual([invalid]);
+			expect(newestRelease(invalid)).toBeNull();
+		}
+	});
+
 	it('sees a second Unreleased', () => {
 		const two = `# Changelog\n\n## [Unreleased]\n\n### Added\n\n## [Unreleased]\n\n## [1.0.0] - 2026-01-01\n`;
 		expect(headings(two).filter((h) => h === UNRELEASED)).toHaveLength(2);

@@ -1,0 +1,5 @@
+check exit=0
+test exit=0
+test:ssr exit=0
+check:architecture exit=0
+test:browser exit=0

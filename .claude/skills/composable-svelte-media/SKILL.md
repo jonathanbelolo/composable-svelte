@@ -9,6 +9,14 @@ Audio playback, video embedding, and voice input components.
 
 ---
 
+## UPGRADE 1 AGENT ENTRY
+
+For an application built with the integrated Upgrade 1 companion packages, begin with the [managed package reference](../../../packages/media/recipes/managed/README.md) and its executable recipe. The same reference is included in the package at `node_modules/@composable-svelte/media/recipes/managed/README.md`; use the installed version's declarations and instructions as the API authority.
+
+Use genuine owned views and the packaged player/voice recipes. Feature retirement and DOM attachment both matter for microphone and player resources. Preserve operation-specific recording/transcription freshness; do not assume disposal alone solves every in-owner request race.
+
+The standalone store and callback examples below describe standalone usage. For an owned application feature, follow the managed recipe rather than copying the standalone setup and adding ad hoc lifetime glue. Candidate qualification and npm publication are separate; verify the installed package version contains this managed surface.
+
 ## PACKAGE OVERVIEW
 
 **Package**: `@composable-svelte/media`
@@ -389,219 +397,47 @@ const videos = extractVideosFromMarkdown(markdown);
 
 ## VOICE INPUT
 
-**Purpose**: Voice recording with push-to-talk and conversation modes, real-time transcription support.
-
-### Quick Start
+VoiceInput borrows one store per input. The application owns and destroys that store. Use managed execution for FIFO subscriber/effect ordering. Components handle recording UI; effects own the microphone and transcription lifecycle.
 
 ```svelte
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { createStore } from '@composable-svelte/core';
   import {
-    VoiceInput,
-    voiceInputReducer,
-    createInitialVoiceInputState
+    VoiceInput, voiceInputReducer, createInitialVoiceInputState,
+    getVoiceInputAudioManager
   } from '@composable-svelte/media';
 
-  // Create voice input store
-  const voiceStore = createStore({
-    // `createInitialVoiceInputState()` takes no arguments; the mode is chosen by
-    // dispatching, not by seeding the state.
+  let transcript = $state('');
+  const store = createStore({
     initialState: createInitialVoiceInputState(),
     reducer: voiceInputReducer,
+    execution: { mode: 'managed' },
     dependencies: {
-      onAudioData: async (audioBlob) => {
-        // Send to transcription service
-        const formData = new FormData();
-        formData.append('audio', audioBlob);
-        const response = await fetch('/api/transcribe', {
-          method: 'POST',
-          body: formData
-        });
-        const { text } = await response.json();
-        return text;
+      getAudioManager: getVoiceInputAudioManager,
+      transcribeAudio: async (audio: Blob) => {
+        const response = await fetch('/api/transcribe', { method: 'POST', body: audio });
+        if (!response.ok) throw new Error('Transcription failed');
+        return response.text();
       }
     }
   });
+  onDestroy(() => store.destroy());
 </script>
 
-<VoiceInput store={voiceStore} />
+<VoiceInput {store} defaultMode="push-to-talk" onTranscript={(text) => transcript = text} />
+<p>{transcript}</p>
 ```
 
-### Recording Modes
+The example's endpoint is application-owned and returns transcript text. Business workflows can record transcripts through their own reducer actions. No client API secret is required by the component.
 
-**Push-to-Talk**:
-- Hold button to record
-- Release to stop
-- Best for short messages
-- Lower latency
+Required props are `store` and `onTranscript`. Optional props are `defaultMode` (`push-to-talk` or `conversation`), `variant` (`icon`, `button`, or `fab`), `label`, `disabled`, and `class`. `voiceStore`, `showWaveform`, and `showTimer` are not props.
 
-**Conversation**:
-- Toggle recording on/off
-- Best for long-form speech
-- Automatic silence detection (optional)
+Use `createInitialVoiceInputState()` rather than duplicating its shape. Recording is represented by `status`, errors by `errorMessage`, and duration uses `recordingStartTime`; the state has no `isRecording`, `duration`, `audioUrl`, or `transcript` field. `onTranscript` receives accepted results.
 
-### Props
+Public interaction actions include `activatePushToTalk`, `startPushToTalkRecording`, `stopPushToTalkRecording`, `cancelPushToTalkRecording`, `activateConversationMode`, `conversationModeToggled` (with `enabled`), `manualSendRequested`, and `deactivateVoiceInput`. Underscore-prefixed actions carry framework generation information and must not be fabricated by applications. Import `VoiceInputAction`, `VoiceInputState`, and `VoiceInputDependencies` for complete contracts.
 
-- `voiceStore: Store<VoiceInputState, VoiceInputAction>` - Voice input store (required)
-- `showWaveform: boolean` - Show audio waveform (default: true)
-- `showTimer: boolean` - Show recording timer (default: true)
-- `class: string` - Custom CSS class (optional)
-
-### State Interface
-
-```typescript
-interface VoiceInputState {
-  // Recording
-  isRecording: boolean;
-  mode: 'push-to-talk' | 'conversation';
-
-  // Audio
-  audioBlob: Blob | null;
-  audioUrl: string | null;
-  duration: number;              // Recording duration in seconds
-
-  // Transcription
-  isTranscribing: boolean;
-  transcript: string | null;
-  transcriptError: string | null;
-
-  // Visualization
-  waveformData: Uint8Array | null;
-  volumeLevel: number;           // 0-100
-
-  // Error handling
-  error: string | null;
-  permissionDenied: boolean;
-}
-```
-
-### Actions
-
-```typescript
-type VoiceInputAction =
-  // Recording
-  | { type: 'startRecording' }
-  | { type: 'stopRecording' }
-  | { type: 'pauseRecording' }
-  | { type: 'resumeRecording' }
-  | { type: 'cancelRecording' }
-
-  // Mode
-  | { type: 'setMode'; mode: 'push-to-talk' | 'conversation' }
-
-  // Transcription
-  | { type: 'transcriptionStarted' }
-  | { type: 'transcriptionCompleted'; transcript: string }
-  | { type: 'transcriptionFailed'; error: string }
-
-  // Internal Events
-  | { type: 'recordingStarted' }
-  | { type: 'recordingStopped'; audioBlob: Blob; duration: number }
-  | { type: 'audioDataAvailable'; data: Uint8Array }
-  | { type: 'volumeChanged'; level: number }
-  | { type: 'errorOccurred'; error: string }
-  | { type: 'permissionDenied' };
-```
-
-### Dependencies
-
-```typescript
-interface VoiceInputDependencies {
-  // Transcription handler (optional)
-  onAudioData?: (audioBlob: Blob) => Promise<string>;
-
-  // Audio processing (optional)
-  onAudioProcessed?: (audioBlob: Blob) => Promise<Blob>;
-}
-```
-
-### Complete Example
-
-```svelte
-<script lang="ts">
-import { createStore, Effect } from '@composable-svelte/core';
-import {
-  VoiceInput,
-  voiceInputReducer,
-  createInitialVoiceInputState
-} from '@composable-svelte/media';
-
-// Create voice input store with transcription
-const voiceStore = createStore({
-  // `createInitialVoiceInputState()` takes no arguments; the mode is chosen by
-  // dispatching, not by seeding the state.
-  initialState: createInitialVoiceInputState(),
-  reducer: voiceInputReducer,
-  dependencies: {
-    // Send audio to Whisper API for transcription
-    onAudioData: async (audioBlob: Blob) => {
-      const formData = new FormData();
-      formData.append('file', audioBlob, 'recording.webm');
-      formData.append('model', 'whisper-1');
-
-      const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${OPENAI_API_KEY}`
-        },
-        body: formData
-      });
-
-      const { text } = await response.json();
-      return text;
-    }
-  }
-});
-
-// Toggle recording mode
-function toggleMode() {
-  const newMode = $voiceStore.mode === 'push-to-talk' ? 'conversation' : 'push-to-talk';
-  voiceStore.dispatch({ type: 'setMode', mode: newMode });
-}
-</script>
-
-<div class="voice-container">
-  <VoiceInput
-    {voiceStore}
-    showWaveform={true}
-    showTimer={true}
-  />
-
-  <!-- Mode toggle -->
-  <button onclick={toggleMode}>
-    Mode: {$voiceStore.mode}
-  </button>
-
-  <!-- Display transcript -->
-  {#if $voiceStore.transcript}
-    <div class="transcript">
-      <strong>Transcript:</strong>
-      <p>{$voiceStore.transcript}</p>
-    </div>
-  {/if}
-
-  <!-- Error display -->
-  {#if $voiceStore.error}
-    <div class="error">{$voiceStore.error}</div>
-  {/if}
-
-  {#if $voiceStore.permissionDenied}
-    <div class="warning">Microphone access denied</div>
-  {/if}
-</div>
-```
-
-### Browser Permissions
-
-Voice input requires microphone permissions. Handle permission flow:
-
-```typescript
-// Check permission before recording
-if ($voiceStore.permissionDenied) {
-  // Show permission request UI
-  alert('Please grant microphone access to use voice input');
-}
-```
+`transcribeAudio` and `getAudioManager` are required dependencies. Tests can inject `createAudioManager` and `deleteAudioManager` to control microphone acquisition and cleanup. The factory must register the same manager returned by `getAudioManager`; cleanup must remain safe during pending permission acquisition. The framework handles late results and recorder lifetime. Browser capture requires permission and a secure context; test permission rejection as well as success.
 
 ---
 
@@ -713,27 +549,34 @@ await store.send({ type: 'nextTrack' }, (state) => {
 
 ### VoiceInput Testing
 
+Test reducer decisions without opening a microphone. For recording tests, inject the audio-manager lifecycle dependencies described above and await the framework's emitted actions; do not manually dispatch private generation events.
+
 ```typescript
-import { TestStore } from '@composable-svelte/core/test';
+import { it, expect } from 'vitest';
+import { createTestStore } from '@composable-svelte/core/test';
 import { voiceInputReducer, createInitialVoiceInputState } from '@composable-svelte/media';
 
-const store = new TestStore({
-  initialState: createInitialVoiceInputState(),
-  reducer: voiceInputReducer,
-  dependencies: {
-    onAudioData: vi.fn((blob) => Promise.resolve('Test transcript'))
+it('selects and clears push-to-talk mode', async () => {
+  const store = createTestStore({
+    initialState: createInitialVoiceInputState(),
+    reducer: voiceInputReducer,
+    execution: { mode: 'managed' },
+    dependencies: { transcribeAudio: async () => '', getAudioManager: () => undefined }
+  });
+  try {
+    await store.send({ type: 'activatePushToTalk' }, state => {
+      expect(state.mode).toBe('push-to-talk');
+      expect(state.status).toBe('idle');
+    });
+    await store.send({ type: 'deactivateVoiceInput' }, state => {
+      expect(state.mode).toBeNull();
+    });
+    await store.finish();
+  } finally {
+    store.destroy();
   }
 });
-
-// Test recording start
-await store.send({ type: 'startRecording' });
-await store.receive({ type: 'recordingStarted' }, (state) => {
-  // `VoiceInputState` has no `isRecording`; the status field carries it.
-  expect(state.status).toBe('recording');
-});
 ```
-
----
 
 ## TROUBLESHOOTING
 

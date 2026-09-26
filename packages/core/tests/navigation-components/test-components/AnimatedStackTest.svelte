@@ -5,7 +5,7 @@
 	 */
 	import AnimatedNavigationStack from '../../../src/lib/navigation-components/AnimatedNavigationStack.svelte';
 	import type { PresentationState } from '../../../src/lib/navigation/types.js';
-	import type { ScopedDestinationStore } from '../../../src/lib/navigation/scope-to-destination.js';
+	import type { ChildView } from '../../../src/lib/navigation/managed-integration.js';
 
 	interface Screen {
 		id: string;
@@ -13,7 +13,7 @@
 	}
 
 	interface Props {
-		store: ScopedDestinationStore<unknown, unknown> | null;
+		store: ChildView<unknown, unknown> | undefined;
 		stack: readonly Screen[];
 		presentation: PresentationState<any>;
 	}

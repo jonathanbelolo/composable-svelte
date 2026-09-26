@@ -16,6 +16,7 @@ import {
 import type { Reducer, Store } from '@composable-svelte/core';
 
 import { toAuthError } from '../../errors/helpers.js';
+import { completesSubmissionInFlight } from '../submission-feedback.js';
 import { emptySignupFields, signupSchema, type SignupFields } from './schema.js';
 import type { SignupAction, SignupDependencies, SignupState } from './types.js';
 
@@ -93,7 +94,11 @@ export const signupReducer: Reducer<SignupState, SignupAction, SignupDependencie
 					? { ...withForm, error: null }
 					: withForm;
 
-			if (action.action.type !== 'submissionSucceeded') {
+			// Only the result of a submission in flight; see `submission-feedback.ts`.
+			// A stale one would otherwise sign up whatever the fields now hold. A new
+			// submission still supersedes one in flight, and still may after a
+			// success or a verification-required outcome: it starts a new attempt.
+			if (!completesSubmissionInFlight(state.form, withForm.form, action.action)) {
 				return [cleared, formEffect];
 			}
 
@@ -167,6 +172,11 @@ export const signupReducer: Reducer<SignupState, SignupAction, SignupDependencie
 			// `state`, not `{ ...state }`: an identical object notifies every
 			// subscriber that nothing changed.
 			return [state.error === null ? state : { ...state, error: null }, Effect.none()];
+		}
+
+		case 'signInRequested': {
+			// For the composer; see the action's doc.
+			return [state, Effect.none()];
 		}
 
 		default: {

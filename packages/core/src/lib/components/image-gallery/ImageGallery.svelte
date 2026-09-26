@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { createStore } from '../../store.svelte.js';
 	import type { Store } from '../../types.js';
 	import {
@@ -111,6 +111,8 @@
 		});
 	}
 
+	onDestroy(() => internalStore?.destroy());
+
 	// Get active store
 	const store = isAdvancedMode ? (props as AdvancedProps).store : internalStore!;
 
@@ -158,29 +160,37 @@
 		observer?.disconnect();
 
 		// Create new observer
-		observer = new IntersectionObserver((entries) => {
+		let active = true;
+		const currentObserver = new IntersectionObserver((entries) => {
+			if (!active) return;
 			entries.forEach((entry) => {
 				if (entry.isIntersecting) {
 					const img = entry.target as HTMLImageElement;
 					const src = img.dataset.src;
-					const imageId = img.dataset.id;
-					if (src && imageId) {
+					if (src) {
 						img.src = src;
-						store.dispatch({ type: 'imageLoaded', imageId });
-						observer!.unobserve(img);
+						currentObserver.unobserve(img);
 					}
 				}
 			});
 		});
 
+		observer = currentObserver;
+
 		// Observe all unloaded thumbnails
 		const thumbnails = gridElement.querySelectorAll('img[data-src]');
-		thumbnails.forEach((img) => observer!.observe(img));
+		thumbnails.forEach((img) => {
+			const htmlImg = img as HTMLImageElement;
+			if (htmlImg.getAttribute('src') === placeholderSvg) {
+				currentObserver.observe(htmlImg);
+			}
+		});
 
 		// Cleanup
 		return () => {
-			observer?.disconnect();
-			observer = undefined;
+			active = false;
+			currentObserver.disconnect();
+			if (observer === currentObserver) observer = undefined;
 		};
 	});
 
@@ -259,12 +269,21 @@
 					alt={image.alt}
 					class="image-gallery__image"
 					loading={enableLazyLoad ? 'lazy' : undefined}
-					onerror={() => {
-						store.dispatch({
-							type: 'imageError',
-							imageId: image.id,
-							error: 'Failed to load image'
-						});
+					onload={(e) => {
+						const img = e.currentTarget;
+						if (img.getAttribute('src') !== placeholderSvg) {
+							store.dispatch({ type: 'imageLoaded', imageId: image.id });
+						}
+					}}
+					onerror={(e) => {
+						const img = e.currentTarget;
+						if (img.getAttribute('src') !== placeholderSvg) {
+							store.dispatch({
+								type: 'imageError',
+								imageId: image.id,
+								error: 'Failed to load image'
+							});
+						}
 					}}
 				/>
 				{#if storeState.errors[image.id]}

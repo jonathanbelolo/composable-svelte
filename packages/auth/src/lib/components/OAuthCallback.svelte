@@ -17,6 +17,7 @@
 	 * Pattern A: it animates nothing.
 	 */
 	import type { Snippet } from 'svelte';
+	import type { PresentationView } from '@composable-svelte/core/application';
 
 	import { isMfaRequired } from '../errors/helpers.js';
 	import type { MfaMethod } from '../deps.js';
@@ -28,19 +29,13 @@
 	} from '../flows/oauth-callback/types.js';
 	import type { SessionAction } from '../session/types.js';
 
-	interface Props {
+	interface StandaloneBinding {
+		mode?: 'standalone' | undefined;
 		flowStore: {
 			readonly state: OAuthCallbackState;
 			dispatch(action: OAuthCallbackAction): void;
 		};
 		sessionStore: { dispatch(action: SessionAction): void };
-		/**
-		 * The callback query, parsed — `oauthParamsFromUrl(window.location.href)`.
-		 *
-		 * `null` is a state worth rendering rather than an error: someone reached
-		 * this URL directly, and the useful answer is a way back to sign-in.
-		 */
-		params?: OAuthCallbackParams | null | undefined;
 		/**
 		 * Where a completed callback goes. **Required** — see above.
 		 *
@@ -71,6 +66,25 @@
 		onMfaRequired?:
 			| ((challenge: { challengeId: string; methods: readonly MfaMethod[] }) => void)
 			| undefined;
+	}
+
+	interface ManagedBinding {
+		mode: 'managed';
+		flowStore: PresentationView<OAuthCallbackState, OAuthCallbackAction>;
+		sessionStore?: never;
+		onSuccess?: never;
+		onStartOver?: never;
+		onMfaRequired?: never;
+	}
+
+	interface PresentationProps {
+		/**
+		 * The callback query, parsed — `oauthParamsFromUrl(window.location.href)`.
+		 *
+		 * `null` is a state worth rendering rather than an error: someone reached
+		 * this URL directly, and the useful answer is a way back to sign-in.
+		 */
+		params?: OAuthCallbackParams | null | undefined;
 		headingLevel?: 1 | 2 | 3 | 4 | undefined;
 		/** Replaces the completed panel. Receives the same `intent` as `onSuccess`. */
 		completed?: Snippet<[{ intent: OAuthIntent; returnTo: string | null }]> | undefined;
@@ -79,22 +93,28 @@
 		class?: string | undefined;
 	}
 
+	type Props = PresentationProps & (StandaloneBinding | ManagedBinding);
+
 	let {
-		flowStore,
-		sessionStore,
 		params = null,
-		onSuccess,
-		onStartOver,
-		onMfaRequired,
 		headingLevel = 2,
 		completed,
 		footer,
-		class: className = ''
+		class: className = '',
+		...binding
 	}: Props = $props();
 
-	const status = $derived(flowStore.state.status);
-	const error = $derived(flowStore.state.error);
-	const returnTo = $derived(flowStore.state.returnTo);
+	/** `undefined` only for a managed view whose owner has retired. See `LoginForm`. */
+	const flow: OAuthCallbackState | undefined = $derived(binding.flowStore.state);
+
+	type Owner = symbol | PresentationView<OAuthCallbackState, OAuthCallbackAction>;
+	const standaloneOwner = Symbol('standalone');
+	const owner: Owner = $derived(binding.mode === 'managed' ? binding.flowStore : standaloneOwner);
+	const viewOf = (key: Owner) => (typeof key === 'symbol' ? binding.flowStore : key);
+
+	const status = $derived(flow?.status);
+	const error = $derived(flow?.error ?? null);
+	const returnTo = $derived(flow?.returnTo ?? null);
 	/**
 	 * What the return was for.
 	 *
@@ -102,7 +122,7 @@
 	 * flow has not read a record yet — the completed branch always has a real
 	 * one, because the reducer sets both fields in the same action.
 	 */
-	const intent = $derived<OAuthIntent>(flowStore.state.intent ?? 'signIn');
+	const intent = $derived<OAuthIntent>(flow?.intent ?? 'signIn');
 	const isLink = $derived(intent === 'link');
 
 	/** Whether there is anything here to act on at all. */
@@ -111,25 +131,26 @@
 	);
 
 	/**
-	 * Whether the callback has been handed to the flow.
+	 * Whether the callback has been handed to the flow, once per owner.
 	 *
-	 * Never reset: a page load is one attempt, and a fresh authorization code
-	 * arrives only with a new page load, which destroys this store.
-	 *
-	 * Unlike `MfaEnrolment`'s flag this is **not** load-bearing — the reducer's
-	 * `status !== 'idle'` guard is total, so a repeat dispatch is refused whatever
-	 * happens here. And unlike `EmailVerification`'s it reads no status at all, so
-	 * there is no `||` whose ordering could be quietly holding it up. That was a
-	 * real defect last round.
+	 * A replacement owner is scoped to its own mount effect; if the page
+	 * was re-mounted with the same spent URL parameters, the consumed
+	 * nonce/code will fail the exchange and offer "Start again".
 	 */
+	let startedOwner: Owner | null = null;
 	let dispatched = false;
 
 	$effect(() => {
+		const key = owner;
+		if (key !== startedOwner) {
+			startedOwner = key;
+			dispatched = false;
+		}
 		if (dispatched) return;
 		if (params === null) return;
 		if (params.code === null && params.error === null) return;
 		dispatched = true;
-		flowStore.dispatch({ type: 'callbackReceived', params });
+		viewOf(key).dispatch({ type: 'callbackReceived', params });
 	});
 
 	/** Whether the session has been handed over. */
@@ -139,11 +160,12 @@
 	// for a link, so this effect is inert there without needing to know about
 	// intents. Attaching a provider must not establish a second session.
 	$effect(() => {
+		if (binding.mode === 'managed') return;
 		if (handedOver) return;
-		const state = flowStore.state;
+		const state = binding.flowStore.state;
 		if (state.status !== 'completed' || state.session === null) return;
 		handedOver = true;
-		sessionStore.dispatch({ type: 'sessionEstablished', session: state.session });
+		binding.sessionStore.dispatch({ type: 'sessionEstablished', session: state.session });
 	});
 
 	/**
@@ -158,14 +180,15 @@
 	let reportedChallenge = false;
 
 	$effect(() => {
-		const current = flowStore.state.error;
-		if (onMfaRequired === undefined || !isMfaRequired(current)) {
+		if (binding.mode === 'managed') return;
+		const current = binding.flowStore.state.error;
+		if (binding.onMfaRequired === undefined || !isMfaRequired(current)) {
 			reportedChallenge = false;
 			return;
 		}
 		if (reportedChallenge) return;
 		reportedChallenge = true;
-		onMfaRequired({ challengeId: current.challengeId, methods: current.methods });
+		binding.onMfaRequired({ challengeId: current.challengeId, methods: current.methods });
 	});
 
 	/** The panel, focused when it replaces the working message. */
@@ -178,110 +201,136 @@
 	/** A cancellation is the flow branching, not a failure. No red banner. */
 	const isDenied = $derived(error?.code === 'oauth_denied');
 	/** Suppressed while a consumer is routing to the second factor. */
-	const handlingMfa = $derived(onMfaRequired !== undefined && isMfaRequired(error));
+	const handlingMfa = $derived(
+		binding.mode !== 'managed' && binding.onMfaRequired !== undefined && isMfaRequired(error)
+	);
+
+	function handleStartOver(key: Owner) {
+		if (binding.mode === 'managed') {
+			viewOf(key).dispatch({ type: 'startOverRequested' });
+		} else {
+			binding.onStartOver();
+		}
+	}
+
+	function handleSuccess(key: Owner) {
+		if (binding.mode === 'managed') {
+			// In managed mode, a successful exchange immediately retires the slot
+			// in the feature. If an abnormal completion or custom parent leaves this
+			// panel mounted, clicking Continue dispatches startOverRequested to return
+			// cleanly to sign-in.
+			viewOf(key).dispatch({ type: 'startOverRequested' });
+		} else {
+			binding.onSuccess({ intent, returnTo });
+		}
+	}
 </script>
 
-<div class="oauth-callback {className}">
-	{#if !hasCallback}
-		<svelte:element this={`h${headingLevel}`} class="oauth-callback__title">
-			Nothing to finish here
-		</svelte:element>
-		<p class="oauth-callback__body">
-			This page completes a sign-in that started somewhere else. Start again to sign in.
-		</p>
-		<button type="button" class="oauth-callback__action" onclick={() => onStartOver()}>
-			Back to sign in
-		</button>
-	{:else if status === 'idle' || status === 'exchanging'}
-		<svelte:element this={`h${headingLevel}`} class="oauth-callback__title">
-			Finishing your sign-in
-		</svelte:element>
-		<p class="oauth-callback__body" role="status" aria-live="polite">One moment…</p>
-	{:else if status === 'completed'}
-		<div
-			bind:this={panel}
-			class="oauth-callback__panel"
-			role="status"
-			aria-live="polite"
-			tabindex="-1"
-		>
-			{#if completed}
-				{@render completed({ intent, returnTo })}
-			{:else if isLink}
+{#if flow}
+	{#each [owner] as key (key)}
+		<div class="oauth-callback {className}">
+			{#if !hasCallback}
 				<svelte:element this={`h${headingLevel}`} class="oauth-callback__title">
-					Account connected
+					Nothing to finish here
 				</svelte:element>
 				<p class="oauth-callback__body">
-					You can now sign in with it as well. Nothing else about your account has changed.
+					This page completes a sign-in that started somewhere else. Start again to sign in.
+				</p>
+				<button type="button" class="oauth-callback__action" onclick={() => handleStartOver(key)}>
+					Back to sign in
+				</button>
+			{:else if status === 'idle' || status === 'exchanging'}
+				<svelte:element this={`h${headingLevel}`} class="oauth-callback__title">
+					Finishing your sign-in
+				</svelte:element>
+				<p class="oauth-callback__body" role="status" aria-live="polite">One moment…</p>
+			{:else if status === 'completed'}
+				<div
+					bind:this={panel}
+					class="oauth-callback__panel"
+					role="status"
+					aria-live="polite"
+					tabindex="-1"
+				>
+					{#if completed}
+						{@render completed({ intent, returnTo })}
+					{:else if isLink}
+						<svelte:element this={`h${headingLevel}`} class="oauth-callback__title">
+							Account connected
+						</svelte:element>
+						<p class="oauth-callback__body">
+							You can now sign in with it as well. Nothing else about your account has changed.
+						</p>
+					{:else}
+						<svelte:element this={`h${headingLevel}`} class="oauth-callback__title">
+							You're signed in
+						</svelte:element>
+						<p class="oauth-callback__body">Welcome back.</p>
+					{/if}
+					<!--
+						Unconditional, and that is the point. A completed sign-in on a
+						callback URL is a user parked somewhere meaningless; gating this
+						button on anything is how that becomes a dead end.
+					-->
+					<button
+						type="button"
+						class="oauth-callback__action"
+						onclick={() => handleSuccess(key)}
+					>
+						{isLink ? 'Back to your account' : 'Continue'}
+					</button>
+				</div>
+			{:else if handlingMfa}
+				<!-- The consumer is routing to the code prompt. Not a failure, so no alert. -->
+				<svelte:element this={`h${headingLevel}`} class="oauth-callback__title">
+					One more step
+				</svelte:element>
+				<p class="oauth-callback__body" role="status" aria-live="polite">
+					Taking you to your second factor…
 				</p>
 			{:else}
-				<svelte:element this={`h${headingLevel}`} class="oauth-callback__title">
-					You're signed in
-				</svelte:element>
-				<p class="oauth-callback__body">Welcome back.</p>
-			{/if}
-			<!--
-				Unconditional, and that is the point. A completed sign-in on a
-				callback URL is a user parked somewhere meaningless; gating this
-				button on anything is how that becomes a dead end.
-			-->
-			<button
-				type="button"
-				class="oauth-callback__action"
-				onclick={() => onSuccess({ intent, returnTo })}
-			>
-				{isLink ? 'Back to your account' : 'Continue'}
-			</button>
-		</div>
-	{:else if handlingMfa}
-		<!-- The consumer is routing to the code prompt. Not a failure, so no alert. -->
-		<svelte:element this={`h${headingLevel}`} class="oauth-callback__title">
-			One more step
-		</svelte:element>
-		<p class="oauth-callback__body" role="status" aria-live="polite">
-			Taking you to your second factor…
-		</p>
-	{:else}
-		<div
-			bind:this={panel}
-			class="oauth-callback__panel"
-			role={isDenied ? 'status' : 'alert'}
-			aria-live="polite"
-			tabindex="-1"
-		>
-			<svelte:element this={`h${headingLevel}`} class="oauth-callback__title">
-				{#if isDenied}
-					{isLink ? 'Connection cancelled' : 'Sign-in cancelled'}
-				{:else}
-					{isLink
-						? "We couldn't connect that account"
-						: "We couldn't finish that sign-in"}
-				{/if}
-			</svelte:element>
-			{#if error}
-				<p
-					class={isDenied ? 'oauth-callback__body' : 'oauth-callback__error'}
-					data-error-code={error.code}
+				<div
+					bind:this={panel}
+					class="oauth-callback__panel"
+					role={isDenied ? 'status' : 'alert'}
+					aria-live="polite"
+					tabindex="-1"
 				>
-					{error.message}
-				</p>
+					<svelte:element this={`h${headingLevel}`} class="oauth-callback__title">
+						{#if isDenied}
+							{isLink ? 'Connection cancelled' : 'Sign-in cancelled'}
+						{:else}
+							{isLink
+								? "We couldn't connect that account"
+								: "We couldn't finish that sign-in"}
+						{/if}
+					</svelte:element>
+					{#if error}
+						<p
+							class={isDenied ? 'oauth-callback__body' : 'oauth-callback__error'}
+							data-error-code={error.code}
+						>
+							{error.message}
+						</p>
+					{/if}
+					<button type="button" class="oauth-callback__action" onclick={() => handleStartOver(key)}>
+						{isDenied ? 'Try again' : 'Start again'}
+					</button>
+				</div>
 			{/if}
-			<button type="button" class="oauth-callback__action" onclick={() => onStartOver()}>
-				{isDenied ? 'Try again' : 'Start again'}
-			</button>
-		</div>
-	{/if}
 
-	<!--
-		Outside every branch, as `ForgotPasswordForm` renders its own. A footer is
-		usually a way out — back to sign in, or someone to ask — and dropping it on
-		a failure branch removes it exactly when the user is most stuck. That was a
-		real defect in `MfaChallengeForm` last round.
-	-->
-	{#if footer}
-		<div class="oauth-callback__footer">{@render footer()}</div>
-	{/if}
-</div>
+			<!--
+				Outside every branch, as `ForgotPasswordForm` renders its own. A footer is
+				usually a way out — back to sign in, or someone to ask — and dropping it on
+				a failure branch removes it exactly when the user is most stuck. That was a
+				real defect in `MfaChallengeForm` last round.
+			-->
+			{#if footer}
+				<div class="oauth-callback__footer">{@render footer()}</div>
+			{/if}
+		</div>
+	{/each}
+{/if}
 
 <style>
 	/* Scoped CSS over core's theme tokens — see `LoginForm` for why not Tailwind. */

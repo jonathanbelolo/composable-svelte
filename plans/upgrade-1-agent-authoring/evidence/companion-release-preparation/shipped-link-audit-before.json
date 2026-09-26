@@ -1,0 +1,71 @@
+{
+  "status": "source-pack-dry-run-not-final-artifact-qualification",
+  "packages": [
+    {
+      "package": "core",
+      "packedFiles": 1258,
+      "relativeLinksChecked": 271,
+      "missing": []
+    },
+    {
+      "package": "auth",
+      "packedFiles": 399,
+      "relativeLinksChecked": 4,
+      "missing": []
+    },
+    {
+      "package": "code",
+      "packedFiles": 69,
+      "relativeLinksChecked": 1,
+      "missing": []
+    },
+    {
+      "package": "media",
+      "packedFiles": 101,
+      "relativeLinksChecked": 1,
+      "missing": []
+    },
+    {
+      "package": "chat",
+      "packedFiles": 157,
+      "relativeLinksChecked": 1,
+      "missing": []
+    },
+    {
+      "package": "maps",
+      "packedFiles": 64,
+      "relativeLinksChecked": 8,
+      "missing": [
+        {
+          "file": "API.md",
+          "link": "../../plans/phase-12/PHASE-12-PLAN.md",
+          "target": "../../plans/phase-12/PHASE-12-PLAN.md"
+        }
+      ]
+    },
+    {
+      "package": "graphics",
+      "packedFiles": 133,
+      "relativeLinksChecked": 4,
+      "missing": []
+    },
+    {
+      "package": "charts",
+      "packedFiles": 53,
+      "relativeLinksChecked": 7,
+      "missing": [
+        {
+          "file": "INTEGRATION.md",
+          "link": "../../plans/phase-11/PHASE-11-PLAN.md",
+          "target": "../../plans/phase-11/PHASE-11-PLAN.md"
+        }
+      ]
+    },
+    {
+      "package": "architecture",
+      "packedFiles": 32,
+      "relativeLinksChecked": 0,
+      "missing": []
+    }
+  ]
+}

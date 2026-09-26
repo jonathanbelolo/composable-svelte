@@ -103,7 +103,7 @@ export function createConnectionValidator(
     // Check if target port already has a connection (if not multiple)
     if (!targetPort.multiple) {
       const existingConnection = Object.values(state.edges).find(
-        (edge) => edge.target === targetNodeId && edge.targetHandle === targetHandle
+        (edge) => edge.target === targetNodeId && (edge.targetHandle || targetNodeType.inputs?.[0]?.id) === targetPort.id
       );
 
       if (existingConnection) {
@@ -117,7 +117,7 @@ export function createConnectionValidator(
     // Check if source port has reached max connections (if not multiple)
     if (!sourcePort.multiple) {
       const existingConnection = Object.values(state.edges).find(
-        (edge) => edge.source === sourceNodeId && edge.sourceHandle === sourceHandle
+        (edge) => edge.source === sourceNodeId && (edge.sourceHandle || sourceNodeType.outputs?.[0]?.id) === sourcePort.id
       );
 
       if (existingConnection) {

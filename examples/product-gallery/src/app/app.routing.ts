@@ -1,64 +1,41 @@
-/**
- * Product Gallery App - Routing Configuration
- *
- * Defines URL serialization/parsing for product detail navigation.
- */
-
 import { matchPath } from '@composable-svelte/core/routing';
-import type { AppState, AppAction } from './app.types';
-import type { ProductDetailState } from '../features/product-detail/product-detail.types';
+import type { ApplicationRouting } from '@composable-svelte/core/application';
+import type { AppAction, AppState } from './app.types.js';
 
-// ============================================================================
-// Serialization (State → URL)
-// ============================================================================
+function pathOf(url: string): string {
+  return url.split(/[?#]/, 1)[0] || '/';
+}
 
-/**
- * Serialize app state to URL path.
- */
 export function serializeAppState(state: AppState): string {
-	if (state.productDetail) {
-		return `/product/${state.productDetail.productId}`;
-	}
-	return '/';
+  return state.productDetail ? `/product/${state.productDetail.productId}` : '/';
 }
 
-// ============================================================================
-// Parsing (URL → Product ID)
-// ============================================================================
-
-/**
- * Parse URL path to product ID.
- * Returns null for home page ('/') or product ID for '/product/:id'
- */
-export function parseAppURL(path: string): string | null {
-	// Home page
-	if (path === '/' || path === '') {
-		return null;
-	}
-
-	// Product detail page
-	const params = matchPath('/product/:productId', path);
-	if (params) {
-		return params.productId ?? null;
-	}
-
-	return null;
+export function parseAppURL(url: string): string | null {
+  const path = pathOf(url);
+  if (path === '/') return null;
+  return matchPath('/product/:productId', path)?.productId ?? null;
 }
 
-// ============================================================================
-// Product ID → Action Mapping (for browser navigation)
-// ============================================================================
+export const appRouting: ApplicationRouting<AppState, AppAction> = {
+  fragment: 'native',
+  serialize: serializeAppState,
+  request: (url) => {
+    const path = pathOf(url);
+    if (path === '/') {
+      return {
+        action: { type: 'presentation', event: { type: 'dismissalRequested' } },
+        expectedURL: '/'
+      };
+    }
+    const productId = parseAppURL(path);
+    return productId
+      ? { action: { type: 'productClicked', productId }, expectedURL: `/product/${productId}` }
+      : undefined;
+  }
+};
 
-/**
- * Convert product ID to action.
- * Used when browser navigates (back/forward button).
- */
 export function productIdToAction(productId: string | null): AppAction {
-	if (!productId) {
-		// Close product detail (go home)
-		return { type: 'productDetail', action: { type: 'dismiss' } };
-	}
-
-	// Open product detail
-	return { type: 'productClicked', productId };
+  return productId
+    ? { type: 'productClicked', productId }
+    : { type: 'presentation', event: { type: 'dismissalRequested' } };
 }

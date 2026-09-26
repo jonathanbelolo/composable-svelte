@@ -1,0 +1,42 @@
+
+> @composable-svelte/graphics@0.2.1 test:browser /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics
+> vitest run --config graphics.browser.config.ts
+
+12:58:43 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics - using default configuration.
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics
+
+12:58:43 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics - using default configuration.
+12:58:43 PM [vite] (client) Re-optimizing dependencies because lockfile has changed
+ ✓ |chromium| tests/shaders/gpu-presets.browser.ts (2 tests) 148ms
+stdout | tests/babylon-native.browser.ts > disposes one real Babylon WebGL engine while its sibling remains live
+BJS - [12:58:47]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/babylon-native.browser.ts > disposes one real Babylon WebGL engine while its sibling remains live
+BJS - [12:58:47]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/babylon-native.browser.ts > proves sibling RAF render loop continuation after first engine is disposed
+BJS - [12:58:47]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/babylon-native.browser.ts > proves sibling RAF render loop continuation after first engine is disposed
+BJS - [12:58:47]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/babylon-native.browser.ts > handles WebGL context loss and restore without crashing or leaking
+BJS - [12:58:47]: Babylon.js v8.36.1 - WebGL2
+stderr | tests/babylon-native.browser.ts > handles WebGL context loss and restore without crashing or leaking
+BJS - [12:58:47]: WebGL context lost.
+stderr | tests/babylon-native.browser.ts > handles WebGL context loss and restore without crashing or leaking
+BJS - [12:58:47]: WebGL context successfully restored.
+stdout | tests/babylon-native.browser.ts > retires engine while async texture creation is in flight without throwing or resurrecting
+BJS - [12:58:47]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/babylon-native.browser.ts > mounts real managed Scene components in browser; owner retirement disposes real WebGL engine while sibling continues
+BJS - [12:58:47]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/babylon-native.browser.ts > mounts real managed Scene components in browser; owner retirement disposes real WebGL engine while sibling continues
+BJS - [12:58:47]: Babylon.js v8.36.1 - WebGL2
+stderr | tests/babylon-native.browser.ts > releases a real Babylon engine once when its managed view retires before initialize resolves
+[graphics] sceneId "initial-scene" is already in use; two scenes sharing an id will cancel each other's animation frame loop
+stdout | tests/babylon-native.browser.ts > releases a real Babylon engine once when its managed view retires before initialize resolves
+BJS - [12:58:47]: Babylon.js v8.36.1 - WebGL2
+ ✓ |chromium| tests/babylon-native.browser.ts (6 tests) 567ms
+
+ Test Files  2 passed (2)
+      Tests  8 passed (8)
+   Start at  12:58:43
+   Duration  4.01s (transform 0ms, setup 0ms, collect 2.55s, tests 715ms, environment 0ms, prepare 117ms)
+

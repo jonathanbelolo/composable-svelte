@@ -1,0 +1,40 @@
+{
+  "package.json": "b3a9fc2cbd7dbc7136952a475fe40f160408f85b417aab06df35bc5dbe2d5f4c",
+  "package-lock.json": "1ab83d85b7d632597dbe97fbfa75cecdeee34b350f6214660a836cc78cda84f6",
+  "tsconfig.json": "03fbac2a3caae943a4a92a6f99ff2afd4cd715f92644ed7192374ea316ae22a5",
+  "vite.config.ts": "6c5d275e3d2c849e61cdbefc2dc4d5184b757ae54f437a57226633d2310706f7",
+  "vite.config.mjs": "6c5d275e3d2c849e61cdbefc2dc4d5184b757ae54f437a57226633d2310706f7",
+  "playwright.config.ts": "b8991efa69c239b900fbbbf57eba722c9d3005e968ca2af27092ab34d819c0f3",
+  "index.html": "3e502d29bb89cff5deb8dad0be1ee4438d2d5aeecf66b6c30cf37b2869804e28",
+  "HANDOFF.md": "8dea915cd08f1f4e62d16f978a5bc2d9da73b389814573d0be4bfcd1559052b6",
+  "ITERATION-LOG.md": "61624573d08f76e8439362e5bbb1e2f9192e17aaef26cc02cb1ff19c1c205dc5",
+  "PUBLIC-REFERENCE-GAPS.md": "320fa3027f76dd87f0120e6a1585959855dafbc87ce306cf0e94d8f7610294c4",
+  "src/main.ts": "b302b5df854e4feac0b9dc7963c1b9d39fa444bc940608df2512ac5cb691d38e",
+  "src/App.svelte": "c72bc8d9d98bdd272d9c7172b074482d6955bde30694f2af64941599b2a57be2",
+  "src/lib/model.ts": "52c679f910683db0f5db2b38964a315e068ecedc997576028ec1f60f1d15e50e",
+  "src/lib/views.ts": "183a07560aad7b9d52fc5e323b8ca65bef5721c39ecd7ef54dd16643600919c1",
+  "src/lib/controlled-backend.ts": "76b99e0c4dca317254bdf58119be2df54d503620dd12ac0049b2d5a979784875",
+  "src/lib/components/AuthFeatureView.svelte": "e8586ea280fe0fbc30a320dc2ed7abadb218a844d8e0747c15a36b793ab28884",
+  "src/lib/components/ChangePasswordView.svelte": "4640cd9ee5f631d96335769f22fc6009f03f8101b3f5616be0c3fabb52504700",
+  "src/lib/components/ChartView.svelte": "35401230dd378f367f19cd4b55a1ff2ba94c2f69800241a7a993a11707b075d4",
+  "src/lib/components/LoginView.svelte": "25fc468e4da0adf232d6f866572f18bfa6af6ce6b872c9168a6e68ed37722881",
+  "src/lib/components/MfaView.svelte": "8f84d2cfc23ea49ec94d86c464612ef29d85322eeb746bb9647b5ed56b9e9714",
+  "tests/dashboard.test.ts": "2be7dbb977fc07932838e8597c3f63d20812d900059ab8c9d866d0abb391351a",
+  "tests/browser/dashboard.pw.ts": "0b12eaeaa53f5b11f5999b8dad51f834ad6bf414e66de2ea972e6e6cbc689bd2",
+  "scripts/ssr.mjs": "b32e4cf9d2bd027110b146e25a87ebf59a66d85e44f39fa2286d2275fec0cb0e",
+  "scripts/build.mjs": "34f17a348f3c10f428a6791ba1f02b7b90d74bb034836523c08f4141ac9b61b0",
+  "_changedFromPreOpus": [
+    "package.json",
+    "HANDOFF.md",
+    "ITERATION-LOG.md",
+    "PUBLIC-REFERENCE-GAPS.md",
+    "src/App.svelte",
+    "src/lib/model.ts",
+    "src/lib/components/ChartView.svelte",
+    "tests/dashboard.test.ts"
+  ],
+  "_newSincePreOpus": [
+    "playwright.config.ts",
+    "tests/browser/dashboard.pw.ts"
+  ]
+}

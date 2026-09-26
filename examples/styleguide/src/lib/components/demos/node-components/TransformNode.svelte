@@ -16,6 +16,7 @@
 	<div class="font-bold text-purple-600 dark:text-purple-400 mb-2">Transform</div>
 	<select
 		bind:value={data.operation}
+		aria-label="Transform operation"
 		class="w-full px-2 py-1 text-sm border rounded bg-gray-50 dark:bg-gray-900"
 	>
 		<option value="uppercase">UPPERCASE</option>

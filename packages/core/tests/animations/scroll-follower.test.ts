@@ -20,7 +20,7 @@
  *    "that was them", without going deaf to the user.
  */
 
-import { describe, it, expect, afterEach, beforeAll } from 'vitest';
+import { describe, it, expect, afterEach, beforeAll, vi } from 'vitest';
 import { createScrollFollower } from '../../src/lib/animation/scroll';
 import { assertMotionAllowed, midFlight, nextFrame, settleValue } from '../../src/lib/test/animation.js';
 
@@ -33,6 +33,7 @@ let cleanup: Array<() => void> = [];
 afterEach(() => {
 	cleanup.forEach((fn) => fn());
 	cleanup = [];
+	vi.restoreAllMocks();
 });
 
 /** A real scrollable element — jsdom would report every metric as 0. */
@@ -48,6 +49,38 @@ function scrollable(contentHeight = 2000, viewport = 200) {
 }
 
 describe('createScrollFollower', () => {
+	it('cancels the pending frame when reduced motion replaces active following', () => {
+		const frames = new Map<number, FrameRequestCallback>();
+		let nextId = 0;
+		vi.spyOn(window, 'requestAnimationFrame').mockImplementation(callback => {
+			frames.set(++nextId, callback);
+			return nextId;
+		});
+		const cancel = vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(id => {
+			frames.delete(id);
+		});
+		let reduced = false;
+		const { el, inner } = scrollable();
+		const follower = createScrollFollower(el, { get reducedMotion() { return reduced; } });
+		cleanup.push(() => follower.stop());
+		follower.follow();
+		expect(frames.size).toBe(1);
+		reduced = true;
+		follower.follow();
+		expect(el.scrollTop).toBe(el.scrollHeight - el.clientHeight);
+		expect(cancel).toHaveBeenCalledWith(1);
+		expect(frames.size).toBe(0);
+		// Content changes after the settled call must not revive the old loop.
+		const settled = el.scrollTop;
+		inner.style.height = '4000px';
+		for (const callback of [...frames.values()]) callback(16);
+		expect(el.scrollTop).toBe(settled);
+		reduced = false;
+		follower.follow();
+		expect(frames.size).toBe(1);
+		follower.stop();
+		expect(frames.size).toBe(0);
+	});
 	it('eases toward the bottom rather than jumping', async () => {
 		const { el } = scrollable();
 		const follower = createScrollFollower(el);

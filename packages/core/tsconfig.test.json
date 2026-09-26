@@ -20,6 +20,9 @@
       ],
       "@composable-svelte/core/components/ui": [
         "./dist/components/ui/index.d.ts"
+      ],
+      "@composable-svelte/core/navigation-components": [
+        "./dist/navigation-components/index.d.ts"
       ]
     }
   },
@@ -28,7 +31,9 @@
     "tests/**/*",
     "consumer/src/**/*",
     "consumer/tests/**/*",
-    "consumer/browser/**/*"
+    "consumer/browser/**/*",
+    "docs/examples/agent-patterns/src/**/*",
+    "docs/examples/agent-patterns/tests/**/*"
   ],
   "exclude": [
     "dist",

@@ -2,15 +2,16 @@
  * Tests for Spy WebSocket Client
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { onTestFinished, describe, it, expect, vi, beforeEach } from 'vitest';
 import { createSpyWebSocket } from '../../src/lib/websocket/testing/spy-client.js';
 import { createMockWebSocket } from '../../src/lib/websocket/testing/mock-client.js';
-import type { WebSocketMessage } from '../../src/lib/websocket/types.js';
+import { type WebSocketMessage, WebSocketError, WS_ERROR_CODES } from '../../src/lib/websocket/types.js';
 
 describe('Spy WebSocket Client', () => {
   describe('Connection Recording', () => {
     it('should record connection attempts', async () => {
       const mockClient = createMockWebSocket();
+      onTestFinished(() => mockClient.disconnect());
       const spyClient = createSpyWebSocket(mockClient);
 
       await spyClient.connect('wss://example.com', ['protocol1']);
@@ -23,6 +24,7 @@ describe('Spy WebSocket Client', () => {
 
     it('should record multiple connection attempts', async () => {
       const mockClient = createMockWebSocket();
+      onTestFinished(() => mockClient.disconnect());
       const spyClient = createSpyWebSocket(mockClient);
 
       await spyClient.connect('wss://example.com');
@@ -36,6 +38,7 @@ describe('Spy WebSocket Client', () => {
 
     it('should count connections to specific URL', async () => {
       const mockClient = createMockWebSocket();
+      onTestFinished(() => mockClient.disconnect());
       const spyClient = createSpyWebSocket(mockClient);
 
       await spyClient.connect('wss://example.com');
@@ -53,6 +56,7 @@ describe('Spy WebSocket Client', () => {
   describe('Disconnection Recording', () => {
     it('should record disconnections', async () => {
       const mockClient = createMockWebSocket();
+      onTestFinished(() => mockClient.disconnect());
       const spyClient = createSpyWebSocket(mockClient);
 
       await spyClient.connect('wss://example.com');
@@ -66,13 +70,14 @@ describe('Spy WebSocket Client', () => {
 
     it('should record multiple disconnections', async () => {
       const mockClient = createMockWebSocket();
+      onTestFinished(() => mockClient.disconnect());
       const spyClient = createSpyWebSocket(mockClient);
 
       await spyClient.connect('wss://example.com');
       await spyClient.disconnect(1000, 'First');
 
       await spyClient.connect('wss://example.com');
-      await spyClient.disconnect(1001, 'Second');
+      await spyClient.disconnect(3001, 'Second');
 
       expect(spyClient.disconnections).toHaveLength(2);
       expect(spyClient.disconnections[0]!.reason).toBe('First');
@@ -83,6 +88,7 @@ describe('Spy WebSocket Client', () => {
   describe('Message Sending Recording', () => {
     it('should record sent messages', async () => {
       const mockClient = createMockWebSocket();
+      onTestFinished(() => mockClient.disconnect());
       const spyClient = createSpyWebSocket(mockClient);
 
       await spyClient.connect('wss://example.com');
@@ -109,6 +115,7 @@ describe('Spy WebSocket Client', () => {
 
     it('should delegate send to real client', async () => {
       const mockClient = createMockWebSocket();
+      onTestFinished(() => mockClient.disconnect());
       const spyClient = createSpyWebSocket(mockClient);
 
       await spyClient.connect('wss://example.com');
@@ -123,6 +130,7 @@ describe('Spy WebSocket Client', () => {
   describe('Message Reception Recording', () => {
     it('should record received messages', async () => {
       const mockClient = createMockWebSocket();
+      onTestFinished(() => mockClient.disconnect());
       const spyClient = createSpyWebSocket(mockClient);
 
       await spyClient.connect('wss://example.com');
@@ -153,6 +161,7 @@ describe('Spy WebSocket Client', () => {
 
     it('should notify original listeners', async () => {
       const mockClient = createMockWebSocket();
+      onTestFinished(() => mockClient.disconnect());
       const spyClient = createSpyWebSocket(mockClient);
 
       await spyClient.connect('wss://example.com');
@@ -170,6 +179,7 @@ describe('Spy WebSocket Client', () => {
   describe('State Delegation', () => {
     it('should delegate state to real client', async () => {
       const mockClient = createMockWebSocket();
+      onTestFinished(() => mockClient.disconnect());
       const spyClient = createSpyWebSocket(mockClient);
 
       expect(spyClient.state.status).toBe('disconnected');
@@ -184,6 +194,7 @@ describe('Spy WebSocket Client', () => {
   describe('Stats Delegation', () => {
     it('should delegate stats to real client', async () => {
       const mockClient = createMockWebSocket();
+      onTestFinished(() => mockClient.disconnect());
       const spyClient = createSpyWebSocket(mockClient);
 
       await spyClient.connect('wss://example.com');
@@ -202,6 +213,7 @@ describe('Spy WebSocket Client', () => {
   describe('Event Subscription', () => {
     it('should delegate event subscriptions to real client', async () => {
       const mockClient = createMockWebSocket();
+      onTestFinished(() => mockClient.disconnect());
       const spyClient = createSpyWebSocket(mockClient);
 
       const events: string[] = [];
@@ -218,6 +230,7 @@ describe('Spy WebSocket Client', () => {
   describe('Reset Functionality', () => {
     it('should clear all recorded connections', async () => {
       const mockClient = createMockWebSocket();
+      onTestFinished(() => mockClient.disconnect());
       const spyClient = createSpyWebSocket(mockClient);
 
       await spyClient.connect('wss://example.com');
@@ -233,12 +246,13 @@ describe('Spy WebSocket Client', () => {
 
     it('should clear all recorded disconnections', async () => {
       const mockClient = createMockWebSocket();
+      onTestFinished(() => mockClient.disconnect());
       const spyClient = createSpyWebSocket(mockClient);
 
       await spyClient.connect('wss://example.com');
       await spyClient.disconnect(1000, 'First');
       await spyClient.connect('wss://example.com');
-      await spyClient.disconnect(1001, 'Second');
+      await spyClient.disconnect(3001, 'Second');
 
       expect(spyClient.disconnections).toHaveLength(2);
 
@@ -249,6 +263,7 @@ describe('Spy WebSocket Client', () => {
 
     it('should clear all recorded sent messages', async () => {
       const mockClient = createMockWebSocket();
+      onTestFinished(() => mockClient.disconnect());
       const spyClient = createSpyWebSocket(mockClient);
 
       await spyClient.connect('wss://example.com');
@@ -264,6 +279,7 @@ describe('Spy WebSocket Client', () => {
 
     it('should clear all recorded received messages', async () => {
       const mockClient = createMockWebSocket();
+      onTestFinished(() => mockClient.disconnect());
       const spyClient = createSpyWebSocket(mockClient);
 
       await spyClient.connect('wss://example.com');
@@ -277,6 +293,22 @@ describe('Spy WebSocket Client', () => {
       spyClient.reset();
 
       expect(spyClient.receivedMessages).toHaveLength(0);
+    });
+
+    it('should clear all recorded reconnections', async () => {
+      const mockClient = createMockWebSocket();
+      onTestFinished(() => mockClient.disconnect());
+      const spyClient = createSpyWebSocket(mockClient);
+
+      await spyClient.connect('wss://example.com');
+      spyClient.reconnect('First');
+      spyClient.reconnect('Second');
+
+      expect(spyClient.reconnections).toHaveLength(2);
+
+      spyClient.reset();
+
+      expect(spyClient.reconnections).toHaveLength(0);
     });
   });
 
@@ -321,6 +353,7 @@ describe('Spy WebSocket Client', () => {
   describe('Integration with Real Client', () => {
     it('should work seamlessly with mock client', async () => {
       const mockClient = createMockWebSocket();
+      onTestFinished(() => mockClient.disconnect());
       const spyClient = createSpyWebSocket(mockClient);
 
       // Connect
@@ -332,6 +365,12 @@ describe('Spy WebSocket Client', () => {
       // Receive messages
       spyClient.subscribe(() => {});
       mockClient.simulateMessage({ type: 'pong' });
+
+      // Reconnect
+      const cause = new WebSocketError('heartbeat timeout', WS_ERROR_CODES.HEARTBEAT_TIMEOUT, true);
+      spyClient.reconnect('Network glitch', cause);
+      expect(mockClient.state.status).toBe('reconnecting');
+      expect(mockClient.state.lastError).toBe(cause);
 
       // Disconnect
       await spyClient.disconnect(1000, 'Done');
@@ -347,6 +386,11 @@ describe('Spy WebSocket Client', () => {
       expect(spyClient.receivedMessages).toHaveLength(1);
       expect(spyClient.receivedMessages[0]!.data).toEqual({ type: 'pong' });
 
+      expect(spyClient.reconnections).toHaveLength(1);
+      expect(spyClient.reconnections[0]!.reason).toBe('Network glitch');
+      expect(spyClient.reconnections[0]!.cause).toBe(cause);
+      expect(spyClient.reconnections[0]!.timestamp).toBeGreaterThan(0);
+
       expect(spyClient.disconnections).toHaveLength(1);
       expect(spyClient.disconnections[0]!.code).toBe(1000);
       expect(spyClient.disconnections[0]!.reason).toBe('Done');
@@ -360,6 +404,7 @@ describe('Spy WebSocket Client', () => {
   describe('Unsubscribe Support', () => {
     it('should support unsubscribing from messages', async () => {
       const mockClient = createMockWebSocket();
+      onTestFinished(() => mockClient.disconnect());
       const spyClient = createSpyWebSocket(mockClient);
 
       await spyClient.connect('wss://example.com');
@@ -377,6 +422,7 @@ describe('Spy WebSocket Client', () => {
 
     it('should support unsubscribing from events', async () => {
       const mockClient = createMockWebSocket();
+      onTestFinished(() => mockClient.disconnect());
       const spyClient = createSpyWebSocket(mockClient);
 
       const events: string[] = [];

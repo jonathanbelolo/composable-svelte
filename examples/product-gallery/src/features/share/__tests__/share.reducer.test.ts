@@ -1,3 +1,4 @@
+import { createStore } from '@composable-svelte/core';
 import { describe, it, expect, vi } from 'vitest';
 import { shareReducer, type ShareDependencies } from '../share.reducer.js';
 import type { ShareState } from '../share.types.js';
@@ -84,6 +85,10 @@ describe('Share Reducer', () => {
       const state: ShareState = { productId: 'prod-1', selectedMethod: 'twitter' };
 
       shareReducer(state, { type: 'shareButtonTapped' }, mockDeps);
+      expect(consoleLogSpy).not.toHaveBeenCalled();
+      const store = createStore({ initialState: state, reducer: shareReducer, dependencies: mockDeps });
+      store.dispatch({ type: 'shareButtonTapped' });
+      store.destroy();
 
       expect(consoleLogSpy).toHaveBeenCalledWith('[Share] Sharing via twitter');
       consoleLogSpy.mockRestore();

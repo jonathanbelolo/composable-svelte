@@ -1,0 +1,249 @@
+# Opus independent app review: Brief B (Auth + Charts account dashboard)
+
+- **Reviewer:** Claude Opus 5.5 (`claude-opus-5-5`), fresh independent context.
+- **Date:** 2026-09-26.
+- **Workspace:** `/private/tmp/composable-final-authoring/app-b`.
+- **Inputs used:**
+  - The brief (as supplied to the reviewer).
+  - The installed public docs of core 0.13.1, auth 0.3.0 and charts 0.3.0.
+  - HANDOFF.md, ITERATION-LOG.md and PUBLIC-REFERENCE-GAPS.md.
+  - The tests.
+  - The coordinator's APP-B-RUNTIME-MANIFEST.json, APP-B-INSTALL-VERIFICATION.json, APP-B-PRE-OPUS-HASHES.json, COORDINATOR-TOOLCHAIN.json and POST-ANCESTOR-REMOVAL-RESOLUTION.json.
+- **Not used:** any root repository or migration knowledge, app-a material, or other reviewers' output.
+
+## Verdict: **PENDING** (r6 app CLEAR on type, TestStore, SSR and build evidence; the r6 browser run, final checker and external policy are outstanding)
+
+| Gate | Status |
+|---|---|
+| App as delivered by the author (pre-review) | **BLOCK**, and the evidence is preserved. The dashboard was blank after every sign-in in a real browser (R1), and sign-in was impossible after logout (R3). |
+| Review fixes R1–R6 and R2′ (on r4 artifacts) | CLEAR at the time. Browser 8/8, vitest 15/15. Receipts in `review-receipts/final/`. |
+| r6 artifact refresh (Core `729ca89f…8e0d`, Auth `dbb2611b…7112`, Charts unchanged `c36b7a06…1d`) | **Done and verified.** Installed bytes equal the exact archives, and the lock integrity equals the manifest (see the r6 section). |
+| r6 app change: injected `fetchActivity` through dependency-superset composition | **CLEAR on static and node evidence.** tsc 0, svelte-check 0/0, vitest 20/20, SSR 0, build 0. Mutation controls m1–m5 are all caught. |
+| Fresh focused independent re-review of the r6 app delta | **Done.** `r6-app-edits.diff` `4cc9ac8d…f55`: APPROVE-WITH-NOTES, minors applied. `r6-followup.diff` `b03e19bd…0f0`: APPROVE. |
+| r6 browser run (`npm run test:browser`) | **PENDING.** Waiting for a browser-lease grant from the runtime coordinator, which the dispatch requires; it was not assumed. The spec is updated, including an exact check that the MFA subject's rows come from the injected service. |
+| Coordinator final controlled checker plus separately reviewed external Auth+Charts policy | **PENDING (not supplied).** There is no bundled Auth+Charts profile, and none was used or created. |
+| App acceptance | **Not granted.** It requires the exact installed bytes, the external controls and the r6 browser run to all succeed against the files hashed in `review-receipts/r6-refresh/final/post-r6-hashes.json`. |
+
+The earlier sections below record the r4-era review (initial findings R1–R6/R2′ and receipts). They are kept as historical evidence. Where they differ, the r6 section at the end supersedes them: chart rows are now injected, so N3 is resolved, and Gap 1 and G5 are resolved in r6.
+
+## Artifact, transport and environment evidence
+
+`review-receipts/final/artifact-verification.json` and `resolution.json` record the following.
+
+- **Candidate tarball transport, not registry retrieval.**
+  - `package.json` uses `file:/private/tmp/composable-final-authoring/artifacts-b/*.tgz`.
+  - The lockfile records `resolved: file:../artifacts-b/…` with the manifest's sha512 integrity for core 0.13.1, auth 0.3.0 and charts 0.3.0.
+  - There are zero registry-resolved `@composable-svelte` entries.
+  - The install verification states `transport: local-candidate-tarballs` and `registryRetrievalClaimed: false`.
+  - Only third-party tooling (svelte, vite, vitest, playwright, …) resolves from registry URLs in the lock.
+- **Archive bytes are unchanged.** Size, sha256 and sha512 integrity all match the manifest for all three archives, re-checked at the start and at the end of the review.
+- **Installed package files are unchanged:**
+  - core: 1258 files, 0 mismatched or missing, 0 extra.
+  - auth: 404 files, 0 mismatched or missing, 0 extra.
+  - charts: 53 files, 0 mismatched or missing, 0 extra.
+- **No installed package was edited.**
+- **Lockfile is unchanged** from the pre-review snapshot (sha256 `1ab83d85…84f6`). No dependency was added or removed.
+- **No ancestor fallback.** `/private/tmp/node_modules`, `/private/node_modules`, `/node_modules` and `…/composable-final-authoring/node_modules` are all absent. Every probed import resolves under `app-b/node_modules`.
+- **Pre-review snapshot:** all 22 files matched `APP-B-PRE-OPUS-HASHES.json` before the review edited anything.
+- **Versions** (`review-receipts/final/versions.stdout`):
+  - Toolchain: node 24.10.0, npm 11.6.0, typescript 5.9.3, svelte-check 4.3.3, vite 7.3.6, `@sveltejs/vite-plugin-svelte` 6.2.1, vitest 4.0.7.
+  - Browser testing: `@playwright/test` and `playwright` 1.56.1.
+  - Runtime: svelte 5.55.3.
+  - Candidates: core 0.13.1, auth 0.3.0, charts 0.3.0.
+
+## Findings
+
+### Fixed by the review (each with a test that fails on the pre-fix code)
+
+| ID | Severity | Defect | Fix | Evidence |
+|---|---|---|---|---|
+| R1 | blocker | The chart `FeatureOutlet` was placed only under `{#if state.accountData}` or an `{:else}` branch. While the account loaded no outlet existed, so the real browser logged `Missing FeatureOutlet placement for 'chart'`, then threw `Cannot create a retired visual`, and `<main>` rendered empty after every sign-in. TestStore, svelte-check and SSR all passed regardless. | One always-mounted chart outlet; containers hidden with CSS (`application-views.md`: "Required outlets cannot simply be omitted while their layout remains active"). | `baseline/browser.*` (5 of 6 failed); `final/browser.*` (8/8) |
+| R3 | blocker | Session `logout` clears every auth flow and the app never reopened sign-in. The login route showed an empty card, so no second sign-in or subject change was possible. | Logout, an anonymous transition and a refused handoff dispatch `openLogin`. This is loop-safe: each is a one-shot transition, and `openLogin` is refused only while a temporary flow is live. | probe P1; TestStore "logout offers a fresh sign-in…"; browser "logout removes…" |
+| R2 | major | Every accepted `handoff` was treated as a sign-in, including the documented same-subject `changePassword` rotated-session handoff. That wiped the account view, chart and selection and refetched them. | `accountSubjectId`: a same-subject handoff keeps the view, and a subject change replaces it. | probe P2; TestStore "same-subject rotated password…" |
+| R4 | major | The app-owned account load was an uncancelled `Effect.run` gated only by subject id, so pending work survived logout and a same-subject logout→login ABA accepted an older result. | The documented default: `Effect.cancellable('account-load')` plus an `accountRequest` epoch. Retirement cancels the load and bumps the epoch. | TestStore paired `logout=true/false` with an abort-ignoring service; stale-epoch test |
+| R5 | major | `ChartView` re-dispatched `selectPoint` from `onSelectionChange`. That is callback-based business routing, and it collapsed brush multi-selections to one row. Keyboard selection reached the parent only through that callback. | Callback removed. The chart's own typed `ChartAction<AccountActivityRow>` dispatches flow through the genuine child view, and the parent reads the committed typed selection (`MANAGED.md`: `onSelectionChange` is for local presentation). | TestStore "typed multi-row and keyboard selections…"; browser keyboard test |
+| R6 | minor | Browser Back after sign-in stranded a signed-in user on an empty `/login`. | `navigate('login')` is vetoed while authenticated on the dashboard (a documented business veto). | `negative-control-no-back-veto.txt` |
+| R2′ | minor (from re-review) | Forward to `/dashboard` during `loggingOut` showed an empty dashboard, and account state owned by another subject could be shown on navigation. | Veto the dashboard while logging out. A dashboard navigation or subject change loads the current subject's account on any route. `accountLoaded` resets `selectedMetric`. | `negative-control-round1-model.txt` |
+
+The earlier suite, now superseded, failed 5 of the 6 new behavioral tests on the original model; see `negative-control-original-model.txt`.
+
+### Remaining notes (not blocking; not changed)
+
+- **N1 – dependency hygiene.**
+  - `@vitest/browser-playwright` is declared but unused.
+  - `playwright` is redundant beside `@playwright/test`.
+  - These were not removed, to avoid lockfile churn during review; that is a coordinator decision.
+- **N2 – duplicated build glue.**
+  - `vite.config.mjs` and `vite.config.ts` are identical.
+  - `scripts/build.mjs` duplicates `vite build` with `emptyOutDir: false`, which accumulates stale assets.
+  - The canonical command is `npm run build`. The pre-review `dist/` is preserved at `review-receipts/pre-review-dist/`.
+- **N3 – chart rows are synthesized locally.**
+  - `buildActivityMetrics` ignores `subjectId`; only the account email comes from the controlled backend's `fetchAccount`.
+  - The root cause is confirmed Gap 1, below.
+  - Delayed and reauthentication behavior is still controlled for account load, sign-in, MFA, password change and logout.
+- **N4 – `openChangePassword` / `closeChangePassword` root intents.** They forward to the auth child through `Effect.run`. This is small indirection that mirrors the shipped auth consumer's `closeMfaEnrolment` pattern. The guard duplicates the package's own refusal, which is harmless.
+- **N5 – `selectedMetric` is justified app-specific state.**
+  - It is a typed `AccountActivityRow` projection of the committed chart selection for the account banner.
+  - It is set only by the reducer from routed typed chart actions, and cleared with the account.
+  - It could instead be derived at render time.
+- **N6 – form placement.** The change-password form renders in the single auth outlet above the dashboard, not inside the Security section. This is cosmetic.
+- **N7 – SSR proof scope.**
+  - `scripts/ssr.mjs` proves three isolated roots (anonymous seeded login, authenticated dashboard, anonymous unseeded) with no cross-request leakage.
+  - It shows zero calls to the counted backend operations (login, MFA verify, account, password, logout), both immediately and after 60 ms.
+  - It shows that no startup ran: no login flow was created on the server.
+  - It does not compare equal-input determinism, and the dashboard session fixture is hand-built JS.
+  - The re-reviewer confirmed routing never reduces `navigate` on the server (`core/dist/application/routing.js`).
+- **N8 – test rigor.**
+  - The TestStore tests use `exhaustivity = 'off'` and never call `finish()`.
+  - The author's test 8 (delayed password change after logout) uses an abort-honoring deferred service, so it proves transport abort rather than a dropped late callback. The review's abort-ignoring account-load test with a negative control covers that boundary.
+  - No unit test covers a non-handoff subject change on the login route (re-review note).
+  - No browser test covers Forward during logout.
+  - Pointer/click chart selection has no browser test; keyboard selection does.
+- **N9 – out of brief scope.** No session resolution on page load, so a reload returns to sign-in. A failed account load has no retry control.
+- **N10 – N/A here.** This app uses no media devices, so "fake device tests do not prove physical microphones" does not apply.
+
+## Checklist from the brief
+
+- **Explicit ownership and freshness.**
+  - The app root reducer owns the route: pure `request`/`serialize`, documented vetoes, and no history listeners.
+  - It owns the account load: a cancellable effect, an epoch and a subject owner.
+  - Auth composition, flows, session epochs and flow retirement are package-owned via `createAuthFeature()`, used unmodified.
+  - The chart reducer is `chartReducer<AccountActivityRow>`, used unmodified.
+- **Documented acceptance.**
+  - Route changes happen only on `handoff.kind === 'accepted'`. Rejected sign-ins, MFA-pending and refused handoffs do not navigate (TestStore plus browser).
+  - The password result is read from the one-reduction `changePasswordOutcome`, and the account is kept or replaced by subject id, not object identity.
+- **Retirement.**
+  - Logout or a subject change clears the former account's data, chart and selection.
+  - The account load is cancelled and its epoch invalidated.
+  - Auth retires its own settings/flows owners.
+  - The delayed-after-retirement cases are the author's test 8 plus the review's paired abort-ignoring account-load tests.
+- **Anti-patterns:** none in `src`. There are no repeated Store facades or `createStore`, no copied package reducers, no `subscribeToActions` or `observeChildActions`, and no `$effect`/`onMount` business work. After R5 there is no callback-based managed business routing. There are no ownership casts (the only cast is a data literal `as AuthError` in the controlled backend), no fabricated views, and no duplicated lifecycles (Root/Host/FeatureViews own everything).
+- **Typed composition.**
+  - `optionalSlot` + `ManagedIntegrationBuilder` + `defineViews` over `auth.composition` and the chart slot.
+  - Genuine `PresentationFeatureViewProps` views, with managed-mode `LoginForm`, `MfaChallengeForm` and `ChangePasswordForm`.
+  - The test helpers are typed after round 2.
+- **Inactive checker rules.** No checker was run, so every architecture obligation above rests on this named manual review plus type evidence (tsc and svelte-check at 0) and runtime evidence (TestStore, browser, SSR). The coordinator's controlled checker must still run.
+
+## Public-reference usability (see PUBLIC-REFERENCE-GAPS.md, review section)
+
+- **Gap 1 is confirmed** by a compile check (`review-receipts/gap-check/`, TS2769). A builder whose dependency type extends `AuthFeatureDependencies` cannot compose `auth.composition`. This is a real core/auth typing or documentation gap.
+- **Gap 2 was mostly already documented**, but placement errors surface only at browser attachment, so node, SSR and type checks can't catch them. That is a usability gap.
+- **Gap 3 is minor and valid. Gap 4 is low.**
+- **New gap G5:** logout and refused-handoff flow clearing, with "the parent decides where to go next", is stated only in dist comments, not in the README.
+- **Overall:** after normal iteration the installed references were sufficient to build the app correctly. The defects came from not running the browser and from misreading one-reduction handoff semantics, not from missing docs, except for Gap 1 and G5.
+
+## Receipts (`review-receipts/`)
+
+Each command has `.cmd`, `.stdout`, `.stderr` and `.exit` files.
+
+- **`baseline/`** (pre-review source):
+  - Exit 0: versions, tsc, svelte-check, vitest (8/8) and ssr.
+  - Exit 1: browser (1 of 6 passed, with the review-added spec).
+  - `defect-probe.test.ts.txt` is the P1–P4 probe.
+- **`final/`** (post-review source):
+  - Exit 0: tsc, svelte-check (0 errors, 0 warnings), vitest (15/15), `npm run test:ssr`, `npm run build` and `npm run test:browser` (8/8, Chromium, Vite on 127.0.0.1:5191).
+  - Also `artifact-verification.json`, `resolution.json` and `post-review-hashes.json`.
+- **Negative controls:** `negative-control-original-model.txt`, `negative-control-round1-model.txt` and `negative-control-no-back-veto.txt`.
+- **Diffs and pre-edit copies:**
+  - `review-edits.diff` (sha256 `3a306f26d5efb9391ac8421acc1837f252c7aee72801fbabc4721439d3f8b309`) and `review-edits-round2.diff` (sha256 `c40916c478462a691ebc927e7e3848d2f3954ae08baef8adb237c09302a00525`).
+  - Round-1 copies: `round1-model.ts.txt` and `round1-dashboard.test.ts.txt`.
+  - Pre-review originals: `../opus-review-b-backup/` (the coordinator's `../pre-opus-app-b/` is the authoritative snapshot).
+- **Files changed from the pre-review snapshot:** `package.json` (added a `test:browser` script only), `src/App.svelte`, `src/lib/model.ts`, `src/lib/components/ChartView.svelte`, `tests/dashboard.test.ts`, HANDOFF.md, ITERATION-LOG.md and PUBLIC-REFERENCE-GAPS.md (review addenda appended).
+- **New files:** `playwright.config.ts` and `tests/browser/dashboard.pw.ts`.
+
+## Remaining gates before any acceptance (r4-era; superseded by the r6 section below)
+
+1. The coordinator supplies the final controlled checker and the separately reviewed exact external Auth+Charts policy, and runs them against the files hashed in `post-review-hashes.json`. Any finding is fixed in its owning scope, followed by focused re-review and rerun of only the affected checks.
+2. The coordinator decides on N1 (unused `@vitest/browser-playwright` and the redundant `playwright`). If removed, update the lock without touching candidate tarball specs or bytes, then re-verify.
+3. Optional hardening for the N8 gaps: a unit test for a non-handoff subject change, a browser test for Forward during logout, and a browser test for pointer chart selection.
+
+
+---
+
+## r6 refresh and injected-service correction (2026-09-26)
+
+### Artifact identities and transport
+
+- **Source.** The final reviewed aggregate manifest is `/private/tmp/companion-runtime-release/archives-r6/MANIFEST.json`
+  (`releaseCandidate: candidate-r6-2026-09-26`, `releaseFinal: false`).
+- **Archive checks.** Size, sha256 and sha512 integrity all match the manifest for every package:
+
+  | Package | Archive path | sha256 |
+  |---|---|---|
+  | Core 0.13.1 | `/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz` (995838 bytes) | `729ca89f1850e56bde5db23c9f8560090eed07a0dc4126374dd5e33fd11a8e0d` |
+  | Auth 0.3.0 | `/private/tmp/companion-runtime-release/archives-r6/composable-svelte-auth-0.3.0.tgz` (327285 bytes) | `dbb2611bb01616e4e9ef86a54016724cf6271e0ec337b759b5cbcb21dae27112` |
+  | Charts 0.3.0 | the app keeps `/private/tmp/composable-final-authoring/artifacts-b/composable-svelte-charts-0.3.0.tgz` | `c36b7a06e5a293259cdbebd599a1698cd448c000eac343c66411c1282a73c21d` |
+
+  The Charts copy is byte-identical to the manifest's `archives-r4` Charts entry.
+- **What changed from r4.** Only type declarations, CHANGELOG and docs in Core, and the README in Auth. Runtime JS is unchanged.
+- **Transport is local candidate tarballs** (`file:` specs), not registry retrieval.
+  - `package-lock.json` records `resolved: file:../../companion-runtime-release/archives-r6/…` with the manifest integrity for Core and Auth. Charts is unchanged.
+  - The lock diff is limited to the root entry and the Core and Auth entries.
+- **Installed contents match the archives exactly:**
+  - Core: 1258/1258 files.
+  - Auth: 404/404.
+  - Charts: 53/53.
+  - No mismatched or extra files (`review-receipts/r6-refresh/APP-B-FINAL-INSTALL-VERIFICATION.json`, which includes per-file hashes).
+- **npm's "added 50 packages" was investigated.** Using directory change times against the install start, the only directories touched were `@composable-svelte/{core,auth}` and the optional-platform scope directories. The installed platform binaries are unchanged (darwin-arm64 only). `npm ls --all` exits 0.
+- **No ancestor fallback.** Every probed import resolves under `app-b/node_modules`, and ancestor `node_modules` directories, including under `companion-runtime-release`, are absent (`final/resolution.json`).
+- **Provenance is preserved:**
+  - Pre-refresh `package.json`, `package-lock.json` and the coordinator pre-review hash file are in `review-receipts/r6-refresh/pre/`.
+  - The coordinator's `APP-B-*.json` files and `artifacts-b/` were not modified.
+  - The r4-era receipts in `review-receipts/{baseline,final}/` are kept.
+
+### Change
+
+- **Dependency type.** `AppDependencies` is now `interface extends AuthFeatureDependencies { fetchActivity(subjectId, signal?): Promise<readonly AccountActivityRow[]> }`.
+- **Composition.** It is composed with `.with(authSlot, auth.composition)`, with no casts. The r6 Core superset signatures make this type-check.
+- **The correction is sound in both directions.**
+  - Positive probe: exit 0.
+  - Negative `@ts-expect-error` probe: exit 0. A parent lacking Auth services, and a store missing `fetchActivity`, are still rejected.
+- **Account load.**
+  - `fetchAccount` and `fetchActivity` run under one `Effect.cancellable('account-load')` via `Promise.all`, with the owner-local signal forwarded.
+  - The result is accepted only through the unchanged `accountRequest` epoch and phase gate.
+  - Account ownership is still decided by `accountSubjectId`.
+  - `buildActivityMetrics` is removed.
+- **Controlled backend.**
+  - Per-subject typed rows.
+  - `fetchActivityCalls` counter and captured `activitySignals`.
+  - An abort-ignoring `delayActivity` that resolves in FIFO order.
+- **SSR.** Also asserts `fetchActivityCalls === 0` for all three request roots.
+- **Browser spec.** The MFA journey asserts the exact first injected row (`2026-09-24 — 2 logins via Mobile App`).
+- **Diffs.** `review-receipts/r6-refresh/r6-app-edits.diff` (sha256 `4cc9ac8d8b814b57621f3334de53e414e339497612494b53a2be22dbda208f55`) and `r6-followup.diff` (sha256 `b03e19bdbda04a496cdaffa688c8b8976ebb3a6cb3dae0373764f2a71261d0f0`). Pre-change copies are in `r6-refresh/pre-app-change/source/*.txt`, `r6a-*.txt`.
+
+### Proof that the injected backend is called, cancelled, and stale results rejected
+
+Each item is a TestStore case in `tests/dashboard.test.ts`:
+
+- **Called per subject.** Ada gets 7 rows and the MFA subject gets 3 exact rows. `fetchActivityCalls` goes 1 → 2.
+- **Cancelled on logout.** The captured `activitySignals[0].aborted` flips to `true` on logout. The abort-ignoring service still delivers late, and the state stays signed out, with no account, no chart and `accountLoading` false. The paired `logout=false` control accepts the same late result.
+- **Superseded same-subject request.** The old signal is aborted, the new one is not, and the old late result is dropped while the load stays pending with an unchanged epoch. Only the current result is accepted.
+- **Partial failure.** When `fetchActivity` rejects, the whole load fails: `accountError` is set and there is no partial account or chart.
+- **Mutation controls** (`r6-refresh/mutation-controls.txt`, source restored and verified with `cmp`):
+  - m1: no cancel on retire.
+  - m2: m1 plus no epoch gate.
+  - m3: uncancellable load.
+  - m4: m3 plus no epoch gate.
+  - m5: partial failure tolerated.
+  - Each is caught by at least one test. The epoch gate alone is proven by the public stale `accountLoaded` test (m2/m4). In the injected-service tests, core's managed retirement drops the late callback before the reducer sees it, which is defence in depth.
+
+### r6 receipts (`review-receipts/r6-refresh/`)
+
+- `npm-install.{cmd,stdout,stderr,exit}` (exit 0) and `npm-ls-all.txt` (exit 0).
+- `pre-app-change/*`: the refreshed packages with the unchanged app. tsc 0, svelte-check 0, vitest 15/15, SSR 0, and gap probe exit 0.
+- `final/*`: tsc 0, svelte-check 0 errors 0 warnings, vitest 20/20, SSR 0, build 0, `gap-superset-positive` 0, `gap-superset-negative` 0, `versions.stdout`, `resolution.json`, `post-r6-hashes.json`.
+- **Browser: not run for r6** (lease pending). The last browser receipt (8/8) is `review-receipts/final/browser.*`, on the pre-r6 source and r4 artifacts.
+
+### Remaining notes (non-blocking, from the r6 re-review)
+
+- **`Promise.all`.** It does not abort the sibling request when one fails; the result is still discarded. A local linked `AbortController` would stop that work early.
+- **Row objects.** The controlled backend's row objects are shared module constants, and nothing mutates them.
+- **SSR coverage.** SSR has no authenticated-without-account request root, which is the startup `loadAccount` case. It is client-only by contract.
+- **Signature style.** `fetchActivity` uses method syntax, which checks parameters bivariantly.
+- **Earlier notes still apply:** N1 (unused `@vitest/browser-playwright`, redundant `playwright`), N2, N4–N9. N3 (local rows) is resolved.
+
+### Remaining gates before any acceptance
+
+1. Grant the browser lease and run `npm run test:browser` on the r6 source, keeping the receipts. Any failure is fixed in its owning scope, followed by focused re-review.
+2. Run the coordinator's final controlled checker and separately reviewed external Auth+Charts policy against the files hashed in `review-receipts/r6-refresh/final/post-r6-hashes.json`, with these exact installed bytes. Never use a bundled combination profile.
+3. The coordinator decides on N1 (dependency hygiene). If a lock change follows, keep the candidate `file:` specs and archive bytes and re-verify.

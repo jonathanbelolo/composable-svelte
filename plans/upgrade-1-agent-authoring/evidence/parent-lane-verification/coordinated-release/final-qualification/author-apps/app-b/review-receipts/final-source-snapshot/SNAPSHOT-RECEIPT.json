@@ -1,0 +1,107 @@
+{
+  "createdAt": "2026-09-26T14:40:37.786Z",
+  "app": "Brief B authenticated account dashboard (Auth + Charts)",
+  "purpose": "Final immutable App B source identity for external qualification and the Auth-only derivative. No acceptance implied.",
+  "status": {
+    "app": "PENDING",
+    "pendingGates": [
+      "browser run after runtime lease release (npm run test:browser)",
+      "final packed checker candidate",
+      "separately reviewed external Auth+Charts policy (no bundled combination profile)"
+    ]
+  },
+  "sourceRoot": "/private/tmp/composable-final-authoring/app-b",
+  "excluded": [
+    "node_modules",
+    "dist",
+    "review-receipts"
+  ],
+  "tar": {
+    "path": "review-receipts/final-source-snapshot/app-b-final-source.tar",
+    "sha256": "2f289af3348ab116cc347fca83f6d9ea0f1a27987944a789205bb93ecf600ff2",
+    "entries": 25
+  },
+  "files": {
+    "HANDOFF.md": "bc1ff26a4e743e0c2e8cc8c8e0d07de451fed3235f710ad2d1a684169d270a28",
+    "ITERATION-LOG.md": "e4f066145fd802856487998684cd05ed8032a57a20f63a5fcd1eec1c337b263e",
+    "OPUS-APP-REVIEW.md": "2c587dd8c45afa4016ffaff5cbf7e6cfe5026b61ab23c8c0e03fd381f2ac5994",
+    "PUBLIC-REFERENCE-GAPS.md": "99ae6a0d7ac91f9566063792b3bf32c3225c1bed650238ca7ae1389848b9ddf0",
+    "index.html": "3e502d29bb89cff5deb8dad0be1ee4438d2d5aeecf66b6c30cf37b2869804e28",
+    "package-lock.json": "5e64835b656f38430e707f4ef9c881cda0f6afdd1475d454048d69a00a6dae9e",
+    "package.json": "79b418af04dfa6a8f2e322019fb17ece9af656f0e2b1c5101e904ab9cb2ec575",
+    "playwright.config.ts": "b8991efa69c239b900fbbbf57eba722c9d3005e968ca2af27092ab34d819c0f3",
+    "scripts/build.mjs": "34f17a348f3c10f428a6791ba1f02b7b90d74bb034836523c08f4141ac9b61b0",
+    "scripts/ssr.mjs": "a5101ed2efb6de918661b674c8ab21d0cde335158ed76bcfe19219ee577e8344",
+    "src/App.svelte": "c72bc8d9d98bdd272d9c7172b074482d6955bde30694f2af64941599b2a57be2",
+    "src/lib/components/AuthFeatureView.svelte": "e8586ea280fe0fbc30a320dc2ed7abadb218a844d8e0747c15a36b793ab28884",
+    "src/lib/components/ChangePasswordView.svelte": "4640cd9ee5f631d96335769f22fc6009f03f8101b3f5616be0c3fabb52504700",
+    "src/lib/components/ChartView.svelte": "35401230dd378f367f19cd4b55a1ff2ba94c2f69800241a7a993a11707b075d4",
+    "src/lib/components/LoginView.svelte": "25fc468e4da0adf232d6f866572f18bfa6af6ce6b872c9168a6e68ed37722881",
+    "src/lib/components/MfaView.svelte": "8f84d2cfc23ea49ec94d86c464612ef29d85322eeb746bb9647b5ed56b9e9714",
+    "src/lib/controlled-backend.ts": "74eb38c676d5d83d20b2e80919faf9ab1d6f85de724a0e9cd1743e3cdbd5d3d0",
+    "src/lib/model.ts": "99eecdf8dba65166271dcd1c8784e8bfb2586a00c5d43a1fc196bc11b645c754",
+    "src/lib/views.ts": "183a07560aad7b9d52fc5e323b8ca65bef5721c39ecd7ef54dd16643600919c1",
+    "src/main.ts": "b302b5df854e4feac0b9dc7963c1b9d39fa444bc940608df2512ac5cb691d38e",
+    "tests/browser/dashboard.pw.ts": "068fada55d9671f7919237835239ab0b291c40cd54a54eb051d6eb3b6778c543",
+    "tests/dashboard.test.ts": "e982a2b8ee9afea641044e90b3a031e46f465f3595bc591d4516beb786d147f3",
+    "tsconfig.json": "03fbac2a3caae943a4a92a6f99ff2afd4cd715f92644ed7192374ea316ae22a5",
+    "vite.config.mjs": "6c5d275e3d2c849e61cdbefc2dc4d5184b757ae54f437a57226633d2310706f7",
+    "vite.config.ts": "6c5d275e3d2c849e61cdbefc2dc4d5184b757ae54f437a57226633d2310706f7"
+  },
+  "runtime": {
+    "transport": "local-candidate-tarballs (file: specs); no registry retrieval of candidate packages",
+    "manifest": {
+      "path": "/private/tmp/companion-runtime-release/archives-r6/MANIFEST.json",
+      "sha256": "2813a2094329e87d368d73d5244ecdb48d34f5e1015ad05e8b3ac144fe6f3951"
+    },
+    "packages": [
+      {
+        "name": "@composable-svelte/core",
+        "spec": "file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz",
+        "archiveSha256": "729ca89f1850e56bde5db23c9f8560090eed07a0dc4126374dd5e33fd11a8e0d",
+        "installedFilesVerified": 1258,
+        "mismatchedOrMissing": 0,
+        "extra": 0
+      },
+      {
+        "name": "@composable-svelte/auth",
+        "spec": "file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-auth-0.3.0.tgz",
+        "archiveSha256": "dbb2611bb01616e4e9ef86a54016724cf6271e0ec337b759b5cbcb21dae27112",
+        "installedFilesVerified": 404,
+        "mismatchedOrMissing": 0,
+        "extra": 0
+      },
+      {
+        "name": "@composable-svelte/charts",
+        "spec": "file:/private/tmp/composable-final-authoring/artifacts-b/composable-svelte-charts-0.3.0.tgz",
+        "archiveSha256": "c36b7a06e5a293259cdbebd599a1698cd448c000eac343c66411c1282a73c21d",
+        "installedFilesVerified": 53,
+        "mismatchedOrMissing": 0,
+        "extra": 0
+      }
+    ],
+    "lockSha256": "5e64835b656f38430e707f4ef9c881cda0f6afdd1475d454048d69a00a6dae9e",
+    "svelte": "5.55.3"
+  },
+  "toolchain": [
+    "v24.10.0",
+    "11.6.0",
+    "Version 5.9.3",
+    "svelte-check, 4.3.3",
+    "vite/7.3.6 darwin-arm64 node-v24.10.0",
+    "vitest/4.0.7 darwin-arm64 node-v24.10.0",
+    "Version 1.56.1"
+  ],
+  "evidence": {
+    "reviews": {
+      "review-edits.diff": "3a306f26d5efb9391ac8421acc1837f252c7aee72801fbabc4721439d3f8b309",
+      "review-edits-round2.diff": "c40916c478462a691ebc927e7e3848d2f3954ae08baef8adb237c09302a00525",
+      "r6-refresh/r6-app-edits.diff": "4cc9ac8d8b814b57621f3334de53e414e339497612494b53a2be22dbda208f55",
+      "r6-refresh/r6-followup.diff": "b03e19bdbda04a496cdaffa688c8b8976ebb3a6cb3dae0373764f2a71261d0f0",
+      "sequential/sequential.diff": "3d4b4749adb893c6b54000d0d88af9f49b11c45c047494088a7cb2f7550c1c95",
+      "sequential/sequential-followup.diff": "e85cce2495855240a1fb4ff878738104ced5b71fbeacf33352ad9293a5333a89"
+    },
+    "finalReceipts": "review-receipts/sequential/final/ (tsc 0, svelte-check 0/0, vitest 23/23, ssr 0, build 0)",
+    "browser": "not run on final source (lease pending); last pass 8/8 at review-receipts/final/browser.* on pre-r6 source"
+  }
+}

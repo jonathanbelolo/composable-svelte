@@ -13,8 +13,42 @@ import type { Reducer } from '@composable-svelte/core';
 import type {
 	CodeHighlightState,
 	CodeHighlightAction,
-	CodeHighlightDependencies
+	CodeHighlightDependencies,
+	SupportedLanguage
 } from './code-highlight.types.js';
+
+/**
+ * Highlight `code` as `language`, reporting which input the result belongs to.
+ *
+ * Highlighting is supersede-only: every `init`, `codeChanged` and
+ * `languageChanged` starts one, and a result is applied only while its code and
+ * language are still the state's (see `isStale`). An earlier request that
+ * resolves late is dropped instead of overwriting the newer result.
+ */
+const highlight = (
+	deps: CodeHighlightDependencies,
+	code: string,
+	language: SupportedLanguage,
+	logError = false
+) =>
+	Effect.run<CodeHighlightAction>(async (dispatch) => {
+		try {
+			const html = await deps.highlightCode(code, language);
+			dispatch({ type: 'highlighted', html, code, language });
+		} catch (e) {
+			if (logError) console.error('[CodeHighlight] Highlighting error:', e);
+			const error = e instanceof Error ? e.message : 'Highlighting failed';
+			dispatch({ type: 'highlightFailed', error, code, language });
+		}
+	});
+
+/** A tagged result for code or a language the state has since moved away from. */
+const isStale = (
+	state: CodeHighlightState,
+	result: { code?: string | undefined; language?: SupportedLanguage | undefined }
+): boolean =>
+	(result.code !== undefined && result.code !== state.code) ||
+	(result.language !== undefined && result.language !== state.language);
 
 /**
  * CodeHighlight reducer
@@ -41,16 +75,7 @@ export const codeHighlightReducer: Reducer<
 			if (state.code && !state.highlightedCode && !state.isHighlighting) {
 				return [
 					{ ...state, isHighlighting: true, error: null },
-					Effect.run(async (dispatch) => {
-						try {
-							const html = await deps.highlightCode(state.code, state.language);
-							dispatch({ type: 'highlighted', html });
-						} catch (e) {
-							console.error('[CodeHighlight] Highlighting error:', e);
-							const error = e instanceof Error ? e.message : 'Highlighting failed';
-							dispatch({ type: 'highlightFailed', error });
-						}
-					})
+					highlight(deps, state.code, state.language, true)
 				];
 			}
 			return [state, Effect.none()];
@@ -64,15 +89,7 @@ export const codeHighlightReducer: Reducer<
 					isHighlighting: true,
 					error: null
 				},
-				Effect.run(async (dispatch) => {
-					try {
-						const html = await deps.highlightCode(action.code, state.language);
-						dispatch({ type: 'highlighted', html });
-					} catch (e) {
-						const error = e instanceof Error ? e.message : 'Highlighting failed';
-						dispatch({ type: 'highlightFailed', error });
-					}
-				})
+				highlight(deps, action.code, state.language)
 			];
 
 		case 'languageChanged':
@@ -85,21 +102,15 @@ export const codeHighlightReducer: Reducer<
 					isHighlighting: true,
 					error: null
 				},
-				Effect.run(async (dispatch) => {
-					try {
-						const html = await deps.highlightCode(state.code, action.language);
-						dispatch({ type: 'highlighted', html });
-					} catch (e) {
-						const error = e instanceof Error ? e.message : 'Highlighting failed';
-						dispatch({ type: 'highlightFailed', error });
-					}
-				})
+				highlight(deps, state.code, action.language)
 			];
 
 		case 'highlighted':
+			if (isStale(state, action)) return [state, Effect.none()];
 			return [{ ...state, highlightedCode: action.html, isHighlighting: false }, Effect.none()];
 
 		case 'highlightFailed':
+			if (isStale(state, action)) return [state, Effect.none()];
 			return [{ ...state, error: action.error, isHighlighting: false }, Effect.none()];
 
 		case 'themeChanged':

@@ -25,18 +25,19 @@
 import type { NetworkError } from '../errors/types.js';
 
 /**
- * Whether a rejection is a cancellation rather than a failure.
+ * Whether a rejection is a standard abort or the exact request signal reason.
  *
  * Checked by `name`, not `instanceof DOMException`: a polyfilled or
  * non-browser runtime may reject with a plain `Error` named `AbortError`, and
  * core's own effect runner checks the name for the same reason
  * (`store.svelte.ts`, where it suppresses the console noise).
  */
-function isAbort(thrown: unknown): boolean {
+export function isCancellation(thrown: unknown, signal?: AbortSignal | null): boolean {
 	return (
-		typeof thrown === 'object' &&
+		(signal?.aborted === true && thrown === signal.reason) ||
+		(typeof thrown === 'object' &&
 		thrown !== null &&
-		(thrown as { name?: unknown }).name === 'AbortError'
+		(thrown as { name?: unknown }).name === 'AbortError')
 	);
 }
 
@@ -59,12 +60,48 @@ const UNREACHABLE: NetworkError = {
  * `AuthDependencies` makes on behalf of every member. An abort passes through
  * untouched: it is a cancellation, `toAuthError` already classifies it, and a
  * caller holding its own `AbortSignal` needs to keep telling the two apart.
+ * Custom reasons retain identity here; the effect runner may only recognize
+ * standard AbortError cancellation for its own error-reporting policy.
  */
-export async function send(input: string, init: RequestInit): Promise<Response> {
+export async function send(
+	input: string,
+	init: RequestInit,
+	customFetch?: typeof fetch
+): Promise<Response> {
 	try {
-		return await fetch(input, init);
+		const fetchFn = customFetch ?? fetch;
+		return await fetchFn(input, init);
 	} catch (error) {
-		if (isAbort(error)) throw error;
+		if (isCancellation(error, init.signal)) throw error;
 		throw UNREACHABLE;
 	}
+}
+
+/** Read bytes separately from JSON parsing so a stream failure is not bad JSON. */
+export async function readResponseJson(response: Response, signal?: AbortSignal): Promise<unknown> {
+	if (response.bodyUsed || response.body?.locked) {
+		throw new TypeError('Response body is already used or locked');
+	}
+	// Native Response.text() in Chromium replaces a stream's rejection reason
+	// with TypeError("Failed to fetch"). Read through the standard stream reader
+	// so caller cancellation identity survives in both browsers and Node.
+	const reader = response.body?.getReader();
+	const decoder = new TextDecoder();
+	const chunks: string[] = [];
+	try {
+		if (reader) {
+			for (;;) {
+				const { value, done } = await reader.read();
+				if (done) break;
+				chunks.push(decoder.decode(value, { stream: true }));
+			}
+		}
+		chunks.push(decoder.decode());
+	} catch (error) {
+		if (isCancellation(error, signal)) throw error;
+		throw UNREACHABLE;
+	} finally {
+		reader?.releaseLock();
+	}
+	return JSON.parse(chunks.join(''));
 }

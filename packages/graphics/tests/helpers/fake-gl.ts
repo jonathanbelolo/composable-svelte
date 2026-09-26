@@ -114,6 +114,7 @@ export interface FakeGL {
 	 * so losing the context cannot get there. Modelling allocation failure and
 	 * lostness as one thing would leave three guards permanently unreachable.
 	 */
+	getContext(canvas: HTMLCanvasElement): WebGLRenderingContext;
 	failNextCreate(kind: 'texture' | 'program' | 'shader' | 'buffer', count?: number): void;
 }
 
@@ -298,21 +299,7 @@ export function createFakeGL(): FakeGL {
 		if (name) uniformWrites.set(name, value);
 	};
 
-	/**
-	 * Which canvases have had their context lost.
-	 *
-	 * Per canvas, not one flag, because this fake hands the *same* context object
-	 * to every canvas that asks — and `checkWebGLSupport` creates a throwaway
-	 * canvas, probes it, and releases it with `loseContext()` on every
-	 * `createOverlay`. In a browser that frees the probe's own context and
-	 * touches nothing else. With one shared flag it lost the overlay's, and every
-	 * element in the package failed to upload: 112 tests, none of them about
-	 * context loss.
-	 *
-	 * Lostness is the only property where the aliasing is observable, so it is
-	 * the only one modelled per canvas. Calls and resource counts stay shared,
-	 * which is what the assertions want.
-	 */
+	/** Context loss belongs to a canvas; aggregate call/resource counters stay shared. */
 	const lostCanvases = new WeakSet<HTMLCanvasElement>();
 	/** Before any canvas has claimed the context — the unit tests of this file. */
 	let detachedLost = false;
@@ -633,6 +620,41 @@ export function createFakeGL(): FakeGL {
 		)
 	};
 
+	const canvasContexts = new WeakMap<HTMLCanvasElement, WebGLRenderingContext>();
+	const getContext = (canvas: HTMLCanvasElement): WebGLRenderingContext => {
+		const existing = canvasContexts.get(canvas);
+		if (existing) return existing;
+		// Keep test fault injection on fake.context effective, while executing
+		// every retained context/extension method against its own canvas.
+		const bindSurface = (surface: object): object => {
+			const methods = new WeakMap<Function, Function>();
+			return new Proxy(surface, {
+				get(target, key, receiver) {
+					if (key === 'canvas') return canvas;
+					const value: unknown = Reflect.get(target, key, receiver);
+					if (typeof value !== 'function') return value;
+					let bound = methods.get(value);
+					if (!bound) {
+						bound = (...args: unknown[]) => {
+							const previousCanvas = state.canvas;
+							state.canvas = canvas;
+							try {
+								const result: unknown = Reflect.apply(value, target, args);
+								return key === 'getExtension' && result && typeof result === 'object'
+									? bindSurface(result) : result;
+							} finally { state.canvas = previousCanvas; }
+						};
+						methods.set(value, bound);
+					}
+					return bound;
+				}
+			});
+		};
+		const context = bindSurface(gl) as WebGLRenderingContext;
+		canvasContexts.set(canvas, context);
+		return context;
+	};
+
 	return {
 		live: (kind) => counts[kind]!.made - counts[kind]!.freed,
 		created: (kind) => counts[kind]!.made,
@@ -680,6 +702,7 @@ export function createFakeGL(): FakeGL {
 			drawCount = 0;
 		},
 		context: gl as unknown as WebGLRenderingContext,
+		getContext,
 		get canvas() {
 			return state.canvas;
 		},
@@ -696,31 +719,22 @@ export function createFakeGL(): FakeGL {
  * reaches the context by the same route it does in a browser — including
  * `WebGLContextManager.createContext`, which is private and takes no seam.
  */
-/**
- * Nesting depth, so two installs and two undos land back on the real thing.
- *
- * Each installer used to capture whatever `getContext` happened to be there and
- * restore it on undo. Install twice and undo in *push* order — which every
- * suite does, via `undo.forEach` — and the prototype is left holding the first
- * fake's patch forever. `component-api.test.ts` installs twice inside one `it`,
- * so this fired already; it was harmless only because vitest isolates files.
- */
-let glInstalls = 0;
+// Track active installations, so either cleanup order restores the latest live stub.
+const glInstalls: Array<HTMLCanvasElement['getContext']> = [];
 let pristineGetContext: HTMLCanvasElement['getContext'] | null = null;
 
 export function installFakeGL(fake: FakeGL): () => void {
-	if (glInstalls === 0) pristineGetContext = HTMLCanvasElement.prototype.getContext;
-	glInstalls += 1;
+	if (glInstalls.length === 0) pristineGetContext = HTMLCanvasElement.prototype.getContext;
 	let undone = false;
 
-	HTMLCanvasElement.prototype.getContext = function (
+	const installed = function (
 		this: HTMLCanvasElement,
 		type: string
 	) {
 		if (type === 'webgl' || type === 'experimental-webgl') {
 			// Remembered so `WEBGL_lose_context` can dispatch on the right canvas.
 			fake.canvas = this;
-			return fake.context;
+			return fake.getContext(this);
 		}
 		// A minimal 2D context, because `TextureFactory.scaleImage` needs one.
 		// Returning null here made the auto-scaling path — the whole reason
@@ -744,15 +758,15 @@ export function installFakeGL(fake: FakeGL): () => void {
 		}
 		return null;
 	} as HTMLCanvasElement['getContext'];
+	glInstalls.push(installed);
+	HTMLCanvasElement.prototype.getContext = installed;
 
 	return () => {
 		if (undone) return;
 		undone = true;
-		glInstalls -= 1;
-		if (glInstalls === 0 && pristineGetContext) {
-			HTMLCanvasElement.prototype.getContext = pristineGetContext;
-			pristineGetContext = null;
-		}
+		glInstalls.splice(glInstalls.indexOf(installed), 1);
+		HTMLCanvasElement.prototype.getContext = glInstalls.at(-1) ?? pristineGetContext!;
+		if (!glInstalls.length) pristineGetContext = null;
 	};
 }
 
@@ -764,7 +778,7 @@ export function installFakeGL(fake: FakeGL): () => void {
  * `createOverlay` returns an `OverlayError` — which looks, from a test, exactly
  * like the code under test refusing to work.
  */
-let observerInstalls = 0;
+const observerInstalls: Array<{ io: unknown; ro: unknown }> = [];
 let pristineObservers: { io: unknown; ro: unknown } | null = null;
 
 export function installFakeObservers(): () => void {
@@ -772,7 +786,7 @@ export function installFakeObservers(): () => void {
 	// Captured once, at the outermost install. Capturing per-install and
 	// restoring from whichever undo happens to reach zero restores the *stub*,
 	// because by then that is what the inner install saw.
-	if (observerInstalls === 0) {
+	if (observerInstalls.length === 0) {
 		pristineObservers = { io: g.IntersectionObserver, ro: g.ResizeObserver };
 	}
 
@@ -788,19 +802,16 @@ export function installFakeObservers(): () => void {
 	g.IntersectionObserver = Stub;
 	g.ResizeObserver = Stub;
 
-	// Same nesting problem as `installFakeGL`: `had` captures whatever was
-	// there, so a second install captures the first stub and undoing in push
-	// order leaves it behind.
-	observerInstalls += 1;
+	const installed = { io: Stub, ro: Stub };
+	observerInstalls.push(installed);
 	let undone = false;
 	return () => {
 		if (undone) return;
 		undone = true;
-		observerInstalls -= 1;
-		if (observerInstalls === 0 && pristineObservers) {
-			g.IntersectionObserver = pristineObservers.io;
-			g.ResizeObserver = pristineObservers.ro;
-			pristineObservers = null;
-		}
+		observerInstalls.splice(observerInstalls.indexOf(installed), 1);
+		const active = observerInstalls.at(-1) ?? pristineObservers!;
+		g.IntersectionObserver = active.io;
+		g.ResizeObserver = active.ro;
+		if (!observerInstalls.length) pristineObservers = null;
 	};
 }

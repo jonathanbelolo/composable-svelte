@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import type { Store } from '@composable-svelte/core';
+	import { onMount, untrack } from 'svelte';
 	import type { EditorView } from 'codemirror';
 	import type {
 		CodeEditorState,
@@ -17,30 +16,70 @@
 		updateLineNumbers,
 		updateFolding,
 		updateAutocomplete,
-		runEditorCommand
+		runEditorCommand,
+		restoreEditorValue
 	} from './codemirror-wrapper.js';
+	import {
+		bindViewSource,
+		observesActions,
+		warnStoreReplaced,
+		type ViewSource
+	} from '../internal/view-source.js';
 
-	/**
-	 * Store containing all component state
-	 * NO component $state - all application state lives in the store
-	 */
-	const { store, showToolbar = true }: { store: Store<CodeEditorState, CodeEditorAction>; showToolbar?: boolean | undefined } = $props();
+	type ValueReport = Extract<CodeEditorAction, { type: 'valueChanged' }>;
+
+	const {
+		store,
+		showToolbar = true,
+		autofocus = false
+	}: {
+		/**
+		 * Either a standalone `Store` or a managed view: a `FeatureViewProps`
+		 * store, or the result of `scopeTo` / `composition.bind`. It is bound
+		 * once, at mount. `FeatureViews` and `FeatureOutlet` remount per owner;
+		 * a hand-bound view needs `{#key view}`.
+		 */
+		store: ViewSource<CodeEditorState, CodeEditorAction>;
+		showToolbar?: boolean | undefined;
+		/**
+		 * Focus the editor once it has been created.
+		 *
+		 * Durable configuration rather than a command: a `focus` dispatched
+		 * before the asynchronous editor exists is dropped, and that includes
+		 * one dispatched in the same turn that creates this editor's owner.
+		 */
+		autofocus?: boolean | undefined;
+	} = $props();
+
+	// The engine, its subscriptions and the markup all serve this one store.
+	const source = untrack(() => store);
+	let warnedReplaced = false;
+	$effect(() => {
+		if (store !== source && !warnedReplaced) {
+			warnedReplaced = true;
+			warnStoreReplaced('CodeEditor');
+		}
+	});
+
+	// A managed view reads `undefined` once its owner retires, which can land
+	// before the outlet unmounts this component. Keep showing the last
+	// committed state rather than crash on it. Not $state: written only here.
+	let retained: CodeEditorState | undefined = untrack(() => source.state);
+	const current = $derived.by(() => {
+		const next = $source;
+		if (next !== undefined) retained = next;
+		return retained;
+	});
 
 	// Editor DOM reference
-	let editorElement: HTMLElement;
+	let editorElement: HTMLElement | undefined = $state();
 	let view: EditorView | null = null;
 
-	// Track CodeMirror's internal value to prevent circular updates.
-	//
-	// Not $state: this is read AND written inside the effect below, which is the
-	// shape that produces `effect_update_depth_exceeded`. It terminated only
-	// because the write falsified its own condition. It is never read from the
-	// template, so a plain `let` is both sufficient and safer.
-	let codemirrorValue = '';
-
-	// Not $state, for the same reason: the sync effect reads and writes these.
-	// A reactive guard re-triggers the effect it lives in. Same pattern and same
-	// rationale as `DropdownMenu.svelte` in core.
+	// What the live view was last brought to. Plain `let`s, not $state: they are
+	// read and written by the synchronous state listener, and nothing renders
+	// them.
+	let appliedValue: string | null = null;
+	let appliedRevision = 0;
 	let appliedLanguage: SupportedLanguage | null = null;
 	let appliedTheme: 'light' | 'dark' | 'auto' | null = null;
 	let appliedReadOnly: boolean | null = null;
@@ -55,20 +94,12 @@
 	 * Idempotent by value, and that is load-bearing rather than an optimisation:
 	 * flipping `readOnly` while the editor has focus blurs `contentDOM`, the
 	 * update listener sees `focusChanged` and dispatches `blurred` back into the
-	 * store, which re-runs this effect. These guards are what make that second
-	 * pass a no-op instead of a cycle. The same applies to the ~2 dispatches per
-	 * keystroke.
+	 * store, which notifies the state listener again. These guards, each set
+	 * BEFORE its update, are what make that second pass a no-op instead of a
+	 * cycle. The same applies to the ~2 dispatches per keystroke.
 	 */
-	function syncConfig(
-		editor: EditorView,
-		language: SupportedLanguage,
-		theme: 'light' | 'dark' | 'auto',
-		readOnly: boolean,
-		tabSize: number,
-		showLineNumbers: boolean,
-		enableFolding: boolean,
-		enableAutocomplete: boolean
-	): void {
+	function syncConfig(editor: EditorView, state: CodeEditorState): void {
+		const { language, theme, readOnly, tabSize, showLineNumbers, enableFolding, enableAutocomplete } = state;
 		if (theme !== appliedTheme) {
 			appliedTheme = theme;
 			updateEditorTheme(editor, theme);
@@ -97,10 +128,11 @@
 			appliedLanguage = language;
 			// Stale-request guarded inside the wrapper.
 			updateEditorLanguage(editor, language).catch((e: unknown) => {
+				if (!mounted) return;
 				// Surface it. This used to reset the guard and drop the reason,
 				// which is why `state.error` had no writer and its banner was
-				// unreachable markup.
-				store.dispatch({
+				// unreachable markup. A retired managed view drops this dispatch.
+				source.dispatch({
 					type: 'languageLoadFailed',
 					language,
 					error: e instanceof Error ? e.message : String(e)
@@ -116,159 +148,240 @@
 		}
 	}
 
-	// Initialize CodeMirror on mount
-	onMount(() => {
-		const initial = {
-			value: $store.value,
-			language: $store.language,
-			theme: $store.theme,
-			showLineNumbers: $store.showLineNumbers,
-			readOnly: $store.readOnly,
-			enableAutocomplete: $store.enableAutocomplete,
-			enableFolding: $store.enableFolding,
-			tabSize: $store.tabSize
-		};
+	/**
+	 * This editor's reports that state has not answered yet, oldest first, with
+	 * the value each carries and the `valueRevision` state reaches if it is
+	 * accepted.
+	 *
+	 * A managed store queues a report made during a drain, so several can be
+	 * in flight while state still holds an older value. That older value is
+	 * the editor's own past, not an external write: writing it back would
+	 * rewind the document and start a ping-pong with the queued reports.
+	 *
+	 * An entry leaves when its report is reduced: `reconcile` removes an
+	 * accepted one, `settle` a declined one, and an external write clears them
+	 * all. The bound only matters for a burst of more reports than this in one
+	 * drain. The oldest is then forgotten, so its echo reads as an external
+	 * write: the document is rewound to it, with an undo entry, and the queued
+	 * reports replay one replacement at a time. It converges on state.
+	 */
+	const inFlight: Array<{ report: ValueReport; value: string; revision: number }> = [];
+	const MAX_IN_FLIGHT = 256;
+	/** True while the editor applies state; that change is not an edit. */
+	let writing = false;
+	/**
+	 * Whether this store tells the component which actions it reduced. A
+	 * standalone `Store` without `subscribeToActions` does not, but it reduces
+	 * synchronously, so a report has been answered once `dispatch` returns.
+	 */
+	const hearsActions = observesActions(source);
 
-		createEditorView(editorElement, store, initial).then((editorView) => {
-			view = editorView;
-			// Record what CodeMirror actually received, not what the store says
-			// by the time this promise resolves.
-			codemirrorValue = initial.value;
-			appliedLanguage = initial.language;
-			appliedTheme = initial.theme;
-			appliedReadOnly = initial.readOnly;
-			appliedTabSize = initial.tabSize;
-			appliedShowLineNumbers = initial.showLineNumbers;
-			appliedFolding = initial.enableFolding;
-			appliedAutocomplete = initial.enableAutocomplete;
-
-			// Catch up on anything dispatched while the view was being built.
-			// The effect below cannot do this: `view` is deliberately not
-			// reactive, so its dependency set is the store scalars only and it
-			// does not re-run when the view lands.
-			const current = store.state;
-			syncConfig(
-				editorView,
-				current.language,
-				current.theme,
-				current.readOnly,
-				current.tabSize,
-				current.showLineNumbers,
-				current.enableFolding,
-				current.enableAutocomplete
-			);
-			if (current.value !== codemirrorValue) {
-				// Not undoable: this is the editor catching up to state it was
-				// built from, not an edit. Without this the editor opens with
-				// Undo already enabled and one press wipes the seeded content.
-				updateEditorValue(editorView, current.value, { addToHistory: false });
-				codemirrorValue = current.value;
+	/**
+	 * The editor's dispatch target. It stamps each edit report with the
+	 * revision it expects state to be at, and records it. The report of a write
+	 * this component made from state is not sent: the reducer would only
+	 * discard it as stale, and sending it costs a turn per load.
+	 */
+	const sink = {
+		dispatch(action: CodeEditorAction): void {
+			if (action.type !== 'valueChanged') {
+				source.dispatch(action);
+				return;
 			}
-		});
-
-		// Command actions reach the editor here.
-		//
-		// Deliberately `subscribeToActions` and not an `$effect`: Svelte
-		// coalesces effect runs, so two commands dispatched in the same tick
-		// would collapse into one. This fires synchronously, once per dispatch.
-		// It reads no store *state*, so it never re-subscribes.
-		const unsubscribe = store.subscribeToActions?.((action) => {
-			if (!view) return;
-			switch (action.type) {
-				case 'undo':
-				case 'redo':
-				case 'selectAll':
-				case 'deleteSelection':
-				case 'focus':
-				case 'blur':
-					runEditorCommand(view, action);
-					return;
-				case 'insertText':
-					runEditorCommand(view, action);
-					return;
-			}
-		});
-
-		if (!unsubscribe) {
-			// `subscribeToActions` is optional on the Store contract
-			// (`core/types.ts:239`). Without it the command actions silently do
-			// nothing, which is the exact defect class this component is being
-			// cleaned of — so say so loudly rather than degrade quietly.
-			console.warn(
-				'[CodeEditor] this store does not implement subscribeToActions, so ' +
-					'undo / redo / insertText / deleteSelection / selectAll cannot reach the editor.'
-			);
+			if (writing) return;
+			const baseRevision = inFlight[inFlight.length - 1]?.revision ?? appliedRevision;
+			const report: ValueReport = { ...action, baseRevision };
+			inFlight.push({ report, value: report.value, revision: baseRevision + 1 });
+			if (inFlight.length > MAX_IN_FLIGHT) inFlight.shift();
+			source.dispatch(report);
+			if (!hearsActions) settle(report);
 		}
+	};
+
+	/**
+	 * Bring the live view to `state`: configuration, then the document.
+	 *
+	 * Runs synchronously from the store's state listener, which both store
+	 * kinds notify before any action of the same turn. So a value or setting
+	 * reduced before a command is in the editor when the command runs — a
+	 * loaded file before an `insertText`, `setReadOnly(false)` before an edit.
+	 * It used to run in `$effect`s, after the command.
+	 *
+	 * A value and revision this editor reported is its own echo arriving: the
+	 * document is already there or further on, so it is left alone. Anything
+	 * else is an external write, including one that restores the text an
+	 * in-flight report was edited from: its revision differs. It replaces the
+	 * document, and the reports still queued behind it are stale: they name a
+	 * revision the write replaced, so the reducer drops them.
+	 *
+	 * A reducer that keeps no revision leaves it unchanged; the value alone
+	 * then decides, as it did before revisions existed.
+	 */
+	function reconcile(editor: EditorView, state: CodeEditorState, addToHistory: boolean): void {
+		syncConfig(editor, state);
+		const value = state.value;
+		const revision = state.valueRevision ?? 0;
+		if (value === appliedValue && revision === appliedRevision) return;
+		const unrevised = revision === appliedRevision;
+		appliedValue = value;
+		appliedRevision = revision;
+		const own = inFlight.findIndex(
+			(entry) => entry.value === value && (unrevised || entry.revision === revision)
+		);
+		if (own !== -1) {
+			inFlight.splice(0, own + 1);
+			return;
+		}
+		inFlight.length = 0;
+		if (editor.state.doc.toString() === value) return;
+		writing = true;
+		try {
+			updateEditorValue(editor, value, { addToHistory });
+		} finally {
+			writing = false;
+		}
+	}
+
+	/**
+	 * One of this editor's reports has been reduced.
+	 *
+	 * If state took it, `reconcile` has already matched and removed it. If it
+	 * is still recorded, state declined it: a parent reducer vetoed the edit, or
+	 * the report was stale. The document then shows text state does not hold,
+	 * so it goes back to `state.value`, visibly, and Save saves what is shown.
+	 * The reports queued behind it were edited on top of the declined text; the
+	 * reducer drops them as stale, so they are forgotten here too.
+	 */
+	function settle(report: ValueReport): void {
+		const index = inFlight.findIndex((entry) => entry.report === report || sameReport(entry.report, report));
+		if (index === -1) return;
+		inFlight.length = 0;
+		const state = source.state;
+		if (!state || !view) return;
+		writing = true;
+		try {
+			restoreEditorValue(view, state.value);
+		} finally {
+			writing = false;
+		}
+	}
+
+	/** A slot whose unwrap copies the action still delivers the same report. */
+	const sameReport = (a: ValueReport, b: ValueReport): boolean =>
+		a.value === b.value && a.baseValue === b.baseValue && a.baseRevision === b.baseRevision;
+
+	/** Performs a command action against the live view, if there is one. */
+	function runCommand(action: CodeEditorAction): void {
+		// Before the asynchronous view exists, a command is dropped: nothing is
+		// buffered or replayed. Durable setup belongs in state or props.
+		if (!view) return;
+		switch (action.type) {
+			case 'undo':
+			case 'redo':
+			case 'selectAll':
+			case 'deleteSelection':
+			case 'focus':
+			case 'blur':
+			case 'insertText':
+				runEditorCommand(view, action);
+				return;
+		}
+	}
+
+	let mounted = false;
+
+	onMount(() => {
+		mounted = true;
+		const initial = source.state ?? retained;
+		// Nothing to build from: the owner retired before this mounted.
+		if (!initial || !editorElement) {
+			mounted = false;
+			return;
+		}
+
+		// Command actions reach the editor here, synchronously, once per
+		// action: the managed owner's observed actions, or a standalone store's
+		// `subscribeToActions`. An `$effect` would coalesce two commands of one
+		// tick into one. Subscribed before the view exists; see `runCommand`.
+		const unbind = bindViewSource(
+			source,
+			{
+				component: 'CodeEditor',
+				loses: 'undo / redo / insertText / deleteSelection / selectAll / focus / blur cannot reach the editor'
+			},
+			{
+				onState: (state) => {
+					// `undefined`: the managed owner retired. Leave the editor alone.
+					if (state && view) reconcile(view, state, true);
+				},
+				onAction: (action) => {
+					if (action.type === 'valueChanged') settle(action);
+					else runCommand(action);
+				}
+			}
+		);
+
+		createEditorView(editorElement, sink, initial)
+			.then((editorView) => {
+				if (!mounted) {
+					editorView.destroy();
+					return;
+				}
+				view = editorView;
+				// Record what CodeMirror actually received, not what the store says
+				// by the time this promise resolves.
+				appliedValue = initial.value;
+				appliedRevision = initial.valueRevision ?? 0;
+				appliedLanguage = initial.language;
+				appliedTheme = initial.theme;
+				appliedReadOnly = initial.readOnly;
+				appliedTabSize = initial.tabSize;
+				appliedShowLineNumbers = initial.showLineNumbers;
+				appliedFolding = initial.enableFolding;
+				appliedAutocomplete = initial.enableAutocomplete;
+
+				// Catch up on anything reduced while the view was being built.
+				// Not undoable: this is the editor catching up to state it was
+				// built from, not an edit. Without this the editor opens with Undo
+				// already enabled and one press wipes the seeded content.
+				const latest = source.state;
+				if (latest) reconcile(editorView, latest, false);
+				if (autofocus) editorView.focus();
+			})
+			.catch((error: unknown) => {
+				if (!mounted) return;
+				source.dispatch({
+					type: 'languageLoadFailed',
+					language: initial.language,
+					error: error instanceof Error ? error.message : String(error)
+				});
+			});
 
 		return () => {
-			unsubscribe?.();
+			mounted = false;
+			unbind();
 			view?.destroy();
+			view = null;
 		};
 	});
 
-	// Sync programmatic value updates (from store → CodeMirror).
-	// This handles external changes like loading a file or formatting.
-	$effect(() => {
-		// Read the store FIRST. This was `if (view && $store.value !== ...)`, and
-		// `view` is a deliberately non-reactive `let` that is null on the effect's
-		// first run because `createEditorView` is async. `&&` short-circuited
-		// before `$store.value` was ever read, so the effect captured no
-		// dependencies at all and never ran again — programmatic value changes,
-		// including the whole format flow, never reached the editor.
-		//
-		// Exactly the hazard noted on the config effect below; this one had it in
-		// `&&` form rather than early-`return` form and was missed.
-		const nextValue = $store.value;
-
-		if (view && nextValue !== codemirrorValue) {
-			updateEditorValue(view, nextValue);
-			codemirrorValue = nextValue;
-		}
-	});
-
-	// Sync editor configuration (store -> CodeMirror).
-	$effect(() => {
-		// Read every tracked value first. An early `return` above these would
-		// leave the effect depending only on `view`, which is deliberately not
-		// reactive — and it would then never re-run.
-		const language = $store.language;
-		const theme = $store.theme;
-		const readOnly = $store.readOnly;
-		const tabSize = $store.tabSize;
-		const showLineNumbers = $store.showLineNumbers;
-		const enableFolding = $store.enableFolding;
-		const enableAutocomplete = $store.enableAutocomplete;
-
-		if (!view) return;
-		syncConfig(
-			view,
-			language,
-			theme,
-			readOnly,
-			tabSize,
-			showLineNumbers,
-			enableFolding,
-			enableAutocomplete
-		);
-	});
-
-	// Use Svelte's auto-subscription pattern - ZERO boilerplate!
-	const saveButtonText = $derived($store.hasUnsavedChanges ? 'Save *' : 'Save');
-	const saveButtonDisabled = $derived(!$store.hasUnsavedChanges);
+	const saveButtonText = $derived(current?.hasUnsavedChanges ? 'Save *' : 'Save');
+	const saveButtonDisabled = $derived(!current?.hasUnsavedChanges);
 </script>
 
+{#if current}
 <div
 	class="code-editor"
-	class:code-editor--focused={$store.isFocused}
-	data-theme={$store.theme}
+	class:code-editor--focused={current.isFocused}
+	data-theme={current.theme}
 >
 	{#if showToolbar}
 		<div class="code-editor__toolbar">
 			<div class="code-editor__toolbar-left">
 				<select
 					class="code-editor__select"
-					value={$store.language}
-					onchange={(e) => store.dispatch({ type: 'languageChanged', language: e.currentTarget.value as any })}
+					value={current.language}
+					onchange={(e) => source.dispatch({ type: 'languageChanged', language: e.currentTarget.value as SupportedLanguage })}
 					aria-label="Select programming language"
 				>
 					<option value="typescript">TypeScript</option>
@@ -286,8 +399,8 @@
 
 				<button
 					class="code-editor__button"
-					onclick={() => store.dispatch({ type: 'undo' })}
-					disabled={!$store.canUndo}
+					onclick={() => source.dispatch({ type: 'undo' })}
+					disabled={!current.canUndo}
 					aria-label="Undo"
 				>
 					Undo
@@ -295,8 +408,8 @@
 
 				<button
 					class="code-editor__button"
-					onclick={() => store.dispatch({ type: 'redo' })}
-					disabled={!$store.canRedo}
+					onclick={() => source.dispatch({ type: 'redo' })}
+					disabled={!current.canRedo}
 					aria-label="Redo"
 				>
 					Redo
@@ -304,18 +417,18 @@
 
 				<button
 					class="code-editor__button"
-					onclick={() => store.dispatch({ type: 'toggleLineNumbers' })}
+					onclick={() => source.dispatch({ type: 'toggleLineNumbers' })}
 					aria-label="Toggle line numbers"
 				>
-					Line Numbers: {$store.showLineNumbers ? 'On' : 'Off'}
+					Line Numbers: {current.showLineNumbers ? 'On' : 'Off'}
 				</button>
 
 				<button
 					class="code-editor__button"
-					onclick={() => store.dispatch({ type: 'themeChanged', theme: $store.theme === 'dark' ? 'light' : 'dark' })}
+					onclick={() => source.dispatch({ type: 'themeChanged', theme: current.theme === 'dark' ? 'light' : 'dark' })}
 					aria-label="Toggle theme"
 				>
-					Theme: {$store.theme === 'dark' ? 'Dark' : 'Light'}
+					Theme: {current.theme === 'dark' ? 'Dark' : 'Light'}
 				</button>
 			</div>
 
@@ -323,7 +436,7 @@
 				<!--
 					Disabled by read-only alone. It also used to disable on
 					`formatError !== null`, which was a one-way trap: `formatError` is
-					cleared inside `case 'format'` (code-editor.reducer.ts:156), and a
+					cleared inside `case 'format'` (code-editor.reducer.ts), and a
 					disabled button can never dispatch `format` to reach it. One failed
 					format killed the button for the session — and with no `formatter`
 					dependency the very first click fails, which is exactly what the
@@ -331,8 +444,8 @@
 				-->
 				<button
 					class="code-editor__button"
-					onclick={() => store.dispatch({ type: 'format' })}
-					disabled={$store.readOnly}
+					onclick={() => source.dispatch({ type: 'format' })}
+					disabled={current.readOnly}
 					aria-label="Format code"
 				>
 					Format
@@ -340,7 +453,7 @@
 
 				<button
 					class="code-editor__button code-editor__button--primary"
-					onclick={() => store.dispatch({ type: 'save' })}
+					onclick={() => source.dispatch({ type: 'save' })}
 					disabled={saveButtonDisabled}
 					aria-label="Save code"
 				>
@@ -350,21 +463,21 @@
 		</div>
 	{/if}
 
-	{#if $store.saveError}
+	{#if current.saveError}
 		<div class="code-editor__error">
-			Save Error: {$store.saveError}
+			Save Error: {current.saveError}
 		</div>
 	{/if}
 
-	{#if $store.formatError}
+	{#if current.formatError}
 		<div class="code-editor__error">
-			Format Error: {$store.formatError}
+			Format Error: {current.formatError}
 		</div>
 	{/if}
 
-	{#if $store.error}
+	{#if current.error}
 		<div class="code-editor__error">
-			{$store.error}
+			{current.error}
 		</div>
 	{/if}
 
@@ -373,22 +486,23 @@
 		class="code-editor__container"
 	></div>
 
-	{#if $store.cursorPosition}
+	{#if current.cursorPosition}
 		<div class="code-editor__status-bar">
 			<span class="code-editor__status-item">
-				Ln {$store.cursorPosition.line}, Col {$store.cursorPosition.column}
+				Ln {current.cursorPosition.line}, Col {current.cursorPosition.column}
 			</span>
-			{#if $store.selection}
+			{#if current.selection}
 				<span class="code-editor__status-item">
-					{$store.selection.text.length} chars selected
+					{current.selection.text.length} chars selected
 				</span>
 			{/if}
 			<span class="code-editor__status-item">
-				{$store.language}
+				{current.language}
 			</span>
 		</div>
 	{/if}
 </div>
+{/if}
 
 <style>
 	.code-editor {

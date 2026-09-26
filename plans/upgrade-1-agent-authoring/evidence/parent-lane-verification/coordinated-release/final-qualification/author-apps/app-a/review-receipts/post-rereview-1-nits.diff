@@ -1,0 +1,28 @@
+--- reviewed/src/model.ts
++++ current/src/model.ts
+@@ -194,7 +194,8 @@
+         if (!activeId) return [state, Effect.none()];
+ 
+         // The chat reduces first and ignores an idle or superseded completion, but the
+-        // parent still sees that action. Archive only an assistant reply not yet recorded.
++        // parent still sees that action. Archive only an assistant reply not yet recorded
++        // (assumes the injected generateId yields unique message ids).
+         const reply = state.chat?.messages.at(-1);
+         const conv = state.conversations[activeId];
+         if (
+--- reviewed/tests/component.test.ts
++++ current/tests/component.test.ts
+@@ -245,11 +245,9 @@
+     }
+ 
+     // Negative control: without replacement the pending transcript lands on conv-1.
++    // It is asserted after the same fixed wait used for the replacement case below.
+     const control = await recordThenMaybeReplace(false);
+-    await waitFor(
+-      () => control.querySelector('[data-testid="transcripts-count"]')?.textContent === '1',
+-      'Control transcript recorded on conv-1'
+-    );
++    expect(control.querySelector('[data-testid="transcripts-count"]')?.textContent).toBe('1');
+ 
+     // With replacement the retired voice owner cannot deliver into conv-2.
+     const target = await recordThenMaybeReplace(true);

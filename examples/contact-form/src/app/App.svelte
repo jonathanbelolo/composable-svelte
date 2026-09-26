@@ -1,12 +1,15 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { createStore } from '@composable-svelte/core';
   import {
     Form,
     FormField
   } from '@composable-svelte/core/components/form';
+  import type { FormStore } from '@composable-svelte/core/components/form';
   import { Button, Input, Textarea } from '@composable-svelte/core/components/ui';
   import { appReducer } from './app.reducer.js';
   import { createInitialAppState } from './app.state.js';
+  import type { ContactFormData, ContactFormAction } from '../features/contact-form/contact-form.types.js';
 
   // Create store with integrated form reducer
   const parentStore = createStore({
@@ -15,36 +18,20 @@
     dependencies: {}
   });
 
-  // Create a reactive wrapper store that exposes just the form state
-  // Using $state to make the formStore.state reactive
-  let formStoreState = $state(parentStore.state.contactForm);
+  onDestroy(() => parentStore.destroy());
 
-  $effect(() => {
-    formStoreState = parentStore.state.contactForm;
-  });
-
-  const formStore = {
+  // Direct reactive projection exposing the form slice
+  const formStore: FormStore<ContactFormData> = {
     get state() {
-      return formStoreState;
+      return parentStore.state.contactForm;
     },
-    dispatch(action: any) {
+    dispatch(action: ContactFormAction) {
       parentStore.dispatch({ type: 'contactForm', action });
     },
-    subscribe(listener: any) {
-      // Must emit the form slice, not parent state: FormField reads
-      // `$store.data[name]`, and parent state has no `data`.
-      return parentStore.subscribe((s: any) => listener(s.contactForm));
+    subscribe(listener) {
+      return parentStore.subscribe((s) => listener(s.contactForm));
     }
   };
-
-  // Subscribe to state changes to get submission history and success message
-  let submissionHistory = $state(parentStore.state.submissionHistory);
-  let successMessage = $state(parentStore.state.successMessage);
-
-  $effect(() => {
-    submissionHistory = parentStore.state.submissionHistory;
-    successMessage = parentStore.state.successMessage;
-  });
 
   function dismissSuccessMessage() {
     parentStore.dispatch({ type: 'successMessageDismissed' });
@@ -57,11 +44,11 @@
     <p class="text-gray-600 mb-8">Demonstrating integrated form mode with parent-child composition</p>
 
     <!-- Success Message -->
-    {#if successMessage}
+    {#if parentStore.state.successMessage}
       <div class="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg" data-testid="success-message">
         <div class="flex justify-between items-start">
           <div class="flex-1">
-            <p class="text-green-800 font-medium">{successMessage}</p>
+            <p class="text-green-800 font-medium">{parentStore.state.successMessage}</p>
           </div>
           <button
             onclick={dismissSuccessMessage}
@@ -156,6 +143,7 @@
           <Button
             type="submit"
             class="w-full"
+            disabled={formStore.state.isSubmitting}
             data-testid="submit-button"
           >
             {formStore.state.isSubmitting ? 'Sending...' : 'Send Message'}
@@ -165,11 +153,11 @@
     </div>
 
     <!-- Submission History -->
-    {#if submissionHistory.length > 0}
+    {#if parentStore.state.submissionHistory.length > 0}
       <div class="bg-white shadow-sm rounded-lg p-8">
         <h2 class="text-xl font-semibold text-gray-900 mb-4">Submission History</h2>
         <div class="space-y-4" data-testid="submission-history">
-          {#each submissionHistory as submission}
+          {#each parentStore.state.submissionHistory as submission}
             <div class="border-l-4 border-blue-500 pl-4 py-2" data-testid="submission-item">
               <p class="text-sm text-gray-600">{submission.timestamp.toLocaleString()}</p>
               <p class="font-medium text-gray-900">{submission.name}</p>

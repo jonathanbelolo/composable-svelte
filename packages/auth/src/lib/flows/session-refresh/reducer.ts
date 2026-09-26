@@ -28,8 +28,8 @@ export const DEFAULT_LEAD_MS = 60_000;
 /** How often the watch looks. Also the rate floor — there is no second limiter. */
 export const DEFAULT_TICK_MS = 30_000;
 
-export function createInitialSessionRefreshState(): SessionRefreshState {
-	return { status: 'idle', expiresAt: null, error: null };
+export function createInitialSessionRefreshState(expiresAt: string | null = null): SessionRefreshState {
+	return { status: 'idle', expiresAt, error: null };
 }
 
 export const sessionRefreshReducer: Reducer<
@@ -132,9 +132,10 @@ export const sessionRefreshReducer: Reducer<
 			if (state.expiresAt === action.expiresAt) return [state, Effect.none()];
 
 			// A value arriving while `ended` means a session exists again — a fresh
-			// sign-in — so this is not a dead end. The `mfaObserved` shape.
+			// sign-in or session recovery — so this is not a dead end. The `mfaObserved` shape.
 			const status = state.status === 'ended' && action.expiresAt !== null ? 'idle' : state.status;
-			return [{ ...state, status, expiresAt: action.expiresAt }, Effect.none()];
+			const error = state.status === 'ended' && action.expiresAt !== null ? null : state.error;
+			return [{ ...state, status, expiresAt: action.expiresAt, error }, Effect.none()];
 		}
 
 		case 'refreshSucceeded': {

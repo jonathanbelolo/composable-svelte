@@ -506,7 +506,8 @@ export function audioPlayerReducer(
 						playlist: newPlaylist,
 						currentTrack: action.track,
 						currentTrackIndex: 0,
-						duration: action.track.duration ?? 0
+						duration: action.track.duration ?? 0,
+						shuffleOrder: state.isShuffled ? [0] : []
 					},
 					trackEffect
 				];
@@ -515,13 +516,16 @@ export function audioPlayerReducer(
 			return [
 				{
 					...state,
-					playlist: newPlaylist
+					playlist: newPlaylist,
+					shuffleOrder: state.isShuffled ? [...state.shuffleOrder, state.playlist.length] : state.shuffleOrder
 				},
 				Effect.none()
 			];
 		}
 
 		case 'trackRemoved': {
+			if (!Number.isInteger(action.index) || action.index < 0 || action.index >= state.playlist.length) return [state, Effect.none()];
+			const shuffleOrder = state.shuffleOrder.filter(index => index !== action.index).map(index => index > action.index ? index - 1 : index);
 			const newPlaylist = state.playlist.filter((_, i) => i !== action.index);
 
 			// If we removed the current track
@@ -532,6 +536,7 @@ export function audioPlayerReducer(
 						{
 							...state,
 							playlist: newPlaylist,
+					shuffleOrder,
 							currentTrack: null,
 							currentTrackIndex: -1,
 							isPlaying: false,
@@ -551,6 +556,7 @@ export function audioPlayerReducer(
 						{
 							...state,
 							playlist: newPlaylist,
+					shuffleOrder,
 							currentTrack: nextTrack,
 							currentTrackIndex: nextIndex,
 							currentTime: 0,
@@ -574,6 +580,7 @@ export function audioPlayerReducer(
 				{
 					...state,
 					playlist: newPlaylist,
+					shuffleOrder,
 					currentTrackIndex: newCurrentIndex
 				},
 				Effect.none()
@@ -601,6 +608,7 @@ export function audioPlayerReducer(
 		}
 
 		case 'playlistReordered': {
+			if (!Number.isInteger(action.from) || !Number.isInteger(action.to) || action.from < 0 || action.to < 0 || action.from >= state.playlist.length || action.to >= state.playlist.length) return [state, Effect.none()];
 			const newPlaylist = [...state.playlist];
 			const [movedTrack] = newPlaylist.splice(action.from, 1);
 			if (!movedTrack) {
@@ -623,7 +631,13 @@ export function audioPlayerReducer(
 				{
 					...state,
 					playlist: newPlaylist,
-					currentTrackIndex: newCurrentIndex
+					currentTrackIndex: newCurrentIndex,
+					shuffleOrder: state.shuffleOrder.map(index => {
+						if (index === action.from) return action.to;
+						if (action.from < action.to && index > action.from && index <= action.to) return index - 1;
+						if (action.from > action.to && index >= action.to && index < action.from) return index + 1;
+						return index;
+					})
 				},
 				Effect.none()
 			];

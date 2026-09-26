@@ -10,6 +10,9 @@ criterion by criterion — see [Accessibility](#accessibility).
 
 `@composable-svelte/charts` provides state-driven, interactive data visualization components built on top of [Observable Plot](https://observablehq.com/plot/) and D3 utilities. All chart state is managed using the Composable Architecture patterns from `@composable-svelte/core`.
 
+For the managed ownership contract, operation policy, troubleshooting, and a
+runnable recipe shipped in the npm package, see [Managed integration](./MANAGED.md).
+
 ## Features
 
 - 🎯 **State-Driven**: All chart state managed via reducers (data, selections, zoom, tooltips)
@@ -29,8 +32,8 @@ pnpm add @composable-svelte/charts
 ```
 
 **Peer dependencies**:
-- `@composable-svelte/core` ^0.12.0
-- `svelte` ^5.0.0
+- `@composable-svelte/core` ^0.13.1
+- `svelte` ^5.20.0
 
 ## Quick Start
 
@@ -54,7 +57,7 @@ every chart is operable from the keyboard as soon as it renders.
 
   const store = createStore({
     initialState: createInitialChartState({ data }),
-    reducer: chartReducer,
+    reducer: chartReducer<Reading>,
     dependencies: {}
   });
 
@@ -79,6 +82,65 @@ This block is [`tests/doc-examples/keyboard-chart.svelte`](https://github.com/jo
 quoted verbatim. The file is typechecked by `svelte-check` in the repo gate and
 a test asserts this README still matches it, so the quickstart cannot go stale
 without something failing.
+
+## Managed Companion Usage
+
+`@composable-svelte/charts` is a native companion to `@composable-svelte/core/application`. Both `Chart` and `ChartPrimitive` accept a narrow structural store interface `ChartStore<TRow>`:
+
+```ts
+export type ChartStore<TRow = unknown> = Pick<
+  ChildView<ChartState<TRow>, ChartAction<TRow>>,
+  'state' | 'dispatch' | 'subscribe'
+>;
+```
+
+Both standalone `Store<ChartState<TRow>, ChartAction<TRow>>` (from `createStore`) and managed `ChildView<ChartState<TRow>, ChartAction<TRow>>` satisfy this contract without type casting or authority fabrication.
+
+### Slot Integration and Views
+
+In managed applications, charts mount inside application features via `defineViews` and `FeatureOutlet`:
+
+```svelte
+<!-- FeatureHost.svelte -->
+<script lang="ts">
+  import type { PresentationFeatureViewProps } from '@composable-svelte/core/application';
+  import { Chart, type ChartState, type ChartAction } from '@composable-svelte/charts';
+  import type { MetricRow } from './model.js';
+
+  let { store, surface }: PresentationFeatureViewProps<ChartState<MetricRow>, ChartAction<MetricRow>> = $props();
+</script>
+
+<div use:surface>
+  <Chart
+    {store}
+    x="x"
+    y={(d) => d.y}
+    type="scatter"
+    onSelectionChange={(selected) => {
+      // Direct access to strongly typed rows
+      store.dispatch({ type: 'selectPoints', indices: selected.map(s => s.id) });
+    }}
+  />
+</div>
+```
+
+### Generic Row Typing
+
+`chartReducer`, `Chart`, `ChartPrimitive`, `ChartConfig`, and `ChartAccessor` are generic over row type `TRow = unknown`. When a typed row interface is supplied:
+- Accessors support strongly-typed property names (`x="month"`) or extractor functions (`y={(d: Reading) => d.rainfall}`).
+- The `onSelectionChange` callback receives strongly typed row arrays (`(selected: Reading[]) => void`).
+- Use `chartReducer<Reading>` when assembling a typed `createStore` or managed slot. An unparameterized reducer uses the compatibility `unknown` row contract, which accepts arbitrary data and string accessors. The explicit row type rejects misspelled keys and wrong-shaped `setData` actions.
+- Row-typed accessors and callbacks use the row type directly; the managed binding needs no casts.
+
+### Prompt Retirement Lifecycle
+
+When a managed owner closes or replaces a chart, the child view emits a terminal `undefined` state. `Chart` and `ChartPrimitive` promptly dispose of active resources **before** DOM unmount:
+1. Active animation RAF requests are aborted via `AbortController` and `cancelAnimationFrame`.
+2. D3 zoom and brush event listeners are detached (`.on('.zoom', null)` and `.on('.brush', null)`).
+3. The container's `ResizeObserver` is immediately disconnected.
+4. Any pending SVG attachment timers are cleared (`clearTimeout`).
+5. Outgoing plot DOM nodes are cleaned up, and user callbacks are gated.
+6. Subsequent DOM unmount is completely idempotent.
 
 ## Chart Types
 
@@ -249,10 +311,11 @@ import { createTestStore } from '@composable-svelte/core/test';
 import { chartReducer, createInitialChartState } from '@composable-svelte/charts';
 
 it('selects a chart point', async () => {
-  const data = [{x:1, y:2}];
+  type Row = { x: number; y: number };
+  const data: Row[] = [{x:1, y:2}];
   const store = createTestStore({
     initialState: createInitialChartState({ data }),
-    reducer: chartReducer
+    reducer: chartReducer<Row>
   });
   await store.send({type:'selectPoint', data:data[0], index:0}, state => {
     expect(state.selection.selectedIndices).toEqual([0]);
@@ -425,3 +488,22 @@ MIT © Jonathan Belolo
 - [Observable Plot Documentation](https://observablehq.com/plot/)
 - [D3 Gallery](https://observablehq.com/@d3/gallery)
 - [Phase 11 Plan](https://github.com/jonathanbelolo/composable-svelte/blob/main/plans/phase-11/PHASE-11-PLAN.md)
+
+### Navigation and sizing lifecycle
+
+`enableZoom` defaults to `false` and controls pointer zoom/pan and keyboard zoom
+(`+`, `-`, `0`) and pan (`Shift` + arrow). Disabled navigation keys are left
+unhandled. Ordinary arrows still move the accessible data cursor. Set
+`enableZoom={true}` to opt into zoom and pan consistently across input methods.
+
+Changing `width` or `height` updates fixed dimensions; clearing both restores
+responsive observation. An omitted partner dimension keeps its existing default
+(600 by 400). Superseding a zoom target or unmounting cancels its native animation
+frame without destroying a borrowed store.
+
+For a bar chart whose categories should follow the filtered input rows, pass
+`barCategoryOrder="input"` to `Chart` (or the same option to `buildBarChart`).
+This is useful after sorting or selecting top-N records. Omit the option, or use
+`"auto"`, to preserve Observable Plot's default categorical ordering. Duplicate
+categories share a domain entry in their first-occurrence order. Other chart
+kinds retain their existing domain behavior.

@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import ModalPrimitive from './primitives/ModalPrimitive.svelte';
-  import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
+  import { assertPresentationView, type PresentationView } from '../navigation/managed-integration.js';
   import type { PresentationState } from '../navigation/types.js';
   import type { SpringConfig } from '../animation/spring-config.js';
   import { cn } from '../utils.js';
@@ -12,9 +12,9 @@
 
   interface ModalProps<State, Action> {
     /**
-     * Scoped store for the modal content.
+     * Managed presentation view for the modal content.
      */
-    store: ScopedDestinationStore<State, Action> | null;
+    store?: PresentationView<State, Action> | undefined;
 
     /**
      * Presentation state for animation lifecycle.
@@ -38,19 +38,23 @@
     springConfig?: Partial<SpringConfig> | undefined;
 
     /**
-     * Disable all default styling.
-     * When true, component behaves like the primitive.
+     * Omit the default and supplied CSS classes.
+     * Inline centering transform, opacity and primitive behavior remain active.
      * @default false
      */
     unstyled?: boolean | undefined;
 
     /**
-     * Override backdrop classes.
+     * Classes merged with the default backdrop classes unless unstyled is true.
+     * The primitive owns backdrop opacity during presentation transitions.
      */
     backdropClass?: string | undefined;
 
     /**
-     * Override content container classes.
+     * Classes merged with the default content classes unless unstyled is true.
+     * The wrapper owns translate(-50%, -50%); the primitive composes its scale
+     * animation with that centering transform and owns transition opacity.
+     * Custom layout must retain the corresponding left/top centering anchor.
      */
     class?: string | undefined;
 
@@ -93,7 +97,7 @@
       [
         {
           visible: boolean;
-          store: ScopedDestinationStore<State, Action> | null;
+          store: PresentationView<State, Action> | undefined;
         }
       ]
     > | undefined;
@@ -115,6 +119,13 @@
     disableEscapeKey = false,
     children: renderContent
   }: ModalProps<unknown, unknown> = $props();
+
+  const admittedStore = $derived.by(() => {
+    if (store !== undefined) {
+      assertPresentationView(store);
+    }
+    return store;
+  });
 
   // ============================================================================
   // Computed Classes
@@ -140,7 +151,7 @@
 <!-- ============================================================================ -->
 
 <ModalPrimitive
-  {store}
+  store={admittedStore}
   {presentation}
   {onPresentationComplete}
   {onDismissalComplete}
@@ -148,7 +159,7 @@
   {disableClickOutside}
   {disableEscapeKey}
 >
-  {#snippet children({ visible, store, bindBackdrop, bindContent, initialOpacity })}
+  {#snippet children({ visible, store: primitiveStore, bindBackdrop, bindContent, initialOpacity })}
     <div
       use:bindBackdrop
       class={backdropClasses}
@@ -169,7 +180,7 @@
       style:opacity={initialOpacity}
       style:transform="translate(-50%, -50%)"
     >
-      {@render renderContent?.({ visible, store })}
+      {@render renderContent?.({ visible, store: primitiveStore })}
     </div>
   {/snippet}
 </ModalPrimitive>

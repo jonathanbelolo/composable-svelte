@@ -1,0 +1,47 @@
+{
+  "status": "integrated and parent verified",
+  "reviewDisposition": "Opus conditional clearance satisfied by its exact npm packing correction; runtime equals independently reviewed archive a365156505cc0bd53a5025cf681b182593493341818420cc2fc3b994e3437ac6",
+  "files": [
+    {
+      "path": "README.md",
+      "beforeSHA256": "bafd7b3ec2453b9f4d7c515d0a0a5e72abeb8bde5895615cf21ea925806e88d7",
+      "afterSHA256": "e9d38314b360068838dd8b634c83b7b86474732ca720592d13b0fe916af379b2"
+    },
+    {
+      "path": "src/bundled-policy.mjs",
+      "beforeSHA256": "a53d056ea6d956e921ccaa17bd383aed21f3451e6e7bf9c7c2cd83194ed3ce81",
+      "afterSHA256": "f43f1416ce2e78c44572c54cee14c3e85a677caed47f77d4b2afef81161f4207"
+    },
+    {
+      "path": "src/bundled-policy.test.mjs",
+      "beforeSHA256": "5854445f7c9024f9f34b7c10d0d387772782ab3b6999e7dc0b787504877d1a45",
+      "afterSHA256": "7dfd60e840782d255276817dfac2756325a48f633c8ddd56ed13151692971657"
+    },
+    {
+      "path": "src/check.mjs",
+      "beforeSHA256": "b1b41784bb1eacf7a7fbab2db19fb47992b31ba0c9133bef2d370408129505aa",
+      "afterSHA256": "7ca110b723aeecb1a8a84d43d254f8f034d25b3ddb184e422e02b9fb362fc4d4"
+    },
+    {
+      "path": "src/check.test.mjs",
+      "beforeSHA256": "b8d2d3e7b2246a06348fe8af04317213136d5e254e2530ce4b6a92e4e75b3157",
+      "afterSHA256": "fb6650950d58ee1480f36775314ec8c44224ecb39fbaca51be2054cc9dc40356"
+    },
+    {
+      "path": "src/qualification.test.mjs",
+      "beforeSHA256": "cabef33eb6cc78f82217b3e635b4da453536f4349e829e0a44ca98088bd0d4c8",
+      "afterSHA256": "9634569021901f222651cf66dd8e90245122bfd9145f238e161a52162d2a5e1b"
+    },
+    {
+      "path": "test/inspect-archive.mjs",
+      "beforeSHA256": "62a7f4a7b21c961fd14bfd0052c0b21ecb0a6f5177276ef594d7ce0345c87f31",
+      "afterSHA256": "65cd21bb3be2f3582aff6d487796868dd39d301d8a0d2e3c62f64619b7edcb2f"
+    }
+  ],
+  "parentVerification": {
+    "runner": "pnpm@9.0.0 --dir packages/architecture test",
+    "passed": 529,
+    "failed": 0,
+    "skipped": 0
+  }
+}

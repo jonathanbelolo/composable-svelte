@@ -9,6 +9,14 @@ State-driven 3D graphics for Composable Svelte using WebGL with Babylon.js.
 
 ---
 
+## UPGRADE 1 AGENT ENTRY
+
+For an application built with the integrated Upgrade 1 companion packages, begin with the [managed package reference](../../../packages/graphics/MANAGED.md) and its executable recipe. The same reference is included in the package at `node_modules/@composable-svelte/graphics/MANAGED.md`; use the installed version's declarations and instructions as the API authority.
+
+Use the shipped managed Scene/overlay recipe. Each Scene attachment gets its own adapter from `createAdapter`; use the overlay `owner` prop for its lifetime. Retirement cancels delivery immediately, while disposal of a pending asynchronous initialization waits for its result.
+
+The standalone store and callback examples below describe standalone usage. For an owned application feature, follow the managed recipe rather than copying the standalone setup and adding ad hoc lifetime glue. Candidate qualification and npm publication are separate; verify the installed package version contains this managed surface.
+
 ## PACKAGE OVERVIEW
 
 **Package**: `@composable-svelte/graphics`

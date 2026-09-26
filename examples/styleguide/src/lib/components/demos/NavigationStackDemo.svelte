@@ -2,10 +2,10 @@
 	import { NavigationStack } from '@composable-svelte/core/navigation-components';
 	import { AnimatedNavigationStack } from '@composable-svelte/core/navigation-components';
 	import { Button } from '@composable-svelte/core/components/ui';
-	import { createStore } from '@composable-svelte/core';
-	import { scopeToDestination } from '@composable-svelte/core/navigation';
 	import { Effect } from '@composable-svelte/core';
-	import type { PresentationState } from '@composable-svelte/core/navigation';
+	import type { Reducer } from '@composable-svelte/core';
+	import { ApplicationHost, ApplicationRoot, defineApplication, ManagedIntegrationBuilder, optionalSlot, scopeTo } from '@composable-svelte/core/application';
+	import type { PresentationAction, PresentationState } from '@composable-svelte/core/navigation';
 
 	// ============================================================================
 	// Demo State & Store Setup
@@ -36,12 +36,14 @@
 		// Animated variant actions
 		| { type: 'animatedPushScreen'; screen: ScreenState }
 		| { type: 'animatedPopScreen' }
-		| { type: 'presentationCompleted' }
-		| { type: 'dismissalCompleted' }
-		| { type: 'destination'; action: any };
+		| { type: 'simpleDestination'; action: PresentationAction<StackContentAction> }
+		| { type: 'animatedDestination'; action: PresentationAction<StackContentAction> };
 
-	const demoStore = createStore<DemoState, DemoAction>({
-		initialState: {
+	type StackContentAction =
+		| { type: 'presentationCompleted' }
+		| { type: 'dismissalCompleted' };
+
+	const initialState: DemoState = {
 			simpleDestination: {
 				type: 'stack',
 				state: {
@@ -69,8 +71,27 @@
 				}
 			},
 			presentation: { status: 'idle' as const }
-		},
-		reducer: (state, action) => {
+	};
+
+	const reducer: Reducer<DemoState, DemoAction, undefined> = (state, action) => {
+		if (action.type === 'animatedDestination') {
+			if (action.action.type === 'dismiss') {
+				if (state.presentation.status !== 'presented') return [state, Effect.none()];
+				return [{ ...state, presentation: { status: 'dismissing', content: state.presentation.content, duration: 437 } }, Effect.none()];
+			}
+			if (action.action.action.type === 'presentationCompleted') {
+				if (state.presentation.status !== 'presenting') return [state, Effect.none()];
+				return [{ ...state, presentation: { status: 'presented', content: state.presentation.content } }, Effect.none()];
+			}
+			if (state.presentation.status !== 'dismissing' || state.animatedDestination?.type !== 'stack') return [state, Effect.none()];
+			const currentStack = state.animatedDestination.state.stack;
+			if (currentStack.length <= 1) return [state, Effect.none()];
+			const newDestination: StackDestination = {
+				...state.animatedDestination,
+				state: { stack: currentStack.slice(0, -1) }
+			};
+			return [{ ...state, animatedDestination: newDestination, presentation: { status: 'presented', content: newDestination } }, Effect.none()];
+		}
 			switch (action.type) {
 				// ============================================================
 				// Simple Stack Actions (No Animations)
@@ -177,60 +198,20 @@
 					}
 					return [state, Effect.none()];
 
-				case 'presentationCompleted':
-					console.log('[NavigationStackDemo] presentationCompleted');
-					return [
-						{
-							...state,
-							presentation: {
-								status: 'presented' as const,
-								content: state.presentation.status === 'presenting' ? state.presentation.content : state.animatedDestination!
-							}
-						},
-						Effect.none()
-					];
-
-				case 'dismissalCompleted':
-					// After pop animation completes, update the stack
-					if (state.animatedDestination?.type === 'stack') {
-						const currentStack = state.animatedDestination.state.stack;
-						console.log('[NavigationStackDemo] dismissalCompleted, currentStack.length:', currentStack.length);
-						if (currentStack.length > 1) {
-							const newStack = currentStack.slice(0, -1);
-							const newDestination: StackDestination = {
-								...state.animatedDestination,
-								state: { stack: newStack }
-							};
-							console.log('[NavigationStackDemo] dismissalCompleted, popping stack to:', newStack.length);
-							return [
-								{
-									...state,
-									animatedDestination: newDestination,
-									presentation: {
-							status: 'presented' as const,
-							content: newDestination
-						}
-								},
-								Effect.none()
-							];
-						}
-					}
-					return [
-						{
-							...state,
-							presentation: { status: 'idle' as const }
-						},
-						Effect.none()
-					];
-
 				default:
 					return [state, Effect.none()];
 			}
-		}
-	});
+	};
 
-	const simpleStore = scopeToDestination(demoStore, ['simpleDestination'], 'stack', 'destination');
-	const animatedStore = scopeToDestination(demoStore, ['animatedDestination'], 'stack', 'destination');
+	const simpleSlot = optionalSlot<DemoState, DemoAction>()('simpleDestination');
+	const animatedSlot = optionalSlot<DemoState, DemoAction>()('animatedDestination');
+	const childReducer: Reducer<StackDestination, StackContentAction, undefined> = state => [state, Effect.none()];
+	const composition = new ManagedIntegrationBuilder(reducer)
+		.with(simpleSlot, childReducer)
+		.with(animatedSlot, childReducer, { dismissal: 'deferred' })
+		.build();
+	const application = defineApplication(composition, { initialState: (): DemoState => initialState });
+
 
 	// ============================================================================
 	// Demo Screens
@@ -290,38 +271,24 @@
 		}
 	];
 
-	// Simple stack helpers
-	const simpleStack = $derived($demoStore.simpleDestination?.state.stack ?? []);
-	const simpleStackIds = $derived(new Set(simpleStack.map(s => s.id)));
-	const availableSimpleScreens = $derived(
-		simpleScreens.filter(screen => !simpleStackIds.has(screen.id)).slice(0, 3)
-	);
-	const canPushSimple = $derived(simpleStack.length < 5 && availableSimpleScreens.length > 0);
-
-	// Animated stack helpers
-	const animatedStack = $derived($demoStore.animatedDestination?.state.stack ?? []);
-	const animatedStackIds = $derived(new Set(animatedStack.map(s => s.id)));
-	const availableAnimatedScreens = $derived(
-		animatedScreens.filter(screen => !animatedStackIds.has(screen.id)).slice(0, 3)
-	);
-	const canPushAnimated = $derived(animatedStack.length < 5 && availableAnimatedScreens.length > 0);
-
-	function pushSimpleScreen(screen: ScreenState) {
-		demoStore.dispatch({ type: 'simplePushScreen', screen });
-	}
-
-	function popSimpleScreen() {
-		demoStore.dispatch({ type: 'simplePopScreen' });
-	}
-
-	function pushAnimatedScreen(screen: ScreenState) {
-		demoStore.dispatch({ type: 'animatedPushScreen', screen });
-	}
-
-	function popAnimatedScreen() {
-		demoStore.dispatch({ type: 'animatedPopScreen' });
-	}
 </script>
+
+<ApplicationRoot definition={application} options={{ dependencies: undefined, initial: { input: undefined } }}>
+{#snippet children(app)}
+<ApplicationHost {app}>
+{@const demoStore = app.store}
+{@const state = app.store.state}
+{@const simpleStore = scopeTo(app.store, simpleSlot)}
+{@const animatedStore = scopeTo(app.store, animatedSlot)}
+{@const simpleStack = state.simpleDestination?.state.stack ?? []}
+{@const simpleStackIds = new Set(simpleStack.map(screen => screen.id))}
+{@const availableSimpleScreens = simpleScreens.filter(screen => !simpleStackIds.has(screen.id)).slice(0, 3)}
+{@const canPushSimple = simpleStack.length < 5 && availableSimpleScreens.length > 0}
+{@const animatedStack = state.animatedDestination?.state.stack ?? []}
+{@const animatedStackIds = new Set(animatedStack.map(screen => screen.id))}
+{@const availableAnimatedScreens = animatedScreens.filter(screen => !animatedStackIds.has(screen.id)).slice(0, 3)}
+{@const canPushAnimated = animatedStack.length < 5 && availableAnimatedScreens.length > 0}
+
 
 <div class="space-y-12">
 	<!-- Live Demo Section -->
@@ -366,7 +333,7 @@
 
 					<!-- Simple NavigationStack -->
 					<div class="h-[400px] rounded-lg border bg-background">
-						<NavigationStack store={simpleStore} stack={simpleStack} onBack={popSimpleScreen}>
+						<NavigationStack store={simpleStore} stack={simpleStack} onBack={() => demoStore.dispatch({ type: 'simplePopScreen' })}>
 							{#snippet children({ currentScreen })}
 								{#if currentScreen}
 									<!-- NavigationStack types its props as <unknown, unknown>. -->
@@ -388,7 +355,7 @@
 													<p class="text-xs font-medium">Push screen:</p>
 													<div class="flex flex-wrap gap-2">
 														{#each availableSimpleScreens as screen}
-															<Button variant="default" size="sm" onclick={() => pushSimpleScreen(screen)}>
+															<Button variant="default" size="sm" onclick={() => demoStore.dispatch({ type: 'simplePushScreen', screen })}>
 																{screen.title} →
 															</Button>
 														{/each}
@@ -442,10 +409,10 @@
 						<AnimatedNavigationStack
 							store={animatedStore}
 							stack={animatedStack}
-							presentation={$demoStore.presentation}
-							onBack={popAnimatedScreen}
-							onPresentationComplete={() => demoStore.dispatch({ type: 'presentationCompleted' })}
-							onDismissalComplete={() => demoStore.dispatch({ type: 'dismissalCompleted' })}
+							presentation={state.presentation}
+							onBack={() => demoStore.dispatch({ type: 'animatedPopScreen' })}
+							onPresentationComplete={() => animatedStore?.dispatch({ type: 'presentationCompleted' })}
+							onDismissalComplete={() => animatedStore?.dispatch({ type: 'dismissalCompleted' })}
 						>
 							{#snippet children({ currentScreen })}
 								{#if currentScreen}
@@ -461,7 +428,7 @@
 											<div class="p-3 bg-background/50 rounded border text-xs">
 												<p><strong>Screen ID:</strong> {screen.id}</p>
 												<p><strong>Stack Depth:</strong> {animatedStack.length}</p>
-												<p><strong>Animation:</strong> {$demoStore.presentation.status}</p>
+												<p><strong>Animation:</strong> {state.presentation.status}</p>
 											</div>
 
 											{#if canPushAnimated}
@@ -472,8 +439,8 @@
 															<Button
 																variant="default"
 																size="sm"
-																disabled={$demoStore.presentation.status === 'presenting' || $demoStore.presentation.status === 'dismissing'}
-																onclick={() => pushAnimatedScreen(screen)}
+																disabled={state.presentation.status === 'presenting' || state.presentation.status === 'dismissing'}
+																onclick={() => demoStore.dispatch({ type: 'animatedPushScreen', screen })}
 															>
 																{screen.title} →
 															</Button>
@@ -657,3 +624,7 @@
 		</div>
 	</section>
 </div>
+
+</ApplicationHost>
+{/snippet}
+</ApplicationRoot>

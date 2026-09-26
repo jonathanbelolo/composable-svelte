@@ -18,20 +18,20 @@
 		<div class="grid">
 			{#each items as item (item.id)}
 				<button class="item-card" onclick={() => onItemClick(item.id)}>
-					<div class="item-header">
-						<h3>{item.name}</h3>
+					<span class="item-header">
+						<span class="item-name">{item.name}</span>
 						<span class="category">{item.category}</span>
-					</div>
-					<div class="item-details">
-						<div class="detail">
+					</span>
+					<span class="item-details">
+						<span class="detail">
 							<span class="label">Quantity:</span>
 							<span class="value">{item.quantity}</span>
-						</div>
-						<div class="detail">
+						</span>
+						<span class="detail">
 							<span class="label">Price:</span>
 							<span class="value">${item.price.toFixed(2)}</span>
-						</div>
-					</div>
+						</span>
+					</span>
 				</button>
 			{/each}
 		</div>
@@ -79,7 +79,8 @@
 		gap: 1rem;
 	}
 
-	.item-header h3 {
+	.item-name {
+		font-weight: 700;
 		margin: 0;
 		font-size: 1.25rem;
 		color: #333;

@@ -358,7 +358,7 @@ describe('Registration Form - Integrated Mode', () => {
       await waitForUpdates();
 
       // Wait for submission
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      await expect.poll(() => container.querySelector('[data-testid="success-state"]'), {timeout:3000}).not.toBeNull();
 
       // Should show success screen (not error)
       const successState = container.querySelector('[data-testid="success-state"]');
@@ -402,7 +402,7 @@ describe('Registration Form - Integrated Mode', () => {
       await waitForUpdates();
 
       // Wait for submission to complete
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      await expect.poll(() => container.querySelector('[data-testid="success-state"]'), {timeout:3000}).not.toBeNull();
 
       // Check for success state
       const successState = container.querySelector('[data-testid="success-state"]');
@@ -443,7 +443,9 @@ describe('Registration Form - Integrated Mode', () => {
       await waitForUpdates();
 
       // Check button text changed
-      expect(submitButton.textContent).toContain('Creating Account');
+      await expect.poll(() => submitButton.textContent, {timeout:3000}).toContain('Creating Account');
+      expect(submitButton.disabled).toBe(true);
+      await expect.poll(() => container.querySelector('[data-testid="success-state"]'), {timeout:3000}).not.toBeNull();
     });
 
     test('does not submit invalid form', async () => {
@@ -476,8 +478,8 @@ describe('Registration Form - Integrated Mode', () => {
       await userEvent.click(submitButton);
       await waitForUpdates();
 
-      // Wait a bit
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      // Wait for the rejected cross-field verdict.
+      await expect.poll(() => container.querySelector('[data-testid="confirm-password-error"]')?.textContent, {timeout:3000}).toContain('match');
 
       // Success state should NOT appear
       const successState = container.querySelector('[data-testid="success-state"]');
@@ -511,7 +513,7 @@ describe('Registration Form - Integrated Mode', () => {
 
       await waitForAsyncValidation();
       await userEvent.click(submitButton);
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      await expect.poll(() => container.querySelector('[data-testid="success-state"]'), {timeout:3000}).not.toBeNull();
 
       // Verify success state
       let successState = container.querySelector('[data-testid="success-state"]');
@@ -530,6 +532,10 @@ describe('Registration Form - Integrated Mode', () => {
       // Form should be visible
       const formUsername = container.querySelector('#username');
       expect(formUsername).toBeTruthy();
+      expect((formUsername as HTMLInputElement).value).toBe('');
+      expect((container.querySelector('#email') as HTMLInputElement).value).toBe('');
+      expect((container.querySelector('#password') as HTMLInputElement).value).toBe('');
+      expect((container.querySelector('#confirmPassword') as HTMLInputElement).value).toBe('');
     });
   });
 });

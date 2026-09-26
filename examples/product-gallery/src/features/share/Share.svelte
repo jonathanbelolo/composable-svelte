@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ScopedDestinationStore } from '@composable-svelte/core';
+  import type { PresentationView } from '@composable-svelte/core/application';
   import type { ShareState, ShareAction, ShareMethod } from './share.types.js';
   import type { Product } from '../../models/product.js';
 
@@ -8,7 +8,7 @@
   // ============================================================================
 
   interface ShareProps {
-    store: ScopedDestinationStore<ShareState, ShareAction>;
+    store: PresentationView<ShareState, ShareAction>;
     product: Product;
   }
 

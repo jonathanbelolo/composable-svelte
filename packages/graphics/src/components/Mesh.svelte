@@ -6,10 +6,8 @@
 
 import { onDestroy, untrack } from 'svelte';
 import { customGeometryProblem } from '../core/geometry.js';
-import type { Store } from '@composable-svelte/core';
 import type {
-  GraphicsState,
-  GraphicsAction,
+  GraphicsStore,
   GeometryConfig,
   MaterialConfig,
   MeshConfig,
@@ -27,7 +25,7 @@ let {
   scale,
   visible = true
 }: {
-  store: Store<GraphicsState, GraphicsAction>;
+  store: GraphicsStore;
   id: string;
   geometry: GeometryConfig;
   material: MaterialConfig;
@@ -66,45 +64,27 @@ let warnedGeometry: string | null = null;
 
 $effect(() => {
   const config = meshConfig;
+  // Dispatch reads the store internally. Tracking it here would make the
+  // effect follow its own writes instead of only the mesh props.
   untrack(() => syncToStore(config));
 });
 
 function syncToStore(config: MeshConfig): void {
+  if (!store.state) {
+    ownedId = null;
+    return;
+  }
+
   // Refused geometry is caught here, not only by the reducer — and *before* the
   // ownership branch below, because both paths retry a refusal forever.
-  //
-  // The post-check at the end leaves `ownedId` null when the store refuses an
-  // add, so every later prop change re-dispatched `addMesh`. The update path
-  // has the same shape for a different reason: an owned mesh whose geometry
-  // later goes invalid keeps its `ownedId`, so it re-dispatched `updateMesh`,
-  // which `graphicsReducer` refuses with a warning of its own. Either way it is
-  // an O(vertices) scan and a console warning per prop change, per frame if the
-  // position is animated. Measured on each branch before this: six dispatches
-  // and six warnings across five prop changes.
-  //
-  // The first version of this guard sat below the ownership return and closed
-  // only the add path, while its comment claimed both.
-  //
-  // This calls the same function the reducer calls, so it is one shared rule
-  // rather than the duplicated rules the post-check was chosen to avoid. The
-  // key includes the problem, so a *different* fault still speaks, and success
-  // clears it so a later one does too.
   const problem = customGeometryProblem(config.geometry);
   if (problem) {
-    // Let go of the old mesh before going inert.
-    //
-    // Renaming to an id whose geometry is invalid used to return here with
-    // `ownedId` still set, so the mesh this component used to own stayed in the
-    // scene while the component that put it there had moved on and would never
-    // dispatch for it again. Inert has to mean inert, not "inert and still
-    // rendering the last thing that worked".
-    //
-    // This is the other side of moving the pre-check above the ownership
-    // branch. Below it, the check closed only the add path while its comment
-    // claimed both; above it, it closed both and opened this — the same shape
-    // the register keeps recording, one fix reaching past another.
+    // A rename to invalid geometry must release the old mesh. Returning while
+    // retaining its id leaves an object this component can no longer remove.
     if (ownedId !== null && ownedId !== config.id) {
-      store.dispatch({ type: 'removeMesh', id: ownedId });
+      if (store.state) {
+        store.dispatch({ type: 'removeMesh', id: ownedId });
+      }
       ownedId = null;
     }
 
@@ -124,15 +104,18 @@ function syncToStore(config: MeshConfig): void {
     return;
   }
 
-  // A changed `id` used to send the update to an id the store had never heard
-  // of; `updateMesh` drops those in silence, so the original mesh stayed in the
-  // scene and outlived the component, whose `onDestroy` removes the new id.
   if (ownedId !== null) {
-    store.dispatch({ type: 'removeMesh', id: ownedId });
+    if (store.state) {
+      store.dispatch({ type: 'removeMesh', id: ownedId });
+    }
     ownedId = null;
   }
 
+  if (!store.state) return;
+
   if (store.state.meshes.some((mesh) => mesh.id === config.id)) {
+    // Duplicate ids must stand aside: the reducer's update path affects every
+    // matching mesh and would let the two components fight over one identity.
     if (warnedId !== config.id) {
       console.warn(
         `[graphics] <Mesh> id "${config.id}" is already in use; this mesh is inert`
@@ -144,24 +127,13 @@ function syncToStore(config: MeshConfig): void {
 
   store.dispatch({ type: 'addMesh', mesh: config });
 
-  // Claim the id only if the store actually took it.
-  //
-  // This used to assign unconditionally, and the reducer has more than one
-  // reason to refuse: the duplicate-id check above, and — since custom geometry
-  // arrived — geometry it cannot build. A component that assumed success then
-  // treated every later prop change as an update to a mesh that was never
-  // added, and `updateMesh` drops those, so *repairing* the geometry left the
-  // mesh absent for good with no second warning.
-  //
-  // Kept as defence in depth alongside the pre-check above: it costs one
-  // `.some()` and it does not need to know *why* the store refused, so a
-  // refusal this component has not learned about still cannot be mistaken for
-  // ownership.
-  ownedId = store.state.meshes.some((mesh) => mesh.id === config.id) ? config.id : null;
+  // The reducer can refuse a mesh for reasons beyond the local geometry check.
+  // Claim ownership only after the store actually contains the new identity.
+  ownedId = store.state?.meshes.some((mesh) => mesh.id === config.id) ? config.id : null;
 }
 
 onDestroy(() => {
-  if (ownedId !== null) {
+  if (ownedId !== null && store.state) {
     store.dispatch({ type: 'removeMesh', id: ownedId });
   }
 });

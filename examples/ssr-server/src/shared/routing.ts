@@ -1,114 +1,58 @@
-/**
- * Routing configuration shared between server and client.
- *
- * This demonstrates how Composable Svelte's router works isomorphically:
- * - Server: Parse URL from request to determine initial state
- * - Client: Sync state with browser history API
- *
- * Routes:
- * - / → List page (all posts)
- * - /posts/:id → Post detail page
- * - /posts/:id/comments → Post comments page (nested route)
- */
-
+/** Shared pure route decisions. Browser event ownership remains in core routing. */
 import { createParserConfig, parseDestination, serializeDestination } from '@composable-svelte/core/routing';
 import type { ParserConfig, SerializerConfig } from '@composable-svelte/core/routing';
 import type { AppDestination } from './types';
 
-/**
- * Parser configuration for blog routes.
- *
- * Handles three routes (in order of specificity):
- * - /posts/:id/comments → comments destination (nested route)
- * - /posts/:id → post destination
- * - / → list destination
- */
-export const parserConfig: ParserConfig<AppDestination> = createParserConfig<AppDestination>(
-  {
-    // Keys are tried in insertion order, so the most specific comes first.
-    //
-    // Patterns carry their leading slash. `parseDestination` strips `basePath`
-    // and, when that is '/', hands the parser a path with no leading slash —
-    // which is why this file used to write `posts/:id` and say so in a comment.
-    // `createParserConfig` normalises, so patterns look the same either way.
-    '/posts/:id/comments': (params) => {
-      const postId = parseInt(params.id ?? '', 10);
-      return isNaN(postId) ? null : { type: 'comments', state: { postId } };
-    },
-    '/posts/:id': (params) => {
-      const postId = parseInt(params.id ?? '', 10);
-      // Declining after the pattern matched: '/posts/abc' is not a post route,
-      // and returning null lets the next parser try.
-      return isNaN(postId) ? null : { type: 'post', state: { postId } };
-    },
-    '/': () => ({ type: 'list', state: {} })
-  },
-  { basePath: '/' }
-);
+export const SUPPORTED_LOCALES = ['en', 'fr', 'es'] as const;
+export function supportedLocale(value: string | null | undefined): string | undefined {
+  return SUPPORTED_LOCALES.find(locale => locale === value);
+}
 
-/**
- * Serializer configuration for blog routes.
- *
- * Maps destination state back to URLs for client-side navigation.
- */
+export function extractLocaleAndCleanPath(input: string): { path: string; locale: string | undefined; search: string } {
+  const url = new URL(input, 'https://example.com');
+  const parts = url.pathname.split('/');
+  const locale = supportedLocale(parts[1]);
+  const path = locale ? `/${parts.slice(2).join('/')}` : url.pathname;
+  return { path: path || '/', locale, search: url.search };
+}
+
+function postId(value: string | undefined): number | null {
+  if (!value || !/^\d+$/.test(value)) return null;
+  const number = Number(value);
+  return Number.isSafeInteger(number) && number > 0 ? number : null;
+}
+
+export const parserConfig: ParserConfig<AppDestination> = createParserConfig<AppDestination>({
+  '/posts/:id/comments': params => {
+    const id = postId(params.id);
+    return id === null ? null : { type: 'comments', state: { postId: id } };
+  },
+  '/posts/:id': params => {
+    const id = postId(params.id);
+    return id === null ? null : { type: 'post', state: { postId: id } };
+  },
+  '/': () => ({ type: 'list', state: {} })
+}, { basePath: '/' });
+
 export const serializerConfig: SerializerConfig<AppDestination> = {
   basePath: '/',
   serializers: {
     list: () => '/',
-    post: (state) => `/posts/${state.postId}`,
-    comments: (state) => `/posts/${state.postId}/comments`
+    post: state => `/posts/${state.postId}`,
+    comments: state => `/posts/${state.postId}/comments`,
+    notFound: () => '/404'
   }
 };
 
-/**
- * Parse URL path to determine destination.
- *
- * This is a **pure function** that works on both server and client!
- *
- * @param path - URL path from request (server) or window.location (client)
- * @returns Destination (defaults to list if no match)
- *
- * @example
- * ```typescript
- * // Server-side (Fastify)
- * const destination = parseDestinationFromURL(request.url);
- *
- * // Client-side
- * const destination = parseDestinationFromURL(window.location.pathname);
- * ```
- */
-export function parseDestinationFromURL(path: string): AppDestination {
-  const destination = parseDestination(path, parserConfig);
-  return destination ?? { type: 'list', state: {} };
+export function parseDestinationFromURL(input: string): AppDestination {
+  return parseDestination(extractLocaleAndCleanPath(input).path, parserConfig) ?? { type: 'notFound', state: {} };
 }
-
-/**
- * Generate URL from destination.
- *
- * @param destination - Destination to serialize
- * @returns URL path
- */
 export function destinationURL(destination: AppDestination): string {
   return serializeDestination(destination, serializerConfig);
 }
-
-/**
- * Helper: Generate URL for list page.
- */
-export function listURL(): string {
-  return '/';
+export function formatLocalizedURL(path: string, locale: string = 'en'): string {
+  return locale === 'en' ? path : `/${locale}${path}`;
 }
-
-/**
- * Helper: Generate URL for post detail page.
- */
-export function postURL(postId: number): string {
-  return `/posts/${postId}`;
-}
-
-/**
- * Helper: Generate URL for post comments page.
- */
-export function commentsURL(postId: number): string {
-  return `/posts/${postId}/comments`;
-}
+export function listURL(locale = 'en'): string { return formatLocalizedURL('/', locale); }
+export function postURL(id: number, locale = 'en'): string { return formatLocalizedURL(`/posts/${id}`, locale); }
+export function commentsURL(id: number, locale = 'en'): string { return formatLocalizedURL(`/posts/${id}/comments`, locale); }

@@ -1,13 +1,12 @@
-<script lang="ts">
+<script lang="ts" generics="TRow = unknown">
 /**
  * Chart - High-level wrapper component for charts
  * Handles responsive sizing, provides easy API
  */
 
-import { onMount } from 'svelte';
+import { untrack } from 'svelte';
 import ChartPrimitive from './ChartPrimitive.svelte';
-import type { Store } from '@composable-svelte/core';
-import type { ChartState, ChartAction, ChartConfig } from '../types/chart.types.js';
+import type { ChartState, ChartConfig, ChartStore, ChartAccessor } from '../types/chart.types.js';
 import { createResizeObserver } from '../utils/responsive.js';
 import { buildPlot, resolveAccessor } from '../utils/plot-builder.js';
 
@@ -27,9 +26,10 @@ let {
   size,
   xDomain,
   yDomain,
+  barCategoryOrder,
   onSelectionChange
 }: {
-  store: Store<ChartState<any>, ChartAction<any>>;
+  store: ChartStore<TRow>;
   width?: number | undefined;
   height?: number | undefined;
   type?: 'scatter' | 'line' | 'bar' | 'area' | 'histogram' | undefined;
@@ -37,18 +37,30 @@ let {
   enableBrush?: boolean | undefined;
   enableTooltip?: boolean | undefined;
   enableAnimations?: boolean | undefined;
-  x?: string | ((d: any) => any) | undefined;
-  y?: string | ((d: any) => any) | undefined;
-  color?: string | ((d: any) => any) | undefined;
+  x?: ChartAccessor<TRow> | undefined;
+  y?: ChartAccessor<TRow> | undefined;
+  color?: ChartAccessor<TRow> | undefined;
   size?: number | undefined;
   xDomain?: [number, number] | 'auto' | undefined;
   yDomain?: [number, number] | 'auto' | undefined;
-  onSelectionChange?: ((selected: any[]) => void) | undefined;
+  barCategoryOrder?: 'input' | 'auto' | undefined;
+  onSelectionChange?: ((selected: TRow[]) => void) | undefined;
 } = $props();
+
+const isRetired = $derived($store === undefined);
+let activeObserverCleanup: (() => void) | null = null;
+
+// ChildView sends terminal undefined synchronously, before Svelte removes the
+// outgoing DOM. Release the observer at that moment rather than on effect flush.
+$effect(() => {
+  const binding = store;
+  return untrack(() => binding.subscribe(state => {
+    if (state === undefined && store === binding) activeObserverCleanup?.();
+  }));
+});
 
 // Container element
 let containerElement: HTMLDivElement | null = $state(null);
-let resizeObserver: ResizeObserver | null = $state(null);
 
 /**
  * The id `aria-describedby` points at, unique per component instance.
@@ -67,7 +79,7 @@ let resizeObserver: ResizeObserver | null = $state(null);
 const summaryId = $props.id();
 
 // Chart config
-const config: ChartConfig & { type: typeof type } = $derived({
+const config: ChartConfig<TRow> & { type: typeof type } = $derived({
   type,
   enableZoom,
   enableBrush,
@@ -78,28 +90,41 @@ const config: ChartConfig & { type: typeof type } = $derived({
   color,
   size,
   xDomain,
-  yDomain
+  yDomain,
+  barCategoryOrder
 });
 
-// Setup resize observer
-onMount(() => {
-  if (containerElement && !width && !height) {
-    // Use ResizeObserver for fully responsive sizing
-    resizeObserver = createResizeObserver(containerElement, store.dispatch);
-  } else if (width || height) {
-    // Use fixed dimensions
-    store.dispatch({
-      type: 'resize',
-      dimensions: {
-        width: width || 600,
-        height: height || 400
-      }
-    });
-  }
+// Each sizing mode owns its observer; prop changes retire the previous mode.
+// Promptly disconnects on retirement.
+$effect(() => {
+  const element = containerElement;
+  const fixedWidth = width;
+  const fixedHeight = height;
+  const currentStore = store;
+  const retired = isRetired;
+  if (!element || retired) return;
 
-  return () => {
-    resizeObserver?.disconnect();
+  if (fixedWidth !== undefined || fixedHeight !== undefined) {
+    const dimensions = { width: fixedWidth ?? 600, height: fixedHeight ?? 400 };
+    untrack(() => {
+      const current = currentStore.state?.dimensions;
+      if (current && (current.width !== dimensions.width || current.height !== dimensions.height))
+        currentStore.dispatch({ type: 'resize', dimensions });
+    });
+    return;
+  }
+  let live = true;
+  const observer = createResizeObserver<TRow>(element, action => {
+    if (live && currentStore.state !== undefined) currentStore.dispatch(action);
+  });
+  const release = () => {
+    if (!live) return;
+    live = false;
+    observer.disconnect();
+    if (activeObserverCleanup === release) activeObserverCleanup = null;
   };
+  activeObserverCleanup = release;
+  return release;
 });
 
 // Watch for selection changes.
@@ -115,7 +140,7 @@ onMount(() => {
 // (`chart.reducer.ts:179-191`), so the derived does change identity on a clear
 // and the consumer is told. Under the old guard it never was, and a details
 // panel wired to this callback showed dismissed rows forever.
-const selectedData = $derived($store.selection.selectedData);
+const selectedData = $derived($store?.selection?.selectedData ?? []);
 
 // Not $state: written and read inside the effect below. A reactive flag would
 // re-trigger the effect it lives in (`effect_update_depth_exceeded`).
@@ -129,15 +154,17 @@ $effect(() => {
   // exists. jsdom lacks it, `onMount` throws, and the effect is suppressed, so
   // this is invisible in this package's own environment.
   const selection = selectedData;
+  const retired = isRetired;
+  if (retired) return;
   if (!reportedInitial) {
     reportedInitial = true;
     return;
   }
-  onSelectionChange?.(selection);
+  untrack(() => onSelectionChange?.(selection));
 });
 
 // Provide plot builder to primitive
-function plotBuilder(chartState: ChartState<any>, chartConfig: any) {
+function plotBuilder(chartState: ChartState<TRow>, chartConfig: ChartConfig<TRow>): Element | null {
   return buildPlot(chartState, chartConfig);
 }
 
@@ -149,18 +176,18 @@ function plotBuilder(chartState: ChartState<any>, chartConfig: any) {
  * the label was the one that lied — it named points a user could not reach.
  * Both now read the filtered count, and both say the total when it differs.
  */
-const shownCount = $derived($store.filteredData.length);
-const totalCount = $derived($store.data.length);
+const shownCount = $derived($store?.filteredData?.length ?? 0);
+const totalCount = $derived($store?.data?.length ?? 0);
 const countPhrase = $derived(
   shownCount === totalCount
     ? `${shownCount} data points`
     : `${shownCount} of ${totalCount} data points`
 );
 
-const selectedCount = $derived($store.selection.selectedIndices.length);
+const selectedCount = $derived($store?.selection?.selectedIndices?.length ?? 0);
 
 /** Name an accessor for a human, without pretending to know a function's meaning. */
-const axisName = (accessor: string | ((d: any) => any) | undefined) =>
+const axisName = (accessor: ChartAccessor<TRow> | undefined) =>
   typeof accessor === 'string' ? accessor : accessor ? 'a custom accessor' : null;
 
 /**
@@ -212,11 +239,14 @@ const summaryText = $derived.by(() => {
 const PAN_STEP = 40;
 
 function pan(dx: number, dy: number) {
-  const { x, y, k } = $store.transform;
+  const state = store.state;
+  if (!state) return;
+  const { x, y, k } = state.transform;
   store.dispatch({ type: 'zoom', transform: { x: x + dx, y: y + dy, k } });
 }
 
 function handleKeyDown(event: KeyboardEvent) {
+  if (isRetired || !store.state) return;
   // Arrows move the cursor; Shift+Arrows pan. The skill file documented the
   // reverse — bare arrows panning — but point-to-point traversal is the thing
   // that makes the data reachable at all, so it takes the unmodified key and
@@ -224,6 +254,7 @@ function handleKeyDown(event: KeyboardEvent) {
   switch (event.key) {
     case 'ArrowRight':
     case 'ArrowDown':
+      if (event.shiftKey && !enableZoom) return;
       event.preventDefault();
       if (event.shiftKey) pan(event.key === 'ArrowRight' ? -PAN_STEP : 0, event.key === 'ArrowDown' ? -PAN_STEP : 0);
       else store.dispatch({ type: 'focusNext' });
@@ -231,6 +262,7 @@ function handleKeyDown(event: KeyboardEvent) {
 
     case 'ArrowLeft':
     case 'ArrowUp':
+      if (event.shiftKey && !enableZoom) return;
       event.preventDefault();
       if (event.shiftKey) pan(event.key === 'ArrowLeft' ? PAN_STEP : 0, event.key === 'ArrowUp' ? PAN_STEP : 0);
       else store.dispatch({ type: 'focusPrevious' });
@@ -262,17 +294,20 @@ function handleKeyDown(event: KeyboardEvent) {
     // they held Shift.
     case '+':
     case '=':
+      if (!enableZoom) return;
       event.preventDefault();
       store.dispatch({ type: 'zoomIn' });
       break;
 
     case '-':
     case '_':
+      if (!enableZoom) return;
       event.preventDefault();
       store.dispatch({ type: 'zoomOut' });
       break;
 
     case '0':
+      if (!enableZoom) return;
       event.preventDefault();
       store.dispatch({ type: 'resetZoom' });
       break;
@@ -287,15 +322,17 @@ function handleKeyDown(event: KeyboardEvent) {
  * there is no cursor, so nothing is announced at mount.
  */
 const focusAnnouncement = $derived.by(() => {
-  const index = $store.focusedIndex;
+  const current = $store;
+  if (!current) return '';
+  const index = current.focusedIndex;
   if (index === null) return '';
-  const datum = $store.filteredData[index];
+  const datum = current.filteredData[index];
   if (datum === undefined) return '';
 
   const parts = [`Point ${index + 1} of ${shownCount}.`];
-  if (x) parts.push(`${axisName(x)}: ${resolveAccessor<any>(x)(datum)}.`);
-  if (y) parts.push(`${axisName(y)}: ${resolveAccessor<any>(y)(datum)}.`);
-  if ($store.selection.selectedIndices.includes(index)) parts.push('Selected.');
+  if (x) parts.push(`${axisName(x)}: ${resolveAccessor<TRow>(x)(datum)}.`);
+  if (y) parts.push(`${axisName(y)}: ${resolveAccessor<TRow>(y)(datum)}.`);
+  if (current.selection.selectedIndices.includes(index)) parts.push('Selected.');
 
   return parts.join(' ');
 });
@@ -328,25 +365,27 @@ const MAX_TABLE_ROWS = 100;
  * legitimate configuration, since Plot has its own defaults — the row's own keys
  * are the best available answer, and a primitive row gets one Value column.
  */
-type TableColumn = { label: string; read: (row: any) => unknown };
+type TableColumn = { label: string; read: (row: TRow) => unknown };
 
 const tableColumns = $derived.by((): TableColumn[] => {
   const columns: TableColumn[] = [];
-  if (x) columns.push({ label: typeof x === 'string' ? x : 'x', read: resolveAccessor<any>(x) });
-  if (y) columns.push({ label: typeof y === 'string' ? y : 'y', read: resolveAccessor<any>(y) });
+  if (x) columns.push({ label: typeof x === 'string' ? x : 'x', read: resolveAccessor<TRow>(x) });
+  if (y) columns.push({ label: typeof y === 'string' ? y : 'y', read: resolveAccessor<TRow>(y) });
   if (columns.length > 0) return columns;
 
-  const first = $store.filteredData[0];
+  const current = $store;
+  if (!current) return [];
+  const first = current.filteredData[0];
   if (first !== null && typeof first === 'object') {
     return Object.keys(first as object).map((key) => ({
       label: key,
-      read: (row: any) => row?.[key]
+      read: (row: TRow) => (row as Record<string, unknown>)?.[key]
     }));
   }
-  return [{ label: 'Value', read: (row: any) => row }];
+  return [{ label: 'Value', read: (row: TRow) => row }];
 });
 
-const tableRows = $derived($store.filteredData.slice(0, MAX_TABLE_ROWS));
+const tableRows = $derived($store?.filteredData?.slice(0, MAX_TABLE_ROWS) ?? []);
 
 const tableCaption = $derived(
   shownCount > MAX_TABLE_ROWS

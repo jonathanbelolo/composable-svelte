@@ -13,6 +13,10 @@ import {
   getDirection
 } from '../../src/lib/i18n/reducer.js';
 import type { I18nState, I18nAction, I18nDependencies, TranslationNamespace } from '../../src/lib/i18n/types.js';
+import { createTestStore } from '../../src/lib/test/test-store.js';
+import { afterEach } from 'vitest';
+const ownedStores: Array<{destroy(): void}> = [];
+afterEach(() => { for (const store of ownedStores.splice(0)) store.destroy(); });
 import { Effect } from '../../src/lib/effect.js';
 
 describe('buildFallbackChain', () => {
@@ -160,15 +164,15 @@ describe('i18nReducer', () => {
       ).toBe('pt-BR');
     });
 
-    it('still refuses a locale that is not in availableLocales', () => {
+    it('still refuses a locale that is not in availableLocales', async () => {
       expectConsole('warn');
       mockDeps.localeDetector.getSupportedLocales = vi.fn(() => ['en', 'de']);
 
-      const [newState] = i18nReducer(
-        initialState,
-        { type: 'i18n/setLocale', locale: 'de' },
-        mockDeps
-      );
+      const store = createTestStore({ initialState, reducer: i18nReducer, dependencies: mockDeps });
+      ownedStores.push(store);
+      await store.send({ type: 'i18n/setLocale', locale: 'de' });
+      await store.finish();
+      const newState = store.state;
 
       expect(
         newState.currentLocale,
@@ -237,7 +241,7 @@ describe('i18nReducer', () => {
       expect(mockDeps.dom.setDirection).toHaveBeenCalledWith('rtl');
     });
 
-    it('should warn and return unchanged state for unsupported locale', () => {
+    it('should warn and return unchanged state for unsupported locale', async () => {
       const consoleSpy = expectConsole('warn');
 
       const action: I18nAction = {
@@ -245,10 +249,13 @@ describe('i18nReducer', () => {
         locale: 'invalid'
       };
 
-      const [newState, effect] = i18nReducer(initialState, action, mockDeps);
+      const store = createTestStore({ initialState: initialState, reducer: i18nReducer, dependencies: mockDeps });
+      ownedStores.push(store);
+      await store.send(action);
+      await store.finish();
+      const newState = store.state;
 
       expect(newState).toBe(initialState);
-      expect(effect._tag).toBe('None');
       expect(consoleSpy[0]?.[0]).toEqual(
         expect.stringContaining('Unsupported locale: invalid')
       );
@@ -400,7 +407,7 @@ describe('i18nReducer', () => {
   });
 
   describe('i18n/namespaceLoadFailed', () => {
-    it('should remove loading state and log error', () => {
+    it('should remove loading state and log error', async () => {
       const consoleSpy = expectConsole('error');
 
       const state: I18nState = {
@@ -416,10 +423,13 @@ describe('i18nReducer', () => {
         error
       };
 
-      const [newState, effect] = i18nReducer(state, action, mockDeps);
+      const store = createTestStore({ initialState: state, reducer: i18nReducer, dependencies: mockDeps });
+      ownedStores.push(store);
+      await store.send(action);
+      await store.finish();
+      const newState = store.state;
 
       expect(newState.loadingNamespaces).not.toContain('en:common');
-      expect(effect._tag).toBe('None');
       expect(consoleSpy[0]).toEqual([
         expect.stringContaining('Failed to load namespace common for en'),
         error

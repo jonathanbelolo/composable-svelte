@@ -1,368 +1,122 @@
-import type { Reducer, EffectType } from '@composable-svelte/core';
+import type { Reducer } from '@composable-svelte/core';
 import { Effect } from '@composable-svelte/core';
-import { ifLetPresentation } from '@composable-svelte/core/navigation';
+import { destinationSlot, ManagedIntegrationBuilder } from '@composable-svelte/core/application';
+import { createDestination } from '@composable-svelte/core/navigation';
 import type {
-  ProductDetailState,
+  InfoAction,
+  InfoState,
   ProductDetailAction,
   ProductDetailDestination,
-  ProductDetailDestinationAction
+  ProductDetailState
 } from './product-detail.types.js';
+import { createInfoState } from './product-detail.types.js';
 import { createAddToCartState } from '../add-to-cart/add-to-cart.types.js';
 import { createShareState } from '../share/share.types.js';
 import { createQuickViewState } from '../quick-view/quick-view.types.js';
 import { createDeleteAlertState } from '../delete-alert/delete-alert.types.js';
-import { addToCartReducer, type AddToCartDependencies } from '../add-to-cart/add-to-cart.reducer.js';
-import { shareReducer, type ShareDependencies } from '../share/share.reducer.js';
-import { quickViewReducer, type QuickViewDependencies } from '../quick-view/quick-view.reducer.js';
-import { deleteAlertReducer, type DeleteAlertDependencies } from '../delete-alert/delete-alert.reducer.js';
+import { addToCartReducer } from '../add-to-cart/add-to-cart.reducer.js';
+import { shareReducer } from '../share/share.reducer.js';
+import { quickViewReducer } from '../quick-view/quick-view.reducer.js';
+import { deleteAlertReducer } from '../delete-alert/delete-alert.reducer.js';
 
-// ============================================================================
-// Dependencies
-// ============================================================================
+export type ProductDetailDependencies = Record<never, never>;
 
-export interface ProductDetailDependencies {
-  onCartItemAdded?: (productId: string, quantity: number) => void;
-  onProductDeleted?: (productId: string) => void;
+const infoReducer: Reducer<InfoState, InfoAction, ProductDetailDependencies> = (state) => [
+  state,
+  Effect.none()
+];
+
+export const productDetailDestination = createDestination({
+  addToCart: addToCartReducer,
+  share: shareReducer,
+  quickView: quickViewReducer,
+  deleteAlert: deleteAlertReducer,
+  info: infoReducer
+});
+
+export const productDetailDestinationSlot = destinationSlot<ProductDetailState, ProductDetailAction>()(
+  'destination',
+  productDetailDestination
+);
+
+function presenting(destination: ProductDetailDestination): ProductDetailState['presentation'] {
+  return { status: 'presenting', content: destination, duration: 300 };
 }
-
-// ============================================================================
-// Destination Reducer
-// ============================================================================
-
-const destinationReducer: Reducer<
-  ProductDetailDestination,
-  ProductDetailDestinationAction,
-  AddToCartDependencies | ShareDependencies | QuickViewDependencies | DeleteAlertDependencies
-> = (state, action, deps) => {
-  switch (state.type) {
-    case 'addToCart': {
-      if (action.type === 'addToCart') {
-        const [childState, childEffect] = addToCartReducer(state.state, action.action, deps);
-        return [
-          { type: 'addToCart' as const, state: childState },
-          Effect.map(childEffect, (childAction) => ({
-            type: 'addToCart' as const,
-            action: childAction
-          }))
-        ];
-      }
-      return [state, Effect.none()];
-    }
-
-    case 'share': {
-      if (action.type === 'share') {
-        const [childState, childEffect] = shareReducer(state.state, action.action, deps);
-        return [
-          { type: 'share' as const, state: childState },
-          Effect.map(childEffect, (childAction) => ({
-            type: 'share' as const,
-            action: childAction
-          }))
-        ];
-      }
-      return [state, Effect.none()];
-    }
-
-    case 'quickView': {
-      if (action.type === 'quickView') {
-        const [childState, childEffect] = quickViewReducer(state.state, action.action, deps);
-        return [
-          { type: 'quickView' as const, state: childState },
-          Effect.map(childEffect, (childAction) => ({
-            type: 'quickView' as const,
-            action: childAction
-          }))
-        ];
-      }
-      return [state, Effect.none()];
-    }
-
-    case 'deleteAlert': {
-      if (action.type === 'deleteAlert') {
-        const deleteAlertDeps: DeleteAlertDependencies = {
-          dismiss: () => {} // Handled by parent observation
-        };
-        const [childState, childEffect] = deleteAlertReducer(state.state, action.action, deleteAlertDeps);
-        return [
-          { type: 'deleteAlert' as const, state: childState },
-          Effect.map(childEffect, (childAction) => ({
-            type: 'deleteAlert' as const,
-            action: childAction
-          }))
-        ];
-      }
-      return [state, Effect.none()];
-    }
-
-    case 'info': {
-      // Popover actions handled in parent
-      return [state, Effect.none()];
-    }
-
-    default: {
-      const _exhaustive: never = state;
-      return [_exhaustive, Effect.none()];
-    }
-  }
-};
-
-// ============================================================================
-// ProductDetail Reducer
-// ============================================================================
+function dismissing(destination: ProductDetailDestination): ProductDetailState['presentation'] {
+  return { status: 'dismissing', content: destination, duration: 300 };
+}
 
 export const productDetailReducer: Reducer<
   ProductDetailState,
   ProductDetailAction,
   ProductDetailDependencies
-> = (state, action, deps) => {
+> = (state, action) => {
   switch (action.type) {
     case 'addToCartButtonTapped': {
-      const destinationState = {
-        type: 'addToCart' as const,
-        state: createAddToCartState(state.productId)
-      };
-      return [
-        {
-          ...state,
-          destination: destinationState,
-          presentation: {
-            status: 'presenting',
-            content: destinationState,
-            duration: 300
-          }
-        },
-        Effect.none()
-      ];
+      const destination = productDetailDestination.initial('addToCart', createAddToCartState(state.productId));
+      return [{ ...state, destination, presentation: presenting(destination) }, Effect.none()];
     }
-
     case 'shareButtonTapped': {
-      const destinationState = {
-        type: 'share' as const,
-        state: createShareState(state.productId)
-      };
-      return [
-        {
-          ...state,
-          destination: destinationState,
-          presentation: {
-            status: 'presenting',
-            content: destinationState,
-            duration: 300
-          }
-        },
-        Effect.none()
-      ];
+      const destination = productDetailDestination.initial('share', createShareState(state.productId));
+      return [{ ...state, destination, presentation: presenting(destination) }, Effect.none()];
     }
-
-    case 'quickViewButtonTapped':
-      return [
-        {
-          ...state,
-          destination: {
-            type: 'quickView',
-            state: createQuickViewState(state.productId)
-          }
-        },
-        Effect.none()
-      ];
-
-    case 'deleteButtonTapped':
-      return [
-        {
-          ...state,
-          destination: {
-            type: 'deleteAlert',
-            state: createDeleteAlertState(state.productId)
-          }
-        },
-        Effect.none()
-      ];
-
-    case 'infoButtonTapped':
-      return [
-        {
-          ...state,
-          destination: {
-            type: 'info',
-            state: { productId: state.productId }
-          }
-        },
-        Effect.none()
-      ];
-
+    case 'quickViewButtonTapped': {
+      const destination = productDetailDestination.initial('quickView', createQuickViewState(state.productId));
+      return [{ ...state, destination, presentation: presenting(destination) }, Effect.none()];
+    }
+    case 'deleteButtonTapped': {
+      const destination = productDetailDestination.initial('deleteAlert', createDeleteAlertState(state.productId));
+      return [{ ...state, destination, presentation: presenting(destination) }, Effect.none()];
+    }
+    case 'infoButtonTapped': {
+      const destination = productDetailDestination.initial('info', createInfoState(state.productId));
+      return [{ ...state, destination, presentation: presenting(destination) }, Effect.none()];
+    }
     case 'destination': {
-      // Handle child destinations with ifLetPresentation
-      const [newState, effect] = ifLetPresentation(
-        (s: ProductDetailState) => s.destination,
-        (s: ProductDetailState, d: ProductDetailDestination | null) => ({ ...s, destination: d }),
-        'destination',
-        (childAction): ProductDetailAction => ({ type: 'destination', action: { type: 'presented', action: childAction } }),
-        destinationReducer
-      )(state, action, deps);
-
-      // Observe child actions for parent updates
-      const presentedAction = action.action;
-
-      // AddToCart completed
-      if (
-        presentedAction.type === 'presented' &&
-        presentedAction.action.type === 'addToCart' &&
-        presentedAction.action.action.type === 'addButtonTapped'
-      ) {
-        const addToCartState = state.destination;
-        if (addToCartState?.type === 'addToCart') {
-          const { productId, quantity } = addToCartState.state;
-
-          // Dismiss regardless of whether the host wired the callback — it is
-          // optional, and skipping the dismissal left the sheet stuck open.
-          //
-          // `presentation` must be reset too: the primitives stay mounted while
-          // it is non-idle so an exit animation can finish, so clearing only
-          // `destination` leaves the sheet on screen forever.
-          return [
-            { ...newState, destination: null, presentation: { status: 'idle' } },
-            deps.onCartItemAdded
-              ? Effect.batch(
-                  effect,
-                  Effect.run(() => {
-                    deps.onCartItemAdded!(productId, quantity);
-                  })
-                )
-              : effect
-          ];
-        }
-      }
-
-      // AddToCart canceled
-      if (
-        presentedAction.type === 'presented' &&
-        presentedAction.action.type === 'addToCart' &&
-        presentedAction.action.action.type === 'cancelButtonTapped'
-      ) {
-        // Start dismissal animation
-        if (state.destination) {
-          return [
-            {
-              ...newState,
-              presentation: {
-                status: 'dismissing',
-                content: state.destination,
-                duration: 300
-              }
-            },
-            effect
-          ];
-        }
-        return [{ ...newState, destination: null, presentation: { status: 'idle' } }, effect];
-      }
-
-      // Share completed
-      if (
-        presentedAction.type === 'presented' &&
-        presentedAction.action.type === 'share' &&
-        presentedAction.action.action.type === 'shareButtonTapped'
-      ) {
-        // Start dismissal animation
-        if (state.destination) {
-          return [
-            {
-              ...newState,
-              presentation: {
-                status: 'dismissing',
-                content: state.destination,
-                duration: 300
-              }
-            },
-            effect
-          ];
-        }
-        return [{ ...newState, destination: null, presentation: { status: 'idle' } }, effect];
-      }
-
-      // Share canceled
-      if (
-        presentedAction.type === 'presented' &&
-        presentedAction.action.type === 'share' &&
-        presentedAction.action.action.type === 'cancelButtonTapped'
-      ) {
-        // Start dismissal animation
-        if (state.destination) {
-          return [
-            {
-              ...newState,
-              presentation: {
-                status: 'dismissing',
-                content: state.destination,
-                duration: 300
-              }
-            },
-            effect
-          ];
-        }
-        return [{ ...newState, destination: null, presentation: { status: 'idle' } }, effect];
-      }
-
-      // QuickView closed
-      if (
-        presentedAction.type === 'presented' &&
-        presentedAction.action.type === 'quickView' &&
-        presentedAction.action.action.type === 'closeButtonTapped'
-      ) {
-        // Just dismiss — reset presentation too, or the overlay stays mounted.
-        return [{ ...newState, destination: null, presentation: { status: 'idle' } }, effect];
-      }
-
-      // Delete alert - intercept dismiss actions
-      if (
-        presentedAction.type === 'presented' &&
-        presentedAction.action?.type === 'deleteAlert' &&
-        (presentedAction.action.action?.type === 'cancelButtonTapped' ||
-         presentedAction.action.action?.type === 'confirmButtonTapped')
-      ) {
-        // Dismiss the alert, keep ProductDetail open.
-        return [{ ...newState, destination: null, presentation: { status: 'idle' } }, effect];
-      }
-
-      return [newState, effect];
-    }
-
-    case 'presentation': {
-      switch (action.event.type) {
-        case 'presentationCompleted': {
-          // Animation finished - mark as presented
-          if (state.presentation.status === 'presenting' && state.presentation.content) {
-            return [
-              {
-                ...state,
-                presentation: {
-                  status: 'presented',
-                  content: state.presentation.content
-                }
-              },
-              Effect.none()
-            ];
-          }
+      if (action.action.type === 'dismiss') {
+        if (!state.destination || state.presentation.status !== 'presented') {
           return [state, Effect.none()];
         }
-
-        case 'dismissalCompleted': {
-          // Dismissal animation finished - clear everything
-          return [
-            {
-              ...state,
-              destination: null,
-              presentation: { status: 'idle' }
-            },
-            Effect.none()
-          ];
-        }
-
-        default:
-          return [state, Effect.none()];
+        return [{ ...state, presentation: dismissing(state.destination) }, Effect.none()];
       }
+      const destination = state.destination;
+      if (!destination) return [state, Effect.none()];
+      const child = action.action.action;
+      if (destination.type !== child.type) return [state, Effect.none()];
+      if (child.action.type === 'presentationCompleted') {
+        if (state.presentation.status !== 'presenting') return [state, Effect.none()];
+        return [{
+          ...state,
+          presentation: { status: 'presented', content: destination }
+        }, Effect.none()];
+      }
+      if (child.action.type === 'dismissalCompleted') {
+        if (state.presentation.status !== 'dismissing') return [state, Effect.none()];
+        return [{ ...state, destination: null, presentation: { status: 'idle' } }, Effect.none()];
+      }
+      const closes =
+        (child.type === 'addToCart' && (child.action.type === 'addConfirmed' || child.action.type === 'cancelButtonTapped')) ||
+        (child.type === 'share' && (child.action.type === 'shareButtonTapped' || child.action.type === 'cancelButtonTapped')) ||
+        (child.type === 'quickView' && child.action.type === 'closeButtonTapped') ||
+        (child.type === 'deleteAlert' && (child.action.type === 'deleteConfirmed' || child.action.type === 'cancelButtonTapped')) ||
+        (child.type === 'info' && (child.action.type === 'closeButtonTapped' || child.action.type === 'cancelButtonTapped'));
+      return closes && state.presentation.status === 'presented'
+        ? [{ ...state, presentation: dismissing(destination) }, Effect.none()]
+        : [state, Effect.none()];
     }
-
     default:
       return [state, Effect.none()];
   }
 };
+
+const productDetailBuilder = new ManagedIntegrationBuilder(productDetailReducer)
+  .with(productDetailDestinationSlot, {
+    dismissal: 'deferred',
+    replaceOn: (action) =>
+      action.type === 'addToCartButtonTapped' ||
+      action.type === 'shareButtonTapped' ||
+      action.type === 'quickViewButtonTapped' ||
+      action.type === 'deleteButtonTapped' ||
+      action.type === 'infoButtonTapped'
+  });
+export const productDetailComposition: ReturnType<typeof productDetailBuilder.build> = productDetailBuilder.build();

@@ -1,0 +1,23 @@
+{
+  "README.md": "098c92d5ed52138340f1b4b460125fae596c2845583479d39c25932c0aebadea",
+  "real-device.html": "173a624d182cb34d73d9ff16dd7d6760a469cabf6ee57923be314d90adb16503",
+  "src/real-device.ts": "71daba8d5dc40ed0d36fc9b972f627135070835a6ec2884714be802f940bd4ea",
+  "src/env.d.ts": "18368a0014b79784466d2465058fafcf15bdcf7aedfdb080a664f9ceca69a6b5",
+  "package.json": "8c6e76a1806de6880be0a3a28d631ecda8cc125bc51a5be7cf09b3cedd5dcefa",
+  "package-lock.json": "6a3281a8ded2b5f702031f90c87b6ebe34f5bb701576709385d6d577f2ce8d69",
+  "svelte.config.js": "be5f3e15f9a03841841e0b4a1848c1b601b368c816e486323ce87cc4910bb8ef",
+  "tsconfig.json": "480ce97dd12095ea2586be74ef0c7bc822fc68be041dff88e280cffd42b469d5",
+  "vite.config.ts": "7c4c9bbe8bdeeae660c0c8e1ecf814744682bbe1759267c5df79bf44bad8d180",
+  "candidate-provenance.json": "fdf8b5ebef9fdb71d07f5977cb50172210ffac5afeb62fadf90600a948236630",
+  "r3-dist-equality.json": "51f9380397bf982df0e1b6e0476380cfc9e157e6a49fe5b33f0b225adb8fb24b",
+  "r4-byte-equality.json": "5919af863c82fa828026fb9ad4c2f617b829e0cc6ea172c8a9fc82d7711e5154",
+  "initial-permission-attempt.json": "4ff8383025d7e4c204d3fedfd3e3f981f29f2073b37ef00429e12dba970248f8",
+  "opus-final-review.json": "02bbae34968ad9ba07e9e2f061c1bd1da97ba4886a301faa7941fc412ec15765",
+  "opus-fix.json": "df86ac24ecb3c1e1decf40742a47e4be3c3b19250983e34c5222dad41d7b02d0",
+  "opus-review-followup.json": "065a7cc8b45ec3fd63bcaa51e46ddb27786d3fcaa8f1c4c884b2edf2e7845597",
+  "opus-review.json": "72b765d7ac09a1a65ea2f141e3f408625526a915a5d3cad08b43793d18289a03",
+  "final-real-device-result.json": "7e9981b346b66b96f201f2f0a73a09284d90903d8a1936991beeeb34b8e70969",
+  "final-result-extraction.json": "1fd127531a3f3ec6e22a2764a4a7772b071c79d7117f41299bc44422d20180ce",
+  "M12-QUALIFICATION-RECEIPT.json": "b15dd296dbdcfd5cc9a380fcd4ef89485504496c66dee28b98390f6c950b23fa",
+  "M12-QUALIFICATION-RECEIPT.md": "dc197906ef604758b1d6adaa502a0ef45afaf610137578659e9ff33b1dd68146"
+}

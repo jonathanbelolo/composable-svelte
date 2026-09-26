@@ -1,17 +1,18 @@
 {
   "name": "@composable-svelte/graphics",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "State-driven WebGL graphics package for Composable Svelte",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "svelte-package -i src -o dist",
+    "build": "svelte-package -i src -o dist && node ../../scripts/emit-svelte-declaration-bridges.mjs dist",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:ui": "vitest --ui",
     "check": "svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings",
     "prepublishOnly": "pnpm run build && pnpm run typecheck && pnpm run check && SILENT_TESTS=true pnpm test",
-    "prepack": "pnpm run build"
+    "prepack": "pnpm run build",
+    "test:browser": "vitest run --config graphics.browser.config.ts"
   },
   "exports": {
     ".": {
@@ -25,12 +26,14 @@
   "files": [
     "dist",
     "README.md",
+    "MANAGED.md",
+    "fixtures/installed-consumer",
     "LICENSE",
     "CHANGELOG.md"
   ],
   "peerDependencies": {
-    "@composable-svelte/core": "^0.12.0",
-    "svelte": "^5.0.0"
+    "@composable-svelte/core": "^0.13.1",
+    "svelte": "^5.20.0"
   },
   "dependencies": {
     "@babylonjs/core": "^8.0.0"
@@ -47,7 +50,9 @@
     "tsup": "^8.0.0",
     "typescript": "^5.6.0",
     "vite": "^6.0.0",
-    "vitest": "^4.0.7"
+    "vitest": "^4.0.7",
+    "@vitest/browser-playwright": "^4.0.7",
+    "playwright": "^1.56.1"
   },
   "publishConfig": {
     "access": "public"

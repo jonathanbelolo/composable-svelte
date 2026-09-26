@@ -199,6 +199,8 @@ export function createTreeHelpers<Node>(config: TreeConfig<Node>): TreeHelpers<N
 	 */
 	function findNode(nodes: Node[], targetId: string): Node | null {
 		for (const node of nodes) {
+			if (node == null) continue; // Skip sparse array holes and null entries
+
 			// Check if this is the target
 			if (config.getId(node) === targetId) {
 				return node;
@@ -208,7 +210,7 @@ export function createTreeHelpers<Node>(config: TreeConfig<Node>): TreeHelpers<N
 			const children = config.getChildren(node);
 			if (children) {
 				const found = findNode(children, targetId);
-				if (found) return found;
+				if (found !== null) return found;
 			}
 		}
 		return null;
@@ -225,7 +227,7 @@ export function createTreeHelpers<Node>(config: TreeConfig<Node>): TreeHelpers<N
 	): Node[] | null {
 		for (let i = 0; i < nodes.length; i++) {
 			const node = nodes[i];
-			if (!node) continue; // Skip sparse array holes
+			if (node == null) continue; // Skip sparse array holes and null entries
 
 			// Check if this is the target
 			if (config.getId(node) === targetId) {
@@ -258,7 +260,7 @@ export function createTreeHelpers<Node>(config: TreeConfig<Node>): TreeHelpers<N
 	function deleteNode(nodes: Node[], targetId: string): Node[] | null {
 		for (let i = 0; i < nodes.length; i++) {
 			const node = nodes[i];
-			if (!node) continue; // Skip sparse array holes
+			if (node == null) continue; // Skip sparse array holes and null entries
 
 			// Check if this is the target
 			if (config.getId(node) === targetId) {

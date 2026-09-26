@@ -6,28 +6,45 @@
  * This file covers essential functionality with real timers.
  */
 
-import { describe, it, expect } from 'vitest';
+import { onTestFinished, describe, it, expect } from 'vitest';
 import { expectConsole } from '../helpers/console.js';
 import { createHeartbeat } from '../../src/lib/websocket/heartbeat.js';
 import { createMockWebSocket } from '../../src/lib/websocket/testing/mock-client.js';
 import type { HeartbeatConfig, WebSocketEvent } from '../../src/lib/websocket/types.js';
 
+function hookPongReply(
+  client: ReturnType<typeof createMockWebSocket>,
+  pingMessage: unknown = 'PING',
+  pongMessage: unknown = 'PONG'
+): void {
+  const originalSend = client.send.bind(client);
+  client.send = async (message) => {
+    await originalSend(message);
+    if (message === pingMessage) {
+      client.simulateMessage(pongMessage);
+    }
+  };
+}
+
 describe('WebSocket Heartbeat - Basic', () => {
   describe('Lifecycle', () => {
     it('should start in stopped state', () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       const config: HeartbeatConfig = {
         enabled: true,
         interval: 1000,
         timeout: 500
       };
       const heartbeat = createHeartbeat(client, config);
+      onTestFinished(() => heartbeat.stop());
 
       expect(heartbeat.isRunning).toBe(false);
     });
 
     it('should start monitoring', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       await client.connect('wss://example.com');
 
       const config: HeartbeatConfig = {
@@ -36,6 +53,7 @@ describe('WebSocket Heartbeat - Basic', () => {
         timeout: 25
       };
       const heartbeat = createHeartbeat(client, config);
+      onTestFinished(() => heartbeat.stop());
 
       heartbeat.start();
       expect(heartbeat.isRunning).toBe(true);
@@ -45,6 +63,7 @@ describe('WebSocket Heartbeat - Basic', () => {
 
     it('should stop monitoring', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       await client.connect('wss://example.com');
 
       const config: HeartbeatConfig = {
@@ -53,6 +72,7 @@ describe('WebSocket Heartbeat - Basic', () => {
         timeout: 25
       };
       const heartbeat = createHeartbeat(client, config);
+      onTestFinished(() => heartbeat.stop());
 
       heartbeat.start();
       heartbeat.stop();
@@ -62,12 +82,14 @@ describe('WebSocket Heartbeat - Basic', () => {
 
     it('should not start if disabled', () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       const config: HeartbeatConfig = {
         enabled: false,
         interval: 1000,
         timeout: 500
       };
       const heartbeat = createHeartbeat(client, config);
+      onTestFinished(() => heartbeat.stop());
 
       heartbeat.start();
 
@@ -76,6 +98,7 @@ describe('WebSocket Heartbeat - Basic', () => {
 
     it('should not start if already running', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       await client.connect('wss://example.com');
 
       const config: HeartbeatConfig = {
@@ -84,6 +107,7 @@ describe('WebSocket Heartbeat - Basic', () => {
         timeout: 25
       };
       const heartbeat = createHeartbeat(client, config);
+      onTestFinished(() => heartbeat.stop());
 
       heartbeat.start();
       const firstState = heartbeat.isRunning;
@@ -99,6 +123,7 @@ describe('WebSocket Heartbeat - Basic', () => {
   describe('Ping/Pong', () => {
     it('should send ping messages', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       await client.connect('wss://example.com');
 
       const config: HeartbeatConfig = {
@@ -107,13 +132,10 @@ describe('WebSocket Heartbeat - Basic', () => {
         timeout: 25
       };
       const heartbeat = createHeartbeat(client, config);
+      onTestFinished(() => heartbeat.stop());
 
-      // Subscribe to simulate pong responses
-      client.subscribe((msg) => {
-        if (msg.data === 'PING') {
-          client.simulateMessage('PONG');
-        }
-      });
+      // Hook outgoing send to simulate inbound pong responses
+      hookPongReply(client);
 
       heartbeat.start();
 
@@ -127,6 +149,7 @@ describe('WebSocket Heartbeat - Basic', () => {
 
     it('should use custom ping/pong messages', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       await client.connect('wss://example.com');
 
       const config: HeartbeatConfig = {
@@ -137,13 +160,10 @@ describe('WebSocket Heartbeat - Basic', () => {
         pongMessage: 'HEARTBEAT_PONG'
       };
       const heartbeat = createHeartbeat(client, config);
+      onTestFinished(() => heartbeat.stop());
 
-      // Subscribe to simulate pong responses
-      client.subscribe((msg) => {
-        if (msg.data === 'HEARTBEAT_PING') {
-          client.simulateMessage('HEARTBEAT_PONG');
-        }
-      });
+      // Hook outgoing send to simulate inbound pong responses
+      hookPongReply(client, 'HEARTBEAT_PING', 'HEARTBEAT_PONG');
 
       heartbeat.start();
 
@@ -163,6 +183,7 @@ describe('WebSocket Heartbeat - Basic', () => {
     it('should reconnect on timeout', async () => {
       expectConsole('warn');
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       const events: WebSocketEvent[] = [];
       client.subscribeToEvents((event) => events.push(event));
       await client.connect('wss://example.com');
@@ -173,6 +194,7 @@ describe('WebSocket Heartbeat - Basic', () => {
         timeout: 20
       };
       const heartbeat = createHeartbeat(client, config);
+      onTestFinished(() => heartbeat.stop());
 
       // Don't send pong - will timeout
       heartbeat.start();
@@ -190,6 +212,7 @@ describe('WebSocket Heartbeat - Basic', () => {
   describe('Integration', () => {
     it('should integrate with connection lifecycle', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
 
       const config: HeartbeatConfig = {
         enabled: true,
@@ -197,13 +220,10 @@ describe('WebSocket Heartbeat - Basic', () => {
         timeout: 25
       };
       const heartbeat = createHeartbeat(client, config);
+      onTestFinished(() => heartbeat.stop());
 
-      // Subscribe to simulate pong responses
-      client.subscribe((msg) => {
-        if (msg.data === 'PING') {
-          client.simulateMessage('PONG');
-        }
-      });
+      // Hook outgoing send to simulate inbound pong responses
+      hookPongReply(client);
 
       // Start heartbeat on connection
       client.subscribeToEvents((event) => {
@@ -233,6 +253,7 @@ describe('WebSocket Heartbeat - Basic', () => {
   describe('Cleanup', () => {
     it('should stop sending pings after stop', async () => {
       const client = createMockWebSocket();
+      onTestFinished(() => client.disconnect());
       await client.connect('wss://example.com');
 
       // A pong for every ping, pumped from outside, so that nothing but stop()
@@ -242,10 +263,12 @@ describe('WebSocket Heartbeat - Basic', () => {
       // assertion held with the public stop() made a no-op. The timeout is
       // longer than the test for the same reason.
       const pump = setInterval(() => client.simulateMessage('PONG'), 5);
+      onTestFinished(() => clearInterval(pump));
       const pings = () => client.sentMessages.filter((msg) => msg === 'PING').length;
 
       const config: HeartbeatConfig = { enabled: true, interval: 30, timeout: 10_000 };
       const heartbeat = createHeartbeat(client, config);
+      onTestFinished(() => heartbeat.stop());
       heartbeat.start();
 
       await new Promise((resolve) => setTimeout(resolve, 50));

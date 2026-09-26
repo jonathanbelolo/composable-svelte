@@ -43,6 +43,7 @@
 
   onDestroy(() => {
     cleanup?.();
+    store.destroy();
   });
 
   // ============================================================================
@@ -69,6 +70,7 @@
     <Header
       theme={state.theme}
       onThemeToggle={() => store.dispatch({ type: 'themeToggled' })}
+      onHome={() => store.dispatch({ type: 'homeSelected' })}
     />
 
     <!-- Main Content -->
@@ -116,6 +118,25 @@
           component={selectedComponentInfo}
           onBack={() => store.dispatch({ type: 'homeSelected' })}
         />
+      {:else}
+        <!-- Fallback View: Invalid component ID -->
+        <div class="text-center space-y-6 py-16">
+          <div class="space-y-2">
+            <h2 class="text-3xl font-bold tracking-tight">Component Not Found</h2>
+            <p class="text-muted-foreground max-w-md mx-auto">
+              The requested component could not be found.
+            </p>
+          </div>
+          <div>
+            <button
+              type="button"
+              class="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+              onclick={() => store.dispatch({ type: 'homeSelected' })}
+            >
+              Back to Overview
+            </button>
+          </div>
+        </div>
       {/if}
     </main>
   </div>

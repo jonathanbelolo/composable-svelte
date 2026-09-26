@@ -10,11 +10,13 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { createStore } from '@composable-svelte/core';
 import { createTestStore } from '@composable-svelte/core/test';
 
 import {
 	loginReducer,
 	createInitialLoginState,
+	type LoginAction,
 	type LoginDependencies,
 	type LoginState
 } from '../src/lib/flows/index.js';
@@ -220,3 +222,93 @@ describe('a second submit while the first is in flight', () => {
 		store.assertNoPendingActions();
 	});
 });
+
+describe('a submission result that completes no submission in flight', () => {
+	// The flow starts its request on `submissionSucceeded`. Core's form reducer
+	// refuses a stale stamped one — wrong `submissionId`, or nothing submitting —
+	// and the flow must refuse it too, or it signs in with whatever the fields
+	// now hold. An unstamped one core accepts even when nothing is submitting;
+	// the flow refuses that as well. `mfaChallengeReducer` has the same two
+	// checks (it also refuses while a verification is in flight; login does not).
+
+	it('does not sign in with reset fields when a stale result follows a reset during validation', async () => {
+		// Validation settles synchronously inside `dispatch` here, so the window is
+		// arranged by folding the actions through the reducer: typed, submitted,
+		// and reset while the whole-form validation is still pending.
+		const deps = { login: async () => session };
+		const typed: LoginAction[] = [
+			{ type: 'form', action: { type: 'fieldChanged', field: 'email', value: 'ada@example.com' } },
+			{ type: 'form', action: { type: 'fieldChanged', field: 'password', value: 'hunter2' } },
+			{ type: 'form', action: { type: 'submitTriggered' } }
+		];
+		const validating = typed.reduce((state, action) => loginReducer(state, action, deps)[0], createInitialLoginState());
+		expect(validating.form.isValidating, 'the reset lands during validation').toBe(true);
+		const [reset] = loginReducer(validating, { type: 'form', action: { type: 'formReset' } }, deps);
+		expect(reset.form.data.email).toBe('');
+
+		const login = vi.fn<LoginDependencies['login']>(async () => session);
+		const store = createStore({ initialState: reset, reducer: loginReducer, dependencies: { login } });
+
+		// The submission the reset superseded reports back anyway. Core's form
+		// reducer refuses it: nothing is submitting.
+		store.dispatch({ type: 'form', action: { type: 'submissionSucceeded', submissionId: reset.form.submissionId } });
+		await settleEffects();
+
+		expect(login, 'a request with the reset (empty) fields').not.toHaveBeenCalled();
+		expect(store.state.status).toBe('idle');
+
+		// Positive control: a genuine submission from the same store still signs in.
+		store.dispatch({ type: 'form', action: { type: 'fieldChanged', field: 'email', value: 'bob@example.com' } });
+		store.dispatch({ type: 'form', action: { type: 'fieldChanged', field: 'password', value: 'hunter3' } });
+		store.dispatch({ type: 'form', action: { type: 'submitTriggered' } });
+		await vi.waitFor(() => expect(store.state.status).toBe('succeeded'));
+		expect(login).toHaveBeenCalledTimes(1);
+		expect(vi.mocked(login).mock.calls[0]![0].email).toBe('bob@example.com');
+		store.destroy();
+	});
+
+	it('ignores an unstamped submissionSucceeded when nothing is submitting, though the form accepts it', () => {
+		const state = createInitialLoginState({ email: 'ada@example.com', password: 'hunter2' });
+		const [next] = loginReducer(
+			state,
+			{ type: 'form', action: { type: 'submissionSucceeded' } },
+			{ login: async () => session }
+		);
+		// Core's form reducer has no stamp to check and records the success; the
+		// refusal is the flow's own.
+		expect(next.form, 'the form accepted it').not.toBe(state.form);
+		expect(next.form.submitCount).toBe(state.form.submitCount + 1);
+		expect(next.status, 'the flow did not start a request').toBe('idle');
+	});
+
+	it('ignores a superseded submissionId while a newer submission is in flight', () => {
+		const deps = { login: async () => session };
+		const [submitting] = loginReducer(
+			createInitialLoginState({ email: 'ada@example.com', password: 'hunter2' }),
+			{ type: 'form', action: { type: 'submissionStarted' } },
+			deps
+		);
+		expect(submitting.form.isSubmitting).toBe(true);
+		const current = submitting.form.submissionId!;
+
+		const [next] = loginReducer(
+			submitting,
+			{ type: 'form', action: { type: 'submissionSucceeded', submissionId: current - 1 } },
+			deps
+		);
+		expect(next.status, 'the form refused it, so the flow must not start a request').toBe('idle');
+
+		// Positive control: the current submission's result does start one.
+		const [accepted] = loginReducer(
+			submitting,
+			{ type: 'form', action: { type: 'submissionSucceeded', submissionId: current } },
+			deps
+		);
+		expect(accepted.status).toBe('submitting');
+	});
+});
+
+/** Let queued effects and their dispatches drain. */
+async function settleEffects(): Promise<void> {
+	for (let turn = 0; turn < 4; turn++) await new Promise<void>((done) => setTimeout(done, 0));
+}

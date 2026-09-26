@@ -223,8 +223,8 @@ new app rather than reconstructing it from memory.
 
 See **composable-svelte-navigation** skill for implementation details. This section provides REFERENCE only.
 
-> ⚠️ These are **NOT** `open` / `onOpenChange` components. Each takes a scoped
-> destination store. They render nothing when that store is `null` *and* no
+> ⚠️ These are **NOT** `open` / `onOpenChange` components. Each takes a framework-minted
+> `PresentationView`. They render nothing when that view is absent or retired *and* no
 > `presentation` is mid-flight — a non-idle `presentation` keeps them mounted so
 > the exit animation can finish (`ModalPrimitive.svelte:88-91`). Any example
 > showing `<Modal open={true}>` is wrong.
@@ -234,7 +234,7 @@ See **composable-svelte-navigation** skill for implementation details. This sect
 `Modal`, `Sheet`, `Drawer`, `Alert` and `Popover` share one signature
 (`navigation-components/Modal.svelte:16-66`):
 
-- `store: ScopedDestinationStore<State, Action> | null` — **required**; `null` means not presented
+- `store?: PresentationView<State, Action>` — a managed presentation capability; `undefined` means absent, and a retired view reads `undefined`
 - `presentation?: PresentationState<any>` — omit for instant show/hide
 - `onPresentationComplete?: () => void`
 - `onDismissalComplete?: () => void`
@@ -261,28 +261,26 @@ The children snippet receives `{ visible, store }` — plus `height` on Sheet
 ```svelte
 import { Modal } from '@composable-svelte/core';
 
-{#if detailStore}
-  <Modal
-    store={detailStore}
-    presentation={store.state.presentation}
-    onDismissalComplete={() => store.dispatch({
-      type: 'presentation', event: { type: 'dismissalCompleted' }
-    })}
-  >
-    {#snippet children({ store: scoped })}
-      <ProductDetail store={scoped} onBack={() => scoped.dismiss()} />
-    {/snippet}
-  </Modal>
-{/if}
+<Modal store={detailStore} ariaLabel="Product details">
+  {#if detailStore && detailStore.state !== undefined}
+    {@const detail = detailStore}
+    <ProductDetail store={detail} onBack={() => detail.dismiss()} />
+  {/if}
+</Modal>
 ```
 
-Get the store from `scopeToDestination(...)`; dismiss with `scoped.dismiss()` —
-`dismiss()` lives on the *scoped* store, not the parent.
+Receive `detailStore` from a managed feature view or bind an admitted optional/destination
+slot through its managed composition. Its `dismiss()` requests closure of that exact
+owner. Legacy `scopeToDestination(...)` stores are for reads and dispatch only and
+are not valid presentation inputs. The managed feature view also supplies the
+`surface` action for the actual feature content; see the application views guide.
+This compact example uses instant show/hide; explicit presentation completion
+props remain available for qualified rendering integrations.
 
 ### Tabs
 
 **Props** (`navigation-components/Tabs.svelte:14-29`):
-- `store: ScopedDestinationStore<State, Action> | null` — **required**; renders nothing when `null`
+- `store: ChildView<State, Action> | undefined` — a managed read/dispatch view; absent or retired views render nothing
 - `tabs: string[]` — plain strings, **not** `{ value, label }` objects
 - `activeTab: number` — a numeric **index**, not a string key
 - `onTabChange: (index: number) => void`

@@ -1,0 +1,18 @@
+{
+  "appliedAt": "2026-09-25T09:35:00.842313+00:00",
+  "sourcePatchSha256": "8f92585f08a4091ca3ee9afdeccd48b2dfc5beaebff0fbc6247ed9ba605a760a",
+  "candidateTarSha256": "245cd275f8ba1c34e4df2985aa3d1672e111eee83d54bba6f07728683aa5e628",
+  "mainVerification": {
+    "build": "pass",
+    "typecheck": "pass",
+    "svelteCheck": "0 errors, 0 warnings",
+    "browserTests": 214,
+    "ssrTests": 8
+  },
+  "openGates": [
+    "physical MediaRecorder M12",
+    "final combined package qualification",
+    "version and peer floors",
+    "shared guidance and checker profiles"
+  ]
+}

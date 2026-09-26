@@ -83,6 +83,7 @@ export type DropdownMenuPresentationEvent =
  * Dropdown menu actions.
  */
 export type DropdownMenuAction =
+	| { type: 'itemsChanged'; items: MenuItem[] }
 	| { type: 'opened' }
 	| { type: 'closed' }
 	| { type: 'toggled' }

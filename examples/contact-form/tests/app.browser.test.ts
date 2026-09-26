@@ -315,11 +315,9 @@ describe('Contact Form - Integrated Mode', () => {
       await userEvent.click(container); // Blur
       await waitForUpdates();
 
-      // Should show validating state (briefly)
-      // Note: This might be too fast to catch, but the test demonstrates the pattern
-      const validatingMessage = container.querySelector('[data-testid="email-validating"]');
-      // We can't reliably assert this is visible since async validation is fast
-      // But the test shows the pattern for checking it
+      await expect.poll(() => container.querySelector('[data-testid="email-validating"]')).not.toBeNull();
+      await expect.poll(() => container.querySelector('[data-testid="email-validating"]')).toBeNull();
+      expect(container.querySelector('[data-testid="email-error"]')).toBeNull();
     });
 
     test('rejects blocked email domains', async () => {

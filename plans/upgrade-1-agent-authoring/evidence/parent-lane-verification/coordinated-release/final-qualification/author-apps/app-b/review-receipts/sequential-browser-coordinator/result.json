@@ -1,0 +1,10 @@
+{
+  "command": "npm run test:browser",
+  "exit": 0,
+  "snapshotReceiptSHA256": "d73a6dbf026ed2664cea33705da153dcc35e8021cbfc96fe02e72e6f329c82db",
+  "runtimeManifest": "/private/tmp/companion-runtime-release/archives-r6/MANIFEST.json",
+  "browserLease": "released by runtime coordinator after final16recipe cases",
+  "completedAt": "2026-09-26T14:42:52.490605+00:00",
+  "snapshotFilesVerified": 25,
+  "sourceMismatches": []
+}

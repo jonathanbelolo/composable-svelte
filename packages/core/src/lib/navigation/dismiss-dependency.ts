@@ -4,8 +4,8 @@
  * Allows child features to dismiss themselves without knowing about their parent.
  *
  * The dismiss dependency is injected into child reducers, enabling them to request
- * dismissal by calling deps.dismiss(). The parent receives a PresentationAction.dismiss
- * and can handle it (typically by setting child state to null).
+ * dismissal by calling deps.dismiss(). A managed presentation lift claims the
+ * private request and dismisses the exact presentation that owns the effect.
  *
  * This inverts the control: children don't know they're being presented,
  * they just know they can request dismissal.
@@ -14,8 +14,8 @@
  */
 
 import { Effect } from '../effect.js';
-import type { Dispatch, Effect as EffectType } from '../types.js';
-import type { PresentationAction } from './types.js';
+import { isLiftedDispatch, mintDismissRequest, wasDismissRequestClaimed } from '../execution/dismiss-request.js';
+import type { Effect as EffectType } from '../types.js';
 
 /**
  * Dependency interface for child features that can be dismissed.
@@ -50,8 +50,7 @@ export type DismissDependency = {
   /**
    * Request dismissal of the current feature.
    *
-   * Returns an Effect that, when executed, dispatches PresentationAction.dismiss
-   * to the parent.
+   * Returns an Effect that asks its enclosing managed presentation to dismiss.
    *
    * @returns Effect that dismisses the feature
    */
@@ -59,148 +58,56 @@ export type DismissDependency = {
 };
 
 /**
- * Create a dismiss dependency for a child feature.
+ * Create the managed dismiss dependency: `deps.dismiss()` for a child presented
+ * through a managed slot. It captures no dispatch and wraps nothing.
  *
- * This factory creates a dismiss function that dispatches PresentationAction.dismiss
- * wrapped in the parent's action structure.
+ * The effect hands a private request (`execution/dismiss-request.ts`) to the
+ * dispatch it is executed with. A request travels only between dispatch
+ * closures created by the framework's effect lift: the enclosing managed
+ * presentation's lift claims it synchronously and dispatches that
+ * presentation's own dismiss action in its place. Any other lift — public
+ * `Effect.map`, and every legacy lift built on it — throws, and a raw store
+ * dispatch or a hand-written one is refused before a request exists. No
+ * reducer, history or subscriber sees a request.
  *
- * @param dispatch - The parent's dispatch function
- * @param actionWrapper - Function to wrap PresentationAction in parent action
+ * This requester is exported only from `@composable-svelte/core/application`.
+ * Managed optional slots and dedicated destination slots claim requests;
+ * keyed and legacy lifts reject them.
+ *
+ * @param cleanup - Optional work to finish before dismissing. It receives the
+ * executor's signal; only a thenable result is awaited, and an abort by the
+ * time it has finished drops the dismissal.
  * @returns A dismiss dependency
- *
- * Build it where the store is built, not inside a reducer: a reducer is
- * `(state, action, dependencies)` and has no `dispatch` in scope. Because the
- * dependency needs the store's dispatch and the store needs the dependencies,
- * take the reference lazily.
- *
- * @example
- * ```typescript
- * let dispatch: Dispatch<ParentAction> = () => {};
- *
- * const store = createStore({
- *   initialState,
- *   reducer: parentReducer,
- *   dependencies: {
- *     ...deps,
- *     dismiss: createDismissDependency(
- *       (action) => dispatch(action),
- *       (pa) => ({ type: 'destination', action: pa })
- *     )
- *   }
- * });
- *
- * dispatch = (action) => store.dispatch(action);
- * ```
  */
-export function createDismissDependency<ParentAction>(
-  dispatch: Dispatch<ParentAction>,
-  actionWrapper: (action: PresentationAction<any>) => ParentAction
+export function managedDismissDependency(
+  cleanup?: (signal?: AbortSignal) => void | PromiseLike<void>
 ): DismissDependency {
   return () => {
-    // Dispatch through the *captured* parent dispatch, not the one this effect
-    // is executed with. A child's effects go through `ifLet`, which maps them
-    // with `fromChildAction`; since `actionWrapper` already produces a parent
-    // action, dispatching through `d` would wrap it a second time and the
-    // parent would receive an action it cannot route.
-    //
-    // `fireAndForget` rather than `run` for exactly that reason: this effect
-    // dispatches nothing into the child's action stream, so it takes no
-    // dispatch and `Effect.map` passes it through untouched. `run<ParentAction>`
-    // claimed the opposite, which is the misconception the bug came from.
-    return Effect.fireAndForget(() => {
-      dispatch(
-        actionWrapper({
-          type: 'dismiss' as const
-        })
-      );
-    });
-  };
-}
-
-/**
- * Create a dismiss dependency that also executes cleanup effects before dismissing.
- *
- * Use this when the child needs to perform cleanup (save state, analytics, etc.)
- * before dismissal.
- *
- * @param dispatch - The parent's dispatch function
- * @param actionWrapper - Function to wrap PresentationAction in parent action
- * @param cleanup - Optional cleanup function to run before dismissing
- * @returns A dismiss dependency with cleanup
- *
- * @example
- * ```typescript
- * // `dispatch` is the parent store's, captured lazily — see
- * // `createDismissDependency` above for why.
- * const dismiss = createDismissDependencyWithCleanup(
- *   (action) => dispatch(action),
- *   (pa) => ({ type: 'destination', action: pa }),
- *   async () => {
- *     // Track analytics
- *     await analytics.track('modal_dismissed');
- *   }
- * );
- * ```
- */
-export function createDismissDependencyWithCleanup<ParentAction>(
-  dispatch: Dispatch<ParentAction>,
-  actionWrapper: (action: PresentationAction<any>) => ParentAction,
-  cleanup?: () => void | Promise<void>
-): DismissDependency {
-  return () => {
-    // As above: the captured parent dispatch, so `ifLet`'s mapping cannot
-    // double-wrap the dismiss action, and no dispatch is taken.
-    return Effect.fireAndForget(async () => {
-      // Run cleanup if provided
+    return Effect.run<any>(async (dispatch, signal) => {
       if (cleanup) {
-        await cleanup();
+        // Only a thenable is awaited: without asynchronous cleanup the request
+        // is dispatched in the executor's synchronous part.
+        const pending: unknown = cleanup(signal);
+        if (pending && typeof (pending as { then?: unknown }).then === 'function') await pending;
+      }
+      if (signal?.aborted) return;
+
+      // Checked before minting, so a request never exists for a dispatch that
+      // could deliver it to a reducer, a history or a subscriber.
+      if (!isLiftedDispatch(dispatch)) {
+        throw new TypeError(
+          'deps.dismiss() from managedDismissDependency was executed with a dispatch that is not a framework lift: no enclosing managed presentation'
+        );
       }
 
-      // Dispatch dismiss action
-      dispatch(
-        actionWrapper({
-          type: 'dismiss' as const
-        })
-      );
+      const request = mintDismissRequest();
+      dispatch(request);
+
+      // Every lift claims, forwards to another lift, or throws. Reaching this
+      // line unclaimed means that invariant is broken.
+      if (!wasDismissRequestClaimed(request)) {
+        throw new TypeError('Internal error: a managed dismiss request returned from a framework lift unclaimed');
+      }
     });
   };
-}
-
-/**
- * Convenience helper for creating dismiss dependency with common action patterns.
- *
- * This assumes the parent action has a structure like:
- * `{ type: actionField, action: PresentationAction<ChildAction> }`
- *
- * @param dispatch - The parent's dispatch function
- * @param actionField - The parent action field name (e.g., 'destination')
- * @returns A dismiss dependency
- *
- * @example
- * ```typescript
- * // Simpler API for common case. As above, this goes where the store is
- * // built and captures its dispatch lazily.
- * const dependencies = {
- *   ...deps,
- *   dismiss: dismissDependency((action) => dispatch(action), 'destination')
- * };
- *
- * // Equivalent to:
- * createDismissDependency(
- *   (action) => dispatch(action),
- *   (pa) => ({ type: 'destination', action: pa })
- * )
- * ```
- */
-export function dismissDependency<ParentAction>(
-  dispatch: Dispatch<ParentAction>,
-  actionField: string
-): DismissDependency {
-  return createDismissDependency(
-    dispatch,
-    (presentationAction) => ({
-      type: actionField,
-      action: presentationAction
-    } as ParentAction)
-  );
 }

@@ -5,7 +5,7 @@ A concise reference for @composable-svelte/core. For detailed documentation, see
 ## Installation
 
 ```bash
-npm install @composable-svelte/core svelte@^5.0.0
+npm install @composable-svelte/core@next svelte@^5.20.0
 ```
 
 ## Core Patterns
@@ -115,15 +115,15 @@ case 'destination':
 ### Navigation Components
 
 ```svelte
-<script>
+<script lang="ts">
   import { Modal, Sheet, Drawer, Alert } from '@composable-svelte/core/navigation-components';
-  import { scopeToOptional } from '@composable-svelte/core';
+  import type { PresentationView } from '@composable-svelte/core/application';
 
-  const scopedStore = scopeToOptional(store, ['destination'], 'destination');
+  let { view }: { view?: PresentationView<unknown, unknown> } = $props();
 </script>
 
-{#if scopedStore}
-  <Modal store={scopedStore}>
+{#if view}
+  <Modal store={view}>
     <AddItemForm />
   </Modal>
 {/if}
@@ -683,28 +683,27 @@ Destination.is(action, 'addItem.saveButtonTapped')
 
 ## Common Patterns
 
-### Dismiss from Child
+### Dismiss from a Managed Child
 
 ```typescript
-import { createDismissDependency } from '@composable-svelte/core';
+import {
+  managedDismissDependency,
+  type DismissDependency
+} from '@composable-svelte/core/application';
 
-// In parent
-const dismissDep = createDismissDependency<ParentAction>(
-  store.dispatch,
-  (action) => ({ type: 'destination', action })
-);
+type ChildDeps = { readonly dismiss: DismissDependency };
 
-// Pass to child
-const [newState, effect] = childReducer(
-  childState,
-  childAction,
-  { ...deps, dismiss: dismissDep }
-);
+const dependencies: ChildDeps = {
+  dismiss: managedDismissDependency()
+};
 
-// In child
+// In a child reducer integrated through an optional or destination slot:
 case 'cancelButtonTapped':
   return [state, deps.dismiss()];
 ```
+
+View code can call `PresentationView.dismiss()` on a view obtained from managed
+composition. Legacy scoped stores expose state and dispatch only.
 
 ### Error Handling
 

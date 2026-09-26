@@ -1,0 +1,19 @@
+--- opus-final-review/pre-correction/package/src/symbols.mjs	1985-10-26 09:15:00
++++ packages/architecture/src/symbols.mjs	2026-09-26 17:18:22
+@@ -1,5 +1,6 @@
+ // Lexical collection only. Value provenance and execution zones are separate passes.
+ import ts from 'typescript';
++import {isInstantiationExpression} from './expression-values.mjs';
+ 
+ export function buildSymbols({modules}) {
+   // This collector augments fresh parser scopes exactly once. Reusing an already
+@@ -164,7 +165,8 @@
+       const label = ((ts.isLabeledStatement(parent) || ts.isBreakStatement(parent) || ts.isContinueStatement(parent)) && parent.label === node);
+       let inType = false;
+       for (let parent = node.parent; parent; parent = parent.parent) {
+-        if (ts.isTypeNode(parent) || ts.isInterfaceDeclaration(parent) || ts.isTypeAliasDeclaration(parent)) {inType = true; break;}
++        // `arguments<T>` is still a runtime read of the arguments object; only its type arguments are types.
++        if ((ts.isTypeNode(parent) && !isInstantiationExpression(parent)) || ts.isInterfaceDeclaration(parent) || ts.isTypeAliasDeclaration(parent)) {inType = true; break;}
+       }
+       if (!propertyName && !label && !inType) error(module, unit, node, 'arguments-object', 'Use explicit parameters instead of the implicit arguments object.');
+     }

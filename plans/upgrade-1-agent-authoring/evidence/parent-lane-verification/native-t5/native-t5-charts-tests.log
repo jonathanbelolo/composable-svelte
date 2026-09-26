@@ -1,0 +1,15 @@
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/charts
+
+3:39:01 PM [vite-plugin-svelte] tests/chart-managed-proof.test.svelte.ts:130:18 This reference only captures the initial value of `config`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally
+ ✓ tests/chart-managed-proof.test.svelte.ts (17 tests) 3061ms
+     ✓ builds one plot per store dispatch and one per prop change  486ms
+     ✓ rebinds a live chart when its store prop changes and ignores predecessor retirement  528ms
+       ✓ runs two charts simultaneously under one root, retiring one leaves the other functional  307ms
+
+ Test Files  1 passed (1)
+      Tests  17 passed (17)
+   Start at  15:38:59
+   Duration  22.50s (transform 11.48s, setup 0ms, collect 17.52s, tests 3.06s, environment 1.44s, prepare 24ms)
+

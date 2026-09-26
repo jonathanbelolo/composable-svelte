@@ -1,0 +1,77 @@
+import {it,expect,vi,afterEach} from 'vitest';
+import {mount,unmount,flushSync} from 'svelte';
+import {createStore} from '../src/lib/store.svelte.js';
+import {imageGalleryReducer,createInitialImageGalleryState} from '../src/lib/components/image-gallery/image-gallery.reducer.js';
+import {commandReducer} from '../src/lib/components/command/command.reducer.js';
+import {createInitialCommandState} from '../src/lib/components/command/command.types.js';
+import ImageGallery from '../src/lib/components/image-gallery/ImageGallery.svelte';
+import AspectRatio from '../src/lib/components/ui/aspect-ratio/AspectRatio.svelte';
+const image={id:'photo',url:'https://invalid.example/image.png',alt:'Photo'};
+const deps={};
+const cleanups:Array<()=>void|Promise<void>>=[];
+afterEach(async()=>{for(const clean of cleanups.splice(0).reverse())await clean();vi.useRealTimers();vi.unstubAllGlobals();});
+it('command recovers valid selection when result list changes after empty search',()=>{
+ let state=createInitialCommandState({commands:[{id:'a',label:'Apple'}]});
+ [state]=commandReducer(state,{type:'queryChanged',query:'Pear'},{});
+ expect(state.selectedIndex).toBe(-1);
+ [state]=commandReducer(state,{type:'commandsUpdated',commands:[{id:'p',label:'Pear'}]},{});
+ expect(state.selectedIndex).toBe(0);
+ [state]=commandReducer(state,{type:'previousCommand'},{});expect(state.selectedIndex).toBe(0);
+});
+it('reopened gallery ignores a stale dismissal and reduced-motion close becomes fully idle',()=>{
+ let state=createInitialImageGalleryState({images:[image]});
+ [state]=imageGalleryReducer(state,{type:'openLightbox',index:0},deps);
+ [state]=imageGalleryReducer(state,{type:'presentation',event:{type:'presentationCompleted'}},deps);
+ [state]=imageGalleryReducer(state,{type:'closeLightbox'},deps);
+ [state]=imageGalleryReducer(state,{type:'openLightbox',index:0},deps);
+ const reopened=state;[state]=imageGalleryReducer(state,{type:'presentation',event:{type:'dismissalCompleted'}},deps);
+ expect(state).toBe(reopened);
+ [state]=imageGalleryReducer(state,{type:'presentation',event:{type:'presentationCompleted'}},deps);
+ [state]=imageGalleryReducer(state,{type:'motionPreferenceChanged',prefersReduced:true},deps);
+ const store=createStore({initialState:state,reducer:imageGalleryReducer,dependencies:{}});cleanups.push(()=>store.destroy());
+ store.dispatch({type:'closeLightbox'});expect(store.state.lightbox.isOpen).toBe(false);expect(store.state.lightbox.presentation.status).toBe('idle');
+});
+it('replacement presentation timers cannot complete a later presentation early',async()=>{
+ vi.useFakeTimers();const store=createStore({initialState:createInitialImageGalleryState({images:[image]}),reducer:imageGalleryReducer,dependencies:{}});cleanups.push(()=>store.destroy());
+ store.dispatch({type:'openLightbox',index:0});await vi.advanceTimersByTimeAsync(100);
+ store.dispatch({type:'openLightbox',index:0});await vi.advanceTimersByTimeAsync(200);
+ expect(store.state.lightbox.presentation.status).toBe('presenting');
+ await vi.advanceTimersByTimeAsync(100);expect(store.state.lightbox.presentation.status).toBe('presented');
+});
+it('gallery callbacks are effects, never invoked by pure reduction',()=>{
+ const onImageClick=vi.fn(),onImageLoad=vi.fn(),onImageError=vi.fn();const callbacks={onImageClick,onImageLoad,onImageError};const state=createInitialImageGalleryState({images:[image]});
+ imageGalleryReducer(state,{type:'imageClicked',index:0},callbacks);
+ imageGalleryReducer(state,{type:'imageLoaded',imageId:image.id},callbacks);
+ imageGalleryReducer(state,{type:'imageError',imageId:image.id,error:'failure'},callbacks);
+ expect(onImageClick).not.toHaveBeenCalled();expect(onImageLoad).not.toHaveBeenCalled();expect(onImageError).not.toHaveBeenCalled();
+ const store=createStore({initialState:state,reducer:imageGalleryReducer,dependencies:callbacks});cleanups.push(()=>store.destroy());
+ onImageLoad.mockImplementation(()=>expect(store.state.loadedImages.has(image.id)).toBe(true));
+ onImageClick.mockImplementation(()=>expect(store.state.lightbox.isOpen).toBe(true));
+ onImageError.mockImplementation(()=>expect(store.state.errors[image.id]).toBe('failure'));
+ store.dispatch({type:'imageLoaded',imageId:image.id});expect(onImageLoad).toHaveBeenCalledOnce();
+ store.dispatch({type:'imageClicked',index:0});expect(onImageClick).toHaveBeenCalledOnce();
+ store.dispatch({type:'imageError',imageId:image.id,error:'failure'});expect(onImageError).toHaveBeenCalledOnce();
+});
+it('lazy intersection starts loading but only image events report completion and retired observers are inert',async()=>{
+ const callbacks:Array<IntersectionObserverCallback>=[];const disconnect=vi.fn(),unobserve=vi.fn();
+ vi.stubGlobal('IntersectionObserver',class{constructor(callback:IntersectionObserverCallback){callbacks.push(callback);}observe(){}unobserve=unobserve;disconnect=disconnect;});
+ const target=document.createElement('div');document.body.append(target);const loaded=vi.fn(),failed=vi.fn();
+ const component=mount(ImageGallery,{target,props:{images:[image],enableLightbox:false,onImageLoad:loaded,onImageError:failed}});flushSync();
+ let mounted=true;cleanups.push(async()=>{if(mounted)await unmount(component);target.remove();});
+ const img=target.querySelector('img')!;expect(img).not.toBeNull();img.dispatchEvent(new Event('load'));expect(loaded).not.toHaveBeenCalled();
+ const callback=callbacks.at(-1)!;callback([{isIntersecting:true,target:img,time:0,boundingClientRect:img.getBoundingClientRect(),intersectionRect:img.getBoundingClientRect(),intersectionRatio:1,rootBounds:null}],{} as IntersectionObserver);
+ expect(loaded).not.toHaveBeenCalled();expect(img.src).toBe(image.url);
+ img.dispatchEvent(new Event('load'));expect(loaded).toHaveBeenCalledOnce();
+ img.dispatchEvent(new Event('error'));expect(failed).toHaveBeenCalledOnce();
+ await unmount(component);mounted=false;expect(disconnect).toHaveBeenCalled();
+ expect(()=>callback([{isIntersecting:true,target:img,time:0,boundingClientRect:img.getBoundingClientRect(),intersectionRect:img.getBoundingClientRect(),intersectionRatio:1,rootBounds:null}],{} as IntersectionObserver)).not.toThrow();
+ expect(loaded).toHaveBeenCalledOnce();target.remove();
+});
+it('AspectRatio preserves caller styling while owning ratio geometry',async()=>{
+ const target=document.createElement('div');document.body.append(target);
+ const component=mount(AspectRatio,{target,props:{ratio:2,style:'color: red; padding-bottom: 0 !important;',id:'ratio-proof'}});flushSync();
+ let mounted=true;cleanups.push(async()=>{if(mounted)await unmount(component);target.remove();});
+ const element=target.querySelector('#ratio-proof') as HTMLElement;
+ expect(element.style.color).toBe('red');expect(element.style.paddingBottom).toBe('50%');
+ await unmount(component);mounted=false;target.remove();
+});

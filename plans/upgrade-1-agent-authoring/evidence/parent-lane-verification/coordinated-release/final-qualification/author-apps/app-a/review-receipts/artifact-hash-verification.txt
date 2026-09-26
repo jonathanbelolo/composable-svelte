@@ -1,0 +1,13 @@
+archive composable-svelte-core-0.13.1.tgz sha256=30e044e139e831033e06fdf626db979875efa2f7c29d72dece33a21db112d18b MATCH bytes=995049/995049
+archive composable-svelte-code-0.5.0.tgz sha256=f85b945232c460edc45c0051dc69c4580f4a502b39a2988af38c62a2e3a37026 MATCH bytes=66774/66774
+archive composable-svelte-media-0.5.0.tgz sha256=c0bfa6528fb6cd3dc68f2769237d3053514f76f79bc5197316b230eb07b78298 MATCH bytes=80479/80479
+archive composable-svelte-chat-0.5.0.tgz sha256=cfbfe99d8dff4a5328b581794192f32e6e97b9867e551befc2150f4b8ad07090 MATCH bytes=143773/143773
+installed @composable-svelte/core@0.13.1 files=1258 mismatched=0 extraFiles=0 
+installed @composable-svelte/code@0.5.0 files=69 mismatched=0 extraFiles=0 
+installed @composable-svelte/media@0.5.0 files=101 mismatched=0 extraFiles=0 
+installed @composable-svelte/chat@0.5.0 files=157 mismatched=0 extraFiles=0 
+app files changed vs PRE-OPUS snapshot: none
+svelte="5.55.3"
+transport="local-candidate-tarballs"
+registryRetrievalClaimed=false
+RESULT: ALL MATCH

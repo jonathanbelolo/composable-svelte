@@ -1,0 +1,10 @@
+
+> test:ssr
+> node scripts/ssr.mjs
+
+--- Starting SSR Qualification ---
+4:39:25 PM [vite-plugin-svelte] no Svelte config found at /private/tmp/composable-final-authoring/app-b - using default configuration.
+Loaded SSR modules successfully.
+✓ Independent request roots verified (no cross-request state leakage).
+✓ Zero client-only work performed during SSR (all network & effect counters 0).
+SSR qualification passed cleanly.

@@ -173,6 +173,10 @@ export interface StreamingChatState {
 
 	/** Waiting for response to start */
 	isWaitingForResponse: boolean;
+	/** Monotonic stream operation generation, independent of message IDs. */
+	streamGeneration?: number | undefined;
+	activeStreamId?: string | null | undefined;
+	activeStreamMessageId?: string | null | undefined;
 
 	/** Error message (if any) */
 	error: string | null;
@@ -268,13 +272,16 @@ export type StreamingChatAction =
 	/** Internal: every upload for a message has settled; stream it. */
 	| {
 			type: '_internal_attachmentsResolved';
+			streamId?: string | undefined;
 			messageId: string;
 			message: string;
 			attachments: MessageAttachment[];
 	  }
-	| { type: 'chunkReceived'; chunk: string }
-	| { type: 'streamComplete' }
-	| { type: 'streamError'; error: string }
+	| { type: 'chunkReceived'; chunk: string; streamId?: string | undefined }
+	| { type: 'streamComplete'; streamId?: string | undefined }
+	| { type: 'streamError'; error: string; streamId?: string | undefined }
+	/** A newer reply request retired this operation; observe to present retry/supersession. */
+	| { type: 'streamSuperseded'; streamId: string; messageId: string }
 	| { type: 'stopGeneration' }
 	// Message operations
 	| { type: 'regenerateMessage'; messageId: string }

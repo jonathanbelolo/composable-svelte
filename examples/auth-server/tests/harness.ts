@@ -39,23 +39,18 @@ export async function startServer(options: ServerOptions = {}): Promise<Harness>
 	}
 	const baseUrl = `http://127.0.0.1:${address.port}`;
 
-	const jar = createCookieJar();
-	// The adapter calls the global `fetch`, so the jar has to be installed there.
-	// Node has no cookie store of its own; see `cookie-jar.ts` for what that
-	// does and does not prove.
-	const original = globalThis.fetch;
-	globalThis.fetch = jar.fetch;
+	const jar = createCookieJar(globalThis.fetch, options.now);
 
+	let stopping: Promise<void> | undefined;
 	return {
 		app,
 		store,
 		baseUrl,
 		jar,
-		deps: createHttpAuthDeps(baseUrl),
+		deps: createHttpAuthDeps(baseUrl, { fetch: jar.fetch }),
 		fetch: jar.fetch,
-		async stop() {
-			globalThis.fetch = original;
-			await app.close();
+		stop() {
+			return stopping ??= app.close();
 		}
 	};
 }

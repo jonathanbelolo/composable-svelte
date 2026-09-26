@@ -30,24 +30,49 @@ import type { PresentationState } from '@composable-svelte/core';
  * attached reached the rendered bubble and stopped there — the backend and the
  * model never saw it.
  */
-function streamNow(
-	message: string,
-	attachments: MessageAttachment[] | undefined,
-	deps: StreamingChatDependencies
-): EffectType<StreamingChatAction> {
-	return Effect.run(async (dispatch) => {
-		const abortController = deps.streamMessage(
-			message,
-			(chunk) => dispatch({ type: 'chunkReceived', chunk }),
-			() => dispatch({ type: 'streamComplete' }),
-			(error) => dispatch({ type: 'streamError', error }),
-			attachments
-		);
-
-		if (abortController) {
-			dispatch({ type: '_internal_setAbortController', abortController });
+const STREAM_EFFECT_ID = 'streaming-chat/stream';
+function streamNow(streamId: string | undefined, message: string, attachments: MessageAttachment[] | undefined, deps: StreamingChatDependencies): EffectType<StreamingChatAction> {
+	return Effect.subscription(STREAM_EFFECT_ID, (dispatch) => {
+		let live = true;
+		let settled = false;
+		const origin = streamId === undefined ? {} : { streamId };
+		let controller: AbortController | void;
+		const terminal = (action: StreamingChatAction) => {
+			if (!live)
+				return;
+			live = false;
+			settled = true;
+			dispatch(action);
+		};
+		try {
+			controller = deps.streamMessage(message, chunk => { if (live)
+				dispatch({ type: 'chunkReceived', chunk, ...origin }); }, () => terminal({ type: 'streamComplete', ...origin }), error => terminal({ type: 'streamError', error, ...origin }), attachments);
 		}
+		catch (error) {
+			terminal({ type: 'streamError', error: error instanceof Error ? error.message : 'Stream failed', ...origin });
+		}
+		let cleaned = false;
+		const cleanup = () => { if (cleaned)
+			return; cleaned = true; live = false; if (!settled)
+			controller?.abort(); };
+		if (!live)
+			cleanup();
+		return cleanup;
 	});
+}
+/** Compatibility for consumers that explicitly supplied the legacy controller action. */
+function cancelStream(state: StreamingChatState): EffectType<StreamingChatAction> {
+	const controller = state.currentStreaming?.abortController;
+	return Effect.batch(Effect.cancel(STREAM_EFFECT_ID), controller
+		? Effect.fireAndForget(() => controller.abort()) : Effect.none());
+}
+/** Replacement is observable; applications decide whether to render or retry it. */
+function notifySuperseded(state: StreamingChatState): EffectType<StreamingChatAction> {
+	const streamId = state.activeStreamId;
+	const messageId = state.activeStreamMessageId;
+	return streamId != null && messageId != null
+		? Effect.run((dispatch) => { dispatch({ type: 'streamSuperseded', streamId, messageId }); })
+		: Effect.none();
 }
 
 /**
@@ -66,10 +91,12 @@ function streamNow(
 /**
  * The cancellation id for one message's uploads.
  *
- * Per message, not per store. A single shared id made the upload a singleton:
+ * Uploads are per message; only the latest requested reply owns currentStreaming.
+ * Superseded uploads still settle metadata, but never begin a stale reply.
+ * A single shared id made the upload a singleton:
  * sending a second message with an attachment aborted the first one's upload
  * mid-flight, and because the store gates a cancelled effect's dispatch, the
- * first message never streamed, never got a reply, and kept an attachment
+ * first message's upload never settled and kept an attachment
  * frozen at `uploadStatus: 'uploading'` — which now renders a progress bar that
  * can never move. Any attachment-free send did the same to an upload in flight.
  */
@@ -105,6 +132,7 @@ function cancelUploadsFor(messages: Message[]): EffectType<StreamingChatAction> 
  * signal — and re-registering the same id supersedes an earlier upload for free.
  */
 function streamFor(
+	streamId: string,
 	messageId: string,
 	message: string,
 	attachments: MessageAttachment[] | undefined,
@@ -113,10 +141,10 @@ function streamFor(
 	const outstanding = attachments?.some((a) => /^(blob:|data:)/.test(a.url)) ?? false;
 
 	return deps.uploadFile && attachments && outstanding
-		? uploadThenStream(messageId, message, attachments, deps)
+		? uploadThenStream(streamId, messageId, message, attachments, deps)
 		// Cancel only *this* message's upload: re-sending it supersedes whatever
 		// was in flight for it, and nothing else's upload is any of its business.
-		: Effect.batch(Effect.cancel(uploadIdFor(messageId)), streamNow(message, attachments, deps));
+		: Effect.batch(Effect.cancel(uploadIdFor(messageId)), streamNow(streamId, message, attachments, deps));
 }
 
 /**
@@ -145,6 +173,7 @@ function markUploading(
 }
 
 function uploadThenStream(
+	streamId: string,
 	messageId: string,
 	message: string,
 	attachments: MessageAttachment[],
@@ -183,7 +212,7 @@ function uploadThenStream(
 			})
 		);
 
-		dispatch({ type: '_internal_attachmentsResolved', messageId, message, attachments: resolved });
+		dispatch({ type: '_internal_attachmentsResolved', streamId, messageId, message, attachments: resolved });
 	});
 }
 
@@ -217,6 +246,8 @@ export function streamingChatReducer(
 
 	switch (action.type) {
 		case 'sendMessage': {
+			const streamGeneration = (state.streamGeneration ?? 0) + 1;
+			const streamId = String(streamGeneration);
 			// Use attachments from action if provided, otherwise use pending attachments from state
 			const attachments = action.attachments ?? (state.pendingAttachments.length > 0 ? state.pendingAttachments : undefined);
 
@@ -227,12 +258,7 @@ export function streamingChatReducer(
 			// dispatched, clamped and discarded. The predicate is the same one
 			// `uploadThenStream` uses to decide what to upload; anything else keeps
 			// no upload status at all, because no upload happens to it.
-			const willUpload = deps.uploadFile !== undefined;
-			const trackedAttachments = attachments?.map((attachment) =>
-				willUpload && /^(blob:|data:)/.test(attachment.url)
-					? { ...attachment, uploadStatus: 'uploading' as const, uploadProgress: 0 }
-					: attachment
-			);
+			const trackedAttachments = markUploading(attachments, deps);
 
 			// Add user message to conversation
 			const userMessage: Message = {
@@ -250,6 +276,7 @@ export function streamingChatReducer(
 					messages: [...state.messages, userMessage],
 					lastAppendedId: userMessage.id,
 					currentStreaming: { content: '' },
+					streamGeneration, activeStreamId: streamId, activeStreamMessageId: userMessage.id,
 					isWaitingForResponse: true,
 					error: null,
 					pendingAttachments: [] // Clear attachments after sending
@@ -257,7 +284,11 @@ export function streamingChatReducer(
 				// Uploads first, if there are any and the consumer can do them.
 				// Streaming waits, because the whole point of uploading is that the
 				// URL the backend receives resolves for someone other than the sender.
-				streamFor(userMessage.id, action.message, trackedAttachments, deps)
+				Effect.batch(
+					cancelStream(state),
+					streamFor(streamId, userMessage.id, action.message, trackedAttachments, deps),
+					notifySuperseded(state)
+				)
 			];
 		}
 
@@ -288,20 +319,48 @@ export function streamingChatReducer(
 		}
 
 		case '_internal_attachmentsResolved': {
+			let messagesChanged = false;
+			const messages = state.messages.map((message) => {
+				if (message.id !== action.messageId) return message;
+				if (action.streamId === undefined) {
+					if (message.attachments === action.attachments) return message;
+					messagesChanged = true;
+					return { ...message, attachments: action.attachments };
+				}
+				if (!message.attachments || message.attachments.length === 0) return message;
+
+				let attachmentsChanged = false;
+				const updatedAttachments = message.attachments.map((attachment) => {
+					if (attachment.uploadStatus !== 'uploading') return attachment;
+					const resolved = action.attachments.find((r) => r.id === attachment.id);
+					if (!resolved || resolved === attachment) return attachment;
+					attachmentsChanged = true;
+					return resolved;
+				});
+
+				if (!attachmentsChanged) return message;
+				messagesChanged = true;
+				return { ...message, attachments: updatedAttachments };
+			});
+
+			const shouldStream =
+				action.streamId !== undefined
+					? action.streamId === state.activeStreamId
+					: state.activeStreamId == null;
+
 			return [
-				{
-					...state,
-					messages: state.messages.map((message) =>
-						message.id === action.messageId
-							? { ...message, attachments: action.attachments }
-							: message
-					)
-				},
-				streamNow(action.message, action.attachments, deps)
+				messagesChanged ? { ...state, messages } : state,
+				shouldStream
+					? streamNow(action.streamId, action.message, action.attachments, deps)
+					: Effect.none()
 			];
 		}
 
+		case 'streamSuperseded':
+			return [state, Effect.none()];
+
 		case 'chunkReceived': {
+			if (action.streamId !== undefined && action.streamId !== state.activeStreamId) return [state, Effect.none()];
 			if (!state.currentStreaming) {
 				return [state, Effect.none()];
 			}
@@ -320,6 +379,7 @@ export function streamingChatReducer(
 		}
 
 		case 'streamComplete': {
+			if (action.streamId !== undefined && action.streamId !== state.activeStreamId) return [state, Effect.none()];
 			if (!state.currentStreaming) {
 				return [state, Effect.none()];
 			}
@@ -336,102 +396,57 @@ export function streamingChatReducer(
 				{
 					...state,
 					messages: [...state.messages, assistantMessage],
-					currentStreaming: null,
+					currentStreaming: null, activeStreamId: null, activeStreamMessageId: null,
 					isWaitingForResponse: false
 				},
-				Effect.none()
+				Effect.cancel(STREAM_EFFECT_ID)
 			];
 		}
 
 		case 'streamError': {
+			if (action.streamId !== undefined && action.streamId !== state.activeStreamId) return [state, Effect.none()];
 			return [
 				{
 					...state,
-					currentStreaming: null,
+					currentStreaming: null, activeStreamId: null, activeStreamMessageId: null,
 					isWaitingForResponse: false,
 					error: action.error
 				},
-				Effect.none()
+				Effect.cancel(STREAM_EFFECT_ID)
 			];
 		}
 
 		case 'stopGeneration': {
-			if (!state.currentStreaming?.abortController) {
-				// No controller yet means the send has not reached the transport —
-				// it is still uploading. `streamFor` only dispatches
-				// `_internal_setAbortController` once its executor runs, which is
-				// after the upload resolves, so this branch used to return
-				// `Effect.none()` and Stop did nothing at all: the upload continued,
-				// the stream started, and a reply arrived for a message the user had
-				// cancelled. The attachment also stayed at `'uploading'` forever,
-				// which renders a progress bar that can never move — the exact
-				// symptom `ed855dd` set out to remove, left in place on this path.
-				const uploading = state.messages.filter((message) =>
-					message.attachments?.some((a) => a.uploadStatus === 'uploading')
-				);
-
-				if (!state.currentStreaming && uploading.length === 0) {
-					return [state, Effect.none()];
-				}
-
-				const uploadingIds = new Set(uploading.map((message) => message.id));
-
-				return [
-					{
-						...state,
-						currentStreaming: null,
-						isWaitingForResponse: false,
-						messages: state.messages.map((message) =>
-							!uploadingIds.has(message.id) || !message.attachments
+			// Current operations own one message. Legacy states without ownership retain
+			// their historical global-upload Stop behavior.
+			const uploading = state.messages.filter(message => (state.activeStreamMessageId == null || message.id === state.activeStreamMessageId) &&
+				message.attachments?.some(attachment => attachment.uploadStatus === 'uploading'));
+			if (!state.currentStreaming && uploading.length === 0)
+				return [state, Effect.none()];
+			const uploadingSet = new Set(uploading);
+			let messages =
+				uploading.length === 0
+					? state.messages
+					: state.messages.map((message) =>
+							!uploadingSet.has(message)
 								? message
 								: {
 										...message,
-										attachments: message.attachments.map((a) =>
-											a.uploadStatus === 'uploading'
-												? { ...a, uploadStatus: 'error' as const }
-												: a
+										attachments: message.attachments?.map((attachment) =>
+											attachment.uploadStatus === 'uploading'
+												? { ...attachment, uploadStatus: 'error' as const, uploadError: 'Upload cancelled' }
+												: attachment
 										)
 									}
-						)
-					},
-					cancelUploadsFor(uploading)
-				];
-			}
-
-			// Abort the stream
-			state.currentStreaming.abortController.abort();
-
-			// Save partial content as a message if there's any content
-			if (state.currentStreaming.content.trim()) {
-				const partialMessage: Message = {
-					id: generateId(),
-					role: 'assistant',
-					content: state.currentStreaming.content,
-					timestamp: getTimestamp()
-				};
-
-				return [
-					{
-						...state,
-						messages: [...state.messages, partialMessage],
-						currentStreaming: null,
-						isWaitingForResponse: false
-					},
-					Effect.none()
-				];
-			}
-
-			return [
-				{
-					...state,
-					currentStreaming: null,
-					isWaitingForResponse: false
-				},
-				Effect.none()
-			];
+						);
+			if (state.currentStreaming?.content.trim())
+				messages = [...messages, { id: generateId(), role: 'assistant', content: state.currentStreaming.content, timestamp: getTimestamp() }];
+			return [{ ...state, messages, currentStreaming: null, activeStreamId: null, activeStreamMessageId: null, isWaitingForResponse: false }, Effect.batch(cancelStream(state), cancelUploadsFor(uploading))];
 		}
 
 		case 'regenerateMessage': {
+			const streamGeneration = (state.streamGeneration ?? 0) + 1;
+			const streamId = String(streamGeneration);
 			const messageIndex = state.messages.findIndex((m) => m.id === action.messageId);
 			if (messageIndex === -1 || state.messages[messageIndex]!.role !== 'assistant') {
 				return [state, Effect.none()];
@@ -464,8 +479,10 @@ export function streamingChatReducer(
 				{
 					...state,
 					messages: newMessages,
+					reactionPicker: pickerAfterMessages(state.reactionPicker, newMessages),
 					isWaitingForResponse: true,
 					currentStreaming: { content: '' },
+					streamGeneration, activeStreamId: streamId, activeStreamMessageId: userMessage.id,
 					error: null,
 				},
 				// For the same reasons as `submitEditedMessage`: the user message is
@@ -473,8 +490,10 @@ export function streamingChatReducer(
 				// copy of it beneath the regenerated reply — and a failed upload
 				// gets another attempt rather than being resent as a local URL.
 				Effect.batch(
+					cancelStream(state),
 					cancelUploadsFor(state.messages.slice(messageIndex)),
-					streamFor(userMessage.id, userMessage.content, userMessage.attachments, deps)
+					streamFor(streamId, userMessage.id, userMessage.content, userMessage.attachments, deps),
+					notifySuperseded(state)
 				)
 			];
 		}
@@ -547,16 +566,18 @@ export function streamingChatReducer(
 				(m) => !newMessages.some((kept) => kept.id === m.id)
 			);
 
+			const removesActive = state.activeStreamMessageId != null && removed.some(m => m.id === state.activeStreamMessageId);
 			return [
 				{
 					...state,
 					messages: newMessages,
+					...(removesActive ? { currentStreaming: null, activeStreamId: null, activeStreamMessageId: null, isWaitingForResponse: false } : {}),
 					reactionPicker: pickerAfterMessages(state.reactionPicker, newMessages)
 				},
 				// Otherwise the deleted message's upload lands afterwards and streams
 				// a reply into a conversation that no longer contains the question —
 				// measured: deleting the only message left an orphan assistant reply.
-				cancelUploadsFor(removed)
+				Effect.batch(cancelUploadsFor(removed), removesActive ? cancelStream(state) : Effect.none())
 			];
 		}
 
@@ -598,6 +619,8 @@ export function streamingChatReducer(
 		}
 
 		case 'submitEditedMessage': {
+			const streamGeneration = (state.streamGeneration ?? 0) + 1;
+			const streamId = String(streamGeneration);
 			if (!state.editingMessage || !state.editingMessage.content.trim()) {
 				return [state, Effect.none()];
 			}
@@ -623,9 +646,11 @@ export function streamingChatReducer(
 				{
 					...state,
 					messages: newMessages,
+					reactionPicker: pickerAfterMessages(state.reactionPicker, newMessages),
 					editingMessage: null,
 					isWaitingForResponse: true,
 					currentStreaming: { content: '' },
+					streamGeneration, activeStreamId: streamId, activeStreamMessageId: updatedMessage.id,
 					error: null
 				},
 				// The tail is being dropped, so its uploads must not land later and
@@ -639,8 +664,10 @@ export function streamingChatReducer(
 				// attempt. Editing was otherwise the one action that could resend a
 				// message and silently keep a URL only the sender can open.
 				Effect.batch(
+					cancelStream(state),
 					cancelUploadsFor(state.messages.slice(messageIndex + 1)),
-					streamFor(updatedMessage.id, editedContent, updatedMessage.attachments, deps)
+					streamFor(streamId, updatedMessage.id, editedContent, updatedMessage.attachments, deps),
+					notifySuperseded(state)
 				)
 			];
 		}
@@ -819,14 +846,14 @@ export function streamingChatReducer(
 				{
 					...state,
 					messages: [],
-					currentStreaming: null,
+					currentStreaming: null, activeStreamId: null, activeStreamMessageId: null,
 					isWaitingForResponse: false,
 					error: null,
 					editingMessage: null,
 					reactionPicker: { status: 'idle' }
 				},
 				// Every message is going, so every upload in flight for one is too.
-				cancelUploadsFor(state.messages)
+				Effect.batch(cancelStream(state), cancelUploadsFor(state.messages))
 			];
 		}
 
@@ -997,7 +1024,7 @@ export function streamingChatReducer(
 				{
 					...state,
 					messages: restored,
-					currentStreaming: null,
+					currentStreaming: null, activeStreamId: null, activeStreamMessageId: null,
 					isWaitingForResponse: false,
 					error: null,
 					editingMessage: null,
@@ -1012,7 +1039,7 @@ export function streamingChatReducer(
 				},
 				// The session being replaced may have had uploads in flight. Their
 				// resolutions would land against messages that are no longer here.
-				cancelUploadsFor(state.messages)
+				Effect.batch(cancelStream(state), cancelUploadsFor(state.messages))
 			];
 		}
 

@@ -19,8 +19,10 @@
 		groups,
 		maxResults,
 		caseSensitive,
-		filterFunction
+		filterFunction,
+		onCommandExecute
 	}: {
+		onCommandExecute?: ((command: CommandItem) => void) | undefined;
 		commands: CommandItem[];
 		groups?: CommandGroup[];
 		maxResults?: number;
@@ -36,6 +38,7 @@
 	{maxResults}
 	{caseSensitive}
 	{filterFunction}
+	{onCommandExecute}
 >
 	{#snippet children()}
 		<CommandInput />

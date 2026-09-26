@@ -23,11 +23,11 @@ Composable Svelte helps you build predictable, testable, and maintainable Svelte
 ## Installation
 
 ```bash
-npm install @composable-svelte/core
+npm install @composable-svelte/core@next
 # or
-pnpm add @composable-svelte/core
+pnpm add @composable-svelte/core@next
 # or
-bun add @composable-svelte/core
+bun add @composable-svelte/core@next
 ```
 
 > Published on npm. Start from the [packaged consumer starter](../consumer/README.md); no clone is required.
@@ -38,14 +38,14 @@ Composable Svelte requires:
 
 ```json
 {
-  "svelte": "^5.0.0"
+  "svelte": "^5.20.0"
 }
 ```
 
 Install them if not already present:
 
 ```bash
-npm install svelte@^5.0.0
+npm install svelte@^5.20.0
 ```
 
 ## Your First App: Counter

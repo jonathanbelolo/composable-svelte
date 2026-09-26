@@ -1,0 +1,51 @@
+--- a/tests/dashboard.test.ts
++++ b/tests/dashboard.test.ts
+@@ -1068,13 +1068,14 @@
+       expect(store.state.route).toBe('login');
+       expect(store.state.accountData).toBeNull();
+       expect(store.state.chart).toBeNull();
++      expect(store.state.accountLoading).toBe(false);
+     } else {
+       expect(store.state.route).toBe('dashboard');
+       expect(store.state.chart?.data).toHaveLength(7);
+     }
+   });
+ 
+-  it('a superseded fetchActivity response cannot fill the next subject’s dashboard', async () => {
++  it('a superseded fetchActivity response is rejected after the same subject signs in again', async () => {
+     const backend = createControlledBackend({ delayActivity: true });
+     const store = makeStore(backend);
+     await signInThroughForm(store, 'ada@example.com');
+@@ -1097,5 +1098,20 @@
+     backend.resolveDelayedActivity();
+     await until(() => store.state.accountData !== null, 'current account');
+     expect(store.state.chart?.data).toHaveLength(7);
++  });
++
++  it('a failed fetchActivity fails the whole account load without a partial view', async () => {
++    const backend = createControlledBackend();
++    backend.fetchActivity = async () => {
++      throw new Error('Activity service unavailable');
++    };
++    const store = makeStore(backend);
++    await signInThroughForm(store, 'ada@example.com');
++    await until(() => !store.state.accountLoading, 'load settled');
++    expect(backend.counters.fetchAccountCalls).toBe(1);
++    expect(store.state.accountError).toBe('Activity service unavailable');
++    expect(store.state.accountData).toBeNull();
++    expect(store.state.chart).toBeNull();
++    expect(store.state.route).toBe('dashboard');
+   });
+ });
+--- a/tests/browser/dashboard.pw.ts
++++ b/tests/browser/dashboard.pw.ts
+@@ -45,8 +45,7 @@
+   await chart.focus();
+   await page.keyboard.press('Home');
+   await page.keyboard.press('Enter');
+-  await expect(page.getByTestId('selected-metric')).toContainText('2026-09-24');
+-  await expect(page.getByTestId('selected-metric')).toContainText('2 logins');
++  await expect(page.getByTestId('selected-metric')).toHaveText(/2026-09-24\s*—\s*2 logins via Mobile App/);
+ });
+ 
+ test('keyboard chart selection reaches the owning feature as a typed row', async ({ page }) => {

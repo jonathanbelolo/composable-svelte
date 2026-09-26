@@ -21,7 +21,8 @@ import type {
 	ExtractCaseType,
 	ExtractCaseState
 } from './types.js';
-import { Effect as EffectConstructors, nestGroups } from '../effect.js';
+import { Effect as EffectConstructors, liftEffect, nestGroups } from '../effect.js';
+import { registerDestinationCases } from './destination-metadata.js';
 
 // ============================================================================
 // createDestination() Core
@@ -338,6 +339,17 @@ export function createDestination<Reducers extends Record<string, Reducer<any, a
 		}
 	}
 
+	const routes: Record<string, Reducer<any, any, any>> = Object.create(null);
+	for (const k of Object.keys(reducers)) {
+		const childReducer = reducers[k];
+		if (typeof childReducer !== 'function') {
+			throw new TypeError(`createDestination: case "${k}" must be a reducer function`);
+		}
+		routes[k] = childReducer;
+	}
+	Object.freeze(routes);
+	const keys = Object.freeze(Object.keys(routes));
+
 	// Auto-generated reducer
 	const reducer: Reducer<DestinationState<Reducers>, DestinationAction<Reducers>, any> = (
 		state,
@@ -346,7 +358,7 @@ export function createDestination<Reducers extends Record<string, Reducer<any, a
 	) => {
 		// Route action to correct child reducer based on type matching
 		const caseType = action.type as keyof Reducers;
-		const childReducer = reducers[caseType];
+		const childReducer = routes[caseType as string];
 
 		// If no reducer for this case type, return state unchanged
 		if (!childReducer) {
@@ -386,9 +398,10 @@ export function createDestination<Reducers extends Record<string, Reducer<any, a
 		return [
 			newState,
 			nestGroups(
-				EffectConstructors.map(
+				liftEffect(
 					childEffect,
-					(childResult) => ({ type: caseType, action: childResult }) as DestinationAction<Reducers>
+					(childResult) => ({ type: caseType, action: childResult }) as DestinationAction<Reducers>,
+					{ kind: 'pass' }
 				),
 				String(caseType)
 			)
@@ -422,7 +435,7 @@ export function createDestination<Reducers extends Record<string, Reducer<any, a
 	// A case action carries its child action; the case is one of *this*
 	// destination's own (`in` also found `hasOwnProperty`, R1-REVIEW 1.9).
 	const isCaseAction = (value: unknown): value is { type: string; action: unknown } =>
-		isRecord(value) && typeof value.type === 'string' && Object.hasOwn(reducers, value.type) && 'action' in value;
+		isRecord(value) && typeof value.type === 'string' && Object.hasOwn(routes, value.type) && 'action' in value;
 	const isWrapper = (value: unknown): value is { type: 'presented' | 'dismiss'; action?: unknown } =>
 		isRecord(value) && (value.type === 'dismiss' || value.type === 'presented');
 
@@ -500,7 +513,7 @@ export function createDestination<Reducers extends Record<string, Reducer<any, a
 		return { matched: false };
 	};
 
-	return {
+	const result: Destination<Reducers> = {
 		reducer,
 		initial,
 		extract,
@@ -509,4 +522,15 @@ export function createDestination<Reducers extends Record<string, Reducer<any, a
 		match,
 		_types: null as any  // Type-level only
 	};
+
+	registerDestinationCases(
+		result,
+		Object.freeze({
+			reducer,
+			keys,
+			routes
+		})
+	);
+
+	return result;
 }

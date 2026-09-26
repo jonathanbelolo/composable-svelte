@@ -1,11 +1,12 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { createStore } from '@composable-svelte/core';
-  import { Form, FormField } from '@composable-svelte/core/components/form';
+  import { Form, FormField, type FormAction, type FormState } from '@composable-svelte/core/components/form';
   import { Button, Input } from '@composable-svelte/core/components/ui';
   import { appReducer } from './app.reducer.js';
   import { createInitialAppState } from './app.state.js';
   import StepIndicator from '../components/StepIndicator.svelte';
-  import type { OnboardingStep } from '../features/onboarding/onboarding.types.js';
+  import type { OnboardingStep, PersonalInfoData, AddressData } from '../features/onboarding/onboarding.types.js';
 
   // Create parent store
   const parentStore = createStore({
@@ -14,59 +15,45 @@
     dependencies: {}
   });
 
-  // Create reactive wrappers for form states
-  let personalInfoFormState = $state(parentStore.state.personalInfoForm);
-  let addressFormState = $state(parentStore.state.addressForm);
-
-  $effect(() => {
-    personalInfoFormState = parentStore.state.personalInfoForm;
-    addressFormState = parentStore.state.addressForm;
+  onDestroy(() => {
+    parentStore.destroy();
   });
 
   const personalInfoFormStore = {
     get state() {
-      return personalInfoFormState;
+      return parentStore.state.personalInfoForm;
     },
-    dispatch(action: any) {
+    dispatch(action: FormAction<PersonalInfoData>) {
       parentStore.dispatch({ type: 'personalInfoForm', action });
     },
-    subscribe(listener: any) {
+    subscribe(listener: (state: FormState<PersonalInfoData>) => void) {
       // Must emit the form slice, not parent state: FormField reads
       // `$store.data[name]`, and parent state has no `data`.
-      return parentStore.subscribe((s: any) => listener(s.personalInfoForm));
+      return parentStore.subscribe(s => listener(s.personalInfoForm));
     }
   };
 
   const addressFormStore = {
     get state() {
-      return addressFormState;
+      return parentStore.state.addressForm;
     },
-    dispatch(action: any) {
+    dispatch(action: FormAction<AddressData>) {
       parentStore.dispatch({ type: 'addressForm', action });
     },
-    subscribe(listener: any) {
+    subscribe(listener: (state: FormState<AddressData>) => void) {
       // Must emit the form slice, not parent state: FormField reads
       // `$store.data[name]`, and parent state has no `data`.
-      return parentStore.subscribe((s: any) => listener(s.addressForm));
+      return parentStore.subscribe(s => listener(s.addressForm));
     }
   };
 
-  // Subscribe to parent state
-  let currentStep = $state(parentStore.state.currentStep);
-  let completedData = $state(parentStore.state.completedData);
-  let isSubmitting = $state(parentStore.state.isSubmitting);
-  let submitError = $state(parentStore.state.submitError);
-  let submissionComplete = $state(parentStore.state.submissionComplete);
-  let submittedData = $state(parentStore.state.submittedData);
-
-  $effect(() => {
-    currentStep = parentStore.state.currentStep;
-    completedData = parentStore.state.completedData;
-    isSubmitting = parentStore.state.isSubmitting;
-    submitError = parentStore.state.submitError;
-    submissionComplete = parentStore.state.submissionComplete;
-    submittedData = parentStore.state.submittedData;
-  });
+  // Derived state from parent store
+  let currentStep = $derived(parentStore.state.currentStep);
+  let completedData = $derived(parentStore.state.completedData);
+  let isSubmitting = $derived(parentStore.state.isSubmitting);
+  let submitError = $derived(parentStore.state.submitError);
+  let submissionComplete = $derived(parentStore.state.submissionComplete);
+  let submittedData = $derived(parentStore.state.submittedData);
 
   // Compute completed steps
   let completedSteps = $derived(

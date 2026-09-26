@@ -28,7 +28,9 @@ export type CasePath = string;
  * Match a presentation action against a case path.
  *
  * This function helps parents observe child actions without directly handling child logic.
- * It unwraps PresentationAction and extracts the child action if the path matches.
+ * The first nested step unwraps PresentationAction; subsequent explicit path
+ * segments may be ordinary destination case actions or further presentations.
+ * No unnamed ordinary action level is skipped.
  *
  * @param action - The parent action to match against
  * @param path - The case path to match (e.g., "destination.saveButtonTapped")
@@ -64,12 +66,18 @@ export function matchPresentationAction<A>(
   if (!action || typeof action !== 'object') {
     return null;
   }
+  if (!path || typeof path !== 'string') {
+    return null;
+  }
 
   const parts = path.split('.');
   let current: any = action;
 
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
+    if (!current || typeof current !== 'object') {
+      return null;
+    }
 
     // Check if current level has 'type' field
     if (!('type' in current)) {
@@ -87,23 +95,22 @@ export function matchPresentationAction<A>(
     }
 
     // Navigate to next level
-    // Check for PresentationAction wrapper
-    if ('action' in current && current.action && typeof current.action === 'object') {
-      const presentationAction = current.action as any;
-
-      // Must be 'presented' type
-      if (presentationAction.type !== 'presented') {
-        return null;
-      }
-
-      // Navigate into presented action
-      if ('action' in presentationAction) {
-        current = presentationAction.action;
-      } else {
-        return null;
-      }
-    } else {
+    if (!('action' in current) || !current.action || typeof current.action !== 'object') {
       return null;
+    }
+
+    const nextAction = current.action as any;
+    if (nextAction.type === 'presented') {
+      if (!('action' in nextAction) || !nextAction.action || typeof nextAction.action !== 'object') {
+        return null;
+      }
+      current = nextAction.action;
+    } else {
+      // The parent field must enter through PresentationAction. Further case
+      // segments are ordinary tagged actions and are matched explicitly.
+      if (i === 0) return null;
+      // Ordinary nested action (e.g. destination case action: { type: 'editor', action: ... })
+      current = nextAction;
     }
   }
 

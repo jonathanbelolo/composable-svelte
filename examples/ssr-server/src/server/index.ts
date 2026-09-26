@@ -5,22 +5,21 @@
  * with a modern Node.js framework.
  */
 
-import Fastify from 'fastify';
+import Fastify, { type FastifyRequest, type FastifyReply } from 'fastify';
 import fastifyStatic from '@fastify/static';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { createStore } from '@composable-svelte/core';
 import { renderToHTML } from '@composable-svelte/core/ssr';
 import { fastifySecurityHeaders, fastifyRateLimit } from '@composable-svelte/core/ssr/middleware';
-import { createInitialI18nState, BundledTranslationLoader, createStaticLocaleDetector, serverDOM } from '@composable-svelte/core/i18n';
-import type { I18nState } from '@composable-svelte/core/i18n';
+import { BundledTranslationLoader, createStaticLocaleDetector, createSSRLocaleDetector, serverDOM } from '@composable-svelte/core/i18n';
 import { createNoopStorage } from '@composable-svelte/core/dependencies';
 import App from '../shared/App.svelte';
 import { appReducer } from '../shared/reducer';
 import type { AppDependencies } from '../shared/reducer';
-import { initialState } from '../shared/types';
+import { createInitialAppState } from '../shared/initial-state';
 import { loadPosts, loadAllComments, loadCommentsByPostId } from './data';
-import { parseDestinationFromURL } from '../shared/routing';
+import { extractLocaleAndCleanPath, SUPPORTED_LOCALES } from '../shared/routing';
 
 // Import translation files
 import enTranslations from '../locales/en/common.json';
@@ -60,198 +59,49 @@ app.register(fastifyStatic, {
 });
 
 
-/**
- * Detect locale from request.
- * Priority: 1. Query param (?lang=fr), 2. Accept-Language header, 3. Default (en)
- */
-function detectLocale(request: any): string {
-  // Safety check
-  if (!request) {
-    return 'en';
-  }
-
-  // 1. Check query param
-  const queryLang = request.query?.lang;
-  if (queryLang && ['en', 'fr', 'es'].includes(queryLang)) {
-    return queryLang;
-  }
-
-  // 2. Check Accept-Language header
-  // In Fastify, headers are automatically lowercased
-  const acceptLanguage = request.headers?.['accept-language'];
-  if (acceptLanguage && typeof acceptLanguage === 'string') {
-    // Parse Accept-Language header (e.g., "fr-FR,fr;q=0.9,en;q=0.8")
-    const languages = acceptLanguage
-      .split(',')
-      .flatMap((lang: string) => {
-        // Both splits can yield undefined under noUncheckedIndexedAccess, and
-        // a malformed header really can produce an empty segment.
-        const code = lang.trim().split(';')[0];
-        const base = code?.split('-')[0];
-        return base ? [base] : [];
-      });
-
-    // Find first supported language
-    for (const lang of languages) {
-      if (['en', 'fr', 'es'].includes(lang)) {
-        return lang;
-      }
-    }
-  }
-
-  // 3. Default to English
-  return 'en';
+/** Path locale wins; otherwise use core's query/header detector, then English. */
+function detectLocale(request: FastifyRequest): string {
+  return extractLocaleAndCleanPath(request.url).locale ?? createSSRLocaleDetector({
+    supportedLocales: [...SUPPORTED_LOCALES], defaultLocale: 'en',
+    url: new URL(request.url, 'https://example.com').href,
+    cookies: '', acceptLanguage: request.headers['accept-language'] ?? ''
+  }).detect();
 }
 
-/**
- * Main SSR route handler.
- * This demonstrates the complete SSR flow with routing and i18n:
- * 1. Parse URL to determine destination (list, post, or comments)
- * 2. Detect locale and initialize i18n
- * 3. Load data on the server
- * 4. Compute initial meta tags based on destination
- * 5. Create store with URL-driven state and i18n
- * 6. Render component to HTML
- * 7. Send response with embedded state
- */
-async function renderApp(request: any, reply: any) {
+const translationLoader = new BundledTranslationLoader({ bundles: {
+  en: { common: enTranslations }, fr: { common: frTranslations }, es: { common: esTranslations }
+}});
+
+async function renderApp(request: FastifyRequest, reply: FastifyReply) {
   try {
-    // 1. Parse URL using router (same logic as client!)
-    const path = request.url;
-    const destination = parseDestinationFromURL(path);
-
-    // 2. Detect locale and initialize i18n (manual setup for Fastify)
     const locale = detectLocale(request);
-    const i18nState = createInitialI18nState(locale, ['en', 'fr', 'es'], 'en');
-
-    // Create translation loader
-    const translationLoader = new BundledTranslationLoader({
-      bundles: {
-        en: { common: enTranslations },
-        fr: { common: frTranslations },
-        es: { common: esTranslations }
-      }
-    });
-
-    // Preload common namespace
-    const translations = await translationLoader.load('common', locale);
-    // `TranslationLoader.load` returns null when the namespace is missing; the
-    // annotation puts the failure here rather than 70 lines later at createStore.
-    const updatedI18nState: I18nState = {
-      ...i18nState,
-      translations: translations ? { [`${locale}:common`]: translations } : {}
-    };
-
-    // SSR-safe storage: the library's own no-op implementation.
-    const mockStorage = createNoopStorage<string>();
-
-    // Create i18n dependencies for the store
-    const i18nDependencies = {
-      translationLoader,
-      localeDetector: createStaticLocaleDetector(locale, ['en', 'fr', 'es']),
-      storage: mockStorage,
-      dom: serverDOM
-    };
-
-    // 3. Load data based on destination
-    const posts = await loadPosts();
-
-    // For comments route, preload comments for the specific post
-    // For other routes, load all comments (demonstrates different strategies)
-    const comments =
-      destination.type === 'comments'
-        ? await loadCommentsByPostId(destination.state.postId)
-        : await loadAllComments();
-
-    // 4. Compute initial meta tags based on destination
-    let meta = initialState.meta;
-
-    if (destination.type === 'list') {
-      meta = {
-        title: 'Blog Posts - Composable Svelte SSR',
-        description: 'Server-Side Rendered blog with Composable Svelte and Fastify',
-        canonical: 'https://example.com/'
-      };
-    } else if (destination.type === 'post') {
-      const post = posts.find((p) => p.id === destination.state.postId);
-      if (post) {
-        meta = {
-          title: `${post.title} - Composable Svelte Blog`,
-          description: post.content.slice(0, 160),
-          ogImage: `/og/post-${post.id}.jpg`,
-          canonical: `https://example.com/posts/${post.id}`
-        };
-      }
-    } else if (destination.type === 'comments') {
-      const post = posts.find((p) => p.id === destination.state.postId);
-      const commentCount = comments.filter((c) => c.postId === destination.state.postId).length;
-      if (post) {
-        meta = {
-          title: `Comments on "${post.title}" - Composable Svelte Blog`,
-          description: `Read ${commentCount} comments on ${post.title}`,
-          canonical: `https://example.com/posts/${post.id}/comments`
-        };
-      }
-    }
-
-    // 5. Create store with URL-driven state and i18n
-    const store = createStore({
-      initialState: {
-        ...initialState,
-        posts,
-        comments,
-        destination,
-        meta,
-        i18n: updatedI18nState
-      },
-      reducer: appReducer,
-      dependencies: {
-        fetchPosts: loadPosts,
-        fetchComments: loadCommentsByPostId,
-        ...i18nDependencies
-      } satisfies AppDependencies
-      // ssr.deferEffects defaults to true, so effects are automatically skipped
-    });
-
-    // 6. Render component to HTML
-    // Note: Title and meta tags are handled by <svelte:head> in App.svelte!
-    // This demonstrates state-driven meta tags.
-    const html = renderToHTML(
-      App,
-      { store },
-      {
-        head: `
-        <link rel="stylesheet" href="/assets/index.css">
-        <style>
-          * {
-            box-sizing: border-box;
-          }
-          body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-          }
-        </style>
-      `,
+    const [posts, comments, translations] = await Promise.all([
+      loadPosts(), loadAllComments(), translationLoader.load('common', locale)
+    ]);
+    const state = createInitialAppState({ path: request.url, locale, posts, comments,
+      translations: translations ? { [`${locale}:common`]: translations } : {} });
+    const store = createStore({ initialState: state, reducer: appReducer, dependencies: {
+      fetchPosts: loadPosts, fetchComments: loadCommentsByPostId, translationLoader,
+      localeDetector: createStaticLocaleDetector(locale, [...SUPPORTED_LOCALES]),
+      storage: createNoopStorage<string>(), dom: serverDOM
+    } satisfies AppDependencies });
+    try {
+      const html = renderToHTML(App, { store }, {
+        // App owns its title/canonical; the document wrapper owns language.
+        title: null, lang: locale,
+        head: '<link rel="stylesheet" href="/assets/index.css">',
         clientScript: '/assets/index.js'
-      }
-    );
-
-    // 7. Send response
-    reply.type('text/html').send(html);
+      });
+      return reply.code(state.destination.type === 'notFound' ? 404 : 200).type('text/html').send(html);
+    } finally { store.destroy(); }
   } catch (error) {
     request.log.error(error);
-    // The message stays in the log: after R1.7.d a serialization failure
-    // names state fields, which is not for the client (R1-REVIEW 1.9).
-    reply.status(500).send({ error: 'Internal Server Error' });
+    return reply.code(500).send({ error: 'Internal Server Error' });
   }
 }
 
-// Register routes - handle all three routes with the same handler
 app.get('/', renderApp);
-app.get('/posts/:id', renderApp);
-app.get('/posts/:id/comments', renderApp);
+app.get('/*', renderApp);
 
 /**
  * Health check endpoint

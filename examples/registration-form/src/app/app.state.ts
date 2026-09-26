@@ -13,6 +13,7 @@ export function createInitialAppState(): AppState {
   return {
     registrationForm: createInitialFormState(registrationFormConfig),
     registrationSuccess: false,
+    submittedUser: null,
     registeredUser: null
   };
 }

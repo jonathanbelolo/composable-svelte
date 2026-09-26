@@ -12,8 +12,8 @@ import { BundledTranslationLoader, createStaticLocaleDetector, browserDOM } from
 import App from '../shared/App.svelte';
 import { appReducer } from '../shared/reducer';
 import type { AppDependencies } from '../shared/reducer';
-import type { AppState, AppAction, AppDestination } from '../shared/types';
-import { parseDestinationFromURL, destinationURL } from '../shared/routing';
+import type { AppState, AppAction } from '../shared/types';
+import { parseDestinationFromURL, extractLocaleAndCleanPath, supportedLocale } from '../shared/routing';
 
 // Import translation files
 import enTranslations from '../locales/en/common.json';
@@ -35,6 +35,7 @@ const translationLoader = new BundledTranslationLoader({
  * Hydrate the application.
  */
 async function hydrate() {
+  let releaseOwnedStore: (() => void) | undefined;
   try {
     // 1. Read serialized state from the server
     const stateElement = document.getElementById('__COMPOSABLE_SVELTE_STATE__');
@@ -66,17 +67,9 @@ async function hydrate() {
       {
         reducer: appReducer,
         dependencies: {
-          fetchPosts: async () => {
-            // In a real app, this would fetch from an API
-            // For this example, we'll just return empty array
-            // (the data is already loaded via SSR)
-            return [];
-          },
-          fetchComments: async (postId: number) => {
-            // In a real app, this would fetch from an API
-            // For this example, return empty (comments loaded via SSR)
-            return [];
-          },
+          // Read-only demo snapshot, not a persistence or network API.
+          fetchPosts: async () => parsedState.posts,
+          fetchComments: async (postId: number) => parsedState.comments.filter(comment => comment.postId === postId),
           ...i18nDependencies
         } satisfies AppDependencies
       }
@@ -85,19 +78,19 @@ async function hydrate() {
     // 5. Sync browser history with state (URL routing!)
     // When destination changes → update URL
     // When user clicks back/forward → dispatch navigate action
-    syncBrowserHistory(store, {
-      // Parse URL path to destination
-      parse: parseDestinationFromURL,
-      // Serialize state to URL
-      serialize: (state) => destinationURL(state.destination),
-      // Map destination → action for back/forward navigation
-      destinationToAction: (dest: AppDestination | null): AppAction | null => {
-        if (dest) {
-          return { type: 'navigate', destination: dest };
-        }
-        // If no destination, navigate to list
-        return { type: 'navigate', destination: { type: 'list', state: {} } };
-      }
+    let cleanupHistory: (() => void) | undefined;
+    releaseOwnedStore = () => {
+      try { cleanupHistory?.(); } finally { store.destroy(); }
+    };
+    cleanupHistory = syncBrowserHistory(store, {
+      parse: path => ({ destination: parseDestinationFromURL(path), ...extractLocaleAndCleanPath(path) }),
+      parseQuery: search => search,
+      destinationToAction: (route, query: unknown): AppAction | null => route ? {
+        type: 'historyNavigated',
+        destination: route.destination,
+        locale: route.locale ?? supportedLocale(new URLSearchParams(typeof query === 'string' ? query : '').get('lang')) ?? locale,
+        search: typeof query === 'string' ? query : ''
+      } : null
     });
 
     // 6. Hydrate the app (reuse existing DOM from SSR)
@@ -112,10 +105,12 @@ async function hydrate() {
     // Cleanup on unmount (for HMR during development)
     if (import.meta.hot) {
       import.meta.hot.dispose(() => {
-        unmount(app);
+        releaseOwnedStore?.();
+        void unmount(app);
       });
     }
   } catch (error) {
+    releaseOwnedStore?.();
     console.error('❌ Hydration failed:', error);
 
     // Show error to user. Built as DOM nodes rather than an innerHTML template

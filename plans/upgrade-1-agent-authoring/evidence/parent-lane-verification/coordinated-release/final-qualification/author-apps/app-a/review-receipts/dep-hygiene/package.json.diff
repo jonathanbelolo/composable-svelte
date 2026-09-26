@@ -1,0 +1,33 @@
+--- review-receipts/dep-hygiene/package.before.json	2026-09-26 15:12:05
++++ package.json	2026-09-26 15:12:12
+@@ -11,21 +11,21 @@
+     "test:ssr": "vite build --ssr tests/ssr-entry.ts --outDir ssr && node tests/ssr.mjs"
+   },
+   "dependencies": {
+-    "@composable-svelte/core": "file:/private/tmp/composable-final-authoring/artifacts-a/composable-svelte-core-0.13.1.tgz",
++    "@composable-svelte/chat": "file:/private/tmp/composable-final-authoring/artifacts-a/composable-svelte-chat-0.5.0.tgz",
+     "@composable-svelte/code": "file:/private/tmp/composable-final-authoring/artifacts-a/composable-svelte-code-0.5.0.tgz",
++    "@composable-svelte/core": "file:/private/tmp/composable-final-authoring/artifacts-a/composable-svelte-core-0.13.1.tgz",
+     "@composable-svelte/media": "file:/private/tmp/composable-final-authoring/artifacts-a/composable-svelte-media-0.5.0.tgz",
+-    "@composable-svelte/chat": "file:/private/tmp/composable-final-authoring/artifacts-a/composable-svelte-chat-0.5.0.tgz",
+     "svelte": "5.55.3"
+   },
+   "devDependencies": {
+-    "typescript": "5.9.3",
+-    "svelte-check": "4.3.3",
+-    "vite": "7.3.6",
+-    "@sveltejs/vite-plugin-svelte": "6.2.1",
+-    "vitest": "4.0.7",
+-    "@vitest/browser-playwright": "4.0.7",
+     "@playwright/test": "1.56.1",
++    "@sveltejs/vite-plugin-svelte": "6.2.1",
++    "@types/node": "22.18.6",
++    "jsdom": "28.1.0",
+     "playwright": "1.56.1",
+-    "@types/node": "22.18.6"
++    "svelte-check": "4.3.3",
++    "typescript": "5.9.3",
++    "vite": "7.3.6",
++    "vitest": "4.0.7"
+   }
+ }

@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/charts",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Interactive data visualization components for Composable Svelte - Built with Observable Plot and D3",
   "type": "module",
   "main": "./dist/index.js",
@@ -17,11 +17,14 @@
   "files": [
     "dist",
     "README.md",
+    "INTEGRATION.md",
+    "MANAGED.md",
+    "fixtures/installed-consumer",
     "LICENSE",
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "svelte-package -o dist",
+    "build": "svelte-package -o dist && node ../../scripts/emit-svelte-declaration-bridges.mjs dist",
     "typecheck": "tsc --noEmit",
     "check": "svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings",
     "test": "vitest run",
@@ -57,8 +60,8 @@
     "url": "https://github.com/jonathanbelolo/composable-svelte/issues"
   },
   "peerDependencies": {
-    "@composable-svelte/core": "^0.12.0",
-    "svelte": "^5.0.0"
+    "@composable-svelte/core": "^0.13.1",
+    "svelte": "^5.20.0"
   },
   "devDependencies": {
     "@composable-svelte/core": "workspace:*",

@@ -23,6 +23,7 @@ import { Effect } from '@composable-svelte/core';
 import { isAuthError, toAuthError } from '../errors/helpers.js';
 import { anonymousSubject, subjectFromSession } from '../subject/helpers.js';
 import type { AuthError } from '../errors/types.js';
+import { decideSessionEstablished } from './establish.js';
 import type { SessionAction, SessionDependencies, SessionState } from './types.js';
 
 /** Initial state: nothing known, anonymous subject, epoch 0. */
@@ -319,30 +320,10 @@ export const sessionReducer: Reducer<SessionState, SessionAction, SessionDepende
 		}
 
 		case 'sessionEstablished': {
-			// The handover from a flow that owns its own async: credentials login,
-			// an MFA challenge, an OAuth callback, a magic link. No epoch guard,
-			// because this is not effect feedback from *this* store — the flow is
-			// asserting a result it already has.
-			//
-			// One status is refused. A sign-in resolving after the user has hit
-			// sign-out would otherwise re-authenticate them, and `loggingOut` is
-			// the only window where that is possible. Everything else yields, on
-			// the principle the `login` arm already states: explicit user intent
-			// supersedes a background resolve.
-			if (state.status === 'loggingOut') {
-				return [state, Effect.none()];
-			}
-			return [
-				{
-					status: 'authenticated',
-					subject: subjectFromSession(action.session),
-					error: null,
-					epoch: state.epoch,
-					// Advisory: absent means the backend states none.
-					expiresAt: action.session.expires_at ?? null
-				},
-				Effect.none()
-			];
+			// The handover from a flow that owns its own async. The rule — refused
+			// only while `loggingOut` — lives in `decideSessionEstablished`, which
+			// the managed auth feature calls too, so the two cannot drift apart.
+			return [decideSessionEstablished(state, action.session).state, Effect.none()];
 		}
 
 		default: {

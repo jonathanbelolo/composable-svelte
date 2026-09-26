@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { Store } from '@composable-svelte/core';
+	import type { PresentationState } from '@composable-svelte/core';
+	import type { ViewStore } from '../../internal/view-store.js';
 	import type { Message, StreamingChatState, StreamingChatAction } from '../types.js';
 	import ChatMessage from './ChatMessage.svelte';
 	import ContextMenu from './ContextMenu.svelte';
@@ -14,7 +15,11 @@
 	 */
 	interface Props {
 		message: Message;
-		store: Store<StreamingChatState, StreamingChatAction>;
+		/**
+		 * A standalone `Store`, or a managed feature view. Once a managed owner
+		 * retires, the message renders nothing: its actions would have nowhere to go.
+		 */
+		store: ViewStore<StreamingChatState, StreamingChatAction>;
 		isStreaming?: boolean | undefined;
 		/** Forwarded to `ChatMessage`; the list decides. */
 		animateIn?: boolean | undefined;
@@ -30,8 +35,11 @@
 
 	const { message, store, isStreaming = false, animateIn = false, userLabel = 'You', assistantLabel = 'Assistant', userAvatarUrl, assistantAvatarUrl }: Props = $props();
 
+	// `undefined` once a managed owner has retired.
+	const chat = $derived($store);
+
 	// Check if this message is being edited
-	const isEditing = $derived($store.editingMessage?.id === message.id);
+	const isEditing = $derived(chat?.editingMessage?.id === message.id);
 
 	let editTextarea: HTMLTextAreaElement | undefined = $state();
 
@@ -44,13 +52,14 @@
 		const end = editTextarea.value.length;
 		editTextarea.setSelectionRange(end, end);
 	});
-	const editContent = $derived($store.editingMessage?.content ?? '');
+	const editContent = $derived(chat?.editingMessage?.content ?? '');
 
 	// Reaction picker state
 	// One slot in the store, not a boolean per message. Two component-local
 	// booleans meant two stacked full-viewport backdrops, and the first became
 	// unclosable.
-	const picker = $derived($store.reactionPicker);
+	const idlePicker: PresentationState<string> = { status: 'idle' };
+	const picker = $derived(chat?.reactionPicker ?? idlePicker);
 	const pickerIsMine = $derived(picker.status !== 'idle' && picker.content === message.id);
 	const pickerOpen = $derived(
 		pickerIsMine && (picker.status === 'presenting' || picker.status === 'presented')
@@ -75,7 +84,9 @@
 	}
 </script>
 
-{#if isEditing && message.role === 'user'}
+{#if !chat}
+	<!-- Retired: nothing to act on. -->
+{:else if isEditing && message.role === 'user'}
 	<!-- Edit mode for user messages -->
 	<div class="chat-message chat-message--editing" data-role="user">
 		<div class="chat-message__header">

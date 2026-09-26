@@ -1,0 +1,19 @@
+{
+  "status": "integrated-and-parent-verified",
+  "base": "16f983e706731f634b5bea6805b836b3bea3d506",
+  "head": "f06b63e64416b14eef05fbce2159165747068584",
+  "paths": 104,
+  "conflicts": 0,
+  "sourceChecks": {
+    "check": "0 errors, 0 warnings",
+    "typecheck": "pass",
+    "build": "pass",
+    "chromiumTests": 942,
+    "ssrTests": 62
+  },
+  "archiveSHA256": "92d8ee7f8486f7573bdbfbae9181b20a0aac696e282050793ce2ddf14a33bdd5",
+  "archiveFiles": 404,
+  "packedAndInstalledBytes": "Verified against rebuilt main package and both physical installed fixtures; only documented pnpm manifest transforms allowed",
+  "forbiddenCacheFiles": 0,
+  "releaseStatus": "local old-label candidate; final versions/checker profiles/publication pending"
+}

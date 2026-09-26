@@ -1,0 +1,293 @@
+{
+  "schema": "composable-final-checker/profile-phase-manifest/v2",
+  "generatedAt": "2026-09-26T14:06:01.104Z",
+  "status": "PROFILE IMPLEMENTATION CANDIDATE - pending fresh independent final review; 8 of 9 required profiles registered (auth pending coordinator boundary decision); not a release artifact",
+  "checkerArchive": {
+    "finalCandidate": {
+      "path": "profile-phase/P6-archive/composable-svelte-architecture-0.13.1.tgz",
+      "sha256": "9e7cd442743a473b9c87fdad075d7ce2dfba5a2df4a28589ab030be437a0140d",
+      "integrity": "sha512-9xF5ISTJtElpQMJz0WBQ1X+vO7/clApipj/nvEC/OGOF1XiGYzCfjrzBkMNuPrFRC3tIjye3LP5oZ4LlUYPesg==",
+      "bytes": 95434,
+      "fileCount": 39
+    },
+    "preRegistration": {
+      "path": "profile-phase/P5-archive-preregistration/composable-svelte-architecture-0.13.1.tgz",
+      "sha256": "2410e594900b19f10dbc97d3fc97c9f0a2516b276cc728475dda8634993b6f82",
+      "integrity": "sha512-NCYSuzVPvdzoxuuFeV8Ht0zJAcA9KvtjljqgwcPb8EExLrQKkXTcKAG1feAMrop2el9M0dyeSNEJXavtSfqyWw==",
+      "bytes": 94762,
+      "fileCount": 36
+    },
+    "superseded": [
+      {
+        "sha256": "356f4697b8ceaa82f2f9c2456402e456582767b98f80ec6e80eb6c52741060be",
+        "note": "partial 4-profile candidate (P3/P4), no compat fix; superseded"
+      },
+      {
+        "sha256": "02dc833e727ac998293a717ddc8df15ad15cc14fdbcf11ad47daff20048dde68",
+        "note": "P3 interim, bytes deleted"
+      },
+      {
+        "sha256": "7cae973afd0303d16b8fbc205d357be2a381344e95b27fd67f70718a12d03843",
+        "note": "starter-only preparation (workspace root), superseded"
+      }
+    ]
+  },
+  "runtime": {
+    "manifest": {
+      "path": "/private/tmp/companion-runtime-release/archives-r5-chat/MANIFEST.json",
+      "sha256": "6a28bae3e95f9e2e3186cee552c9ef913ba92b4685d3fff0cb143f54c985fba9"
+    },
+    "receiptsReused": [
+      {
+        "path": "/private/tmp/companion-runtime-release/matrix-r4/minimum/qualification-receipt.json",
+        "sha256": "d4336b4b6a47d98a1a6e04b8f33f22a1e3e7b37d221f9fcdb2b4b84b003c4762"
+      },
+      {
+        "path": "/private/tmp/companion-runtime-release/matrix-r4/newer/qualification-receipt.json",
+        "sha256": "9eedd66437c92efd2f6b14ede7bd40588185672d6a945f5cedfd0e77e9159911"
+      },
+      {
+        "path": "/private/tmp/companion-runtime-release/matrix-r5-chat/minimum/qualification-receipt.json",
+        "sha256": "005a03ad8b9035d9f9f7c657cee5adc157ae36542922976bfd83b908b23427ba"
+      },
+      {
+        "path": "/private/tmp/companion-runtime-release/matrix-r5-chat/newer/qualification-receipt.json",
+        "sha256": "1ed1b104524bcf2e4daf34c8536f83f0e0e50846978be35521f80ab21eef43fa"
+      }
+    ]
+  },
+  "registered": {
+    "starter": {
+      "path": "packages/architecture/policies/starter.json",
+      "sha256": "f2821ebf0fa5cd34b346361089edd56bb4ec01a40c59eb969c60f90c7e77d190"
+    },
+    "chat": {
+      "path": "packages/architecture/policies/chat.json",
+      "sha256": "4e958b18f465a2bb65cff36ecf97f76e66a7da3bed83942ef5397f0c9030436f"
+    },
+    "code": {
+      "path": "packages/architecture/policies/code.json",
+      "sha256": "669cd1a15dcba7a7c3e6ebe572888e4611e0e214dd2e607c744076182762e437"
+    },
+    "media": {
+      "path": "packages/architecture/policies/media.json",
+      "sha256": "717854d1add64795bf06a7d8ecf73a768dd8fb717cf706b3846b0e5384b501c3"
+    },
+    "chat-code-media": {
+      "path": "packages/architecture/policies/chat-code-media.json",
+      "sha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327"
+    },
+    "maps": {
+      "path": "packages/architecture/policies/maps.json",
+      "sha256": "6c60262dc74594255ba2d245b4a0b057edc008bb450ff7b4309a975b1d5c760a"
+    },
+    "graphics": {
+      "path": "packages/architecture/policies/graphics.json",
+      "sha256": "5b66bb6ec3b309fba9f4696f07ac35f5f7b9c86e75520d11d9de966b2fe0f03b"
+    },
+    "charts": {
+      "path": "packages/architecture/policies/charts.json",
+      "sha256": "853f929a63217a9667ec64e928dbd8767c15ad49ff82e75e802e4209e4398645"
+    }
+  },
+  "notRegistered": {
+    "auth": {
+      "proposedPolicy": "profile-phase/P1-policies/bundled/auth.json",
+      "sha256": "ab100ba510f5cdc4931bca33e0dc398d21f1382010b51ed44242d30dc6846662",
+      "reason": "no qualifying Auth-only input: shipped auth consumer rejected (non-hook constructs); App-B imports Charts and still fails on Promise executors"
+    }
+  },
+  "externalAppBPolicy": {
+    "path": "profile-phase/P1-policies/external-appb/app-b-auth-charts.json",
+    "sha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de",
+    "note": "external only; not in registry/archive; needs independent review/pin"
+  },
+  "qualifyingInputs": {
+    "chat": "chat-managed shipped recipe (R5 Chat fe21f00f)",
+    "code": "code-managed shipped recipe",
+    "media": "media-managed shipped recipe",
+    "chat-code-media": "chat-code-media combined install, three shipped recipes (R5 Chat)",
+    "maps": "maps-fixture-production-consumer",
+    "graphics": "graphics-fixture-production-consumer",
+    "charts": "charts-fixture-production-consumer"
+  },
+  "receipts": {
+    "p5PreRegistration": {
+      "path": "profile-phase/P5-pre-registration/profile-qualification-receipt.json",
+      "sha256": "2463fd35a2f2852ea392d77d0068388b33dc212f569e2ec8bde64ab8e0d14fe4",
+      "verdict": "ALL_EXPECTATIONS_MET",
+      "failures": 0
+    },
+    "p5Equivalence": {
+      "path": "profile-phase/P5-equivalence/production-consumer-equivalence.json",
+      "sha256": "55deae4e612989091d6d19a8e0c096bc62e3db9a2a7a1464ee1afc1494cc15c8",
+      "verdict": "EQUIVALENCE_CHECKS_PASSED",
+      "failures": 0
+    },
+    "p5EquivalenceRun1ToolingFailure": {
+      "path": "profile-phase/P5-equivalence/run1-production-consumer-equivalence-FAILED-tooling.json",
+      "sha256": "63f3e20b62d21839db09c54a865956b0dbbe714f712ad6153209dc914d3e6055"
+    },
+    "p5EquivalenceRun2VacuousSsr": {
+      "path": "profile-phase/P5-equivalence/run2-production-consumer-equivalence-FLAWED-vacuous-ssr.json",
+      "sha256": "c6a4c3fbc2972393c52875602ce01428a513ced47c2a2605e163de4bdce2aece"
+    },
+    "p6PostRegistration": {
+      "path": "profile-phase/P6-post-registration/profile-qualification-receipt.json",
+      "sha256": "2d067010d43a35ad5dc547d3577625e6169660bff330c3cab4d28b913f183f76",
+      "verdict": "ALL_EXPECTATIONS_MET",
+      "failures": 0
+    },
+    "p6AuthorApps": {
+      "path": "profile-phase/P6-author-app-compatibility/author-app-compatibility-receipt.json",
+      "sha256": "edbbe5f16ff5c9a575e81e85605d4e5cc22c88f33fbe84be0519b5c62033a1f5",
+      "verdict": "EXPECTATION_FAILURES",
+      "failures": 2
+    }
+  },
+  "harness": {
+    "path": "/private/tmp/composable-final-qualification/repo/scripts/verify-release-archives.mjs",
+    "sha256": "01e71e02ca3205096e35902d9eebbba788ee4c169c9a7cf8f64e7ab4359552c9",
+    "edited": false
+  },
+  "orchestration": {
+    "qualify-profiles-v2.mjs": "204d4ac986aa3e190b074255a5a9d891a6d5e58d257ba9a816b035aa7941d3fc",
+    "equivalence.mjs": "6624626447ae2ba4c711ab2360f70265a04742e5146e80b4c0055018992a03fd",
+    "author-app-compatibility-v2.mjs": "8929e612c21a0a65c88dd19ee9869d10ca94bf86f9e52c96fda4e7be82388956",
+    "P1-policies/generate-policies.mjs": "7ab4b3dddd1c520f2b87a28cf76d7278db9f0babc8ab87e4cb341d3106ca147a"
+  },
+  "packageDeltaSincePreProfile": [
+    {
+      "path": "CHANGELOG.md",
+      "before": "066f38af5d1698e5b82d47b33e7129d937dc6c923aa8fee5fa13ef1fc16bb7af",
+      "after": "e05bafa60a456898b6e971b406f32e869d913815b39a2f05e528a245f63c044a"
+    },
+    {
+      "path": "README.md",
+      "before": "c9505722e33433073da40ad0a05f8a711d586d7648a423c944af126d3a547c36",
+      "after": "d6377ca1787b3a1342c4c901904bf148305ba60598a57df975ea8073fe888070"
+    },
+    {
+      "path": "policies/charts.json",
+      "before": null,
+      "after": "853f929a63217a9667ec64e928dbd8767c15ad49ff82e75e802e4209e4398645"
+    },
+    {
+      "path": "policies/chat-code-media.json",
+      "before": null,
+      "after": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327"
+    },
+    {
+      "path": "policies/chat.json",
+      "before": null,
+      "after": "4e958b18f465a2bb65cff36ecf97f76e66a7da3bed83942ef5397f0c9030436f"
+    },
+    {
+      "path": "policies/code.json",
+      "before": null,
+      "after": "669cd1a15dcba7a7c3e6ebe572888e4611e0e214dd2e607c744076182762e437"
+    },
+    {
+      "path": "policies/graphics.json",
+      "before": null,
+      "after": "5b66bb6ec3b309fba9f4696f07ac35f5f7b9c86e75520d11d9de966b2fe0f03b"
+    },
+    {
+      "path": "policies/maps.json",
+      "before": null,
+      "after": "6c60262dc74594255ba2d245b4a0b057edc008bb450ff7b4309a975b1d5c760a"
+    },
+    {
+      "path": "policies/media.json",
+      "before": null,
+      "after": "717854d1add64795bf06a7d8ecf73a768dd8fb717cf706b3846b0e5384b501c3"
+    },
+    {
+      "path": "src/bundled-policy.mjs",
+      "before": "4bb72a598c8dd112ac452acc3b717936d62abcbc6567b31e7e1673daeae5d7b1",
+      "after": "b23657850a9bda4a928791200afae5e2bb718c2e428d083887dbaa0e0f05c2cc"
+    },
+    {
+      "path": "src/bundled-policy.test.mjs",
+      "before": "020686a24e8262b8ff16e4811e327aa7859161e9da5ecfc0b0aa08116e8c792a",
+      "after": "b8b7d9659f5b5cb407c357ec2e32328fac3406a4be8af24947dbe955bc3ac03f"
+    },
+    {
+      "path": "src/check.test.mjs",
+      "before": "37de61c050228b2eabcd623e21c974bc251f5e6c8c3d7cceecc08453c421d56e",
+      "after": "1597c143d2690d5f96c93c1a7875c84b3f2abc75b79474f520d02ecf525b6e2b"
+    },
+    {
+      "path": "src/expression-values.mjs",
+      "before": "07b15e7d905053e56bb629ea9c7313346a1c28e2c0c1d056ba0743641df983b6",
+      "after": "c5135591985f3248fd867c302e03708c853d9439020e53bac26f86058e3db3b4"
+    },
+    {
+      "path": "src/instantiation-expression.test.mjs",
+      "before": null,
+      "after": "5f861d16f2d389f68158d6be4d58c7ae7ca9cc6acb98527644687d5f70a0863b"
+    },
+    {
+      "path": "src/semantic-flow.mjs",
+      "before": "c9672b49f1439cddf0e6362674d117b4095a7f6517fac7c767b062c9ba126a95",
+      "after": "7f012f30254ea7033c2d2312447dd41e7f0d819cf8e289e8923daf49f15d5b4d"
+    }
+  ],
+  "packageDeltaSincePartialCandidate": [
+    {
+      "path": "CHANGELOG.md",
+      "before": "ea29c19d6037e14adb16cabc489729c4daa4643bb44422568fca205fdfdeb0c1",
+      "after": "e05bafa60a456898b6e971b406f32e869d913815b39a2f05e528a245f63c044a"
+    },
+    {
+      "path": "README.md",
+      "before": "0197f50b43e3c8873836eb01491ee81601bec6187e1989d17aa5101e2ed879a1",
+      "after": "d6377ca1787b3a1342c4c901904bf148305ba60598a57df975ea8073fe888070"
+    },
+    {
+      "path": "policies/charts.json",
+      "before": null,
+      "after": "853f929a63217a9667ec64e928dbd8767c15ad49ff82e75e802e4209e4398645"
+    },
+    {
+      "path": "policies/graphics.json",
+      "before": null,
+      "after": "5b66bb6ec3b309fba9f4696f07ac35f5f7b9c86e75520d11d9de966b2fe0f03b"
+    },
+    {
+      "path": "policies/maps.json",
+      "before": null,
+      "after": "6c60262dc74594255ba2d245b4a0b057edc008bb450ff7b4309a975b1d5c760a"
+    },
+    {
+      "path": "src/bundled-policy.mjs",
+      "before": "0cd6ff4f61a684f9622270c3f84fc6ff54bc0e99fdeb816a7bdd8ef519f3d10c",
+      "after": "b23657850a9bda4a928791200afae5e2bb718c2e428d083887dbaa0e0f05c2cc"
+    },
+    {
+      "path": "src/bundled-policy.test.mjs",
+      "before": "7c951604558365a2482b79cbbe8ba8095b09c8213be6706510c72a823b7d4695",
+      "after": "b8b7d9659f5b5cb407c357ec2e32328fac3406a4be8af24947dbe955bc3ac03f"
+    },
+    {
+      "path": "src/check.test.mjs",
+      "before": "996a01170df61c25b520e7bf6817bb3ba0842734866d7893d749aed2a2598be0",
+      "after": "1597c143d2690d5f96c93c1a7875c84b3f2abc75b79474f520d02ecf525b6e2b"
+    },
+    {
+      "path": "src/expression-values.mjs",
+      "before": "07b15e7d905053e56bb629ea9c7313346a1c28e2c0c1d056ba0743641df983b6",
+      "after": "c5135591985f3248fd867c302e03708c853d9439020e53bac26f86058e3db3b4"
+    },
+    {
+      "path": "src/instantiation-expression.test.mjs",
+      "before": null,
+      "after": "5f861d16f2d389f68158d6be4d58c7ae7ca9cc6acb98527644687d5f70a0863b"
+    },
+    {
+      "path": "src/semantic-flow.mjs",
+      "before": "c9672b49f1439cddf0e6362674d117b4095a7f6517fac7c767b062c9ba126a95",
+      "after": "7f012f30254ea7033c2d2312447dd41e7f0d819cf8e289e8923daf49f15d5b4d"
+    }
+  ]
+}

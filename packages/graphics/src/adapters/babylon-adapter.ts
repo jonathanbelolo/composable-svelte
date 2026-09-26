@@ -541,6 +541,9 @@ export class BabylonAdapter {
    */
   resize(): void {
     this.engine?.resize();
+    if (this.lastCamera) {
+      this.applyOrthographicBounds(this.lastCamera);
+    }
   }
 
   /**

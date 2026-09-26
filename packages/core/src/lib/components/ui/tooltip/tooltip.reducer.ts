@@ -8,6 +8,7 @@
 
 import type { Reducer } from '../../../types.js';
 import { Effect } from '../../../effect.js';
+import { springPresets } from '../../../animation/spring-config.js';
 import type {
 	TooltipState,
 	TooltipAction,
@@ -36,138 +37,70 @@ import type {
  * // After animation → presentationCompleted → tooltip fully shown
  * ```
  */
-export const tooltipReducer: Reducer<TooltipState, TooltipAction, TooltipDependencies> = (
-	state,
-	action,
-	deps
-) => {
-	const hoverDelay = deps.hoverDelay ?? 300;
-	const animationDuration = 0.15; // Tooltip preset duration in seconds
+/** Owned wait: cancellation clears both the timeout and its abort listener. */
+function completion(id: string, ms: number, action: TooltipAction) {
+	return Effect.cancellable<TooltipAction>(id, async (dispatch, signal) => {
+		if (signal?.aborted) return;
+		await new Promise<void>((resolve) => {
+			const finish = () => { clearTimeout(timer); signal?.removeEventListener('abort', finish); resolve(); };
+			const timer = setTimeout(finish, ms);
+			signal?.addEventListener('abort', finish, { once: true });
+		});
+		if (!signal?.aborted) dispatch(action);
+	});
+}
 
+export const tooltipReducer: Reducer<TooltipState, TooltipAction, TooltipDependencies> = (state, action, deps) => {
+	const hoverDelay = deps.hoverDelay ?? 300;
+	const duration = springPresets.tooltip.visualDuration;
+	const dismiss = (current: TooltipState): ReturnType<typeof tooltipReducer> => {
+		const presentationVersion = (current.presentationVersion ?? 0) + 1;
+		return [{ ...current, presentationVersion,
+			presentation: { status: 'dismissing', content: current.content ?? '', duration: duration * 0.7 }
+		}, Effect.batch(Effect.cancel('tooltip-presentation'), completion('tooltip-dismissal', duration * 0.7 * 1000,
+			{ type: 'presentation', event: { type: 'dismissalCompleted' }, presentationVersion }))];
+	};
 	switch (action.type) {
 		case 'hoverStarted': {
-			// Start hover delay timer (cancellable)
-			return [
-				{
-					...state,
-					content: action.content,
-					isWaitingToShow: true
-				},
-				Effect.cancellable('tooltip-hover-delay', async (dispatch) => {
-					await new Promise((resolve) => setTimeout(resolve, hoverDelay));
-					dispatch({ type: 'delayCompleted' });
-				})
-			];
+			if (state.presentation.status === 'presenting' || state.presentation.status === 'presented') {
+				return [{ ...state, content: action.content, isHovered: true,
+					presentation: { ...state.presentation, content: action.content } }, Effect.none()];
+			}
+			const hoverVersion = (state.hoverVersion ?? 0) + 1;
+			return [{ ...state, content: action.content, isWaitingToShow: true, isHovered: true, hoverVersion },
+				completion('tooltip-hover-delay', hoverDelay, { type: 'delayCompleted', hoverVersion })];
 		}
-
 		case 'hoverEnded': {
-			// Cancel hover timer or start dismissal
+			const current = { ...state, isHovered: false };
 			if (state.isWaitingToShow) {
-				// Hover ended before delay completed - just clear state
-				// The delay effect will still fire, but delayCompleted will be ignored
-				return [
-					{
-						...state,
-						content: null,
-						isWaitingToShow: false
-					},
-					Effect.none()
-				];
+				return [{ ...current, content: state.presentation.status === 'idle' ? null : state.content,
+					isWaitingToShow: false, hoverVersion: (state.hoverVersion ?? 0) + 1 }, Effect.cancel('tooltip-hover-delay')];
 			}
-
-			if (state.presentation.status === 'presented') {
-				// Tooltip is shown - start dismissal animation
-				return [
-					{
-						...state,
-						presentation: {
-							status: 'dismissing',
-							content: state.presentation.content,
-							duration: animationDuration * 0.7 // Faster exit
-						}
-					},
-					// Use cancellable effect for dismissal completion
-					Effect.cancellable('tooltip-dismissal', async (dispatch) => {
-						await new Promise((resolve) => setTimeout(resolve, animationDuration * 0.7 * 1000));
-						dispatch({
-							type: 'presentation',
-							event: { type: 'dismissalCompleted' }
-						});
-					})
-				];
-			}
-
-			// Tooltip is animating in or already dismissing - ignore
-			return [state, Effect.none()];
+			if (state.presentation.status === 'presented') return dismiss(current);
+			// Preserve the exit intention while entrance settles, rather than discarding it.
+			return [current, Effect.none()];
 		}
-
 		case 'delayCompleted': {
-			// Delay completed - start presentation animation
-			if (!state.isWaitingToShow || !state.content) {
-				return [state, Effect.none()];
-			}
-
-			return [
-				{
-					...state,
-					isWaitingToShow: false,
-					presentation: {
-						status: 'presenting',
-						content: state.content,
-						duration: animationDuration
-					}
-				},
-				// Use cancellable effect for normal completion
-				// Timeout will be cancelled when completion happens
-				Effect.cancellable('tooltip-presentation', async (dispatch) => {
-					await new Promise((resolve) => setTimeout(resolve, animationDuration * 1000));
-					dispatch({
-						type: 'presentation',
-						event: { type: 'presentationCompleted' }
-					});
-				})
-			];
+			if (action.hoverVersion !== undefined && action.hoverVersion !== state.hoverVersion) return [state, Effect.none()];
+			if (!state.isWaitingToShow || state.content === null || state.isHovered === false) return [state, Effect.none()];
+			const presentationVersion = (state.presentationVersion ?? 0) + 1;
+			return [{ ...state, isWaitingToShow: false, presentationVersion,
+				presentation: { status: 'presenting', content: state.content, duration }
+			}, Effect.batch(Effect.cancel('tooltip-hover-delay'), Effect.cancel('tooltip-dismissal'),
+				completion('tooltip-presentation', duration * 1000,
+					{ type: 'presentation', event: { type: 'presentationCompleted' }, presentationVersion }))];
 		}
-
 		case 'presentation': {
-			if (action.event.type === 'presentationCompleted') {
-				// Animation-in completed
-				if (state.presentation.status !== 'presenting') {
-					return [state, Effect.none()];
-				}
-
-				return [
-					{
-						...state,
-						presentation: {
-							status: 'presented',
-							content: state.presentation.content
-						}
-					},
-					Effect.none()
-				];
+			if (action.presentationVersion !== undefined && action.presentationVersion !== state.presentationVersion) return [state, Effect.none()];
+			if (action.event.type === 'presentationCompleted' && state.presentation.status === 'presenting') {
+				if (state.isHovered === false) return dismiss(state);
+				return [{ ...state, presentation: { status: 'presented', content: state.content ?? state.presentation.content } }, Effect.cancel('tooltip-presentation')];
 			}
-
-			if (action.event.type === 'dismissalCompleted') {
-				// Animation-out completed
-				if (state.presentation.status !== 'dismissing') {
-					return [state, Effect.none()];
-				}
-
-				return [
-					{
-						...state,
-						content: null,
-						presentation: { status: 'idle' }
-					},
-					Effect.none()
-				];
+			if (action.event.type === 'dismissalCompleted' && state.presentation.status === 'dismissing') {
+				return [{ ...state, content: state.isWaitingToShow ? state.content : null, presentation: { status: 'idle' } }, Effect.cancel('tooltip-dismissal')];
 			}
-
 			return [state, Effect.none()];
 		}
-
-		default:
-			return [state, Effect.none()];
+		default: return [state, Effect.none()];
 	}
 };

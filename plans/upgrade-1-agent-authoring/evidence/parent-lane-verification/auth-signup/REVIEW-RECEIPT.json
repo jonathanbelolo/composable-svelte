@@ -1,0 +1,11 @@
+{
+  "logPath": "/private/tmp/auth-signup-parent-opus-review.jsonl",
+  "logSha256": "ac2915a0a6f633602e68998d317738342afc48f390a594f94c334e5654253c6e",
+  "result": "success",
+  "isError": false,
+  "durationMs": 71665,
+  "reviewedWorktree": "/Users/jonathanbelolo/.codex/worktrees/fe42/composable-svelte",
+  "base": "86200751",
+  "sourceScope": "Uncommitted auth signup delta; see review prompt and report",
+  "testRunsByReviewer": false
+}

@@ -139,6 +139,7 @@ export function createScrollFollower(
 	return {
 		follow(): void {
 			if (config.reducedMotion ?? prefersReducedMotion()) {
+				if (frame !== null) cancelAnimationFrame(frame);
 				settle();
 				return;
 			}
