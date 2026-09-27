@@ -135,6 +135,17 @@ Two questions, in order:
 **No to both → a plain boolean plus Motion One in a guarded `$effect`.**
 Reference: `Switch.svelte:60-86`.
 
+## Whole-layout and cross-route motion
+
+Some motion spans the layout rather than one component. Examples are a card that becomes the heading of the next page, a list that resizes while items leave, or several elements that move together across a route change. Do not build this from per-component effects, timers or clones. Use the framework's fluid layout motion, from `@composable-svelte/core/application/motion`. It is **unreleased**: on the development branch for the next release, not in published core 0.13.1. The whole contract is in [Fluid Layout Motion & Staged Routing](../packages/core/docs/fluid-motion.md).
+
+- **Across a route change:** `useStagedRoute(application).request(intent, { motion: plan })` with a `defineChoreography` plan. The route's single domain action commits at the plan's `cueMs`, and the plan's tracks continue on a motion plane afterwards.
+- **Within a page:** `useLayoutChoreography().transition(plan, commit)`. The explicit business action runs at once and the plan bridges the old and new layout. Content that the commit removes belongs inside `<Presence when={…}>`.
+- **The plan is visual data only.** It has no authority over business state, history or focus. Store-observed lifecycles still follow the rules above.
+- **Reduced motion is framework-owned.** Under `prefers-reduced-motion: reduce` a staged request commits on the next turn without choreography, and turning the preference on during playback settles the run. Do not build empty or zero-length plans for it.
+- **Declared property motion on one element or group** (not the layout) uses compiled recipes (`useMotion`, `useMotionGroup`); see [application-motion.md](../packages/core/docs/application-motion.md).
+- **Fluid layout motion is opt-in by import.** An application that never imports the motion subpath or creates a plan carries none of its engine.
+
 ### Be honest about what the boolean pattern gives up
 
 It is **fire-and-forget**. It dispatches nothing, so the store never learns the

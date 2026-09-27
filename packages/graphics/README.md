@@ -1,10 +1,21 @@
 # @composable-svelte/graphics
 
-State-driven WebGL graphics package for Composable Svelte.
+State-driven 3D graphics for Composable Svelte (Babylon.js: WebGL by default, WebGPU on explicit request).
+
+> **Unreleased — next release.** This branch adds APIs that the published `@composable-svelte/graphics` 0.3.0 does not include:
+> - `graphicsVisualProvider()` and its types (`RenderAuthority`, `GraphicsVisualProvider`, `GraphicsRepresentation`,
+>   `GraphicsRepresentationContext`, `GraphicsRetainedRenderer`);
+> - explicit WebGPU selection (`new BabylonAdapter({ renderer: 'webgpu' })`, `BabylonAdapterOptions`);
+> - the `<Scene>` `label` prop;
+> - document-order canvas focus.
+>
+> Using `graphicsVisualProvider` for fluid motion also requires the unreleased fluid-motion APIs of `@composable-svelte/core`
+> (`fluidMotion`; not in the published core 0.13.1). WebGPU selection, `label` and focus do not depend on them.
+> Sections describing these additions are marked *(unreleased)*.
 
 ## Features
 
-- ✅ **WebGL** by default: Babylon.js `Engine`. **WebGPU** on explicit request: Babylon.js `WebGPUEngine`, loaded on demand — see Renderer below.
+- ✅ **WebGL** by default: Babylon.js `Engine`. **WebGPU** on explicit request *(unreleased)*: Babylon.js `WebGPUEngine`, loaded on demand — see Renderer below.
 - ✅ **State-Driven**: All scene state managed through pure reducers
 - ✅ **Declarative API**: Svelte components for scene composition
 - ✅ **Type-Safe**: Full TypeScript support
@@ -72,12 +83,12 @@ Root component that manages the Babylon.js engine and renders the 3D scene.
 
 **Props:**
 - `store`: `GraphicsStore` (`Pick<ChildView<GraphicsState, GraphicsAction>, 'state' | 'dispatch' | 'subscribe'>`) — accepts standalone stores from `createStore` or managed child views from `defineViews`/`FeatureViews`.
-- `createAdapter?`: `() => GraphicsAdapter` (optional) — creates a fresh adapter for this attachment. When omitted, `<Scene>` creates a `BabylonAdapter`. The scene owns and disposes the adapter returned by the factory; return a new instance for each mount or replacement. `initialize(canvas)` must resolve `{ renderer: 'webgl', capabilities }`, and `dispose()` must release its resources. A retired scene waits for an in-flight initialization to settle, then disposes the result once.
+- `createAdapter?`: `() => GraphicsAdapter` (optional) — creates a fresh adapter for this attachment. When omitted, `<Scene>` creates a `BabylonAdapter`. The scene owns and disposes the adapter returned by the factory; return a new instance for each mount or replacement. `initialize(canvas)` must resolve `{ renderer, capabilities }`, where `renderer` is `'webgl'` or `'webgpu'` and names the engine that actually renders, and `dispose()` must release its resources. A retired scene waits for an in-flight initialization to settle, then disposes the result once.
 - `width?`: string | number (default: '100%')
 - `height?`: string | number (default: '600px')
-- `label?`: string (default: `'Interactive 3D scene'`). The canvas's accessible name, rendered as `role="img"` with `aria-label`. Name what the scene shows, for example `"Pavilion model — drag or use arrow keys to orbit"`.
+- `label?` *(unreleased)*: string (default: `'Interactive 3D scene'`). The canvas's accessible name, rendered as `role="img"` with `aria-label`. Name what the scene shows, for example `"Pavilion model — drag or use arrow keys to orbit"`.
 
-**Input and focus.** With the default adapter, the canvas is a real camera control: drag to orbit, the wheel to zoom, and arrow keys to orbit while it has focus. Once the camera's inputs attach, the canvas becomes focusable at `tabindex="0"`, in document order. Babylon's own default is a positive tab index, which would move the canvas ahead of the rest of the page. Before initialisation, and if initialisation fails, the canvas is not a tab stop.
+**Input and focus** *(document-order focus unreleased)*. With `BabylonAdapter` (WebGL or WebGPU), the canvas is a real camera control: drag to orbit, the wheel to zoom, and arrow keys to orbit while it has focus. Once the camera's inputs attach, the canvas becomes focusable at `tabindex="0"`, in document order. Babylon's own default is a positive tab index, which would move the canvas ahead of the rest of the page. Before initialisation, and if initialisation fails, the canvas is not a tab stop.
 
 `BabylonAdapter` is exported alongside these. It is the imperative class
 `<Scene>` drives Babylon.js *through*, not a way of driving `<Scene>` — reach for
@@ -270,7 +281,10 @@ When a managed view is retired (for example, when the parent reducer transitions
 
 The one exception is a canvas that a fluid-motion run is representing, described next. Without such a run, retirement behaves exactly as listed above.
 
-### Fluid Motion: Rendering Past Retirement
+### Fluid Motion: Rendering Past Retirement *(unreleased)*
+
+*Next release.* This needs `graphicsVisualProvider` from this package and `fluidMotion` from the unreleased core fluid-motion APIs; neither is in
+the published graphics 0.3.0 or core 0.13.1.
 
 A route transition can keep an outgoing `<Scene>` or `<WebGLOverlay>` moving on screen after its feature retires. Add the package's representation provider to the application's visual configuration:
 
@@ -542,7 +556,7 @@ fixed presets do not cover.
 
 ## Renderer
 
-**WebGL by default, via Babylon's `Engine`. WebGPU only when you ask for it.**
+**WebGL by default, via Babylon's `Engine`. WebGPU only when you ask for it** *(WebGPU selection is unreleased — next release)*.
 
 ```svelte
 <script lang="ts">
@@ -563,12 +577,19 @@ fixed presets do not cover.
 - Built-in materials use WGSL, so this package's meshes need no GLSL toolchain. Babylon would fetch that toolchain (glslang/twgsl) from
   its CDN only if a custom GLSL material were compiled for WebGPU. This package adds none.
 - The retained representation path (`graphicsVisualProvider`) works identically for both engines. The WebGPU canvas is mirrored
-  right after each frame.
+  right after each frame. Camera input, `label` and focus behave as described under `<Scene>`.
+- **Failure cleanup.** If WebGPU initialisation fails part-way (for example `requestDevice` rejects, or the context cannot be configured),
+  the partially built engine and any allocated device are released. The error reports the original reason
+  (`WebGPU initialisation failed: …`). If the engine is released while Babylon is restoring it after a device loss, the late device
+  is destroyed; no restoration outlives release.
 
-Qualification (real Metal-3 adapter, not a fallback) is recorded in
-`docs/development/fluid-motion/remaining-webgpu-coverage-report.md`. Headless Chromium exposes no WebGPU adapter by default,
-and `--enable-unsafe-webgpu` alone gives the SwiftShader fallback. The isolated suite `graphics.webgpu.browser.config.ts` requests
-the Metal backend.
+**Qualification scope.** WebGPU is qualified functionally on one real adapter: Apple Metal-3 (`isFallbackAdapter: false`), in headless
+Playwright Chromium 141 on macOS with `--enable-unsafe-webgpu --use-angle=metal --enable-features=Vulkan,WebGPUService`. The qualification covers
+rendering, retained progression after retirement, a real route commit, cleanup, and partial-initialisation and restoration failures. The
+executable suite is [`graphics.webgpu.browser.config.ts`](./graphics.webgpu.browser.config.ts) (fixtures in [`tests/webgpu/`](./tests/webgpu/)); the independent review record is
+[`remaining-webgpu-correction-astra-review.md`](../../docs/development/fluid-motion/remaining-webgpu-correction-astra-review.md). Other GPUs, operating systems and browsers were not run. No WebGPU
+timing figures were measured. Headless Chromium exposes no WebGPU adapter by default, and `--enable-unsafe-webgpu` alone gives the
+SwiftShader software fallback, which the suite rejects.
 
 The history, briefly: an earlier version claimed automatic WebGPU with a WebGL fallback, while both branches built the same WebGL
 `Engine` and only the label changed. The explicit option above replaces that.
@@ -581,10 +602,14 @@ The history, briefly: an earlier version claimed automatic WebGPU with a WebGL f
 
 ### What it costs
 
-The figures below were measured with `docs/development/fluid-motion/graphics-cost-evidence/`, in Chromium on one machine (Apple M3 Max): hardware GL through ANGLE Metal, and software GL through SwiftShader. Other GPUs, drivers and browsers were not measured.
+The figures below were measured during the fluid-motion audit, in Chromium on one machine (Apple M3 Max): hardware GL through ANGLE Metal, and software GL through SwiftShader. The measuring harness and raw results are local audit evidence and are not committed (see the evidence-retention note in the [fluid-motion acceptance README](../../docs/development/fluid-motion/README.md)). Other GPUs, drivers and browsers were not measured.
 
-- **Bundle.** The adapter imports the Babylon modules it uses directly, not the `@babylonjs/core` barrel. Babylon marks every file as having side effects, so the barrel import bundled the whole library. For an app that imports `Scene`, the largest emitted chunk is now about 1.18 MB minified / 280 KB gzip, down from 5.75 MB / 1.26 MB. That is the eagerly loaded chunk, not everything emitted: the build now emits 50 chunks totalling about 1.55 MB minified (before: 10 chunks, 5.76 MB), because material shaders are split into chunks that load on demand. `WebGLOverlay` and the reducer do not include Babylon.
-- **Mounting a `Scene`.** Each `<Scene>` creates its own engine and WebGL context. On the main thread, mounting takes about 25–35 ms cold and about 15 ms when the module is already loaded: engine and scene about 17–23 ms, scene sync about 7 ms, first frame about 5 ms.
+- **Bundle.** The adapter imports the Babylon modules it uses directly, not the `@babylonjs/core` barrel. Babylon marks every file as having side effects, so the barrel import bundled the whole library.
+  - For an app that imports `Scene`, the eagerly loaded chunk is about 1.18 MB minified / 281 KB gzip, down from 5.75 MB / 1.26 MB with the barrel.
+  - Everything emitted totals 65 chunks and about 1.85 MB minified (before: 10 chunks, 5.76 MB). Material shaders and the WebGPU engine with its WGSL shaders are split into chunks that load only on demand. The WebGPU chunks are emitted but never loaded unless `renderer: 'webgpu'` is chosen.
+  - `WebGLOverlay` and the reducer do not include Babylon (about 16.6 KB and 2.4 KB gzip).
+  - These figures come from Vite production builds of minimal consumers against the package build, with Svelte and core external.
+- **Mounting a `Scene` (WebGL figures).** Each `<Scene>` creates its own engine and WebGL context (a WebGPU device with `renderer: 'webgpu'`, not timed). On the main thread, mounting takes about 25–35 ms cold and about 15 ms when the module is already loaded: engine and scene about 17–23 ms, scene sync about 7 ms, first frame about 5 ms.
   - In the measured after-change hardware runs (ANGLE Metal on the M3 Max, with parallel shader compilation, at DPR 1 and 2) there was no long task. One before-change hardware run at DPR 2 showed an 89 ms long task during the cold mount. This was not measured on other GPUs.
   - Under software WebGL (headless Chromium's default SwiftShader, which has no `KHR_parallel_shader_compile`), each mount shows one ~150 ms long task outside that JavaScript. Attributing it to software pipeline compilation is an inference from the hardware/software difference; the GPU process was not traced. Treat headless timings as a software-rendering worst case.
 - **Fluid-motion mirror.** While a run represents a canvas, each frame is copied into its mirror. The measured figure is the main-thread time of the synchronous `drawImage` call inside the frame observer: ≤ 0.1 ms per frame on ANGLE Metal (M3 Max). That is CPU and submission time only; when the GPU completes the copy, and what it costs there, was not measured. Under SwiftShader the call is a CPU readback: about 7 ms at 960×540 and about 19 ms at 1920×1080.
@@ -595,6 +620,11 @@ Run `pnpm test`, `pnpm run typecheck`, and `pnpm run check` for the package gate
 `pnpm run test:browser` additionally qualifies shader pixels against Chromium
 WebGL (install the Playwright Chromium browser before this check). The GPU check
 is required when changing shader presets; a headless fake GL does not execute GLSL.
+
+`pnpm exec vitest run --config graphics.webgpu.browser.config.ts` runs the isolated WebGPU suite ([config](./graphics.webgpu.browser.config.ts); unreleased): real rendering, retained
+progression, a real Host route commit, and initialisation-failure cleanup. It needs a real WebGPU adapter. The configuration
+passes macOS Metal launch flags; other platforms need their own flags or a headed/GPU runner. The first test fails on a software
+fallback adapter, by design.
 
 A `RenderLoop` can restart after `stop()`. `destroy()` permanently releases its
 visibility listener and makes subsequent `start()` calls throw. A restarted loop

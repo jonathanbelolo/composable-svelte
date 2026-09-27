@@ -2,7 +2,9 @@
 
 Staged routing lets a routed application animate a whole layout across a route change. The framework measures the current page, plays a declared choreography on a motion plane, commits the route's domain action at a cue point, and finishes the motion against the new page. Applications do not own history writers, timers, element clones or coordinators.
 
-These APIs are prospective (candidate public). Everything below is compiled, run with TestStore and server rendering, and played in Chromium by `docs/development/fluid-motion/guidance-example-check` against the package exports. Participants are styled like any other markup: grid, flex, gradients, positioning, pseudo-elements, SVG, canvas and video are represented as they are painted (§8). Do not restyle a page to make it animate.
+> **Unreleased.** These APIs are on the development branch for the **next release**. They are not in the published `@composable-svelte/core` 0.13.1, and the graphics and media providers they mention are not in the published `@composable-svelte/graphics` 0.3.0 or `@composable-svelte/media` 0.5.0. Once released they follow the 0.x line, where a minor release may still change them (see [Versioning](https://github.com/jonathanbelolo/composable-svelte/blob/codex/fluid-layout-motion/README.md#versioning)).
+
+Everything below is compiled, run with TestStore and server rendering, and played in Chromium by `docs/development/fluid-motion/guidance-example-check` against the package exports. Participants are styled like any other markup: grid, flex, gradients, positioning, pseudo-elements, SVG, canvas and video are represented as they are painted (§8). Do not restyle a page to make it animate.
 
 Use something else when:
 
@@ -607,7 +609,11 @@ import { graphicsVisualProvider } from '@composable-svelte/graphics';
 export const sceneVisual = fluidMotion({ providers: [graphicsVisualProvider()] });
 ```
 
-After the feature retires, renderer-driven progression and playing `startAnimation` descriptors continue on the plane; other store changes stop at the last synced pose. See "Fluid Motion: Rendering Past Retirement" in the graphics README for its lifetime and cost details. A third-party renderer without a provider gets the built-in canvas mirror, which is live only while that renderer's own loop still draws.
+After the feature retires, renderer-driven progression and playing `startAnimation` descriptors continue on the plane; other store changes stop at the last synced pose. See "Fluid Motion: Rendering Past Retirement" in the [graphics README](https://github.com/jonathanbelolo/composable-svelte/blob/codex/fluid-layout-motion/packages/graphics/README.md) for its lifetime and cost details. A third-party renderer without a provider gets the built-in canvas mirror, which is live only while that renderer's own loop still draws. Mounting a `Scene` and mirroring its canvas have measured costs that depend on the GPU and the browser. The [graphics README](https://github.com/jonathanbelolo/composable-svelte/blob/codex/fluid-layout-motion/packages/graphics/README.md)'s "What it costs" lists them per measured machine and backend.
+
+### First-party media
+
+`@composable-svelte/media` ships `mediaVisualProvider()` for `VideoEmbed`'s cross-origin iframe players (for example YouTube). When a page holding a `VideoEmbed` is removed under a run, its iframe moves into the run's inert decoration with its player state kept. A destination `VideoEmbed` with the same scope, `mediaKey` and configuration can adopt that same player, with no second player or reload. Configure the provider with `fluidMotion({ providers: [...] })`, like the graphics provider. The [media README](https://github.com/jonathanbelolo/composable-svelte/blob/codex/fluid-layout-motion/packages/media/README.md) describes props, identity and scope, audio, and where a state-preserving move is unavailable. Ordinary `<video>` elements need nothing from it: they use the core behaviour in the table above.
 
 ### Closed shadow roots and opaque content
 
@@ -829,3 +835,13 @@ describe('staged catalog → detail navigation', () => {
 - When a committed state change turns `when` false, the boundary's participants are handed off after the business commit and before Svelte removes them: an outgoing participant of the active run is revealed on the plane, and `retire()` is called while its source is still connected.
 - Nothing is retired unless the removal is established. A commit that throws, does nothing, or leaves `when` true retires nothing, so input and semantics are untouched. Participants outside a closing `Presence` are never retired early. Before that point the framework only reads.
 - Supersession and Host destruction behave as for route runs: a successor adopts, and every retained renderer is disposed exactly once.
+
+## 11. Imports and cost
+
+Fluid motion is opt-in by import:
+
+- An application that never imports `@composable-svelte/core/application/motion` or creates a plan gets none of the choreography or representation engine. `ApplicationHost` reaches the engine only through a plan from `defineChoreography`, or through `visual: fluidMotion(...)` on `defineApplication`. There is no global registration and no import side effect.
+- Route staging (`routing.staging`) and scroll restoration (`routing.scroll`) are ordinary routing features. They are present whether or not motion is used.
+- Graphics and media providers are separate packages. Import them only where they are configured. The WebGPU engine in `@composable-svelte/graphics` is a lazy chunk loaded only when requested.
+
+Preparation cost is described in §8 (*Preparation*). As a guide from measured runs, a 1,500-element participant takes about 320–340 ms of copying work, which is why the default preparation budget is 600 ms.

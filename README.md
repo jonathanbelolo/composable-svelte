@@ -17,7 +17,7 @@ see the table below before you depend on one.
 | **media** | usable | audio player, `VideoEmbed` (YouTube/Vimeo/Twitch), voice input — no video *player*, no streaming formats |
 | **code** | usable, thin | three wrappers: CodeMirror, Prism, SvelteFlow |
 | **charts** | feature-complete for 5 chart types | scatter, line, bar, area, histogram. Heatmap, network graph and hierarchy layouts are deferred |
-| **graphics** | usable | WebGL overlay and a Babylon adapter. `engine: 'webgpu'` is accepted and **runs WebGL** — real WebGPU is not implemented |
+| **graphics** | usable | WebGL overlay and a Babylon adapter. WebGL by default. Real WebGPU (Babylon's `WebGPUEngine`), **unreleased** (next release; not in published 0.3.0), only on explicit `new BabylonAdapter({ renderer: 'webgpu' })`, with no silent fallback. It has been qualified on a real Apple Metal-3 adapter; see [its README](./packages/graphics/README.md) |
 | **maps** | **in development** | 3D buildings, marker clustering, geocoding/search, drawing tools and routing are all unbuilt |
 | **auth** | usable, broad | sign-in flows, sessions, guards and the full account-settings surface — MFA management, connected OAuth providers, changing an email address, deleting an account, and session-lifetime management over a server-owned cookie. It speaks to one backend shape |
 
@@ -36,6 +36,7 @@ review. No independent WCAG 2.1 AA audit has been done on the other packages.
 - ✅ **Complete Backend**: API client, WebSocket, Storage, Clock dependencies
 - ✅ **Component library**: shadcn-svelte integration with reducer-driven patterns — browse the full set in [the styleguide](examples/styleguide)
 - ✅ **URL Routing**: Browser history sync with pattern matching
+- 🚧 **Fluid layout motion** (opt-in; **unreleased**, for the next release; not in published core 0.13.1): staged route transitions and within-page choreography. Shared, outgoing and incoming participants move on a motion plane, the business action commits at a cue, and canvas, video and third-party renderers can keep rendering after their page retires. See [Fluid Layout Motion & Staged Routing](./packages/core/docs/fluid-motion.md)
 - ✅ **Auth**: Sessions plus password sign-in, signup, email verification, password recovery, MFA, OAuth, magic links and account settings — headless flows and styled components, over injected dependencies. See [`@composable-svelte/auth`](./packages/auth/README.md)
 
 ## Quick Start
@@ -403,6 +404,7 @@ Explore working examples in the `examples/` directory:
 - **[Styleguide](./examples/styleguide)**: Component showcase — browse the full set there, including a working demo of every auth flow
 - **[Product Gallery](./examples/product-gallery)**: Full-featured product browsing app
 - **[URL Routing](./examples/url-routing)**: Browser history integration examples
+- **[Fluid Motion Reference](./examples/fluid-motion-reference)** (unreleased APIs, next release): A staged, routed gallery exercising fluid layout motion with a graphics scene, video and richly styled content
 - **[Auth Server](./examples/auth-server)**: A reference backend for `@composable-svelte/auth`, and a client driving every flow against it — the only example that talks to a real server rather than a mock
 
 ```bash
@@ -417,6 +419,7 @@ pnpm dev
 - **[API Documentation](./packages/core/src/lib/dependencies/README.md)**: Dependencies module
 - **[Security Guide](./packages/core/src/lib/dependencies/SECURITY.md)**: Storage security best practices
 - **[Auth](./packages/auth/README.md)**: Sessions, the sign-in flows, and the backend contract
+- **[Fluid Layout Motion & Staged Routing](./packages/core/docs/fluid-motion.md)** (unreleased, next release): Choreography, staging, providers and their qualified limits
 - **[Architecture & tutorial guide](./guides/README.md)**: Every package, and a feature built from scratch
 - **[CLAUDE.md](./CLAUDE.md)**: Full project documentation for contributors
 

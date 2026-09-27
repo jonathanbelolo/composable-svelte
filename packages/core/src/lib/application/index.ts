@@ -13,7 +13,7 @@ export { managedDismissDependency } from '../navigation/dismiss-dependency.js';
 export type { DismissDependency } from '../navigation/dismiss-dependency.js';
 
 export type { ApplicationRouting, ApplicationRouteRequest, ApplicationStaging, StagedRouteRequester } from './routing.js';
-// Prospective staged navigation (candidate public, not finalized).
+// Staged navigation: unreleased (next release; not in published 0.13.1). See docs/fluid-motion.md.
 export { useStagedRoute } from './routing.js';
 export type { RouteFallbackProps, RenderFailureSummary } from './renderer/route-render.js';
 // Scroll ownership vocabulary (backend owned by the scroll author; requested exports).

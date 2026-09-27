@@ -482,7 +482,7 @@ animateAccordionExpand(element), animateAccordionCollapse(element)
 
 ## FLUID LAYOUT MOTION & STAGED ROUTING
 
-Opt-in, prospective API for whole-layout motion across a route change. Ordinary routing, `AnimatedNavigationStack` and overlay presentation are unchanged. The full compiled example and contracts are in `packages/core/docs/fluid-motion.md`.
+Opt-in API for whole-layout motion across a route change. **Unreleased:** it is on the development branch for the next release, not in published core 0.13.1. Ordinary routing, `AnimatedNavigationStack` and overlay presentation are unchanged. The full compiled example and contracts are in `packages/core/docs/fluid-motion.md`.
 
 **Rules**
 
@@ -883,6 +883,8 @@ Does component animate?
 - [ ] 6. Request via `useStagedRoute(application).request(intent, { motion: plan })`; "back" is an ordinary request
 - [ ] 7. Mark scroll containers with `data-composable-scroll="<key>"` if `routing.scroll.containers` is used
 - [ ] 8. Test with `TestStore` `staging: { staging, serialize }`: `receiveProtocol` for request/admitted/terminal, `receive` for the one domain action
+- [ ] 9. Wrap content that a within-page commit removes in `<Presence when={…}>`, with `useParticipant()` called by a component inside it
+- [ ] 10. Configure providers (`graphicsVisualProvider()`, `mediaVisualProvider()` or your own) with `visual: fluidMotion({ providers })`; declare unobservable content with `data-composable-representation`
 
 ---
 

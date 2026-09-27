@@ -1,6 +1,9 @@
 # Fluid layout motion: acceptance and reproduction
 
-The feature is accepted by Main and the Opus co-lead. Start with the
+The feature is accepted by Main and the Opus co-lead and committed in
+`68b31d38c01b6441e5d94c063570e65b3d924bb9`. It is **unreleased**; use this branch
+until the next package releases include it. This work does not publish packages.
+Start with the
 [public authoring guide](../../../packages/core/docs/fluid-motion.md) and the
 [runnable reference](../../../examples/fluid-motion-reference/README.md).
 The [final acceptance record](final-acceptance.md),
@@ -45,7 +48,7 @@ sh docs/development/fluid-motion/shadow-coverage-check/link.sh
 pnpm --dir docs/development/fluid-motion/shadow-coverage-check exec vitest run --config vitest.browser.config.mjs
 ```
 
-The public reference tests generate their evidence below `reference-evidence/`.
+The public reference tests generate their evidence below `reference-evidence/rich-representation/`.
 The retained final review reports document narrower independent controls and actual
 results; rerunning these commands does not recreate historical measurements exactly.
 Real WebGPU qualification needs an actual suitable adapter; a headless browser

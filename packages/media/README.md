@@ -245,10 +245,10 @@ build failure rather than something a reader discovers by pasting.
 | `muted` | `boolean` | Start muted |
 | `showTitle` | `boolean` | Show the video title above the embed |
 | `class` | `string` | Additional CSS class |
-| `referrerPolicy` | `ReferrerPolicy` | The iframe's referrer policy, default `'no-referrer'`. YouTube requires a referrer and shows **Error 153** without one ([API Client Identity](https://developers.google.com/youtube/terms/required-minimum-functionality)), so pass `'strict-origin-when-cross-origin'` for YouTube |
-| `mediaKey` | `string` | Stable identity for fluid-motion adoption (see below) |
-| `mediaScope` | `MediaVisualProvider` | The adoption scope: this application's `mediaVisualProvider()` instance |
-| `playerControl` | `'none' \| 'player-api'` | Opt in to the platform's player API so a leaving player can be muted (YouTube: adds `enablejsapi=1` and `origin`) |
+| `referrerPolicy` | `ReferrerPolicy` | **Unreleased (next release; not in 0.5.0).** The iframe's referrer policy, default `'no-referrer'`. YouTube requires a referrer and shows **Error 153** without one ([API Client Identity](https://developers.google.com/youtube/terms/required-minimum-functionality)), so pass `'strict-origin-when-cross-origin'` for YouTube |
+| `mediaKey` | `string` | **Unreleased (next release; not in 0.5.0).** Explicit identity for fluid-motion adoption. No default: without a key a player is never adopted (see below) |
+| `mediaScope` | `MediaVisualProvider` | **Unreleased (next release; not in 0.5.0).** The adoption scope. Defaults to the `media` provider the enclosing application configured. An explicit value overrides it |
+| `playerControl` | `'none' \| 'player-api'` | **Unreleased (next release; not in 0.5.0).** Default `'none'`. `'player-api'` opts in to the platform's documented player API so that a player that only leaves can be muted. For YouTube it adds `enablejsapi=1` and `origin` to the embed URL. Nothing is added unless you opt in |
 
 Exactly one of `url` or `video` is required, enforced by the type rather than at
 runtime. A `url` that matches no known platform renders nothing.
@@ -257,9 +257,19 @@ runtime. A `url` that matches no known platform renders nothing.
 The component supplies it from the current hostname; `detectVideo` deliberately
 does not, because detection cannot know where the result will be rendered.
 
-**Fluid motion (live handoff).** Add the media provider to the application's
-visual configuration, and a route transition keeps the *same* player (no reload,
-no second player) instead of a frozen copy:
+> **Unreleased: next release.** Everything in this fluid-motion section is in
+> this repository for the **next release**. That covers `mediaVisualProvider`,
+> `liveMediaResources`, the structural provider types, and the `VideoEmbed` props
+> `mediaKey`, `mediaScope`, `playerControl` and `referrerPolicy`.
+> - The published `@composable-svelte/media` **0.5.0** does not include them.
+> - They also rely on core APIs (`fluidMotion`, `useRepresentationProvider`,
+>   `Presence`) that the published `@composable-svelte/core` **0.13.1** does not
+>   include.
+
+**Fluid motion: the same live player across a transition.** Add the media
+provider to the application's visual configuration. A route or within-page
+transition then keeps the *same* player (no reload, no second player) instead of
+a frozen copy:
 
 ```ts
 import { fluidMotion } from '@composable-svelte/core/application/motion';
@@ -269,39 +279,120 @@ export const media = mediaVisualProvider();
 // defineApplication(composition, { …, visual: fluidMotion({ providers: [media] }) })
 ```
 
-When a page holding a `VideoEmbed` retires under a run, its iframe moves
-(`Element.prototype.moveBefore`) into the run's inert, `aria-hidden` decoration.
-Focus inside the player is released at that moment, and input stays with real
-content. What happens next is decided within the same commit:
+The provider covers `VideoEmbed`'s cross-origin iframe players only. An
+application's own `<video>` elements need nothing from this package: core's
+built-in video provider keeps them decoding automatically. That includes a
+`MediaStream` `srcObject` (camera, screen, WebRTC, canvas capture) and
+unencrypted MSE, both the `src = URL.createObjectURL(mediaSource)` pattern and a
+`srcObject` MediaSource. See core's [fluid-motion guide](../core/docs/fluid-motion.md)
+(also unreleased, next release).
 
-- **Adoption.** A destination `VideoEmbed` with the same `mediaScope`, the same
-  `mediaKey` and the same configuration takes the player over before creating
-  its own. Playback, and audio, continue under the new owner, which stays
-  reactive to its props. A visual match alone never transfers a player.
+**At the commit.** When a page holding a `VideoEmbed` is removed under a run,
+the component's own iframe moves (`Element.prototype.moveBefore`, which keeps
+the player's state) into the run's inert, `aria-hidden` decoration:
+- **Focus:** if focus was inside the player, it is released at that moment, so
+  no keystroke reaches the decoration. Where focus goes is core's focus policy;
+  unrelated focus is not touched.
+- **Handlers:** the old component's teardown can no longer release or destroy
+  the player: each registration belongs to one owner.
+
+What happens next is decided within the same commit flush:
+
+- **Adoption.** A destination `VideoEmbed` mounting in that commit takes the
+  player over before creating any iframe of its own (no second request, player
+  or ad). This requires all of the following:
+  - it resolves to the same scope, and that scope is the one the leaving
+    `VideoEmbed` itself belonged to;
+  - it uses the same `mediaKey`;
+  - it has the same configuration: embed URL, `sandbox`, `allow` and referrer
+    policy.
+
+  Only one destination can claim a player. The player moves into the
+  destination's own place, becomes interactive again, and keeps playing, with
+  its audio, under its new owner. It follows the destination's props from then
+  on: a changed URL navigates it. A visual match alone never transfers a player,
+  and neither does a key without a scope. A return after the commit creates a
+  new player.
 - **Leaving only, with `playerControl="player-api"`.** The player is asked to
-  mute through its documented API. It stays on screen only once it reports being
-  muted, within 250 ms; otherwise it is disposed. (This is the platform's own
-  reported state, not a measurement of sound.) Twitch has no documented command
-  channel for a bare player, so it is disposed.
+  mute through its documented API.
+  - It stays on screen, still playing, only once **the player itself reports
+    being muted** (YouTube `infoDelivery`, Vimeo `getMuted`), within 250 ms.
+    Otherwise (API not ready, refused, dropped) it is disposed.
+  - This is the platform's reported state, not a measurement of sound.
+  - Twitch has no documented command channel for a bare player, so it is always
+    disposed.
 - **Leaving only, without it.** It is disposed at once. Decoration never
   prolongs audio.
 
-The adoption scope defaults to the `media` provider the enclosing application
-configured (core's `useRepresentationProvider`). An explicit `mediaScope` overrides it.
-Outside an application host there is no scope: nothing is claimed.
+The run disposes whatever it still holds exactly once: at settle, on
+supersession, or at host teardown.
 
-Within-page removal hands the player off too, when the conditional that removes it
-is core's `<Presence when={…}>`. The hand-off happens after the business commit and
-before the block is removed. A commit that throws, or changes nothing, moves nothing.
+**Scope.** Scope resolution, in order:
+1. an explicit `mediaScope`;
+2. the `media` provider configured by the nearest application host (core's
+   `useRepresentationProvider`), resolved once when the component initialises;
+3. none: outside an application host, during SSR, or with a core version that
+   predates the lookup. Then nothing is claimed.
 
-**Documented exception.** Moving the *same* player to a different place in the page
-needs a state-preserving move (`Element.prototype.moveBefore`). Browsers without it
-(Safari, and the tested Firefox 142) destroy an iframe's document whenever it is
-removed or re-inserted, and no compliant way to carry the same player across was
-found. There the page and its player stay usable until the commit. Then the player
-settles and is disposed, and the destination renders its own. This is reported as
-`mediaMoveUnavailable`, never as live continuity. Firefox 144+ documents
-`moveBefore` but has not been qualified here.
+Scopes are separated by **provider instance**, not by application. Different
+`mediaVisualProvider()` instances never claim each other's players, but
+applications that share one instance share one scope. So give each application
+its own `mediaVisualProvider()` instance.
+
+**Within-page removal** hands the player off too, when the conditional that
+removes it is core's `<Presence when={…}>`. The hand-off happens after the
+business commit and before the block is removed. A commit that throws, or
+changes nothing, moves nothing. Without `Presence`, a within-page removal
+destroys the iframe before any hand-off, so there is no live continuation.
+
+**Documented exception (engines without `moveBefore`).** Moving the *same*
+player to a different place in the page needs a state-preserving move. Removing
+or re-inserting an iframe otherwise destroys its document (HTML: the iframe
+"removing steps … destroy a child navigable"). No compliant way to carry the
+same player across was found in the tested engines without it.
+
+There, the provider declines with `{ declined: 'mediaMoveUnavailable', settle:
+true }`:
+- the page and its player stay real and usable until the commit;
+- the player's participant then settles (it is not represented and no
+  placeholder is animated) and leaves with its page;
+- a destination renders its own player.
+
+It is never labelled live continuity.
+
+Tested: Safari/WebKit 26 and Firefox 142 lack `moveBefore`. Firefox 144+
+documents it but **has not been qualified here**.
+
+**What has been verified, and what has not.**
+- **Handoff, adoption, muting, focus, scope and disposal lifecycles:** tested in
+  Chromium (141 and the installed Chrome 153) with a local fixture player,
+  including real `ApplicationHost` route commits and `Presence` within-page
+  commits.
+- **Real YouTube** (public video, started by a real click, `referrerPolicy:
+  'strict-origin-when-cross-origin'`): the player's own reported time kept
+  advancing through the handoff, and its API reported muted afterwards.
+- **Real Vimeo:** the mute API round-trips. Playback of the tested public video
+  was **refused under automation** (a platform `PlaybackError`, with or without
+  this component's attributes), so Vimeo playback is **not qualified**.
+- **Physical audio output** was not measured for any platform.
+
+**Protected (EME) video** is not something this component embeds. For ordinary
+`<video>` with `mediaKeys`, core's built-in declines conservatively and settles.
+Protected pixels may be unavailable to copying by the key system's policy (W3C
+EME, [media element restrictions](https://www.w3.org/TR/encrypted-media/#media-element-restrictions);
+[Clear Key](https://www.w3.org/TR/encrypted-media/#clear-key) may differ). That
+decline is a conservative choice, not a claim that every protected copy is
+impossible, and no protected fixture has been qualified.
+
+**Exports (unreleased; next release).** From `@composable-svelte/media` (and `/video-embed`):
+- `mediaVisualProvider()` and the `MediaVisualProvider` and `PlayerControl` types;
+- `liveMediaResources()`, a `{ registered, retained }` count for resource
+  ledgers and tests.
+
+`/video-embed` also exports the structural provider types (`MediaRepresentation`,
+`MediaRepresentationContext`, `MediaRetainedRenderer`, `MediaDecline`). They
+mirror core's `RepresentationProvider` family, so the provider works with the
+supported core peer range.
 
 **Utilities:**
 

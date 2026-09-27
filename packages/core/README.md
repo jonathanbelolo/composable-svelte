@@ -41,7 +41,7 @@ ship with the installed version and cover factoring, ownership and async correct
 | [chat](https://www.npmjs.com/package/@composable-svelte/chat) | Streaming chat, presence, typing, cursors | No CRDT document collaboration |
 | [code](https://www.npmjs.com/package/@composable-svelte/code) | CodeMirror, Prism, SvelteFlow | Wrappers around those engines |
 | [media](https://www.npmjs.com/package/@composable-svelte/media) | Audio, video embeds, voice input | Transcription is application-provided; no streaming video player |
-| [graphics](https://www.npmjs.com/package/@composable-svelte/graphics) | Babylon scenes and WebGL overlays | Real WebGPU is not implemented |
+| [graphics](https://www.npmjs.com/package/@composable-svelte/graphics) | Babylon scenes and WebGL overlays | WebGL by default. Real WebGPU is unreleased (next graphics release): only when requested explicitly (`renderer: 'webgpu'`), with no silent fallback |
 | [maps](https://www.npmjs.com/package/@composable-svelte/maps) | MapLibre maps and optional Mapbox adapter | Clustering, geocoding, drawing and routing remain unbuilt |
 
 Install the packages you need; their manifests declare compatible peers.
@@ -67,6 +67,7 @@ so an application that includes it needs Svelte 5.30 or newer.
 - ✅ **Complete Backend**: API client, WebSocket, Storage, Clock dependencies
 - ✅ **Component library**: shadcn-svelte integration with reducer-driven patterns — browse the full set in [the styleguide](https://github.com/jonathanbelolo/composable-svelte/tree/main/examples/styleguide)
 - ✅ **URL Routing**: Browser history sync with pattern matching
+- 🚧 **Fluid layout motion** (opt-in; **unreleased**, for the next release; not in 0.13.1): staged route transitions and within-page choreography with representation providers, from `@composable-svelte/core/application/motion`. See [Fluid Layout Motion & Staged Routing](./docs/fluid-motion.md)
 - ✅ **3,116 tests**: browser and node suites, measured at the R1 closure's exit (2026-09-05)
 
 ## Installation
@@ -327,6 +328,7 @@ Comprehensive documentation is available in the \`docs/\` directory:
 - **[Navigation](./docs/navigation/tree-based.md)** - Tree-based navigation, components, dismiss patterns
 - **[DSL](./docs/dsl/destinations.md)** - Destinations, matchers, scope helpers
 - **[Animation](./docs/animation/animated-navigation.md)** - Motion One integration
+- **[Fluid Layout Motion & Staged Routing](./docs/fluid-motion.md)** (unreleased, next release) - Cross-route and within-page choreography, providers, qualified limits
 - **[Backend](./docs/backend/api-client.md)** - API client, WebSocket, dependencies
 - **[Routing](./docs/routing/url-sync.md)** - URL synchronization
 - **[API Reference](./docs/api/reference.md)** - Complete API documentation
