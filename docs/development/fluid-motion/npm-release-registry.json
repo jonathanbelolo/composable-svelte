@@ -1,0 +1,94 @@
+{
+  "verifiedUTC": "2026-09-27T20:26:51.861796+00:00",
+  "packages": [
+    {
+      "name": "@composable-svelte/core",
+      "version": "0.14.0",
+      "integrity": "sha512-5sMs8AzZ66mN9aIcSnE0EhcLPFnG3LCeuLR5qcOttiqlWY7wAl2myMAW1dfPqAJg9Lg7nbYvVO1TA6/EeAR32Q==",
+      "distTags": {
+        "upgrade1": "0.13.0",
+        "upgrade1-candidate": "0.13.1",
+        "next": "0.13.1",
+        "latest": "0.14.0"
+      }
+    },
+    {
+      "name": "@composable-svelte/auth",
+      "version": "0.4.0",
+      "integrity": "sha512-UJGfZFfFqP9Rx0MdreSldYWcmUqG1ofuT8tireMTzSx8DGXD0EJiX30VLXeEGlAZbIAvtN4gT2+npL8G8iOCZQ==",
+      "distTags": {
+        "latest": "0.4.0",
+        "upgrade1-candidate": "0.3.0"
+      }
+    },
+    {
+      "name": "@composable-svelte/charts",
+      "version": "0.4.0",
+      "integrity": "sha512-17LKRFp8Man6tuU06B+NWLV/ug1dPw+S2nagQZZEFUYf4ixsFFPDx9BNddaJBOzbZOkyt/toUwBqrcFNxebHag==",
+      "distTags": {
+        "upgrade1-candidate": "0.3.0",
+        "latest": "0.4.0"
+      }
+    },
+    {
+      "name": "@composable-svelte/code",
+      "version": "0.6.0",
+      "integrity": "sha512-HX/6QUpMn8c96hM/qmC/nZfcLFrDNGFv9jOE/HkBcGM68PEMPj1DfNlPZFPB7xJjgvcuKTUQtBDEp5OJ5Y9CTw==",
+      "distTags": {
+        "latest": "0.6.0",
+        "upgrade1-candidate": "0.5.0"
+      }
+    },
+    {
+      "name": "@composable-svelte/media",
+      "version": "0.6.0",
+      "integrity": "sha512-BrpymIvcb/kq5XG55O3TLfdgQ5Zr7lYpwV02TA6zJLUy62XiyDjFnNZAICv+Bw4ao3ISO3RlMJVQLJ5I9MSvfw==",
+      "distTags": {
+        "latest": "0.6.0",
+        "upgrade1-candidate": "0.5.0"
+      }
+    },
+    {
+      "name": "@composable-svelte/graphics",
+      "version": "0.4.0",
+      "integrity": "sha512-25kIndy2R8ABZ8QeSScnvfKcjKskvIiXnefzxJ64wrPv/zNmTBX8VQbLUnXNoLqRYjx0QPWizj4kWpYV3zY5Eg==",
+      "distTags": {
+        "latest": "0.4.0",
+        "upgrade1-candidate": "0.3.0"
+      }
+    },
+    {
+      "name": "@composable-svelte/chat",
+      "version": "0.6.0",
+      "integrity": "sha512-xmXU3GqmoVZL8CDNnBaSzG1IMxzA/SRAiy9gGKEnlG5EDUH5Fi4O385+Bf46mAqunqSfIo8pbk2j/e0Tdg+1Qg==",
+      "distTags": {
+        "upgrade1-candidate": "0.5.0",
+        "latest": "0.6.0"
+      }
+    },
+    {
+      "name": "@composable-svelte/maps",
+      "version": "0.4.0",
+      "integrity": "sha512-PdsSKNwkEI/eMfS/zuf5CLt+NhPBqM0TrDTKK7A9524XGLCGL6k7t1KhqONoE3v5DtmuJ4EKHsxXVS8lpeMzcw==",
+      "distTags": {
+        "latest": "0.4.0",
+        "upgrade1-candidate": "0.3.0"
+      }
+    }
+  ],
+  "pending": [],
+  "installedConsumer": {
+    "result": "PASS",
+    "strictTypeScript": "NodeNext",
+    "allEightLockfileIntegritiesMatch": true,
+    "source": "registry.npmjs.org",
+    "newAPIs": [
+      "choreography",
+      "representation providers",
+      "Presence",
+      "media adoption props",
+      "explicit WebGPU selection"
+    ]
+  },
+  "preparationCommit": "60ebbb218c981013bb39e755573052146bcdaff7"
+}

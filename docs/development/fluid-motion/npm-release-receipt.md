@@ -1,11 +1,13 @@
 # Fluid motion npm release
 
-## Release candidate
+## Published release
 
 Prepared from feature commit `68b31d38c01b6441e5d94c063570e65b3d924bb9` and
 documentation commit `55852fb9225cabc9f0cb2aa0f8a35f6444e6eb7e` on
 `codex/fluid-layout-motion`. Publication is explicitly authorized by the user.
-Registry publication is pending; this preparation record is not a publication receipt.
+Release preparation commit: `60ebbb218c981013bb39e755573052146bcdaff7` (pushed and verified).
+All eight versions are published under `latest`; public registry and installed-consumer
+verification passed on 2026-09-27.
 
 | Package | Version |
 |---|---|
@@ -63,4 +65,23 @@ functional on one Apple Metal adapter; its timing was not measured.
 
 ## Publication verification
 
-Pending. No npm package has been published by this release task yet.
+All eight sequential publish commands exited 0 on 2026-09-27 at 20:21–20:22 UTC.
+The registry returned HTTP 202 to each upload. One successful npm login and one
+publishing authorization window covered the batch. Initial reads returned old
+versions or 404 while npm processed the uploads; none was repeated. All eight
+versions became available by 20:26 UTC.
+
+Fresh registry reads verified every exact version, its `latest` dist-tag and its
+SHA-512 integrity against the approved archive manifest. A clean external consumer
+then installed all eight exact versions from `registry.npmjs.org` without peer
+relaxation and passed the strict NodeNext TypeScript consumer for choreography,
+representation providers, Presence, media adoption and explicit WebGPU selection.
+All eight installed lockfile versions and integrity values match the approved
+artifacts. See the [registry verification receipt](npm-release-registry.json).
+
+The earlier standalone/combined SSR, browser, documentation, declaration and
+regression checks ran against byte-identical archives. No unrelated package was
+republished, and no repository merge or security-setting change was performed.
+
+[npm’s publish-time scanning announcement](https://github.blog/changelog/2026-07-28-npm-publish-time-malware-scanning-and-dual-use-metadata/)
+explains the delay between accepted upload and installable package.

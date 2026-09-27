@@ -75,5 +75,5 @@
     }
   ],
   "baseCommit": "55852fb9225cabc9f0cb2aa0f8a35f6444e6eb7e",
-  "publicationStatus": "prepared; see npm-release-receipt.md for publication verification"
+  "publicationStatus": "published and verified; see npm-release-receipt.md and npm-release-registry.json"
 }
