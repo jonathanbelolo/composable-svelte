@@ -4,7 +4,7 @@
 
 **Read this first when building or changing an application, including with an AI agent.** Applications describe content, presentation and business rules. Composable Svelte supplies the machinery that executes and coordinates them.
 
-This is the normative application-authoring policy for the core 0.13 API. It takes precedence over lower-level tutorials when choosing application architecture; it does not add capabilities to the installed version. Read the matching [release scope](./prerelease.md). Use installed package documentation and public exports; a library checkout or private agent skill is unnecessary.
+This is the normative application-authoring policy for the core 0.14 API. It takes precedence over lower-level tutorials when choosing application architecture; it does not add capabilities to the installed version. Read the matching [release scope](./prerelease.md). Use installed package documentation and public exports; a library checkout or private agent skill is unnecessary.
 
 ## Responsibility boundary
 
@@ -68,6 +68,7 @@ An observer attached to a component is not a durable business handoff.
 | Open a dialog | Set the composed child state and render its genuine presentation view | Subscribe to a store to synchronize a separate dialog controller |
 | Change pages | Dispatch navigation intent and declare pure route decisions | Handwrite `popstate` listeners and history writes in application features |
 | Animate a panel or several modules | Declare a supported single-target or grouped motion recipe under the Host | Manage playback timers and detached-element cleanup in each view |
+| Move a layout across a route change or a within-page commit (0.14.0) | Request the route with a `defineChoreography` plan (`useStagedRoute`), or use `useLayoutChoreography`, with `useParticipant` and `<Presence>`; see [fluid layout motion](./fluid-motion.md) | Clone elements, run timers or delay the business commit in application code |
 
 Moving a violation into `useWorkspaceSetup()`, `helpers/` or `adapters/` does not change its responsibility.
 
@@ -75,9 +76,9 @@ Moving a violation into `useWorkspaceSetup()`, `helpers/` or `adapters/` does no
 
 Custom motion can be a page-level composition or a small element detail. Start with `useMotion` or `useMotionGroup` from `@composable-svelte/core/application/motion`. Local visual state, normal DOM event handlers, CSS styling and Svelte rendering are permitted; there is no blanket ban on lifecycle hooks. The question is whether code introduces independent ownership of a framework responsibility.
 
-For managed motion, use recipes rather than direct `svelte/transition`, `svelte/animate`, `svelte/motion`, transition/animate directives, frame loops, Web Animations or View Transitions. If a recipe cannot express the requirement, report the missing capability. Ordinary CSS transitions and animations remain permitted, provided they do not compete with managed playback for the same property or substitute for presentation lifecycle coordination.
+For managed motion, use recipes, or [fluid layout motion](./fluid-motion.md) for whole-layout and cross-route motion, rather than direct `svelte/transition`, `svelte/animate`, `svelte/motion`, transition/animate directives, frame loops, Web Animations or View Transitions. If a recipe cannot express the requirement, report the missing capability. Ordinary CSS transitions and animations remain permitted, provided they do not compete with managed playback for the same property or substitute for presentation lifecycle coordination.
 
-The intended framework supplies common motion and contains custom rendering algorithms behind managed extension points. Today, authored recipes support declared properties and fixed target sets; there is **no public custom motion-driver extension or shared-layout transition system**, and automatic presentation animation remains incomplete. Do not infer those capabilities from this contract.
+The intended framework supplies common motion and contains custom rendering algorithms behind managed extension points. Authored recipes support declared properties and fixed target sets; recipes have **no public custom motion-driver extension**. Since 0.14.0, whole-layout and cross-route motion is [fluid layout motion](./fluid-motion.md): choreography plans with shared, outgoing and incoming tracks, staged route commits, `Presence` for within-page removal, and representation providers as the extension point for custom renderers, with qualified limits. Choreography tracks accept geometry drivers from `defineVisualDriver`. Automatic presentation animation remains incomplete. Do not infer capabilities beyond what those guides state.
 
 For explicit animated dismissal, follow the complete [managed presentation example](./application-presentation.md) and [deferred dismissal protocol](./navigation/dismiss.md#explicit-animated-exits): opt the slot into deferred dismissal, retain the current child during exit, tolerate repeated requests, and dispatch a distinct completion action through its captured child view. The parent handles that routed action to clear the slot. Completion comes from the presentation component's callback, not `useMotion` or `useMotionGroup`, which expose no completion API. Deferred dismissal does not select or run an animation; the documented explicit `PresentationState` bridge remains a compatibility exception. Do not use a second dismiss request as completion or revive a child from a presentation snapshot.
 

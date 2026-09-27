@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/maps",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Interactive map components for Composable Svelte - Built with Maplibre GL, with an optional Mapbox GL adapter",
   "type": "module",
   "main": "./dist/index.js",
@@ -64,7 +64,7 @@
     "url": "https://github.com/jonathanbelolo/composable-svelte/issues"
   },
   "peerDependencies": {
-    "@composable-svelte/core": "^0.13.1",
+    "@composable-svelte/core": "^0.14.0",
     "svelte": "^5.20.0",
     "mapbox-gl": "^3.0.0"
   },

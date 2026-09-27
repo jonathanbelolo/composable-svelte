@@ -2,7 +2,7 @@
 
 This directory is a standalone `defineViews` / `FeatureViews` / `FeatureOutlet` application. It uses public package exports only and exercises a typed `mapClicked` action. It ships in the maps npm archive so the recipe can be copied outside the repository.
 
-Copy the directory outside the repository, then install the published versions named by its manifest (core `^0.13.1`, maps `^0.3.0`, Svelte `^5.20.0`) and run the checks:
+Copy the directory outside the repository, then install the published versions named by its manifest (core `^0.14.0`, maps `^0.4.0`, Svelte `^5.20.0`) and run the checks:
 
 ```sh
 npm install

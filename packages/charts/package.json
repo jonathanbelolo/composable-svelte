@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/charts",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Interactive data visualization components for Composable Svelte - Built with Observable Plot and D3",
   "type": "module",
   "main": "./dist/index.js",
@@ -60,7 +60,7 @@
     "url": "https://github.com/jonathanbelolo/composable-svelte/issues"
   },
   "peerDependencies": {
-    "@composable-svelte/core": "^0.13.1",
+    "@composable-svelte/core": "^0.14.0",
     "svelte": "^5.20.0"
   },
   "devDependencies": {

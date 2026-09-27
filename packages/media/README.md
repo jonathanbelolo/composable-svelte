@@ -245,10 +245,10 @@ build failure rather than something a reader discovers by pasting.
 | `muted` | `boolean` | Start muted |
 | `showTitle` | `boolean` | Show the video title above the embed |
 | `class` | `string` | Additional CSS class |
-| `referrerPolicy` | `ReferrerPolicy` | **Unreleased (next release; not in 0.5.0).** The iframe's referrer policy, default `'no-referrer'`. YouTube requires a referrer and shows **Error 153** without one ([API Client Identity](https://developers.google.com/youtube/terms/required-minimum-functionality)), so pass `'strict-origin-when-cross-origin'` for YouTube |
-| `mediaKey` | `string` | **Unreleased (next release; not in 0.5.0).** Explicit identity for fluid-motion adoption. No default: without a key a player is never adopted (see below) |
-| `mediaScope` | `MediaVisualProvider` | **Unreleased (next release; not in 0.5.0).** The adoption scope. Defaults to the `media` provider the enclosing application configured. An explicit value overrides it |
-| `playerControl` | `'none' \| 'player-api'` | **Unreleased (next release; not in 0.5.0).** Default `'none'`. `'player-api'` opts in to the platform's documented player API so that a player that only leaves can be muted. For YouTube it adds `enablejsapi=1` and `origin` to the embed URL. Nothing is added unless you opt in |
+| `referrerPolicy` | `ReferrerPolicy` | **New in 0.6.0.** The iframe's referrer policy, default `'no-referrer'`. YouTube requires a referrer and shows **Error 153** without one ([API Client Identity](https://developers.google.com/youtube/terms/required-minimum-functionality)), so pass `'strict-origin-when-cross-origin'` for YouTube |
+| `mediaKey` | `string` | **New in 0.6.0.** Explicit identity for fluid-motion adoption. No default: without a key a player is never adopted (see below) |
+| `mediaScope` | `MediaVisualProvider` | **New in 0.6.0.** The adoption scope. Defaults to the `media` provider the enclosing application configured. An explicit value overrides it |
+| `playerControl` | `'none' \| 'player-api'` | **New in 0.6.0.** Default `'none'`. `'player-api'` opts in to the platform's documented player API so that a player that only leaves can be muted. For YouTube it adds `enablejsapi=1` and `origin` to the embed URL. Nothing is added unless you opt in |
 
 Exactly one of `url` or `video` is required, enforced by the type rather than at
 runtime. A `url` that matches no known platform renders nothing.
@@ -257,14 +257,12 @@ runtime. A `url` that matches no known platform renders nothing.
 The component supplies it from the current hostname; `detectVideo` deliberately
 does not, because detection cannot know where the result will be rendered.
 
-> **Unreleased: next release.** Everything in this fluid-motion section is in
-> this repository for the **next release**. That covers `mediaVisualProvider`,
-> `liveMediaResources`, the structural provider types, and the `VideoEmbed` props
-> `mediaKey`, `mediaScope`, `playerControl` and `referrerPolicy`.
-> - The published `@composable-svelte/media` **0.5.0** does not include them.
-> - They also rely on core APIs (`fluidMotion`, `useRepresentationProvider`,
->   `Presence`) that the published `@composable-svelte/core` **0.13.1** does not
->   include.
+> **New in 0.6.0.** Everything in this fluid-motion section is introduced in
+> `@composable-svelte/media` 0.6.0: `mediaVisualProvider`, `liveMediaResources`,
+> the structural provider types, and the `VideoEmbed` props `mediaKey`,
+> `mediaScope`, `playerControl` and `referrerPolicy`. They rely on core APIs
+> (`fluidMotion`, `useRepresentationProvider`, `Presence`) introduced in
+> `@composable-svelte/core` 0.14.0; this package declares `@composable-svelte/core ^0.14.0`.
 
 **Fluid motion: the same live player across a transition.** Add the media
 provider to the application's visual configuration. A route or within-page
@@ -284,8 +282,8 @@ application's own `<video>` elements need nothing from this package: core's
 built-in video provider keeps them decoding automatically. That includes a
 `MediaStream` `srcObject` (camera, screen, WebRTC, canvas capture) and
 unencrypted MSE, both the `src = URL.createObjectURL(mediaSource)` pattern and a
-`srcObject` MediaSource. See core's [fluid-motion guide](../core/docs/fluid-motion.md)
-(also unreleased, next release).
+`srcObject` MediaSource. See core's [fluid-motion guide](https://github.com/jonathanbelolo/composable-svelte/blob/codex/fluid-layout-motion/packages/core/docs/fluid-motion.md)
+(core 0.14.0).
 
 **At the commit.** When a page holding a `VideoEmbed` is removed under a run,
 the component's own iframe moves (`Element.prototype.moveBefore`, which keeps
@@ -384,7 +382,7 @@ EME, [media element restrictions](https://www.w3.org/TR/encrypted-media/#media-e
 decline is a conservative choice, not a claim that every protected copy is
 impossible, and no protected fixture has been qualified.
 
-**Exports (unreleased; next release).** From `@composable-svelte/media` (and `/video-embed`):
+**Exports (0.6.0).** From `@composable-svelte/media` (and `/video-embed`):
 - `mediaVisualProvider()` and the `MediaVisualProvider` and `PlayerControl` types;
 - `liveMediaResources()`, a `{ registered, retained }` count for resource
   ledgers and tests.

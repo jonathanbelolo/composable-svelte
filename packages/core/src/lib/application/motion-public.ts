@@ -46,13 +46,13 @@ export {
 
 export { default as MotionElement } from './MotionElement.svelte';
 
-// Fluid layout choreography: unreleased (next release; not in published 0.13.1). See docs/fluid-motion.md.
+// Fluid layout choreography: introduced in 0.14.0 (0.x line). See docs/fluid-motion.md.
 export { defineChoreography, type ChoreographyPlan, type ChoreographyTrack } from './renderer/choreography/plan.js';
 export { useParticipant, useLayoutChoreography, type ParticipantOptions, type LayoutChoreography } from './renderer/choreography/participant.js';
 export { defineVisualDriver, type VisualDriver, type VisualDriverInput, type VisualDriverOutput } from './renderer/choreography/drivers.js';
 export { default as MotionPlane } from './MotionPlane.svelte';
 export { QUALIFIED_PAINT_POLICIES, type PaintPolicy, type Pose, type Waypoint, type Corners, type Inset, type ContentPolicy } from './renderer/choreography/plan.js';
-// Representation providers and per-application visual configuration: unreleased (next release).
+// Representation providers and per-application visual configuration: introduced in 0.14.0.
 export { fluidMotion } from './renderer/choreography/engine.js';
 // S2/S3 core seams (docs/development/fluid-motion/core-media-seam-interface.md).
 export { useRepresentationProvider } from './renderer/choreography/participant.js';

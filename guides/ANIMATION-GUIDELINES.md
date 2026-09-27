@@ -137,7 +137,7 @@ Reference: `Switch.svelte:60-86`.
 
 ## Whole-layout and cross-route motion
 
-Some motion spans the layout rather than one component. Examples are a card that becomes the heading of the next page, a list that resizes while items leave, or several elements that move together across a route change. Do not build this from per-component effects, timers or clones. Use the framework's fluid layout motion, from `@composable-svelte/core/application/motion`. It is **unreleased**: on the development branch for the next release, not in published core 0.13.1. The whole contract is in [Fluid Layout Motion & Staged Routing](../packages/core/docs/fluid-motion.md).
+Some motion spans the layout rather than one component. Examples are a card that becomes the heading of the next page, a list that resizes while items leave, or several elements that move together across a route change. Do not build this from per-component effects, timers or clones. Use the framework's fluid layout motion, from `@composable-svelte/core/application/motion`. It is introduced in core 0.14.0. The whole contract is in [Fluid Layout Motion & Staged Routing](../packages/core/docs/fluid-motion.md).
 
 - **Across a route change:** `useStagedRoute(application).request(intent, { motion: plan })` with a `defineChoreography` plan. The route's single domain action commits at the plan's `cueMs`, and the plan's tracks continue on a motion plane afterwards.
 - **Within a page:** `useLayoutChoreography().transition(plan, commit)`. The explicit business action runs at once and the plan bridges the old and new layout. Content that the commit removes belongs inside `<Presence when={…}>`.

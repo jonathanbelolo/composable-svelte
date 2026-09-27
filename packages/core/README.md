@@ -11,10 +11,11 @@
 
 Inspired by [The Composable Architecture (TCA)](https://github.com/pointfreeco/swift-composable-architecture) from Swift/iOS, adapted for Svelte 5 and TypeScript.
 
-## Upgrade 1 — core 0.13
+## Upgrade 1 — core 0.14
 
-Install `@composable-svelte/core` or pin `@composable-svelte/core@0.13.1`. Read the
-[release scope and migration notes](./docs/prerelease.md) before upgrading.
+Install `@composable-svelte/core` or pin `@composable-svelte/core@0.14.0`. 0.14.0 adds opt-in
+[fluid layout motion and staged routing](./docs/fluid-motion.md); applications that do not import it are
+unaffected. Read the [release scope and migration notes](./docs/prerelease.md) before upgrading from 0.12 or earlier.
 
 ## Start here
 
@@ -41,15 +42,15 @@ ship with the installed version and cover factoring, ownership and async correct
 | [chat](https://www.npmjs.com/package/@composable-svelte/chat) | Streaming chat, presence, typing, cursors | No CRDT document collaboration |
 | [code](https://www.npmjs.com/package/@composable-svelte/code) | CodeMirror, Prism, SvelteFlow | Wrappers around those engines |
 | [media](https://www.npmjs.com/package/@composable-svelte/media) | Audio, video embeds, voice input | Transcription is application-provided; no streaming video player |
-| [graphics](https://www.npmjs.com/package/@composable-svelte/graphics) | Babylon scenes and WebGL overlays | WebGL by default. Real WebGPU is unreleased (next graphics release): only when requested explicitly (`renderer: 'webgpu'`), with no silent fallback |
+| [graphics](https://www.npmjs.com/package/@composable-svelte/graphics) | Babylon scenes and WebGL overlays | WebGL by default. Real WebGPU (introduced in graphics 0.4.0) only when requested explicitly (`renderer: 'webgpu'`), with no silent fallback |
 | [maps](https://www.npmjs.com/package/@composable-svelte/maps) | MapLibre maps and optional Mapbox adapter | Clustering, geocoding, drawing and routing remain unbuilt |
 
 Install the packages you need; their manifests declare compatible peers.
 See the [component catalog](./docs/components.md) for public import paths.
 
 The architecture checker is completely optional and use is discouraged. The starter does not install it. Do not use its results as architectural approval.
-The runtime companion packages listed above declare `@composable-svelte/core ^0.13.1`
-in their coordinated releases. `@composable-svelte/code` requires Svelte `^5.30.0`,
+The runtime companion packages listed above declare `@composable-svelte/core ^0.14.0`
+in their coordinated minor releases (auth, charts, maps and graphics 0.4.0; code, chat and media 0.6.0), minor rather than patch because their core peer floor rises. `@composable-svelte/architecture` stays at 0.13.1 and is not qualified against core 0.14. `@composable-svelte/code` requires Svelte `^5.30.0`,
 so an application that includes it needs Svelte 5.30 or newer.
 
 ## Features
@@ -67,17 +68,17 @@ so an application that includes it needs Svelte 5.30 or newer.
 - ✅ **Complete Backend**: API client, WebSocket, Storage, Clock dependencies
 - ✅ **Component library**: shadcn-svelte integration with reducer-driven patterns — browse the full set in [the styleguide](https://github.com/jonathanbelolo/composable-svelte/tree/main/examples/styleguide)
 - ✅ **URL Routing**: Browser history sync with pattern matching
-- 🚧 **Fluid layout motion** (opt-in; **unreleased**, for the next release; not in 0.13.1): staged route transitions and within-page choreography with representation providers, from `@composable-svelte/core/application/motion`. See [Fluid Layout Motion & Staged Routing](./docs/fluid-motion.md)
+- ✅ **Fluid layout motion** (opt-in; introduced in 0.14.0): staged route transitions and within-page choreography with representation providers, from `@composable-svelte/core/application/motion`. See [Fluid Layout Motion & Staged Routing](./docs/fluid-motion.md)
 - ✅ **3,116 tests**: browser and node suites, measured at the R1 closure's exit (2026-09-05)
 
 ## Installation
 
 ```bash
-npm install @composable-svelte/core@0.13.1
+npm install @composable-svelte/core@0.14.0
 # or
-pnpm add @composable-svelte/core@0.13.1
+pnpm add @composable-svelte/core@0.14.0
 # or
-yarn add @composable-svelte/core@0.13.1
+yarn add @composable-svelte/core@0.14.0
 ```
 
 **Peer Dependencies**: Svelte 5.20.0 or higher. Tailwind CSS (v3 or v4) is an
@@ -328,7 +329,7 @@ Comprehensive documentation is available in the \`docs/\` directory:
 - **[Navigation](./docs/navigation/tree-based.md)** - Tree-based navigation, components, dismiss patterns
 - **[DSL](./docs/dsl/destinations.md)** - Destinations, matchers, scope helpers
 - **[Animation](./docs/animation/animated-navigation.md)** - Motion One integration
-- **[Fluid Layout Motion & Staged Routing](./docs/fluid-motion.md)** (unreleased, next release) - Cross-route and within-page choreography, providers, qualified limits
+- **[Fluid Layout Motion & Staged Routing](./docs/fluid-motion.md)** (0.14.0) - Cross-route and within-page choreography, providers, qualified limits
 - **[Backend](./docs/backend/api-client.md)** - API client, WebSocket, dependencies
 - **[Routing](./docs/routing/url-sync.md)** - URL synchronization
 - **[API Reference](./docs/api/reference.md)** - Complete API documentation

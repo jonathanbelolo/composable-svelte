@@ -39,7 +39,7 @@ For cross-cutting primitives, the consumer exercises `AuthGuard` and `RoleGate` 
 It can replace, remove, and restore the left auth owner while the right remains live.
 
 Run this consumer against **installed packages**, not workspace aliases. Its
-manifest pins the published core `0.13.1`, auth `0.3.0`, and the minimum Svelte
+manifest pins core `0.14.0`, auth `0.4.0`, and the minimum Svelte
 `5.20.0`. Copy it to a fresh directory outside the repository and run
 `npm install`; to check the current Svelte pin, install `svelte@5.55.3` instead.
 Do not bypass peer checks with `--force` or `--legacy-peer-deps`. Confirm that
@@ -142,4 +142,5 @@ verification fixtures built from later pre-release candidates (core 0.13.0,
 auth 0.2.1 labels) also passed all four commands; the current-pin browser needed
 one retry after Vite's first dependency reoptimization timed out before the
 initial app button appeared. This document does not record a run against the
-published core 0.13.1 and auth 0.3.0.
+published core 0.13.1 and auth 0.3.0, nor against the current pins (core 0.14.0,
+auth 0.4.0).

@@ -14,7 +14,7 @@ Start with the file relevant to the task. Keep the decisions described below exp
 
 Copy this directory into a separate project, install its dependencies (`npm install`),
 then run `npm run check`, `npm test`, `npm run build`, and `npm run test:ssr`. Browser tests need Chromium
-(`npx playwright install chromium`). The example pins core `0.13.1` so its code and guidance match the installed API.
+(`npx playwright install chromium`). The example pins core `0.14.0` so its code and guidance match the installed API.
 `npm run dev` opens the small notebook demo. Its save service is in-memory and does
 not provide persistence or conflict detection. Request and collection modules are
 independent recipes tested alongside the runnable editor; they are not a hidden

@@ -2,7 +2,7 @@
 
 This standalone application uses public `@composable-svelte/core` and `@composable-svelte/graphics` exports. It includes a real `defineViews` / `FeatureViews` / `FeatureOutlet` route and checks all five public graphics component prop types. It ships in the graphics npm archive.
 
-Copy the directory outside the repository, then install the published versions named by its manifest (core `^0.13.1`, graphics `^0.3.0`, Svelte `^5.20.0`) and run the checks:
+Copy the directory outside the repository, then install the published versions named by its manifest (core `^0.14.0`, graphics `^0.4.0`, Svelte `^5.20.0`) and run the checks:
 
 ```sh
 npm install

@@ -18,7 +18,7 @@ Welcome to the complete documentation for **@composable-svelte/core** - a Compos
 ### Managed Applications
 - **[Application presentation](./application-presentation.md)** - Genuine presentation views and the explicit animated-exit compatibility path
 - **[Application motion](./application-motion.md)** - Single-target and grouped recipes, reduced motion and managed cleanup
-- **[Fluid layout motion & staged routing](./fluid-motion.md)** (unreleased, next release) - Cross-route and within-page choreography, `Presence`, representation providers and qualified limits
+- **[Fluid layout motion & staged routing](./fluid-motion.md)** (0.14.0) - Cross-route and within-page choreography, `Presence`, representation providers and qualified limits
 - **[Application ownership](./application-ownership.md)** - Declarative Root lifetime and typed contextual lookup
 - **[Application routing](./application-routing.md)** - Pure route decisions, SSR handoff and framework-owned browser attachment
 - **[Application views](./application-views.md)** - Typed view declarations, feature outlets and the framework-supplied presentation surface
@@ -41,7 +41,7 @@ Welcome to the complete documentation for **@composable-svelte/core** - a Compos
 
 ### Animation
 - **[Animation System](./animation/animated-navigation.md)** - PresentationState lifecycle and Motion One integration
-- **[Fluid layout motion](./fluid-motion.md)** (unreleased, next release) - Whole-layout choreography across route changes and within a page
+- **[Fluid layout motion](./fluid-motion.md)** (0.14.0) - Whole-layout choreography across route changes and within a page
 
 ### Backend Integration
 - **[API Client](./backend/api-client.md)** - HTTP/REST client with effects, interceptors, retries

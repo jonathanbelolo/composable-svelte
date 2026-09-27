@@ -2,7 +2,7 @@
 
 This standalone application uses only public core and charts exports. It checks row-typed `Chart` and `ChartPrimitive` props, a real `defineViews` / `FeatureViews` / `FeatureOutlet` route, SSR, and native wheel and brush gestures in Chromium. The brush checks both the lifted parent selection and the typed `onSelectionChange` payload. The recipe ships in the charts npm archive.
 
-Copy the directory outside the repository, then install the published versions named by its manifest (core `^0.13.1`, charts `^0.3.0`, Svelte `^5.20.0`) and run the checks:
+Copy the directory outside the repository, then install the published versions named by its manifest (core `^0.14.0`, charts `^0.4.0`, Svelte `^5.20.0`) and run the checks:
 
 ```sh
 npm install

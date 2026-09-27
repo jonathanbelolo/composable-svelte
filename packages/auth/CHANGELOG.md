@@ -1,5 +1,14 @@
 # @composable-svelte/auth
 
+## [0.4.0] - 2026-09-27
+
+Requires `@composable-svelte/core` `^0.14.0` and Svelte `^5.20.0` as peers.
+
+### Changed
+
+- **Compatibility-only release for core 0.14.0.** The `@composable-svelte/core` peer moves from `^0.13.1` to `^0.14.0`. There are no source or API changes since 0.3.0.
+- This is a minor rather than a patch: under 0.x, `^0.3.0` does not include 0.4.0. Existing installs on core 0.13 therefore do not update into an unsatisfiable core peer; upgrade core and this package together.
+
 ## [0.3.0] - 2026-09-26
 
 ### Added

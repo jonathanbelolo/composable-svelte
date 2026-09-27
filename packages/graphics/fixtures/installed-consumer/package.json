@@ -10,8 +10,8 @@
     "test:browser": "vitest run --config browser.config.mjs"
   },
   "dependencies": {
-    "@composable-svelte/core": "^0.13.1",
-    "@composable-svelte/graphics": "^0.3.0",
+    "@composable-svelte/core": "^0.14.0",
+    "@composable-svelte/graphics": "^0.4.0",
     "svelte": "^5.20.0"
   },
   "devDependencies": {

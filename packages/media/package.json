@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/media",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Audio player, video embed, and voice input components for Composable Svelte - Built with Web Audio API and MediaRecorder",
   "type": "module",
   "main": "./dist/index.js",
@@ -72,7 +72,7 @@
     "url": "https://github.com/jonathanbelolo/composable-svelte/issues"
   },
   "peerDependencies": {
-    "@composable-svelte/core": "^0.13.1",
+    "@composable-svelte/core": "^0.14.0",
     "svelte": "^5.20.0"
   },
   "devDependencies": {

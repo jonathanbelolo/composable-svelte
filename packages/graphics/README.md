@@ -2,20 +2,20 @@
 
 State-driven 3D graphics for Composable Svelte (Babylon.js: WebGL by default, WebGPU on explicit request).
 
-> **Unreleased — next release.** This branch adds APIs that the published `@composable-svelte/graphics` 0.3.0 does not include:
+> **New in 0.4.0.** These APIs are introduced in `@composable-svelte/graphics` 0.4.0 (not in 0.3.x):
 > - `graphicsVisualProvider()` and its types (`RenderAuthority`, `GraphicsVisualProvider`, `GraphicsRepresentation`,
 >   `GraphicsRepresentationContext`, `GraphicsRetainedRenderer`);
 > - explicit WebGPU selection (`new BabylonAdapter({ renderer: 'webgpu' })`, `BabylonAdapterOptions`);
 > - the `<Scene>` `label` prop;
 > - document-order canvas focus.
 >
-> Using `graphicsVisualProvider` for fluid motion also requires the unreleased fluid-motion APIs of `@composable-svelte/core`
-> (`fluidMotion`; not in the published core 0.13.1). WebGPU selection, `label` and focus do not depend on them.
-> Sections describing these additions are marked *(unreleased)*.
+> Using `graphicsVisualProvider` for fluid motion also requires the fluid-motion APIs of `@composable-svelte/core` 0.14.0
+> (`fluidMotion`); this package declares `@composable-svelte/core ^0.14.0`. WebGPU selection, `label` and focus do not depend on them.
+> Sections describing these additions are marked *(0.4.0)*.
 
 ## Features
 
-- ✅ **WebGL** by default: Babylon.js `Engine`. **WebGPU** on explicit request *(unreleased)*: Babylon.js `WebGPUEngine`, loaded on demand — see Renderer below.
+- ✅ **WebGL** by default: Babylon.js `Engine`. **WebGPU** on explicit request *(0.4.0)*: Babylon.js `WebGPUEngine`, loaded on demand — see Renderer below.
 - ✅ **State-Driven**: All scene state managed through pure reducers
 - ✅ **Declarative API**: Svelte components for scene composition
 - ✅ **Type-Safe**: Full TypeScript support
@@ -86,9 +86,9 @@ Root component that manages the Babylon.js engine and renders the 3D scene.
 - `createAdapter?`: `() => GraphicsAdapter` (optional) — creates a fresh adapter for this attachment. When omitted, `<Scene>` creates a `BabylonAdapter`. The scene owns and disposes the adapter returned by the factory; return a new instance for each mount or replacement. `initialize(canvas)` must resolve `{ renderer, capabilities }`, where `renderer` is `'webgl'` or `'webgpu'` and names the engine that actually renders, and `dispose()` must release its resources. A retired scene waits for an in-flight initialization to settle, then disposes the result once.
 - `width?`: string | number (default: '100%')
 - `height?`: string | number (default: '600px')
-- `label?` *(unreleased)*: string (default: `'Interactive 3D scene'`). The canvas's accessible name, rendered as `role="img"` with `aria-label`. Name what the scene shows, for example `"Pavilion model — drag or use arrow keys to orbit"`.
+- `label?` *(0.4.0)*: string (default: `'Interactive 3D scene'`). The canvas's accessible name, rendered as `role="img"` with `aria-label`. Name what the scene shows, for example `"Pavilion model — drag or use arrow keys to orbit"`.
 
-**Input and focus** *(document-order focus unreleased)*. With `BabylonAdapter` (WebGL or WebGPU), the canvas is a real camera control: drag to orbit, the wheel to zoom, and arrow keys to orbit while it has focus. Once the camera's inputs attach, the canvas becomes focusable at `tabindex="0"`, in document order. Babylon's own default is a positive tab index, which would move the canvas ahead of the rest of the page. Before initialisation, and if initialisation fails, the canvas is not a tab stop.
+**Input and focus** *(document-order focus: 0.4.0)*. With `BabylonAdapter` (WebGL or WebGPU), the canvas is a real camera control: drag to orbit, the wheel to zoom, and arrow keys to orbit while it has focus. Once the camera's inputs attach, the canvas becomes focusable at `tabindex="0"`, in document order. Babylon's own default is a positive tab index, which would move the canvas ahead of the rest of the page. Before initialisation, and if initialisation fails, the canvas is not a tab stop.
 
 `BabylonAdapter` is exported alongside these. It is the imperative class
 `<Scene>` drives Babylon.js *through*, not a way of driving `<Scene>` — reach for
@@ -281,10 +281,9 @@ When a managed view is retired (for example, when the parent reducer transitions
 
 The one exception is a canvas that a fluid-motion run is representing, described next. Without such a run, retirement behaves exactly as listed above.
 
-### Fluid Motion: Rendering Past Retirement *(unreleased)*
+### Fluid Motion: Rendering Past Retirement *(0.4.0)*
 
-*Next release.* This needs `graphicsVisualProvider` from this package and `fluidMotion` from the unreleased core fluid-motion APIs; neither is in
-the published graphics 0.3.0 or core 0.13.1.
+*Since 0.4.0.* This needs `graphicsVisualProvider` from this package (0.4.0) and `fluidMotion` from `@composable-svelte/core` 0.14.0.
 
 A route transition can keep an outgoing `<Scene>` or `<WebGLOverlay>` moving on screen after its feature retires. Add the package's representation provider to the application's visual configuration:
 
@@ -556,7 +555,7 @@ fixed presets do not cover.
 
 ## Renderer
 
-**WebGL by default, via Babylon's `Engine`. WebGPU only when you ask for it** *(WebGPU selection is unreleased — next release)*.
+**WebGL by default, via Babylon's `Engine`. WebGPU only when you ask for it** *(WebGPU selection: 0.4.0)*.
 
 ```svelte
 <script lang="ts">
@@ -586,8 +585,8 @@ fixed presets do not cover.
 **Qualification scope.** WebGPU is qualified functionally on one real adapter: Apple Metal-3 (`isFallbackAdapter: false`), in headless
 Playwright Chromium 141 on macOS with `--enable-unsafe-webgpu --use-angle=metal --enable-features=Vulkan,WebGPUService`. The qualification covers
 rendering, retained progression after retirement, a real route commit, cleanup, and partial-initialisation and restoration failures. The
-executable suite is [`graphics.webgpu.browser.config.ts`](./graphics.webgpu.browser.config.ts) (fixtures in [`tests/webgpu/`](./tests/webgpu/)); the independent review record is
-[`remaining-webgpu-correction-astra-review.md`](../../docs/development/fluid-motion/remaining-webgpu-correction-astra-review.md). Other GPUs, operating systems and browsers were not run. No WebGPU
+executable suite is [`graphics.webgpu.browser.config.ts`](https://github.com/jonathanbelolo/composable-svelte/blob/codex/fluid-layout-motion/packages/graphics/graphics.webgpu.browser.config.ts) (fixtures in [`tests/webgpu/`](https://github.com/jonathanbelolo/composable-svelte/tree/codex/fluid-layout-motion/packages/graphics/tests/webgpu)); the independent review record is
+[`remaining-webgpu-correction-astra-review.md`](https://github.com/jonathanbelolo/composable-svelte/blob/codex/fluid-layout-motion/docs/development/fluid-motion/remaining-webgpu-correction-astra-review.md). Other GPUs, operating systems and browsers were not run. No WebGPU
 timing figures were measured. Headless Chromium exposes no WebGPU adapter by default, and `--enable-unsafe-webgpu` alone gives the
 SwiftShader software fallback, which the suite rejects.
 
@@ -602,7 +601,7 @@ The history, briefly: an earlier version claimed automatic WebGPU with a WebGL f
 
 ### What it costs
 
-The figures below were measured during the fluid-motion audit, in Chromium on one machine (Apple M3 Max): hardware GL through ANGLE Metal, and software GL through SwiftShader. The measuring harness and raw results are local audit evidence and are not committed (see the evidence-retention note in the [fluid-motion acceptance README](../../docs/development/fluid-motion/README.md)). Other GPUs, drivers and browsers were not measured.
+The figures below were measured during the fluid-motion audit, in Chromium on one machine (Apple M3 Max): hardware GL through ANGLE Metal, and software GL through SwiftShader. The measuring harness and raw results are local audit evidence and are not committed (see the evidence-retention note in the [fluid-motion acceptance README](https://github.com/jonathanbelolo/composable-svelte/blob/codex/fluid-layout-motion/docs/development/fluid-motion/README.md)). Other GPUs, drivers and browsers were not measured.
 
 - **Bundle.** The adapter imports the Babylon modules it uses directly, not the `@babylonjs/core` barrel. Babylon marks every file as having side effects, so the barrel import bundled the whole library.
   - For an app that imports `Scene`, the eagerly loaded chunk is about 1.18 MB minified / 281 KB gzip, down from 5.75 MB / 1.26 MB with the barrel.
@@ -621,7 +620,7 @@ Run `pnpm test`, `pnpm run typecheck`, and `pnpm run check` for the package gate
 WebGL (install the Playwright Chromium browser before this check). The GPU check
 is required when changing shader presets; a headless fake GL does not execute GLSL.
 
-`pnpm exec vitest run --config graphics.webgpu.browser.config.ts` runs the isolated WebGPU suite ([config](./graphics.webgpu.browser.config.ts); unreleased): real rendering, retained
+`pnpm exec vitest run --config graphics.webgpu.browser.config.ts` runs the isolated WebGPU suite ([config](https://github.com/jonathanbelolo/composable-svelte/blob/codex/fluid-layout-motion/packages/graphics/graphics.webgpu.browser.config.ts); 0.4.0): real rendering, retained
 progression, a real Host route commit, and initialisation-failure cleanup. It needs a real WebGPU adapter. The configuration
 passes macOS Metal launch flags; other platforms need their own flags or a headed/GPU runner. The first test fails on a software
 fallback adapter, by design.

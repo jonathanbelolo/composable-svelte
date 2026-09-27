@@ -482,7 +482,7 @@ animateAccordionExpand(element), animateAccordionCollapse(element)
 
 ## FLUID LAYOUT MOTION & STAGED ROUTING
 
-Opt-in API for whole-layout motion across a route change. **Unreleased:** it is on the development branch for the next release, not in published core 0.13.1. Ordinary routing, `AnimatedNavigationStack` and overlay presentation are unchanged. The full compiled example and contracts are in `packages/core/docs/fluid-motion.md`.
+Opt-in API for whole-layout motion across a route change. Introduced in core 0.14.0 (graphics 0.4.0 and media 0.6.0 for their providers). Ordinary routing, `AnimatedNavigationStack` and overlay presentation are unchanged. The full compiled example and contracts are in `packages/core/docs/fluid-motion.md`.
 
 **Rules**
 

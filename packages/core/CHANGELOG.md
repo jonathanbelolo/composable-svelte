@@ -7,6 +7,41 @@ All notable changes to `@composable-svelte/core` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0] - 2026-09-27
+
+Requires Svelte `^5.20.0` (unchanged). Companion releases in this train declare `@composable-svelte/core ^0.14.0`.
+
+### Added
+
+- **Fluid layout choreography** (opt-in, `@composable-svelte/core/application/motion`): `defineChoreography`, `useParticipant`, `useLayoutChoreography`, `defineVisualDriver`, `MotionPlane`, `Presence`, `QUALIFIED_PAINT_POLICIES`, and the visual engine `fluidMotion()`.
+  - Choreography decorates a synchronous, owned business commit and never gains authority over state.
+  - **Opt-in by import.** The engine is reached only through a plan from `defineChoreography`, or through the optional `visual: fluidMotion(...)` entry in `defineApplication`'s options. An application that does neither gets none of the choreography or representation engine.
+  - `visual` itself is optional. Without it, a plan uses the built-in providers and the default 600 ms preparation budget, and diagnostics are not delivered.
+  - See `docs/fluid-motion.md`.
+- **Retained representations:** participants are represented on a decorative plane and can outlive their source through the commit.
+  - Built-in providers cover canvas (2D/WebGL), video (URL sources, MediaStream `srcObject`, and unencrypted MediaSource/blob sources) and same-origin iframes.
+  - The provider interface is public: `RepresentationProvider`, `ProvidedRepresentation`, `RetainedRenderer`, `RepresentationContext`, `RepresentationDecline` (with `settle?: boolean`), `VisualConfiguration`, `VisualDiagnostic`, `FluidMotionOptions`, plus `useRepresentationProvider`.
+  - A provider can settle its containing participant: no copy is animated, and the live source stays until the commit.
+- **Representation declaration** `data-composable-representation="light-dom" | "opaque"` for elements whose rendering cannot be observed (for example closed shadow roots).
+- **Staged navigation** (`@composable-svelte/core/application`): `useStagedRoute`, `ApplicationStaging`, `StagedRouteRequester`, the staged request/transaction types, `ScrollPolicy` / `ApplicationScrollOwnership`, `RouteFallbackProps` and `RenderFailureSummary`.
+
+### Changed
+
+- The default preparation budget is 600 ms (was 250 ms), both for `fluidMotion()` and for staged route preparation. It is calibrated to cold preparation of about 1,500 elements, and plans and applications can still set their own.
+- Starter (`consumer/`) and the agent-patterns example are pinned to core 0.14.0. The starter's Svelte pin stays 5.57.0.
+
+### Known limits
+
+- **Cold preparation of large participants.** A cold 1,501-element participant took about 330–351 ms of preparation work in 10–11 slices, with an observed longest frame gap of 34–76.6 ms. The business commit waits for it within the budget. Larger participants can exceed the budget, and the run then settles without motion. No universally smooth frame rate is claimed.
+- **Content the built-in projection settles** (its participant is not animated, rather than animating a possibly wrong copy). Providers are consulted first, so content a custom provider represents, such as a managed component with a closed shadow root, still animates.
+  - video with observable `mediaKeys` (protected media);
+  - predefined `lower-armenian` / `upper-armenian` counters outside 1–9999 (author overrides are unaffected);
+  - confirmed closed shadow roots that no provider represents;
+  - elements declared `opaque` that neither a provider nor an opted-in native snapshot represents.
+- **Closed-root boundary.** An undeclared, non-serializable closed shadow root on a built-in element **without an observable signal** cannot be detected with public APIs. Unrendered (unslotted) light content is an observable signal: it is detected and settles. Ambiguous custom elements are projected and report `representationCompletenessUnverified`.
+- **Text rasterization.** Chromium can rasterize text at fractional positions in the plane slightly differently from in-flow text. Geometry is identical.
+- **Optional architecture checker.** `@composable-svelte/architecture` 0.13.1 (optional, not a release requirement) supports core below 0.14.0. It reports core 0.14.x as outside its known range.
+
 ## [0.13.1] - 2026-09-26
 
 ### Added

@@ -10,7 +10,7 @@
     "test:ssr": "vite build --ssr tests/ssr-entry.ts --outDir ssr && node tests/ssr.mjs"
   },
   "dependencies": {
-    "@composable-svelte/core": "0.13.1",
+    "@composable-svelte/core": "0.14.0",
     "svelte": "5.43.3"
   },
   "devDependencies": {

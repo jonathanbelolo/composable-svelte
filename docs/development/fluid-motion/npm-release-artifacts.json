@@ -1,0 +1,79 @@
+{
+  "schema": "composable-svelte/release-archives-manifest/v1",
+  "packages": [
+    {
+      "name": "@composable-svelte/core",
+      "version": "0.14.0",
+      "sha256": "d24254093ee6196e69726bd421d837e968e12ac7d4491d1a38576919247ecc44",
+      "integrity": "sha512-5sMs8AzZ66mN9aIcSnE0EhcLPFnG3LCeuLR5qcOttiqlWY7wAl2myMAW1dfPqAJg9Lg7nbYvVO1TA6/EeAR32Q==",
+      "fileCount": 1346,
+      "status": "ready",
+      "file": "composable-svelte-core-0.14.0.tgz"
+    },
+    {
+      "name": "@composable-svelte/auth",
+      "version": "0.4.0",
+      "sha256": "2484efd54eeb41fd0c030ce1c7337c5592ce72bfefd2ccd26cb68a2523605de2",
+      "integrity": "sha512-UJGfZFfFqP9Rx0MdreSldYWcmUqG1ofuT8tireMTzSx8DGXD0EJiX30VLXeEGlAZbIAvtN4gT2+npL8G8iOCZQ==",
+      "fileCount": 404,
+      "status": "ready",
+      "file": "composable-svelte-auth-0.4.0.tgz"
+    },
+    {
+      "name": "@composable-svelte/charts",
+      "version": "0.4.0",
+      "sha256": "a89eddcb45146395043b4e0a9a2abc6bab02dc36146a41595a3d5b38eecd121a",
+      "integrity": "sha512-17LKRFp8Man6tuU06B+NWLV/ug1dPw+S2nagQZZEFUYf4ixsFFPDx9BNddaJBOzbZOkyt/toUwBqrcFNxebHag==",
+      "fileCount": 53,
+      "status": "ready",
+      "file": "composable-svelte-charts-0.4.0.tgz"
+    },
+    {
+      "name": "@composable-svelte/code",
+      "version": "0.6.0",
+      "sha256": "e835095140fd0c02bae4a2909ec2d1f4eb6afe5c0e4093c81a1786c234ad720b",
+      "integrity": "sha512-HX/6QUpMn8c96hM/qmC/nZfcLFrDNGFv9jOE/HkBcGM68PEMPj1DfNlPZFPB7xJjgvcuKTUQtBDEp5OJ5Y9CTw==",
+      "fileCount": 69,
+      "status": "ready",
+      "file": "composable-svelte-code-0.6.0.tgz"
+    },
+    {
+      "name": "@composable-svelte/media",
+      "version": "0.6.0",
+      "sha256": "5380c999decb5b17ea8ee2fa75d2b87e86ea3d037ffdb438a8f30a6566a588a0",
+      "integrity": "sha512-BrpymIvcb/kq5XG55O3TLfdgQ5Zr7lYpwV02TA6zJLUy62XiyDjFnNZAICv+Bw4ao3ISO3RlMJVQLJ5I9MSvfw==",
+      "fileCount": 104,
+      "status": "ready",
+      "file": "composable-svelte-media-0.6.0.tgz"
+    },
+    {
+      "name": "@composable-svelte/graphics",
+      "version": "0.4.0",
+      "sha256": "2bba5026fa95d91bc4d71ced0b68fc5a0b6688b6bccdfd10bc0db7118074718b",
+      "integrity": "sha512-25kIndy2R8ABZ8QeSScnvfKcjKskvIiXnefzxJ64wrPv/zNmTBX8VQbLUnXNoLqRYjx0QPWizj4kWpYV3zY5Eg==",
+      "fileCount": 139,
+      "status": "ready",
+      "file": "composable-svelte-graphics-0.4.0.tgz"
+    },
+    {
+      "name": "@composable-svelte/maps",
+      "version": "0.4.0",
+      "sha256": "04df439c162604051c61d621cba3f778ea7580b3c3993e2868b531a2ea7ac387",
+      "integrity": "sha512-PdsSKNwkEI/eMfS/zuf5CLt+NhPBqM0TrDTKK7A9524XGLCGL6k7t1KhqONoE3v5DtmuJ4EKHsxXVS8lpeMzcw==",
+      "fileCount": 64,
+      "status": "ready",
+      "file": "composable-svelte-maps-0.4.0.tgz"
+    },
+    {
+      "name": "@composable-svelte/chat",
+      "version": "0.6.0",
+      "sha256": "033bd36ecfb07684cd4f8eb3e976778ed041237548aad2d9f9d806a3bfec0393",
+      "integrity": "sha512-xmXU3GqmoVZL8CDNnBaSzG1IMxzA/SRAiy9gGKEnlG5EDUH5Fi4O385+Bf46mAqunqSfIo8pbk2j/e0Tdg+1Qg==",
+      "fileCount": 157,
+      "status": "ready",
+      "file": "composable-svelte-chat-0.6.0.tgz"
+    }
+  ],
+  "baseCommit": "55852fb9225cabc9f0cb2aa0f8a35f6444e6eb7e",
+  "publicationStatus": "prepared; see npm-release-receipt.md for publication verification"
+}

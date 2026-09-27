@@ -7,8 +7,8 @@ CodeEditor, CodeHighlight, and NodeCanvas row. `Host.svelte` renders their
 order, highlighting, viewport commands, and absence of integration warnings.
 
 To run it in a Svelte/Vite consumer that has installed compatible versions of
-`@composable-svelte/core` (`^0.13.1`), `@composable-svelte/code` (`^0.5.0`), Svelte
-(`^5.30.0`; checked at 5.30.0 and 5.55.3, not every patch in between), Vitest, Playwright,
+`@composable-svelte/core` (`^0.14.0`), `@composable-svelte/code` (`^0.6.0`), Svelte
+(`^5.30.0`; Svelte 5.30.0 and 5.55.3 were checked before this release, not every patch in between), Vitest, Playwright,
 `@vitest/browser-playwright`, and `@sveltejs/vite-plugin-svelte`:
 
 ```sh

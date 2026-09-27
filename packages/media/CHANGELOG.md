@@ -5,6 +5,21 @@ All notable changes to `@composable-svelte/media` will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-09-27
+
+Requires `@composable-svelte/core` `^0.14.0` and Svelte `^5.20.0` as peers.
+
+### Added
+
+- `mediaVisualProvider()` and `liveMediaResources()`, with the types `MediaVisualProvider` and `PlayerControl`, from the package root and `@composable-svelte/media/video-embed`. The representation types `MediaRepresentation`, `MediaRepresentationContext`, `MediaRetainedRenderer` and `MediaDecline` come from `@composable-svelte/media/video-embed`.
+  - Embedded players take part in core 0.14 fluid motion: a keyed player is adopted across the commit rather than restarted.
+  - A player that cannot move settles its participant (`settle: true`) instead of animating a blank copy.
+- `VideoEmbed` props:
+  - `mediaKey`, explicit adoption identity with no default;
+  - `mediaScope`;
+  - `playerControl` (`'none' | 'player-api'`);
+  - `referrerPolicy`, default `'no-referrer'`. YouTube needs `'strict-origin-when-cross-origin'`, otherwise it shows Error 153.
+
 ## [0.5.0] - 2026-09-26
 
 Requires `@composable-svelte/core` `^0.13.1` (exports `isManagedChildView` and

@@ -1,6 +1,14 @@
-# Core 0.13 release scope and migration
+# Core release scope and migration
 
-Install with `npm install @composable-svelte/core@0.13.1 svelte`. The bundled starter and executable agent examples pin this release. Read the [agent patterns](./agent-patterns.md), [executable examples](./examples/agent-patterns/README.md), and [owned-work testing guide](./testing-owned-work.md) alongside the contract.
+## Core 0.14.0
+
+`npm install @composable-svelte/core@0.14.0 svelte`. 0.14.0 adds **fluid layout motion and staged routing**, which is opt-in by import. Applications that do not use it are unaffected. The APIs are staged route requests (`useStagedRoute`, `routing.staging`, `routing.scroll`), choreography (`defineChoreography`, `useParticipant`, `useLayoutChoreography`, `<MotionPlane />`, `<Presence>`), and representation providers (`fluidMotion`, `useRepresentationProvider`). See [Fluid Layout Motion & Staged Routing](./fluid-motion.md) for the contract and its qualified limits.
+
+The coordinated companion releases are graphics `0.4.0` (`graphicsVisualProvider`, explicit WebGPU selection), media `0.6.0` (`mediaVisualProvider` and `VideoEmbed` adoption props), auth, charts and maps `0.4.0`, and code and chat `0.6.0`. Each declares `@composable-svelte/core ^0.14.0`; chat also declares `@composable-svelte/code ^0.6.0` and `@composable-svelte/media ^0.6.0`. The companions take **minor** releases rather than patches because their core peer floor rises to `^0.14.0`: under a patch, existing caret ranges could pull a companion that needs a newer core than the one installed. `@composable-svelte/architecture` stays at 0.13.1, unchanged and **not qualified** against core 0.14.
+
+## Core 0.13 release scope (earlier release)
+
+Install with `npm install @composable-svelte/core@0.13.1 svelte`. The bundled starter and executable agent examples pinned this release; they now pin 0.14.0. Read the [agent patterns](./agent-patterns.md), [executable examples](./examples/agent-patterns/README.md), and [owned-work testing guide](./testing-owned-work.md) alongside the contract.
 
 ## Supported scope
 

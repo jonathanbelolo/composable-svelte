@@ -1,8 +1,8 @@
 # Fluid layout motion: acceptance and reproduction
 
 The feature is accepted by Main and the Opus co-lead and committed in
-`68b31d38c01b6441e5d94c063570e65b3d924bb9`. It is **unreleased**; use this branch
-until the next package releases include it. This work does not publish packages.
+`68b31d38c01b6441e5d94c063570e65b3d924bb9`. It is prepared for release in core 0.14.0,
+graphics 0.4.0 and media 0.6.0, with the coordinated companion releases. This record does not itself publish packages.
 Start with the
 [public authoring guide](../../../packages/core/docs/fluid-motion.md) and the
 [runnable reference](../../../examples/fluid-motion-reference/README.md).

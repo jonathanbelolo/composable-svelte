@@ -102,7 +102,7 @@ This API animates supported declared properties. It does not provide component p
 
 The recipes above animate declared properties of elements you bind. They take effect when bound state changes, and they never delay a route commit.
 
-Whole-layout motion across a route change, or a layout change within a page, uses a different set of APIs. They are **unreleased** (next release; not in published 0.13.1):
+Whole-layout motion across a route change, or a layout change within a page, uses a different set of APIs. They are introduced in core 0.14.0:
 
 - **Across a route change**: `useStagedRoute` from `@composable-svelte/core/application`, plus `defineChoreography`, `useParticipant` and `<MotionPlane />` from `@composable-svelte/core/application/motion`. The route's domain action commits at the plan's `cueMs`, and shared surfaces finish against the new page.
 - **Within a page**: `useLayoutChoreography`, also from `@composable-svelte/core/application/motion`. Content that the commit removes goes inside `<Presence when={…}>` (same subpath), so it can hand off before Svelte removes it.

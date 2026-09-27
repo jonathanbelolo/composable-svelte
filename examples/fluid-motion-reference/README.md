@@ -4,8 +4,7 @@ An architecture-archive gallery that exercises fluid layout motion end to end. I
 `@composable-svelte/core` (`/`, `/application`, `/application/motion`) and `@composable-svelte/graphics`. It covers the four reference
 scenarios in [`specs/frontend/fluid-layout-motion-design.md`](../../specs/frontend/fluid-layout-motion-design.md).
 
-**Status: unreleased — next release.** The example is implemented and accepted with the fluid-motion feature in this branch. It uses APIs that
-the published packages do not include yet (core 0.13.1, graphics 0.3.0), so it runs only against this workspace's builds (`workspace:*`). The final
+**Status:** implemented and accepted with the fluid-motion feature. It uses APIs introduced in core 0.14.0 and graphics 0.4.0, and in this repository it runs against the workspace builds (`workspace:*`). The final
 integration run is 42/42 browser tests and 3/3 SSR, on the final core and graphics builds. See the [acceptance README](../../docs/development/fluid-motion/README.md) and the
 [reference integration report](../../docs/development/fluid-motion/remaining-reference-integration-report.md).
 

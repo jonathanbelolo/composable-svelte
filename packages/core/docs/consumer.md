@@ -6,7 +6,7 @@ Read the [application authoring contract](./application-contract.md) first. It
 defines the required managed application path, responsibility boundaries and
 how to report unsupported requirements.
 
-For core 0.13, start with `npm install @composable-svelte/core@0.13.1 svelte`.
+For core 0.14, start with `npm install @composable-svelte/core@0.14.0 svelte`.
 The checker is not required. Do not install it as part of the recommended setup.
 Read the [agent patterns](./agent-patterns.md), [executable examples](./examples/agent-patterns/README.md),
 and [owned-work testing guide](./testing-owned-work.md) before implementation.
@@ -35,6 +35,10 @@ Use `useMotion` or `useMotionGroup` from `@composable-svelte/core/application/mo
 inside a managed application. The [motion guide](./application-motion.md) includes
 compiled single-target and grouped examples, reduced-motion behavior and cleanup.
 See the [release limits](./prerelease.md) for presentation animation bridges.
+
+For motion across a route change or a whole-layout change within a page (0.14.0), use
+[fluid layout motion](./fluid-motion.md): `useStagedRoute` with `defineChoreography` plans,
+`useLayoutChoreography`, `useParticipant`, `<Presence>` and `<MotionPlane />`. It is opt-in by import.
 
 ## State, dependencies and lifecycle
 

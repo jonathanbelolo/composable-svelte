@@ -5,9 +5,31 @@ All notable changes to `@composable-svelte/graphics` will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**Scope note.** `engine: 'webgpu'` is an accepted option that runs WebGL. Real
-WebGPU is `WebGPUEngine` with its own async initialisation, and it is not built.
+**Scope note (through 0.3.0).** `engine: 'webgpu'` is an accepted option that runs WebGL. From 0.4.0, real
+WebGPU is available on explicit request with `new BabylonAdapter({ renderer: 'webgpu' })` (Babylon.js `WebGPUEngine`).
 See the README.
+
+## [0.4.0] - 2026-09-27
+
+Requires `@composable-svelte/core` `^0.14.0` and Svelte `^5.20.0` as peers.
+
+### Added
+
+- `graphicsVisualProvider()` and its types (`RenderAuthority`, `GraphicsVisualProvider`, `GraphicsRepresentation`, `GraphicsRepresentationContext`, `GraphicsRetainedRenderer`).
+  - A scene keeps rendering past its retirement during core 0.14 fluid motion (`fluidMotion`).
+  - The retained surface is owned and disposed with the representation.
+- Explicit WebGPU: `new BabylonAdapter({ renderer: 'webgpu' })` with `BabylonAdapterOptions`, using Babylon.js `WebGPUEngine` loaded on demand.
+  - WebGL remains the default.
+  - `activeRenderer` reports `'webgpu'` only when this path is taken (the scope note below applies through 0.3.0).
+- `<Scene>` `label` prop: the canvas's accessible name, with `role="img"`.
+- Document-order canvas focus.
+
+### Known limits
+
+- **Mount cost depends on the WebGL backend (WebGL figures).**
+  - On hardware WebGL (ANGLE Metal, M3 Max, with parallel shader compilation) a `<Scene>` mount took about 25–35 ms cold and about 15 ms warm, with no long task in the measured after-change runs.
+  - Under software WebGL (headless Chromium's default SwiftShader, without `KHR_parallel_shader_compile`), each mount shows one ~150 ms long task. The fluid-motion reference study measured ~150–157 ms per destination `Scene` mount there.
+  - WebGPU mounts were not timed. Other GPUs were not measured. See the README's performance section.
 
 ## [0.3.0] - 2026-09-26
 

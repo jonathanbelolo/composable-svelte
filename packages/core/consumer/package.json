@@ -14,7 +14,7 @@
     "test:ssr": "node scripts/ssr.mjs"
   },
   "dependencies": {
-    "@composable-svelte/core": "0.13.1",
+    "@composable-svelte/core": "0.14.0",
     "svelte": "5.57.0"
   },
   "devDependencies": {

@@ -2,9 +2,9 @@
 
 Staged routing lets a routed application animate a whole layout across a route change. The framework measures the current page, plays a declared choreography on a motion plane, commits the route's domain action at a cue point, and finishes the motion against the new page. Applications do not own history writers, timers, element clones or coordinators.
 
-> **Unreleased.** These APIs are on the development branch for the **next release**. They are not in the published `@composable-svelte/core` 0.13.1, and the graphics and media providers they mention are not in the published `@composable-svelte/graphics` 0.3.0 or `@composable-svelte/media` 0.5.0. Once released they follow the 0.x line, where a minor release may still change them (see [Versioning](https://github.com/jonathanbelolo/composable-svelte/blob/codex/fluid-layout-motion/README.md#versioning)).
+> **Introduced in `@composable-svelte/core` 0.14.0.** The first-party providers mentioned here are introduced in `@composable-svelte/graphics` 0.4.0 (`graphicsVisualProvider`) and `@composable-svelte/media` 0.6.0 (`mediaVisualProvider`). Earlier versions (core 0.13.x, graphics 0.3.x, media 0.5.x) do not include these APIs. They follow the 0.x line, where a minor release may still change them (see [Versioning](https://github.com/jonathanbelolo/composable-svelte/blob/codex/fluid-layout-motion/README.md#versioning)).
 
-Everything below is compiled, run with TestStore and server rendering, and played in Chromium by `docs/development/fluid-motion/guidance-example-check` against the package exports. Participants are styled like any other markup: grid, flex, gradients, positioning, pseudo-elements, SVG, canvas and video are represented as they are painted (§8). Do not restyle a page to make it animate.
+Everything below is compiled, run with TestStore and server rendering, and played in Chromium by [`guidance-example-check`](https://github.com/jonathanbelolo/composable-svelte/tree/codex/fluid-layout-motion/docs/development/fluid-motion/guidance-example-check) against the package exports. Participants are styled like any other markup: grid, flex, gradients, positioning, pseudo-elements, SVG, canvas and video are represented as they are painted (§8). Do not restyle a page to make it animate.
 
 Use something else when:
 
