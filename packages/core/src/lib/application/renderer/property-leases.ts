@@ -11,6 +11,11 @@ export interface PropertyLease {
   readonly live: boolean;
   write(value: string): void;
   release(): void;
+  /**
+   * Retire without restoring: for a node leaving the document in this same flush (value handoff at
+   * beforeRemoval). No stable value is written; cleanup still runs. A newer holder is unaffected.
+   */
+  abandon(): void;
 }
 interface Channel {
   stable: string;
@@ -32,8 +37,13 @@ export class PropertyAuthority {
   constructor(private write: (property: Property, value: string) => void, private readonly onError: (error: unknown) => void = error => console.error('[Composable Svelte] Property cleanup error:', error)) {}
 
   get hasLeases():boolean{return [...this.channels.values()].some(channel=>channel.current!==undefined);}
+  /** Read-only ownership inspection for cooperating writers (choreography): current lease, group, stable. */
+  holder(property: Property): {readonly lease: PropertyLease | undefined; readonly grouped: boolean; readonly stable: string | undefined} {
+    const channel = this.channels.get(property);
+    return {lease: channel?.current, grouped: !!channel?.group, stable: channel?.stable};
+  }
 
-  private report(error:unknown):void{try{void Promise.resolve(this.onError(error)).catch(()=>{});}catch{}}
+  report(error:unknown):void{try{void Promise.resolve(this.onError(error)).catch(()=>{});}catch{}}
 
   /** Remove one retiring registration's legacy projections; nothing is rewritten. */
   withdraw(source: object): void {
@@ -73,6 +83,12 @@ export class PropertyAuthority {
     const lease: PropertyLease = {
       get live() { return !retired && !authority.disposed && alive() && channel.current === lease; },
       write(value) { if (lease.live) authority.write(property, value); },
+      abandon() {
+        if (retired) return;
+        retired = true;
+        if (channel.current === lease) channel.current = undefined;
+        try { cleanup(); } catch (error) { authority.report(error); }
+      },
       release() {
         if (retired) return;
         retired = true;

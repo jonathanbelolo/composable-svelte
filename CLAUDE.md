@@ -63,7 +63,7 @@ The store uses `$state.raw()` internally (in `store.svelte.ts`), making `store.s
 ### Key Patterns to Follow
 
 1. **State Management**: All persistent state belongs in the store. Use `$state` only for local component state (UI-only, ephemeral).
-2. **Animation**: State-driven animations with Motion One + PresentationState. CSS only for infinite loops (spinners, skeletons).
+2. **Animation**: State-driven animations with Motion One + PresentationState for overlay lifecycles, compiled recipes (`useMotion`, `useMotionGroup`) for declared properties, and staged fluid motion (`useStagedRoute`, `defineChoreography`, `<MotionPlane />`) for cross-route layout transitions. CSS only for infinite loops (spinners, skeletons). See `packages/core/docs/fluid-motion.md` and `packages/core/docs/application-motion.md`.
 3. **Testing**: Use TestStore with send/receive for exhaustive reducer testing.
 4. **Navigation**: Prefer parent observation for dismissal when the parent needs to react. The dismiss dependency is fine for simple close actions.
 
@@ -405,13 +405,15 @@ This library is heavily inspired by TCA for Swift but adapted for Svelte/TypeScr
 - ✅ **Dismiss Dependency**: Children can dismiss themselves via `deps.dismiss()`
 - ✅ **Case Paths**: Type-safe path strings for action matching
 
-### Animation (Phase 4)
+### Animation & Fluid Motion (Phase 4 & Fluid Motion)
 - ✅ **PresentationState**: Lifecycle tracking (idle → presenting → presented → dismissing)
 - ✅ **Motion One**: State-driven animations for component lifecycles (Modal, Sheet, Drawer, Dropdown, etc.)
 - ✅ **Animation Helpers**: `animateModalIn/Out`, `animateSheetIn/Out`, `animateAccordionExpand/Collapse`, etc.
 - ✅ **Effect.afterDelay**: Timing-based effects for animation coordination
 - ✅ **State Guards**: Prevent invalid animation transitions
 - ✅ **CSS Animations**: Only for infinite loops (Spinner, Skeleton) - no CSS transitions for hover/focus
+- ✅ **Compiled Recipes**: `defineMotionRecipe`, `useMotion`, `useMotionGroup` from `@composable-svelte/core/application/motion` for declared property transitions (see `packages/core/docs/application-motion.md`)
+- ✅ **Fluid Layout Motion & Staged Routing**: `defineChoreography`, `useParticipant`, `MotionPlane`, `useLayoutChoreography`, `useStagedRoute` for cross-route and whole-layout choreography without app-owned timers (see `packages/core/docs/fluid-motion.md`)
 
 ### Component Library (Phase 6)
 - ✅ **77 shadcn-svelte Components**: Complete UI component library
@@ -571,20 +573,19 @@ export default {
 
 ### Animation System Implementation
 
-**IMPLEMENTATION**: **State-Driven Animations with Motion One**
+**IMPLEMENTATION**: **State-Driven Animations and Fluid Layout Motion**
 
-**Core Architecture**: All component lifecycle animations use **Motion One** with state-driven patterns:
-- State-driven animation coordination via PresentationState
-- Animation helpers in `packages/core/src/animation/animate.ts`
-- Lifecycle: idle → presenting → presented → dismissing
-- GPU-accelerated via Web Animations API
-- Predictable, testable animation flows
+**Architecture Layers**:
+1. **Component Lifecycle Animations (Motion One)**: State-driven animation coordination via `PresentationState` and helpers in `packages/core/src/animation/animate.ts` (lifecycle: `idle → presenting → presented → dismissing`, GPU-accelerated via Web Animations API).
+2. **Compiled Motion Recipes**: `defineMotionRecipe`, `useMotion`, `useMotionGroup` from `@composable-svelte/core/application/motion` for declared property transitions within a component (see `packages/core/docs/application-motion.md`).
+3. **Fluid Layout Motion & Staged Routing (opt-in)**: `useStagedRoute` from `@composable-svelte/core/application`; `defineChoreography`, `useParticipant`, `<MotionPlane />`, `useLayoutChoreography` from `@composable-svelte/core/application/motion`. Use them for cross-route multi-element transitions and intra-page layout shifts. Participants keep their normal styling; optional `visual: fluidMotion({ ... })` on `defineApplication` adds representation providers, a preparation budget, native snapshots and public diagnostics (see `packages/core/docs/fluid-motion.md`).
 
-**When to Use Motion One (REQUIRED)**:
-1. **Component Lifecycle Animations**: Modal/Dialog fade/scale, Dropdown appear/disappear, Sheet slide in/out
-2. **Expand/Collapse Animations**: Accordion items, Collapsible sections, height transitions
-3. **Toast/Alert Animations**: Slide in from edge, Notification animations
-4. **Navigation Animations**: Page transitions, Stack push/pop, route changes
+**When to Use Which System**:
+1. **Component Lifecycle Animations**: Modal/Dialog fade/scale, Dropdown appear/disappear, Sheet slide in/out (`PresentationState` + Motion One).
+2. **Declared Property Recipes**: Element/group toggle states, disclosure, property transitions (`defineMotionRecipe` + `useMotion` / `useMotionGroup`).
+3. **Navigation Animations**: Stack push/pop and ordinary page transitions (`AnimatedNavigationStack`, `PresentationState` + Motion One). These keep working unchanged; staging is opt-in.
+4. **Cross-Route Layout Choreography**: Whole-layout choreography across route boundaries, shared hero surfaces, coordinated exits/entrances (`useStagedRoute` + `defineChoreography` + `<MotionPlane />`).
+5. **Intra-Page Layout Shifts**: Multi-element choreography triggered by in-page state changes without URL mutation (`useLayoutChoreography` + `defineChoreography`).
 
 **Animation Helpers** (`animate.ts`):
 ```typescript

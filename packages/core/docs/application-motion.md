@@ -97,3 +97,14 @@ The renderer reads `(prefers-reduced-motion: reduce)`. When it matches, state ch
 Bindings belong to the enclosing `ApplicationHost`. Component teardown disconnects targets, cancels active work, and prevents later writes to retired elements. Do not retain an attachment or call it from a different host. Ordinary Svelte conditional rendering is enough; attach the handle whenever the target is present and let component teardown release it.
 
 This API animates supported declared properties. It does not provide component presentation or dismissal authority, replace CSS layout, or make arbitrary DOM mutation safe. The prerelease installed-package qualification exercises the same one-target and sequence patterns, including reduced-motion endpoints and teardown during playback.
+
+## Compiled recipes vs. staged fluid motion
+
+The recipes above animate declared properties of elements you bind. They take effect when bound state changes, and they never delay a route commit.
+
+Whole-layout motion across a route change, or a layout change within a page, uses a different set of APIs:
+
+- **Across a route change**: `useStagedRoute` from `@composable-svelte/core/application`, plus `defineChoreography`, `useParticipant` and `<MotionPlane />` from `@composable-svelte/core/application/motion`. The route's domain action commits at the plan's `cueMs`, and shared surfaces finish against the new page.
+- **Within a page**: `useLayoutChoreography`, also from `@composable-svelte/core/application/motion`.
+
+Both animate only inside a mounted `ApplicationHost`. During SSR, under reduced motion, or without a Host, they commit without choreography. See [Fluid Layout Motion & Staged Routing](./fluid-motion.md).

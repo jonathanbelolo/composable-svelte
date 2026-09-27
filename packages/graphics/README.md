@@ -4,7 +4,7 @@ State-driven WebGL graphics package for Composable Svelte.
 
 ## Features
 
-- ✅ **WebGL**: Babylon.js `Engine`. WebGPU is *not* implemented — see Renderer below.
+- ✅ **WebGL** by default: Babylon.js `Engine`. **WebGPU** on explicit request: Babylon.js `WebGPUEngine`, loaded on demand — see Renderer below.
 - ✅ **State-Driven**: All scene state managed through pure reducers
 - ✅ **Declarative API**: Svelte components for scene composition
 - ✅ **Type-Safe**: Full TypeScript support
@@ -75,6 +75,9 @@ Root component that manages the Babylon.js engine and renders the 3D scene.
 - `createAdapter?`: `() => GraphicsAdapter` (optional) — creates a fresh adapter for this attachment. When omitted, `<Scene>` creates a `BabylonAdapter`. The scene owns and disposes the adapter returned by the factory; return a new instance for each mount or replacement. `initialize(canvas)` must resolve `{ renderer: 'webgl', capabilities }`, and `dispose()` must release its resources. A retired scene waits for an in-flight initialization to settle, then disposes the result once.
 - `width?`: string | number (default: '100%')
 - `height?`: string | number (default: '600px')
+- `label?`: string (default: `'Interactive 3D scene'`). The canvas's accessible name, rendered as `role="img"` with `aria-label`. Name what the scene shows, for example `"Pavilion model — drag or use arrow keys to orbit"`.
+
+**Input and focus.** With the default adapter, the canvas is a real camera control: drag to orbit, the wheel to zoom, and arrow keys to orbit while it has focus. Once the camera's inputs attach, the canvas becomes focusable at `tabindex="0"`, in document order. Babylon's own default is a positive tab index, which would move the canvas ahead of the rest of the page. Before initialisation, and if initialisation fails, the canvas is not a tab stop.
 
 `BabylonAdapter` is exported alongside these. It is the imperative class
 `<Scene>` drives Babylon.js *through*, not a way of driving `<Scene>` — reach for
@@ -264,6 +267,34 @@ When a managed view is retired (for example, when the parent reducer transitions
 - **In-flight Babylon Async Initialization**: If Babylon is still asynchronously initializing its engine when the view is retired, delivery is cancelled immediately. When the engine resolution eventually settles, it is promptly disposed (exactly once), and no late callbacks or `rendererInitialized` actions are dispatched.
 - **WebGLOverlay Immediate Teardown**: When bound to a managed `owner`, `WebGLOverlay` immediately halts its animation loop and destroys WebGL shaders and textures upon retirement, preventing callback leaks.
 - **Sibling Isolation**: Multiple scenes (sibling features or multiple outlets) maintain independent engine instances and render loops. Disposing or retiring one scene leaves sibling RAF loops and WebGL contexts intact.
+
+The one exception is a canvas that a fluid-motion run is representing, described next. Without such a run, retirement behaves exactly as listed above.
+
+### Fluid Motion: Rendering Past Retirement
+
+A route transition can keep an outgoing `<Scene>` or `<WebGLOverlay>` moving on screen after its feature retires. Add the package's representation provider to the application's visual configuration:
+
+```ts
+import { fluidMotion } from '@composable-svelte/core/application/motion';
+import { graphicsVisualProvider } from '@composable-svelte/graphics';
+
+export const application = defineApplication(composition, {
+  initialState,
+  routing,
+  visual: fluidMotion({ providers: [graphicsVisualProvider()] })
+});
+```
+
+No component code is needed: `<Scene>` and `<WebGLOverlay>` register their canvases once they have initialised. While a run represents a canvas, the run shows a mirror that is copied from every rendered frame. When the feature retires, render authority passes from the component to the run:
+
+- **The store ties end at retirement.** The subscription is cut, no reducer runs and nothing dispatches. The component's render loop, camera controls, resize and position tracking stop. The overlay drops its consumer callbacks.
+- **Visual progression continues.** Each run frame draws the scene. Anything the renderer advances by itself keeps moving: the engine clock, camera inertia, Babylon animatables and `onBeforeRender` observers, and overlay `uTime`/`uDeltaTime` shaders.
+- **Declared animations continue visually.** `startAnimation` descriptors that were playing, such as a looping turntable, are continued from a data snapshot. They run on the reducer's own clock with the same easing and loop math, so the outgoing copy stays in phase with a destination that renders the same shared state. Every other state change ends on the last synced pose.
+- **Nothing is seeded.** A destination that should show the same scene reads it from its own application state.
+- **Release happens exactly once** on every path: settle, supersession, Host teardown, context loss or a render failure. The run releases the engine or GPU context. A successor run adopts the same objects without restarting them. If the context is lost during retention, drawing stops, the last frame stays, and the run is told `contextLost`.
+- **Reduced motion** gives a single static frame instead.
+
+Without a representing run, owner retirement and unmount release immediately, as before. A custom `GraphicsAdapter` takes part by implementing `renderAuthority()` (see the `RenderAuthority` type). An adapter without it is not represented by this provider, and the framework's built-in canvas mirror applies instead.
 
 ## Examples
 
@@ -511,24 +542,52 @@ fixed presets do not cover.
 
 ## Renderer
 
-**WebGL, via Babylon's `Engine`. Always.**
+**WebGL by default, via Babylon's `Engine`. WebGPU only when you ask for it.**
 
-This used to claim automatic WebGPU with a WebGL fallback. It never did that:
-both branches of the "detection" constructed the same `new Engine(canvas, …)`,
-and the WebGPU branch's own comment said Babylon would handle it. Detecting a
-WebGPU adapter changed no rendering — only the label reported as
-`renderer.activeRenderer`, which said `webgpu` while WebGL ran, alongside
-`supportsWebGL: false`.
+```svelte
+<script lang="ts">
+  import { Scene, BabylonAdapter } from '@composable-svelte/graphics';
+</script>
 
-Real WebGPU means Babylon's `WebGPUEngine` and its separate async
-initialisation. That is unbuilt, and recorded as a gap rather than claimed.
-`activeRenderer` now reports `'webgl'`, which is what is running.
+<!-- Babylon's WebGPUEngine, on a real WebGPU adapter -->
+<Scene {store} label="Pavilion model" createAdapter={() => new BabylonAdapter({ renderer: 'webgpu' })} />
+```
+
+- `new BabylonAdapter()` / `{ renderer: 'webgl' }` (default) builds Babylon's WebGL `Engine`.
+- `{ renderer: 'webgpu' }` imports Babylon's `WebGPUEngine` on demand. It is emitted as separate lazy chunks that WebGL consumers never load (the bytes ship with the build; they are not eagerly loaded).
+  It checks for WebGPU, then awaits the engine's async initialisation.
+- **There is no silent fallback.** If WebGPU is unavailable, or no adapter or device can be obtained, `initialize` rejects and `<Scene>`
+  dispatches `rendererError`. Retrying with WebGL is the application's explicit choice.
+- `activeRenderer` names the engine that actually renders (`'webgl'` or `'webgpu'`); `capabilities.supportsWebGL` is `false`
+  under WebGPU.
+- Built-in materials use WGSL, so this package's meshes need no GLSL toolchain. Babylon would fetch that toolchain (glslang/twgsl) from
+  its CDN only if a custom GLSL material were compiled for WebGPU. This package adds none.
+- The retained representation path (`graphicsVisualProvider`) works identically for both engines. The WebGPU canvas is mirrored
+  right after each frame.
+
+Qualification (real Metal-3 adapter, not a fallback) is recorded in
+`docs/development/fluid-motion/remaining-webgpu-coverage-report.md`. Headless Chromium exposes no WebGPU adapter by default,
+and `--enable-unsafe-webgpu` alone gives the SwiftShader fallback. The isolated suite `graphics.webgpu.browser.config.ts` requests
+the Metal backend.
+
+The history, briefly: an earlier version claimed automatic WebGPU with a WebGL fallback, while both branches built the same WebGL
+`Engine` and only the label changed. The explicit option above replaces that.
 
 ```svelte
 {#if $store.renderer.isInitialized}
   <p>Renderer: {$store.renderer.activeRenderer}</p>
 {/if}
 ```
+
+### What it costs
+
+The figures below were measured with `docs/development/fluid-motion/graphics-cost-evidence/`, in Chromium on one machine (Apple M3 Max): hardware GL through ANGLE Metal, and software GL through SwiftShader. Other GPUs, drivers and browsers were not measured.
+
+- **Bundle.** The adapter imports the Babylon modules it uses directly, not the `@babylonjs/core` barrel. Babylon marks every file as having side effects, so the barrel import bundled the whole library. For an app that imports `Scene`, the largest emitted chunk is now about 1.18 MB minified / 280 KB gzip, down from 5.75 MB / 1.26 MB. That is the eagerly loaded chunk, not everything emitted: the build now emits 50 chunks totalling about 1.55 MB minified (before: 10 chunks, 5.76 MB), because material shaders are split into chunks that load on demand. `WebGLOverlay` and the reducer do not include Babylon.
+- **Mounting a `Scene`.** Each `<Scene>` creates its own engine and WebGL context. On the main thread, mounting takes about 25–35 ms cold and about 15 ms when the module is already loaded: engine and scene about 17–23 ms, scene sync about 7 ms, first frame about 5 ms.
+  - In the measured after-change hardware runs (ANGLE Metal on the M3 Max, with parallel shader compilation, at DPR 1 and 2) there was no long task. One before-change hardware run at DPR 2 showed an 89 ms long task during the cold mount. This was not measured on other GPUs.
+  - Under software WebGL (headless Chromium's default SwiftShader, which has no `KHR_parallel_shader_compile`), each mount shows one ~150 ms long task outside that JavaScript. Attributing it to software pipeline compilation is an inference from the hardware/software difference; the GPU process was not traced. Treat headless timings as a software-rendering worst case.
+- **Fluid-motion mirror.** While a run represents a canvas, each frame is copied into its mirror. The measured figure is the main-thread time of the synchronous `drawImage` call inside the frame observer: ≤ 0.1 ms per frame on ANGLE Metal (M3 Max). That is CPU and submission time only; when the GPU completes the copy, and what it costs there, was not measured. Under SwiftShader the call is a CPU readback: about 7 ms at 960×540 and about 19 ms at 1920×1080.
 
 ### Graphics regression checks
 

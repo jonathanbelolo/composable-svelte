@@ -1,0 +1,6 @@
+{
+  "name": "fluid-motion-shadow-coverage-check",
+  "private": true,
+  "type": "module",
+  "description": "Closed-shadow participation witnesses through the public @composable-svelte/core package (built dist, linked by link.sh)."
+}

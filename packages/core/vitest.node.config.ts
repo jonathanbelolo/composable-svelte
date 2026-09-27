@@ -39,6 +39,9 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: [
+      'tests/fluid-motion/channels*.test.ts',
+      'tests/fluid-motion/teststore*.test.ts',
+      'tests/fluid-motion/render-ssr.test.ts',
       'tests/ssr/motion-public-lifecycle.test.ts',
       'tests/ssr/motion-group.test.ts',
       'tests/motion-binding-policy.test.ts',

@@ -25,6 +25,17 @@ export type {
 	EmbedOptions
 } from './types.js';
 
+// Fluid-motion live handoff: pass `mediaVisualProvider()` to `fluidMotion({ providers })`.
+export { mediaVisualProvider, liveMediaResources } from './live-media.js';
+export type {
+	MediaVisualProvider,
+	MediaRepresentation,
+	MediaRepresentationContext,
+	MediaRetainedRenderer,
+	MediaDecline,
+	PlayerControl
+} from './live-media.js';
+
 // Utilities
 export {
 	detectVideo,

@@ -18,9 +18,10 @@ export class CaptureChannel {
  }
  get visualRecord():ResourceRecord{return this.record;}
  register(owner:object,surface:()=>HTMLElement|undefined):()=>void{if(!this.record.live)return()=>{};if(this.targets.has(owner))throw new Error('Duplicate outgoing owner registration');this.targets.set(owner,surface);return()=>{if(this.targets.get(owner)===surface)this.targets.delete(owner);};}
- prepare(next:readonly object[]):void{
+ prepare(next:readonly object[],claimed?:(owner:object)=>boolean):void{
   if(!this.record.live||!this.registry.isAttached)return;
-  const live=new Set(next);const outgoing=[...this.targets].filter(([owner])=>!live.has(owner));if(!outgoing.length)return;
+  // Owners claimed by a running route choreography get their removal visuals from it (no double paint).
+  const live=new Set(next);const outgoing=[...this.targets].filter(([owner])=>!live.has(owner)&&!claimed?.(owner));if(!outgoing.length)return;
   const snapshots:HTMLDivElement[]=[];
   for(const [,surface] of outgoing){
     const node=surface();

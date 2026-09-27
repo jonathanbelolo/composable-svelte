@@ -1,7 +1,17 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
+	import * as motion from '@composable-svelte/core/application/motion';
 	import type { VideoEmbed as VideoEmbedType, AspectRatio } from './types.js';
 	import type { VideoPlatform } from './types.js';
 	import { detectVideo } from './video-detection.js';
+	import {
+		claimRetainedMedia,
+		movePreserving,
+		registerLiveMedia,
+		type LiveMediaRecord,
+		type MediaVisualProvider,
+		type PlayerControl
+	} from './live-media.js';
 
 	/**
 	 * VideoEmbed Component
@@ -32,6 +42,38 @@
 
 		/** Show video title above embed (default: false) */
 		showTitle?: boolean | undefined;
+
+		/**
+		 * Explicit, stable identity for this player. Under a fluid-motion run, a
+		 * destination `VideoEmbed` with the same `mediaScope`, the same key and the
+		 * same configuration takes over the outgoing player — same playback, no
+		 * reload — instead of creating its own. A visual match alone never
+		 * transfers a player, and neither does a key without a scope.
+		 */
+		mediaKey?: string | undefined;
+
+		/**
+		 * The adoption scope: the `mediaVisualProvider()` instance this application
+		 * passes to `fluidMotion({ providers })`. Players are claimable only within
+		 * the provider that retained them, so two applications (or providers) with
+		 * the same key never take each other's player.
+		 */
+		mediaScope?: MediaVisualProvider | undefined;
+
+		/**
+		 * Opt in to the platform's documented player API, so a player that is only
+		 * leaving (not taken over) can be muted and keep playing as decoration.
+		 * For YouTube this adds `enablejsapi=1` and `origin` to the embed URL.
+		 * Without it such a player is disposed when its page retires.
+		 */
+		playerControl?: PlayerControl | undefined;
+
+		/**
+		 * The iframe's referrer policy (default `'no-referrer'`). YouTube's embedded
+		 * player requires a referrer and shows "Error 153" without one; pass
+		 * `'strict-origin-when-cross-origin'` for YouTube embeds.
+		 */
+		referrerPolicy?: ReferrerPolicy | undefined;
 	}
 
 	/**
@@ -59,7 +101,11 @@
 		autoplay = false,
 		muted = false,
 		aspectRatio,
-		showTitle = false
+		showTitle = false,
+		mediaKey,
+		mediaScope: explicitScope,
+		playerControl = 'none',
+		referrerPolicy = 'no-referrer'
 	}: Props = $props();
 
 	/**
@@ -126,11 +172,102 @@
 			embed.searchParams.set('parent', window.location.hostname);
 		}
 
+		// Only on explicit opt-in: the documented YouTube IFrame API channel. The
+		// caller's own parameters are kept; nothing else changes.
+		if (playerControl === 'player-api' && video.platform === 'youtube') {
+			embed.searchParams.set('enablejsapi', '1');
+			if (typeof window !== 'undefined') embed.searchParams.set('origin', window.location.origin);
+		}
+
 		return embed.toString();
 	});
 
+	// The adoption scope: an explicit `mediaScope` first; otherwise the `media`
+	// provider the enclosing application configured (core's read-only lookup,
+	// resolved once at initialisation); otherwise none — outside an application
+	// host, during SSR, or with a core that predates the lookup — and then no
+	// player is ever claimed or made claimable.
+	const lookup = (motion as unknown as { useRepresentationProvider?: (name: string) => unknown }).useRepresentationProvider;
+	const mediaScope = untrack(() => explicitScope) ?? (lookup?.('media') as MediaVisualProvider | undefined);
+
 	// Build iframe allow attribute
 	const iframeAllow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+	const iframeSandbox = 'allow-scripts allow-same-origin allow-presentation';
+
+	// What a destination must match to take a player over: the same document and
+	// the same capabilities, so adoption never changes what the player may do.
+	const record = $derived<LiveMediaRecord | null>(
+		video
+			? {
+					platform: video.platform,
+					key: mediaKey,
+					scope: mediaScope,
+					signature: [embedUrl, iframeSandbox, iframeAllow, referrerPolicy].join('\n'),
+					control: playerControl
+				}
+			: null
+	);
+
+	// A retained player with this identity, claimed before any iframe of our own
+	// exists — so there is no second request, player or ad. Browser-only: the
+	// server has nothing to claim.
+	// Claimed once, at initialisation, deliberately (untracked): identity does not
+	// re-claim when props change later.
+	// State, not a constant: once the adopted player's container is destroyed (say
+	// the video becomes invalid), the player is gone with it and a later valid
+	// video gets this component's own iframe — a destroyed browsing context is
+	// never moved again.
+	let claimed = $state<HTMLIFrameElement | null>(
+		untrack(() =>
+			typeof window !== 'undefined' && mediaScope && mediaKey && record
+				? claimRetainedMedia(mediaScope, mediaKey, record.signature)
+				: null
+		)
+	);
+
+	/** Register the iframe this component owns, for the fluid-motion handoff. */
+	function liveMedia(iframe: HTMLIFrameElement, current: LiveMediaRecord | null) {
+		const registration = current ? registerLiveMedia(iframe, current) : null;
+		return {
+			update: (next: LiveMediaRecord | null) => {
+				if (next) registration?.update(next);
+			},
+			destroy: () => registration?.release()
+		};
+	}
+
+	/** Take the claimed player into this component's own place, and own it. */
+	function adopt(container: HTMLElement, current: LiveMediaRecord | null) {
+		const player = claimed;
+		if (!player || !player.isConnected) {
+			claimed = null;
+			return {};
+		}
+		movePreserving(container, player);
+		const registration = liveMedia(player, current);
+		return {
+			update: registration.update,
+			destroy: () => {
+				registration.destroy();
+				if (claimed === player) claimed = null;
+			}
+		};
+	}
+
+	// An adopted player is this component's iframe from then on, so it follows
+	// the same props the declarative one does: the same attributes, kept in sync.
+	// A changed URL navigates it, exactly as a changed `src` binding would.
+	$effect(() => {
+		if (!claimed) return;
+		if (claimed.getAttribute('src') !== embedUrl) claimed.src = embedUrl;
+		claimed.title = title();
+		claimed.setAttribute('aria-label', `${platformName()} video player`);
+		claimed.setAttribute('allow', iframeAllow);
+		claimed.setAttribute('sandbox', iframeSandbox);
+		claimed.setAttribute('referrerpolicy', referrerPolicy);
+	});
+
+	const title = () => video?.title || `${platformName()} video player`;
 
 	// Get platform display name.
 	//
@@ -165,20 +302,26 @@
 		</div>
 	{/if}
 
-	<div class="video-embed__container" style="padding-bottom: {aspectRatioPadding()};">
-		<iframe
-			src={embedUrl}
-			title={video.title || `${platformName()} video player`}
-			class="video-embed__iframe"
-			frameborder="0"
-			allow={iframeAllow}
-			allowfullscreen
-			loading="lazy"
-			sandbox="allow-scripts allow-same-origin allow-presentation"
-			referrerpolicy="no-referrer"
-			aria-label={`${platformName()} video player`}
-		></iframe>
-	</div>
+	{#if claimed}
+		<!-- The adopted player moves in here, keeping its playback: see `adopt`. -->
+		<div class="video-embed__container" style="padding-bottom: {aspectRatioPadding()};" use:adopt={record}></div>
+	{:else}
+		<div class="video-embed__container" style="padding-bottom: {aspectRatioPadding()};">
+			<iframe
+				src={embedUrl}
+				title={title()}
+				class="video-embed__iframe"
+				frameborder="0"
+				allow={iframeAllow}
+				allowfullscreen
+				loading="lazy"
+				sandbox={iframeSandbox}
+				referrerpolicy={referrerPolicy}
+				aria-label={`${platformName()} video player`}
+				use:liveMedia={record}
+			></iframe>
+		</div>
+	{/if}
 </div>
 {/if}
 

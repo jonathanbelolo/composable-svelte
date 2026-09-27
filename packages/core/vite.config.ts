@@ -28,6 +28,9 @@ export default defineConfig({
     // Test file patterns
     include: ['tests/**/*.{test,spec}.{js,ts}', 'tests/**/*.test.svelte.ts'],
     exclude: [
+      'tests/fluid-motion/channels*.test.ts',
+      'tests/fluid-motion/teststore*.test.ts',
+      'tests/fluid-motion/render-ssr.test.ts',
       // Lifecycle unit/SSR suites belong to the Node runner, never browser dependency scanning.
       'tests/motion-binding-policy.test.ts',
       'tests/motion-group-lifecycle.test.ts',

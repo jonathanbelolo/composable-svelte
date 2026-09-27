@@ -19,6 +19,11 @@ export default defineConfig({
       provider: playwright(),
       instances: [{ browser: 'chromium' }]
     },
-    include: ['tests/shaders/gpu-presets.browser.ts', 'tests/babylon-native.browser.ts']
+    include: [
+      'tests/shaders/gpu-presets.browser.ts',
+      'tests/babylon-native.browser.ts',
+      'tests/representation-retained.browser.ts',
+      'tests/scene-focus.browser.ts'
+    ]
   }
 });

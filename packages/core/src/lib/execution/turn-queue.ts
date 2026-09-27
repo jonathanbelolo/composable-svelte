@@ -47,6 +47,18 @@ export type TurnEvent<State, Action> =
     | {readonly type: 'committed'; readonly envelope: TurnEnvelope<Action>; readonly state: State}
     | {readonly type: 'rejected'; readonly envelope: TurnEnvelope<Action>; readonly error: unknown}
     | {readonly type: 'dropped'; readonly envelope: TurnEnvelope<Action>; readonly reason: 'stale-owner' | 'destroyed'};
+/** A resolved inspection reserves the next FIFO position for `action`. `settled` runs after that
+ * turn's state, action and delivery notifications, before its effects; never for dropped/rejected turns. */
+export interface InspectionResolution<Action> {
+    readonly action: Action;
+    readonly settled?: (() => void) | undefined;
+    /**
+     * `report`: a rejected reserved turn goes to the runtime failure sink (`reportFailure(error,
+     * 'reduction')`), like effect-dispatched work, instead of being rethrown to whichever call happened to
+     * drain the queue. Its observer still sees `rejected`. Default: the existing synchronous rethrow.
+     */
+    readonly failure?: 'throw' | 'report' | undefined;
+}
 /** Private FIFO inspection; a skipped inspection is not an application action. */
 export type InspectionEvent<State, Action> = TurnEvent<State, Action>
     | {readonly type: 'skipped'; readonly state: State}
@@ -55,7 +67,7 @@ export type InspectionEvent<State, Action> = TurnEvent<State, Action>
 interface InspectionCommand<State, Action> {
     readonly control: 'inspect';
     readonly origin: OwnerToken | undefined;
-    readonly resolve: () => {readonly action: Action} | undefined;
+    readonly resolve: () => InspectionResolution<Action> | undefined;
     readonly observer: (event: InspectionEvent<State, Action>) => void;
 }
 export interface TurnQueueOptions<State, Action, Dependencies = any> {
@@ -92,6 +104,17 @@ export class TurnQueue<State, Action, Dependencies = any> {
     private isDraining = false;
     private destroyed = false;
     private readonly terminalObservers = new WeakMap<TurnEnvelope<Action>, (event: TurnEvent<State, Action>) => void>();
+    private readonly settlementObservers = new WeakMap<TurnEnvelope<Action>, () => void>();
+    private readonly reportedFailures = new WeakSet<TurnEnvelope<Action>>();
+    /** Rejection routing for one turn: runtime sink for protocol-issued reserved turns, else rethrow. */
+    private rejectTurn(envelope: TurnEnvelope<Action>, error: unknown, capturedErrors: unknown[]): void {
+        this.observeTurn({type: 'rejected', envelope, error});
+        if (this.reportedFailures.has(envelope)) {
+            this.reportedFailures.delete(envelope);
+            this.runtimeInstance.reportFailure(error, 'reduction');
+        }
+        else capturedErrors.push(error);
+    }
     private readonly onTurnSink: ((event: TurnEvent<State, Action>) => void) | undefined;
     private readonly onStateCommittedSink: ((state: State) => void) | undefined;
     private readonly onSubscriberErrorSink: (error: unknown) => void;
@@ -153,7 +176,7 @@ export class TurnQueue<State, Action, Dependencies = any> {
         this.terminalObservers.set(envelope, observer);
         this.enqueue(envelope);
     }
-    enqueueInspection(resolve: () => {readonly action: Action} | undefined, origin: OwnerToken | undefined, observer: (event: InspectionEvent<State, Action>) => void): void {
+    enqueueInspection(resolve: () => InspectionResolution<Action> | undefined, origin: OwnerToken | undefined, observer: (event: InspectionEvent<State, Action>) => void): void {
         const command: InspectionCommand<State, Action> = {control:'inspect', resolve, origin, observer};
         if (this.destroyed) { this.observeInspection(command, {type:'inspection-dropped',reason:'destroyed'}); return; }
         if (origin !== undefined && !isOwnerLive(this.lifecycleValue, origin)) {
@@ -384,6 +407,8 @@ export class TurnQueue<State, Action, Dependencies = any> {
                         else {
                             const turn: TurnEnvelope<Action> = {action:resolved.action,origin:envelope.origin,source:'external'};
                             this.terminalObservers.set(turn,event=>this.observeInspection(envelope,event));
+                            if (resolved.settled) this.settlementObservers.set(turn,resolved.settled);
+                            if (resolved.failure === 'report') this.reportedFailures.add(turn);
                             // Preserve this reserved FIFO position ahead of later actions.
                             this.queue.unshift(turn);
                         }
@@ -440,8 +465,7 @@ export class TurnQueue<State, Action, Dependencies = any> {
                 }
                 catch (error) {
                     // Proposed reducer-throw policy: atomic failed turn.
-                    capturedErrors.push(error);
-                    this.observeTurn({type: 'rejected', envelope, error});
+                    this.rejectTurn(envelope, error, capturedErrors);
                     continue;
                 }
                 let reconciliation: Reconciliation | undefined;
@@ -465,8 +489,7 @@ export class TurnQueue<State, Action, Dependencies = any> {
                     else if (incomingEffects.length) effect = { _tag: 'Batch', effects: [effect, ...incomingEffects] };
                 }
                 catch (error) {
-                    capturedErrors.push(error);
-                    this.observeTurn({type: 'rejected', envelope, error});
+                    this.rejectTurn(envelope, error, capturedErrors);
                     continue;
                 }
                 // Publish lifecycle only after every pure part of the turn has validated.
@@ -535,6 +558,11 @@ export class TurnQueue<State, Action, Dependencies = any> {
                             this.onSubscriberErrorSink(error);
                         }
                     }
+                }
+                const settled = this.settlementObservers.get(envelope);
+                if (settled) {
+                    this.settlementObservers.delete(envelope);
+                    try { settled(); } catch (error) { this.onSubscriberErrorSink(error); }
                 }
                 if (this.destroyed) {
                     this.queue.length = 0;

@@ -19,6 +19,7 @@ import type {
   MeshConfig,
   RendererCapabilities
 } from './types.js';
+import type { RenderAuthority } from '../lib/representation/visual-provider.js';
 
 /**
  * The renderer surface the scene sync actually uses.
@@ -45,8 +46,15 @@ export interface SceneAdapter {
  * can provide mock implementations for deterministic testing.
  */
 export interface GraphicsAdapter extends SceneAdapter {
-  initialize(canvas: HTMLCanvasElement): Promise<{ renderer: 'webgl'; capabilities: RendererCapabilities }>;
+  initialize(canvas: HTMLCanvasElement): Promise<{ renderer: 'webgl' | 'webgpu'; capabilities: RendererCapabilities }>;
   dispose(): void;
+  /**
+   * Optional: the visual-only surface that lets this renderer keep drawing
+   * under a fluid-motion run after its feature retires. An adapter without it
+   * is torn down exactly as before and is not represented by
+   * `graphicsVisualProvider`.
+   */
+  renderAuthority?(): RenderAuthority | null;
 }
 
 /**

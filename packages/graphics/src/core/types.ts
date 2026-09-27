@@ -17,13 +17,12 @@ export type Color = string; // Hex color string like '#ff6b6b'
 // ============================================================================
 
 /**
- * `RendererType = 'auto' | 'webgpu' | 'webgl'` used to sit here, referenced by
- * nothing at all. `'webgpu'` was likewise unproducible in `activeRenderer`:
- * both branches of the adapter's "detection" built the same WebGL `Engine`, so
- * the label was the only thing that ever varied, and it is now always `'webgl'`.
+ * `activeRenderer` names the engine that actually renders. `'webgpu'` appears only when an adapter was
+ * explicitly constructed with `new BabylonAdapter({ renderer: 'webgpu' })` and Babylon's `WebGPUEngine`
+ * initialised on a real WebGPU device; there is no detection and no silent fallback relabelling.
  */
 export interface RendererState {
-  activeRenderer: 'webgl' | null;
+  activeRenderer: 'webgl' | 'webgpu' | null;
   isInitialized: boolean;
   capabilities: RendererCapabilities;
   error: string | null;
@@ -234,7 +233,7 @@ export interface GraphicsState {
 
 export type GraphicsAction =
   // Renderer actions
-  | { type: 'rendererInitialized'; renderer: 'webgl'; capabilities: RendererCapabilities }
+  | { type: 'rendererInitialized'; renderer: 'webgl' | 'webgpu'; capabilities: RendererCapabilities }
   | { type: 'rendererError'; error: string }
 
   // Camera actions

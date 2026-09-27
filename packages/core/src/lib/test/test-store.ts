@@ -237,6 +237,59 @@ import { DeterministicScheduler, type ExecutionScheduler } from '../execution/sc
 import { stableStringify } from '../utils/stable-stringify.js';
 import { realClearTimeout, realSetTimeout, sleep, timersAreFaked } from './real-timers.js';
 
+type TestLifecycle = Pick<typeof import('vitest'), 'onTestFinished'>;
+/**
+ * Vitest's lifecycle, resolved while this module evaluates (top-level await). Every importer,
+ * including a cold `await import()` inside a running test, therefore sees it before its first
+ * TestStore call, and the owning test's cleanup hook registers synchronously with that call.
+ * Undefined outside Vitest, where rejections are rethrown instead.
+ */
+const testLifecycle: TestLifecycle | undefined = await import('vitest').then(
+  (module): TestLifecycle => module,
+  () => undefined
+);
+import { createStagedCoordinator } from '../routing/staged/coordinator.js';
+import type {
+  ApplicationStaging,
+  ProtocolDiagnostic,
+  ProtocolEvent,
+  RequestHandle,
+  RequestId,
+  RequestResult,
+  SourceAuthorityInput,
+  StagedRequestOptions,
+  StagedRouteCoordinator,
+  StagingEligibility,
+  TransactionId,
+  VisualCuePort,
+  VisualTerminalReason
+} from '../routing/staged/types.js';
+import { isOwnerLive, type OwnerToken } from '../execution/identity.js';
+import { isCapturedView, capturedView, registerManagedRoot, type Access } from '../execution/store-access.js';
+import type { ChildView } from '../navigation/managed-integration.js';
+import { TestStagingFixture, connectStagingFixture, createStagingFixture } from './staged-fixtures.js';
+
+const STAGED_REQUEST_OPTION_KEYS: ReadonlySet<string> = new Set(['return', 'onUnavailable', 'motion', 'placement']);
+/** Explicit root request options: a plain object carrying only request option keys. */
+function isStagedRequestOptions(value: object): value is StagedRequestOptions {
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) return false;
+  return Reflect.ownKeys(value).every(key => typeof key === 'string' && STAGED_REQUEST_OPTION_KEYS.has(key));
+}
+
+/**
+ * Options for TestStore staging configuration.
+ */
+export interface TestStoreStagingOptions<State, Action, Intent> {
+  staging: ApplicationStaging<State, Action, Intent>;
+  serialize: (state: State) => string;
+  destination?: ((url: string) => string) | undefined;
+  outletAttached?: boolean | undefined;
+  eligibility?: StagingEligibility | undefined;
+  cueMode?: 'auto' | 'manual' | undefined;
+  report?: ((error: unknown) => void) | undefined;
+}
+
 /**
  * Configuration for TestStore.
  */
@@ -247,6 +300,8 @@ export interface TestStoreConfig<State, Action, Dependencies = any> {
   /** Opt-in production-equivalent FIFO execution. Default remains legacy. */
   execution?: StoreExecutionConfig<State, Action, Dependencies> | undefined;
   maxHistorySize?: number | undefined;
+  /** Explicit staging configuration for staged routing tests. */
+  staging?: TestStoreStagingOptions<State, Action, any> | undefined;
 }
 
 /**
@@ -301,6 +356,7 @@ export class TestStore<State, Action, Dependencies = any> {
   private _managedQueue: TurnQueue<State, Action, Dependencies> | undefined;
   private _managedRuntime: EffectRuntime<Action> | undefined;
   private _managedScheduler: ExecutionScheduler | undefined;
+  private _executionConfig: StoreExecutionConfig<State, Action, Dependencies> | undefined;
   private _receivedSnapshots: State[] = [];
   /** Event projection for diagnostic labels only; runtime owns liveness and cancellation. */
   private _observedResources = new Map<symbol, ResourceRecord>();
@@ -368,6 +424,31 @@ export class TestStore<State, Action, Dependencies = any> {
   /** The test finish hook: unregistered, being registered, armed, or unavailable (no test context). */
   private _hook: 'none' | 'pending' | 'armed' | 'unavailable' = 'none';
   private _hookReady: Promise<void> | null = null;
+  /** The registered managed root access; staging uses it exactly as production uses `managedRootAccess`. */
+  private _managedAccess: Access<Action> | undefined;
+  /** The production coordinator; reachable publicly only through the tracked `_stagedFacade`. */
+  private _stagedCoordinator: StagedRouteCoordinator<unknown> | undefined;
+  private _stagedFacade: StagedRouteCoordinator<unknown> | undefined;
+  private _stagingFixture: TestStagingFixture | undefined;
+  private _stagedSerialize: ((state: unknown) => string) | undefined;
+  private _fixtureConnections = new Map<TestStagingFixture, () => void>();
+  private _protocolEvents: ProtocolEvent[] = [];
+  private _unassertedProtocolEvents: ProtocolEvent[] = [];
+  /** Every staged request made through this store or its coordinator, for finish(). */
+  private _stagedRequests: RequestHandle[] = [];
+  private _protocolDiagnostics: ProtocolDiagnostic[] = [];
+
+  /**
+   * Integration seam for binding rigs (`setEligibility`, `setVisualPort`, status). Requests made
+   * through it are tracked by `finish()` like `request()`; prefer the TestStore methods in tests.
+   */
+  get stagedCoordinator(): StagedRouteCoordinator<unknown> | undefined { return this._stagedFacade; }
+  /** Active staging eligibility fixture if created or provided. */
+  get stagingFixture(): TestStagingFixture | undefined { return this._stagingFixture; }
+  /** Exhaustive transcript of all protocol events emitted by the staged coordinator. */
+  get protocolEvents(): ReadonlyArray<ProtocolEvent> { return this._protocolEvents; }
+  /** Unasserted protocol events waiting for receiveProtocol assertions. */
+  get unassertedProtocolEvents(): ReadonlyArray<ProtocolEvent> { return this._unassertedProtocolEvents; }
 
   /**
    * Control exhaustiveness checking for received actions.
@@ -376,6 +457,12 @@ export class TestStore<State, Action, Dependencies = any> {
   public exhaustivity: 'on' | 'off' = 'on';
 
   constructor(config: TestStoreConfig<State, Action, Dependencies>) {
+    if (config.staging && config.execution?.mode !== 'managed') {
+      if (config.execution?.mode !== undefined) {
+        throw new TypeError(`[TestStore] staging requires managed execution; remove execution.mode: '${config.execution.mode}' or set it to 'managed'`);
+      }
+      config = { ...config, execution: { ...config.execution, mode: 'managed' } };
+    }
     if (config.execution?.mode !== 'managed' && config.execution &&
         (config.execution.scheduler !== undefined || config.execution.slots !== undefined || config.execution._reduce !== undefined || config.execution._initial !== undefined || config.execution._initialization !== undefined || config.execution.rootThrottleCapacity !== undefined)) {
       throw new TypeError('Managed execution options require execution.mode: managed');
@@ -383,6 +470,7 @@ export class TestStore<State, Action, Dependencies = any> {
     this._state = config.initialState;
     this.reducer = config.reducer;
     this.dependencies = config.dependencies ?? ({} as Dependencies);
+    this._executionConfig = config.execution;
     if (config.execution?.mode === 'managed') {
       this._managedScheduler = config.execution.scheduler ?? new DeterministicScheduler();
       this._managedRuntime = new EffectRuntime<Action>({
@@ -409,7 +497,61 @@ export class TestStore<State, Action, Dependencies = any> {
         onTurn: event => this._observeTurn(event),
         onSubscriberError: error => this._recordManagedFailure(error)
       });
+      this._managedAccess = this._createManagedAccess(config.execution);
+      registerManagedRoot(this as any, this._managedAccess);
     }
+    if (config.staging) {
+      this.enableStaging(config.staging);
+    }
+  }
+
+  private _createManagedAccess(executionConfig: StoreExecutionConfig<State, Action, Dependencies> | undefined = this._executionConfig): Access<Action> {
+    const queue = this._managedQueue!;
+    const runtime = this._managedRuntime!;
+    const scheduler = this._managedScheduler!;
+    return {
+      execution: {
+        _reduce: executionConfig?._reduce,
+        slots: executionConfig?.slots
+      },
+      scheduler,
+      registerResource: options => runtime.resourceScope.createRecord(options),
+      activateInitialization: claim => queue.activateInitialization(claim),
+      releaseInitialization: claim => queue.releaseInitialization(claim),
+      isLive: () => !this._destroyed && !queue.isDestroyed && !runtime.isDisposed,
+      lifecycle: () => queue.getLifecycle(),
+      enqueue: (action, origin) => queue.enqueue({ action, origin, source: 'external' }),
+      enqueueObserved: (action, origin, observer) => queue.enqueueObserved(action, origin, observer),
+      enqueueInspection: (resolve, origin, observer) => queue.enqueueInspection(resolve, origin, observer),
+      subscribe: (origin, listener) => {
+        const report = (error: unknown) => this._recordManagedFailure(error);
+        const notify = () => {
+          try { void Promise.resolve(listener()).catch(report); }
+          catch (error) { report(error); }
+        };
+        if (queue.isDestroyed || runtime.isDisposed || !isOwnerLive(queue.getLifecycle(), origin)) {
+          notify();
+          return () => {};
+        }
+        const record = runtime.resourceScope.createRecord({
+          ownerToken: origin, kind: 'subscription', description: 'ChildView'
+        });
+        let manuallyStopped = false;
+        const stop = this.subscribe(() => { if (record.live) notify(); });
+        record.addCleanup(() => {
+          stop();
+          if (!manuallyStopped) notify();
+        });
+        return () => { manuallyStopped = true; record.dispose(); };
+      },
+      subscribeActions: (origin, listener) => {
+        if (queue.isDestroyed || runtime.isDisposed || !isOwnerLive(queue.getLifecycle(), origin))
+          return () => {};
+        return queue.subscribeOwnerDeliveries((deliveryOwner, action) => {
+          if (deliveryOwner === origin) listener(action);
+        });
+      }
+    };
   }
 
   /** Internal qualification harness; application activation belongs to the host owner. */
@@ -463,6 +605,207 @@ export class TestStore<State, Action, Dependencies = any> {
   subscribeToActions(listener: (action: Action, state: State) => void): () => void {
     if (!this._managedQueue) throw new Error('[TestStore] subscribeToActions requires managed execution');
     return this._managedQueue.subscribeToActions(listener);
+  }
+
+  /**
+   * Enable staged routing with the production coordinator (`createStagedCoordinator`) over this
+   * store's registered root access, FIFO queue and scheduler, as `createApplication` does.
+   *
+   * Eligibility defaults to a connected `TestStagingFixture`; cues default to manual. The returned
+   * coordinator is an integration seam for binding rigs (for example `bindManagedRootRoute`'s
+   * `staging` callback); requests made through it are tracked by `finish()` like `request()`.
+   */
+  enableStaging<Intent>(options: TestStoreStagingOptions<State, Action, Intent>): StagedRouteCoordinator<Intent> {
+    if (this._destroyed) {
+      throw new Error('[TestStore] enableStaging() called after store was destroyed');
+    }
+    if (this._stagedCoordinator) {
+      throw new Error('[TestStore] staging is already enabled on this store');
+    }
+    if (!this._managedQueue || !this._managedAccess) {
+      throw new Error('[TestStore] enableStaging() requires managed execution mode (configure execution: { mode: \'managed\' } or pass staging in TestStoreConfig)');
+    }
+    const coordinator = createStagedCoordinator<State, Action, Intent>({
+      access: this._managedAccess,
+      state: () => this._state,
+      subscribe: listener => this.subscribe(listener),
+      staging: options.staging,
+      serialize: options.serialize,
+      destination: options.destination ?? (url => url),
+      cueMode: options.cueMode ?? 'manual',
+      report: options.report ?? (error => { this._recordManagedFailure(error); })
+    });
+    coordinator.subscribe(event => {
+      this._protocolEvents.push(event);
+      this._unassertedProtocolEvents.push(event);
+      this._notify();
+    });
+    coordinator.subscribeDiagnostics(diagnostic => {
+      this._protocolDiagnostics.push(diagnostic);
+      this._notify();
+    });
+    const facade = this._trackedCoordinator(coordinator);
+    this._stagedCoordinator = coordinator as unknown as StagedRouteCoordinator<unknown>;
+    this._stagedFacade = facade as unknown as StagedRouteCoordinator<unknown>;
+    this._stagedSerialize = options.serialize as (state: unknown) => string;
+    coordinator.setOutletAttached(options.outletAttached ?? true);
+    this.setEligibility(options.eligibility ?? createStagingFixture());
+    return facade;
+  }
+
+  /**
+   * The coordinator surface with request tracking; eligibility goes through `setEligibility`.
+   * Every control that can start staged work first arms the owning test's automatic cleanup,
+   * so a test driving only this seam still gets finish()'s staged checks and destruction.
+   */
+  private _trackedCoordinator<Intent>(coordinator: StagedRouteCoordinator<Intent>): StagedRouteCoordinator<Intent> {
+    const store = this;
+    const arm = () => { void store._ensureHooked(); };
+    return Object.freeze({
+      request(intent: Intent, source: SourceAuthorityInput, options?: StagedRequestOptions): RequestHandle {
+        arm();
+        const handle = coordinator.request(intent, source, options);
+        store._stagedRequests = store._stagedRequests.filter(request => request.status === 'pending');
+        store._stagedRequests.push(handle);
+        return handle;
+      },
+      cue: (transaction: TransactionId) => { arm(); coordinator.cue(transaction); },
+      visualTerminal: (transaction: TransactionId, reason: VisualTerminalReason) => { arm(); coordinator.visualTerminal(transaction, reason); },
+      cancel: (transaction: TransactionId, owner: OwnerToken | undefined) => { arm(); coordinator.cancel(transaction, owner); },
+      get status() { return coordinator.status; },
+      subscribe: (listener: (event: ProtocolEvent) => void) => coordinator.subscribe(listener),
+      subscribeDiagnostics: (listener: (event: ProtocolDiagnostic) => void) => coordinator.subscribeDiagnostics(listener),
+      setOutletAttached: (attached: boolean) => coordinator.setOutletAttached(attached),
+      setVisualPort: (port: VisualCuePort | undefined) => coordinator.setVisualPort(port),
+      setEligibility: (eligibility: StagingEligibility | undefined) => store.setEligibility(eligibility),
+      epoch: () => coordinator.epoch(),
+      dispose: () => coordinator.dispose()
+    });
+  }
+
+  private _requireStaging(method: string): StagedRouteCoordinator<unknown> {
+    if (!this._stagedCoordinator) {
+      throw new Error(`[TestStore] ${method}() requires staging to be enabled (use enableStaging or config.staging)`);
+    }
+    return this._stagedCoordinator;
+  }
+
+  /**
+   * Request a staged navigation, as `useStagedRoute` does: from the root, or from a captured
+   * feature view of this store (`request(intent, view, options)`), which binds the request to that
+   * view's owner. Any other source object is rejected rather than treated as root options.
+   */
+  request<Intent = unknown>(intent: Intent, options?: StagedRequestOptions): RequestHandle;
+  request<Intent = unknown>(intent: Intent, from: ChildView<unknown, unknown>, options?: StagedRequestOptions): RequestHandle;
+  request<Intent = unknown>(
+    intent: Intent,
+    fromOrOptions?: ChildView<unknown, unknown> | StagedRequestOptions,
+    maybeOptions?: StagedRequestOptions
+  ): RequestHandle {
+    this._assertAlive('request');
+    this._requireStaging('request');
+    void this._ensureHooked();
+    this._throwFailures();
+    const { source, options } = this._stagedSource(fromOrOptions, maybeOptions);
+    if (this.exhaustivity === 'on') {
+      if (this.receivedActions.length > 0) this.assertNoPendingActions();
+      if (this._unassertedProtocolEvents.length > 0) this.assertNoPendingProtocolEvents();
+    }
+    return this._stagedFacade!.request(intent, source, options);
+  }
+
+  /** Production source rule (`application/routing.ts` sourceFrom) with explicit root options. */
+  private _stagedSource(
+    from: object | undefined,
+    options: StagedRequestOptions | undefined
+  ): { source: SourceAuthorityInput; options: StagedRequestOptions } {
+    if (from === undefined) return { source: {}, options: options ?? {} };
+    if (typeof from !== 'object' || from === null) {
+      throw new TypeError('[TestStore] Staged route source must be a captured feature view of this store');
+    }
+    if (isCapturedView(from)) {
+      return { source: this._viewAuthority(from), options: options ?? {} };
+    }
+    if (options === undefined && isStagedRequestOptions(from)) return { source: {}, options: from };
+    throw new TypeError(
+      '[TestStore] Staged route source must be a captured feature view of this store; ' +
+        'root requests pass only request options (return, onUnavailable, motion, placement).'
+    );
+  }
+
+  private _viewAuthority(view: object): SourceAuthorityInput & { owner: OwnerToken } {
+    const capture = capturedView(view);
+    if (capture.root !== this) throw new TypeError('[TestStore] Staged route source belongs to another store');
+    return {
+      owner: capture.origin,
+      ownerLive: () => capture.isLive(),
+      observeRetirement: (retired: () => void) => {
+        let active = true;
+        const record = capture.registerResource({
+          kind: 'subscription',
+          description: 'Staged route request owner',
+          cleanup: () => { if (active) retired(); }
+        });
+        return () => { active = false; record.dispose(); };
+      }
+    };
+  }
+
+  /**
+   * Deliver a manual cue: appends a commit control for the transaction (default: the pending one).
+   * A cue for a transaction that is no longer pending is a no-op diagnostic.
+   */
+  cue(transaction?: TransactionId): void {
+    this._assertAlive('cue');
+    const coordinator = this._requireStaging('cue');
+    void this._ensureHooked();
+    this._throwFailures();
+    const tx = transaction ?? coordinator.status.pending;
+    if (tx === undefined) {
+      throw new Error('[TestStore] cue() called with no pending transaction and no transaction ID specified');
+    }
+    coordinator.cue(tx);
+  }
+
+  /**
+   * Explicit owner-bound cancel of a staged transaction (default: the pending one). Pass the
+   * captured view that issued the request; root-owned transactions take no view.
+   */
+  cancelStaged(transaction?: TransactionId, from?: ChildView<unknown, unknown>): void {
+    this._assertAlive('cancelStaged');
+    const coordinator = this._requireStaging('cancelStaged');
+    void this._ensureHooked();
+    this._throwFailures();
+    const owner = from === undefined ? undefined : this._stagedSource(from, {}).source.owner;
+    const tx = transaction ?? coordinator.status.pending;
+    if (tx === undefined) {
+      throw new Error('[TestStore] cancelStaged() called with no pending transaction and no transaction ID specified');
+    }
+    coordinator.cancel(tx, owner);
+  }
+
+  /** Attach or detach the managed route outlet (attached by default). Detaching cancels pending work. */
+  setOutletAttached(attached: boolean): void {
+    this._requireStaging('setOutletAttached').setOutletAttached(attached);
+  }
+
+  /**
+   * Replace the history binding eligibility. A `TestStagingFixture` is connected to this store's
+   * committed turns so it records exact history results; any other eligibility (for example a real
+   * binding's) is used as is.
+   */
+  setEligibility(eligibility: StagingEligibility | undefined): void {
+    const coordinator = this._requireStaging('setEligibility');
+    if (eligibility instanceof TestStagingFixture && !this._fixtureConnections.has(eligibility)) {
+      const serialize = this._stagedSerialize!;
+      this._fixtureConnections.set(eligibility, eligibility[connectStagingFixture]({
+        state: () => this._state,
+        subscribe: listener => this.subscribe(listener as (state: State) => void),
+        serialize: state => serialize(state)
+      }));
+    }
+    this._stagingFixture = eligibility instanceof TestStagingFixture ? eligibility : undefined;
+    coordinator.setEligibility(eligibility);
   }
 
   /**
@@ -657,6 +1000,182 @@ export class TestStore<State, Action, Dependencies = any> {
   }
 
   /**
+   * Wait for and assert on protocol events emitted by the staged routing coordinator.
+   *
+   * With exhaustivity on, the matched event must be the next one emitted.
+   * Top-level keys are partial; nested objects are compared structurally.
+   *
+   * @param expected - Expected protocol event partial or matcher, or array of them
+   * @param assert - Optional assertion callback run with the matched event
+   * @param timeout - Timeout in milliseconds of real time (default: 1000)
+   */
+  async receiveProtocol(
+    expected: Partial<ProtocolEvent> | ((event: ProtocolEvent) => boolean),
+    assert?: (event: ProtocolEvent) => void | Promise<void>,
+    timeout?: number
+  ): Promise<ProtocolEvent>;
+  async receiveProtocol(
+    expected: (Partial<ProtocolEvent> | ((event: ProtocolEvent) => boolean))[],
+    assert?: (event: ProtocolEvent) => void | Promise<void>,
+    timeout?: number
+  ): Promise<ProtocolEvent[]>;
+  async receiveProtocol(
+    expected: Partial<ProtocolEvent> | ((event: ProtocolEvent) => boolean) | (Partial<ProtocolEvent> | ((event: ProtocolEvent) => boolean))[],
+    assert?: (event: ProtocolEvent) => void | Promise<void>,
+    timeout: number = 1000
+  ): Promise<ProtocolEvent | ProtocolEvent[]> {
+    this._assertAlive('receiveProtocol');
+    if (!this._stagedCoordinator) {
+      throw new Error('[TestStore] receiveProtocol() requires staging to be enabled');
+    }
+    await this._ensureHooked();
+    this._throwFailures();
+
+    if (Array.isArray(expected)) {
+      if (expected.length === 0) {
+        throw new TypeError('[TestStore] receiveProtocol([]) names no event; pass at least one.');
+      }
+      const claimed = await this._until(
+        () => this._claimManyProtocol(expected),
+        timeout,
+        () => this._timeoutMessage(`Expected to receive protocol events matching ${json(expected)}`, timeout)
+      );
+      if (assert) {
+        for (const event of claimed) {
+          await assert(event);
+        }
+      }
+      return claimed;
+    }
+
+    const claimed = await this._until(
+      () => this._claimOneProtocol(expected),
+      timeout,
+      () => this._timeoutMessage(`Expected to receive protocol event matching ${json(expected)}`, timeout)
+    );
+    if (assert) {
+      await assert(claimed);
+    }
+    return claimed;
+  }
+
+  private _matchesPartialObject(actual: unknown, expected: unknown): boolean {
+    if (typeof expected === 'function') {
+      try { return Boolean((expected as any)(actual)); } catch { return false; }
+    }
+    if (expected === actual) return true;
+    if (typeof expected !== 'object' || expected === null) {
+      return actual === expected;
+    }
+    if (typeof actual !== 'object' || actual === null) {
+      return false;
+    }
+    if (Array.isArray(expected)) {
+      if (!Array.isArray(actual) || actual.length !== expected.length) return false;
+      return expected.every((val, idx) => this._matchesPartialObject(actual[idx], val));
+    }
+    if (expected instanceof Date || actual instanceof Date) {
+      return expected instanceof Date && actual instanceof Date && expected.getTime() === actual.getTime();
+    }
+    if (expected instanceof Error) {
+      if (!(actual instanceof Error)) return false;
+      return actual.name === expected.name && actual.message === expected.message;
+    }
+    return Object.entries(expected).every(([key, value]) => {
+      return this._matchesPartialObject((actual as any)[key], value);
+    });
+  }
+
+  private _matchesProtocolEvent(
+    event: ProtocolEvent,
+    matcher: Partial<ProtocolEvent> | ((event: ProtocolEvent) => boolean)
+  ): boolean {
+    return this._matchesPartialObject(event, matcher);
+  }
+
+  private _claimOneProtocol(
+    expected: Partial<ProtocolEvent> | ((event: ProtocolEvent) => boolean)
+  ): ProtocolEvent | undefined {
+    this._throwFailures();
+    if (this._unassertedProtocolEvents.length === 0) return undefined;
+
+    if (this.exhaustivity === 'on') {
+      const head = this._unassertedProtocolEvents[0]!;
+      if (this._matchesProtocolEvent(head, expected)) {
+        return this._unassertedProtocolEvents.shift()!;
+      }
+      const later = this._unassertedProtocolEvents.findIndex(e => this._matchesProtocolEvent(e, expected));
+      throw new Error(
+        `Expected protocol event ${json(expected)} next, but received ${json(head)} ` +
+          (later === -1 ? '(no later event matches either).\n' : `(match was at position ${later}).\n`) +
+          `Unasserted protocol events, in order:\n${this._describeProtocolQueue()}\n` +
+          `Assert them in order, or set store.exhaustivity = 'off'.`
+      );
+    }
+
+    const index = this._unassertedProtocolEvents.findIndex(e => this._matchesProtocolEvent(e, expected));
+    if (index === -1) return undefined;
+    return this._unassertedProtocolEvents.splice(index, 1)[0]!;
+  }
+
+  private _claimManyProtocol(
+    expected: (Partial<ProtocolEvent> | ((event: ProtocolEvent) => boolean))[]
+  ): ProtocolEvent[] | undefined {
+    this._throwFailures();
+
+    if (this.exhaustivity === 'on') {
+      const remaining = [...expected];
+      let consumed = 0;
+      for (const event of this._unassertedProtocolEvents) {
+        if (remaining.length === 0) break;
+        const k = remaining.findIndex(m => this._matchesProtocolEvent(event, m));
+        if (k === -1) {
+          throw new Error(
+            `Expected to receive one of ${json(remaining)} next, but the protocol event at position ${consumed} was ${json(event)}.\n` +
+            `Unasserted protocol events, in order:\n${this._describeProtocolQueue()}\n` +
+            `Assert it, or set store.exhaustivity = 'off'.`
+          );
+        }
+        remaining.splice(k, 1);
+        consumed++;
+      }
+      if (remaining.length > 0) return undefined;
+      return this._unassertedProtocolEvents.splice(0, consumed);
+    }
+
+    const taken = new Set<number>();
+    const claimed: ProtocolEvent[] = [];
+    for (const matcher of expected) {
+      const index = this._unassertedProtocolEvents.findIndex((e, i) => !taken.has(i) && this._matchesProtocolEvent(e, matcher));
+      if (index === -1) return undefined;
+      taken.add(index);
+      claimed.push(this._unassertedProtocolEvents[index]!);
+    }
+    const indicesDesc = [...taken].sort((a, b) => b - a);
+    for (const i of indicesDesc) {
+      this._unassertedProtocolEvents.splice(i, 1);
+    }
+    return claimed;
+  }
+
+  private _describeProtocolQueue(): string {
+    return this._unassertedProtocolEvents.map((e, i) => `  ${i}: ${JSON.stringify(e)}`).join('\n');
+  }
+
+  /**
+   * Assert no protocol events are pending.
+   * Fails only when exhaustivity is 'on'.
+   */
+  assertNoPendingProtocolEvents(): void {
+    if (this.exhaustivity === 'on' && this._unassertedProtocolEvents.length > 0) {
+      throw new Error(
+        `Expected no pending protocol events, but found ${this._unassertedProtocolEvents.length} unasserted event(s):\n` +
+        this._describeProtocolQueue()
+      );
+    }
+  }
+
+  /**
    * Wait on the real clock until `check` returns a value: it runs at once,
    * again whenever the store notifies (an action arrived, an effect settled, a
    * timer fired or was disarmed), and on a real safety tick; `undefined` keeps
@@ -789,28 +1308,45 @@ export class TestStore<State, Action, Dependencies = any> {
    */
   private _ensureHooked(): Promise<void> {
     if (this._hook !== 'none') return this._hookReady ?? Promise.resolve();
-    this._hook = 'pending';
-    this._hookReady = import('vitest')
-      .then(({ onTestFinished }) => {
-        onTestFinished(async () => {
-          this.destroy();
-          // Legacy hooks are best-effort: they must not require consumers to
-          // advance fake time after the test body or await an arbitrary close.
-          // Explicit destroyAndSettle remains the strict, caller-budgeted API.
-          try {
-            await this._waitForCleanups(timersAreFaked() ? 0 : 50);
-          } catch (error) {
-            if (!(error instanceof CleanupSettlementTimeout)) throw error;
-          }
-          this._throwUnconsumed();
-        });
-        this._hook = 'armed';
-      })
-      .catch(() => {
-        // No vitest, or no current test: rejections are rethrown instead.
-        this._hook = 'unavailable';
+    // Synchronous, so the hook belongs to the test that is current at this call, before any
+    // staged or effect work it starts can outlive that test.
+    try {
+      if (!testLifecycle) throw new Error('Vitest is not available');
+      testLifecycle.onTestFinished(async () => {
+        await this._onTestCleanup();
       });
+      this._hook = 'armed';
+    } catch {
+      // No vitest, or no current test: rejections are rethrown instead.
+      this._hook = 'unavailable';
+    }
+    this._hookReady = Promise.resolve();
     return this._hookReady;
+  }
+
+  /**
+   * Automatic test cleanup executed on onTestFinished. For a store the test did not destroy,
+   * it applies finish()'s staged checks with the same rules (pending requests, transactions and
+   * staged deadlines always; unasserted protocol events only with exhaustivity on), then
+   * destroys, settles cleanups and reports unconsumed rejections.
+   */
+  private async _onTestCleanup(): Promise<void> {
+    let stagedError: unknown;
+    if (!this._destroyed) {
+      try { this._assertStagedFinish(); }
+      catch (error) { stagedError = error; }
+    }
+    this.destroy();
+    // Legacy hooks are best-effort: they must not require consumers to
+    // advance fake time after the test body or await an arbitrary close.
+    // Explicit destroyAndSettle remains the strict, caller-budgeted API.
+    try {
+      await this._waitForCleanups(timersAreFaked() ? 0 : 50);
+    } catch (error) {
+      if (!(error instanceof CleanupSettlementTimeout)) throw error;
+    }
+    if (stagedError) throw stagedError;
+    this._throwUnconsumed();
   }
 
   /** Thrown from the test's finish hook: a rejection nothing asked about. */
@@ -1038,7 +1574,10 @@ export class TestStore<State, Action, Dependencies = any> {
             `See the installed guide: node_modules/@composable-svelte/core/docs/testing-owned-work.md (relative to your project).`;
         }
       );
-      this._throwFailures();this.assertNoPendingActions();return;
+      this._throwFailures();
+      this.assertNoPendingActions();
+      this._assertStagedFinish();
+      return;
     }
     await this._ensureHooked();
     this._throwFailures();
@@ -1072,6 +1611,34 @@ export class TestStore<State, Action, Dependencies = any> {
 
     await this.advanceTime(0);
     this.assertNoPendingActions();
+    this._assertStagedFinish();
+  }
+
+  /**
+   * Staged items finish() and automatic cleanup name, each independently: requests without a
+   * terminal result, the pending transaction, installed staged deadlines (the coordinator's own,
+   * not unrelated scheduler timers) and, with exhaustivity on, unasserted protocol events.
+   */
+  private _assertStagedFinish(): void {
+    const coordinator = this._stagedCoordinator;
+    if (!coordinator) return;
+    const items: string[] = [];
+    for (const request of this._stagedRequests) {
+      if (request.status === 'pending') items.push(`staged request ${request.id} lacks a terminal result`);
+    }
+    const pending = coordinator.status.pending;
+    if (pending !== undefined) items.push(`transaction ${pending} is still pending; cue, cancel, or advance to its deadline`);
+    for (const transaction of coordinator.status.pendingDeadlines()) {
+      items.push(`staged deadline timer remains for transaction ${transaction}`);
+    }
+    if (this.exhaustivity === 'on' && this._unassertedProtocolEvents.length > 0) {
+      items.push(`${this._unassertedProtocolEvents.length} protocol event(s) not asserted:\n${this._describeProtocolQueue()}`);
+    }
+    if (items.length === 0) return;
+    throw new Error(
+      `[TestStore] finish(): staged routing is not settled:\n${items.map(item => `- ${item}`).join('\n')}\n` +
+        `Advance or cue pending work, assert protocol events with receiveProtocol(), or set store.exhaustivity = 'off' for unasserted events only.`
+    );
   }
 
   /**
@@ -1141,6 +1708,11 @@ export class TestStore<State, Action, Dependencies = any> {
   destroy(): void {
     if (this._destroyed) return;
     this._destroyed = true;
+    if (this._stagedCoordinator) {
+      this._stagedCoordinator.dispose();
+    }
+    for (const disconnect of this._fixtureConnections.values()) disconnect();
+    this._fixtureConnections.clear();
     if (this._managedQueue) { this._managedQueue.destroy(); this._notify(); return; }
     this._lifetime.abort();
 

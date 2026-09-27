@@ -9,6 +9,7 @@
 import { onMount } from 'svelte';
 import { createOverlay } from './webgl-overlay.js';
 import { OverlayError } from '../utils/overlay-error.js';
+import { registerRenderSurface, type SurfaceRegistration } from '../representation/visual-provider.js';
 import type {
   OverlayContextAPI,
   OverlayOptions,
@@ -41,10 +42,20 @@ let overlay: OverlayContextAPI | null = $state(null);
 let isDestroyed = false;
 let resizeListenerAttached = false;
 let unsubscribeOwner: (() => void) | null = null;
+// The overlay itself, for release; `overlay` above is cleared when the owner
+// retires so the public methods go inert.
+let instance: OverlayContextAPI | null = null;
+// Present once running: release goes through it, because a fluid-motion run
+// representing this canvas may take render authority at retirement (see
+// `graphicsVisualProvider`), and then the run releases the overlay.
+let surface: SurfaceRegistration | null = null;
+let released = false;
 
-function destroyOverlayInstance(): void {
-  if (isDestroyed) return;
+// Every tie to the owner and the page: its subscription, the resize listener
+// and the public methods.
+function cutBusiness(): void {
   isDestroyed = true;
+  overlay = null;
 
   if (unsubscribeOwner) {
     unsubscribeOwner();
@@ -55,11 +66,36 @@ function destroyOverlayInstance(): void {
     window.removeEventListener('resize', handleResize);
     resizeListenerAttached = false;
   }
+}
 
-  if (overlay) {
-    overlay.stop();
-    overlay.destroy();
-    overlay = null;
+function releaseInstance(): void {
+  const created = instance;
+  instance = null;
+  if (surface) {
+    surface.release();
+  } else if (created) {
+    created.stop();
+    created.destroy();
+  }
+}
+
+function destroyOverlayInstance(): void {
+  if (released) return;
+  released = true;
+  cutBusiness();
+  releaseInstance();
+}
+
+function ownerRetired(): void {
+  if (released) return;
+  cutBusiness();
+  // Destroyed now, unless a representation still needs the renderer for the
+  // retirement that follows in the same frame.
+  if (surface) {
+    surface.ownerRetired();
+  } else {
+    released = true;
+    releaseInstance();
   }
 }
 
@@ -123,9 +159,13 @@ onMount(() => {
   }
 
   overlay = result;
+  instance = result;
 
   // Start the render loop
   overlay.start();
+
+  const authority = result.renderAuthority?.();
+  if (authority) surface = registerRenderSurface(canvas, authority, cutBusiness);
 
   // Handle window resize
   window.addEventListener('resize', handleResize);
@@ -134,7 +174,7 @@ onMount(() => {
   if (owner) {
     unsubscribeOwner = owner.subscribe((state) => {
       if (state === undefined) {
-        destroyOverlayInstance();
+        ownerRetired();
       }
     });
     if (isDestroyed) {

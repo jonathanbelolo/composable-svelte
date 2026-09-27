@@ -245,6 +245,10 @@ build failure rather than something a reader discovers by pasting.
 | `muted` | `boolean` | Start muted |
 | `showTitle` | `boolean` | Show the video title above the embed |
 | `class` | `string` | Additional CSS class |
+| `referrerPolicy` | `ReferrerPolicy` | The iframe's referrer policy, default `'no-referrer'`. YouTube requires a referrer and shows **Error 153** without one ([API Client Identity](https://developers.google.com/youtube/terms/required-minimum-functionality)), so pass `'strict-origin-when-cross-origin'` for YouTube |
+| `mediaKey` | `string` | Stable identity for fluid-motion adoption (see below) |
+| `mediaScope` | `MediaVisualProvider` | The adoption scope: this application's `mediaVisualProvider()` instance |
+| `playerControl` | `'none' \| 'player-api'` | Opt in to the platform's player API so a leaving player can be muted (YouTube: adds `enablejsapi=1` and `origin`) |
 
 Exactly one of `url` or `video` is required, enforced by the type rather than at
 runtime. A `url` that matches no known platform renders nothing.
@@ -252,6 +256,52 @@ runtime. A `url` that matches no known platform renders nothing.
 **Twitch** additionally needs a `parent` matching the page it is embedded in.
 The component supplies it from the current hostname; `detectVideo` deliberately
 does not, because detection cannot know where the result will be rendered.
+
+**Fluid motion (live handoff).** Add the media provider to the application's
+visual configuration, and a route transition keeps the *same* player (no reload,
+no second player) instead of a frozen copy:
+
+```ts
+import { fluidMotion } from '@composable-svelte/core/application/motion';
+import { mediaVisualProvider } from '@composable-svelte/media';
+
+export const media = mediaVisualProvider();
+// defineApplication(composition, { …, visual: fluidMotion({ providers: [media] }) })
+```
+
+When a page holding a `VideoEmbed` retires under a run, its iframe moves
+(`Element.prototype.moveBefore`) into the run's inert, `aria-hidden` decoration.
+Focus inside the player is released at that moment, and input stays with real
+content. What happens next is decided within the same commit:
+
+- **Adoption.** A destination `VideoEmbed` with the same `mediaScope`, the same
+  `mediaKey` and the same configuration takes the player over before creating
+  its own. Playback, and audio, continue under the new owner, which stays
+  reactive to its props. A visual match alone never transfers a player.
+- **Leaving only, with `playerControl="player-api"`.** The player is asked to
+  mute through its documented API. It stays on screen only once it reports being
+  muted, within 250 ms; otherwise it is disposed. (This is the platform's own
+  reported state, not a measurement of sound.) Twitch has no documented command
+  channel for a bare player, so it is disposed.
+- **Leaving only, without it.** It is disposed at once. Decoration never
+  prolongs audio.
+
+The adoption scope defaults to the `media` provider the enclosing application
+configured (core's `useRepresentationProvider`). An explicit `mediaScope` overrides it.
+Outside an application host there is no scope: nothing is claimed.
+
+Within-page removal hands the player off too, when the conditional that removes it
+is core's `<Presence when={…}>`. The hand-off happens after the business commit and
+before the block is removed. A commit that throws, or changes nothing, moves nothing.
+
+**Documented exception.** Moving the *same* player to a different place in the page
+needs a state-preserving move (`Element.prototype.moveBefore`). Browsers without it
+(Safari, and the tested Firefox 142) destroy an iframe's document whenever it is
+removed or re-inserted, and no compliant way to carry the same player across was
+found. There the page and its player stay usable until the commit. Then the player
+settles and is disposed, and the destination renders its own. This is reported as
+`mediaMoveUnavailable`, never as live continuity. Firefox 144+ documents
+`moveBefore` but has not been qualified here.
 
 **Utilities:**
 

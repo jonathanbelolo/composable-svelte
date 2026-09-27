@@ -11,4 +11,8 @@ export function useRegistry(): TargetRegistry {
   return registry;
 }
 
+const featureSourceContext=Symbol('Rendered feature request source');
+/** The captured feature store rendered by the nearest RenderedFeature; request authority defaults to it. */
+export function provideFeatureSource(store:object):void{setContext(featureSourceContext,store);}
+export function optionalFeatureSource():object|undefined{return getContext<object|undefined>(featureSourceContext);}
 export function optionalRegistry():TargetRegistry|undefined{return getContext<TargetRegistry|undefined>(context);}

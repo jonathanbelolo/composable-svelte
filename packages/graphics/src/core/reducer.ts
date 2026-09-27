@@ -18,6 +18,7 @@ import type {
   Vector3
 } from './types.js';
 import { customGeometryProblem } from './geometry.js';
+import { advanceAnimations, sameConfig } from './animation-sample.js';
 
 /**
  * The single frame-loop effect id.
@@ -141,37 +142,6 @@ function scheduleFrame(sceneId: string): EffectType<GraphicsAction> {
       dispatch({ type: 'tick', time: Date.now() });
     }
   });
-}
-
-/** True for a plain data object (not an array, not null). */
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-/**
- * Structural equality for plain scene-config data.
- *
- * Configs are plain data: primitives, `Vector3` tuples, and nested geometry and
- * material objects. Recursing over arrays and plain objects covers all three.
- * Anything else (a function, a class instance) compares unequal, which is the
- * safe direction — it dispatches rather than wrongly skipping a real update.
- */
-function sameConfig(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-
-  if (Array.isArray(a) && Array.isArray(b)) {
-    return a.length === b.length && a.every((item, i) => sameConfig(item, b[i]));
-  }
-
-  if (isPlainObject(a) && isPlainObject(b)) {
-    const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
-    for (const key of keys) {
-      if (!sameConfig(a[key], b[key])) return false;
-    }
-    return true;
-  }
-
-  return false;
 }
 
 /**
@@ -577,98 +547,12 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
     }
 
     case 'tick': {
-      const meshUpdates = new Map<string, Partial<MeshConfig>>();
-
-      // Update all active animations
-      const updatedAnimations = state.animations.map((anim) => {
-        if (!anim.isPlaying) return anim;
-
-        const startTime = typeof anim.startTime === 'number' ? anim.startTime : action.time;
-        const elapsed = action.time - startTime;
-        // Clamped at both ends, and `duration <= 0` is complete rather than
-        // undefined. `elapsed / 0` is NaN when a tick lands in the same
-        // millisecond as the start — including its first tick, so that is ordinary
-        // — and NaN survives `Math.min(NaN, 1)`, flows into the mesh position,
-        // and fails `progress >= 1`, so the animation runs forever writing NaN.
-        // Nothing clamped the bottom either, so a tick timestamped before the
-        // start extrapolated backwards out of the animation's own range.
-        const progress =
-          anim.config.duration > 0
-            ? Math.min(Math.max(elapsed / anim.config.duration, 0), 1)
-            : 1;
-
-        // Apply easing
-        const easedProgress = applyEasing(progress, anim.config.easing || 'linear');
-
-        // Interpolate value
-        const current = interpolateVector3(
-          anim.config.from,
-          anim.config.to,
-          easedProgress
-        );
-
-        // Record the update rather than writing it. Mutating the mesh in place
-        // was the whole defect: `state.meshes` kept both its array identity and
-        // its element identities, so `Scene.svelte`'s diff — which stored that
-        // same array as its baseline — compared an object with itself and could
-        // never fire. State moved and the renderer never heard about it.
-        //
-        // Accumulated per mesh because `property` is one of three: up to three
-        // animations can target one mesh at once, and applying them one at a
-        // time would drop all but the last.
-        // Only when the value actually moved. Writing unconditionally meant a
-        // `from === to` animation — or any animation sitting at its final
-        // value — produced a fresh mesh array every frame, which `syncScene`
-        // reads as a change and pushes to the renderer.
-        //
-        // Compared against what this tick has accumulated so far, falling back
-        // to the mesh as it stands. Comparing against the mesh alone is wrong
-        // when two animations target the same property: whichever of them
-        // happened to produce the pre-tick value was skipped, so the other won
-        // on alternating frames and the mesh strobed. Last-writer-wins is the
-        // documented behaviour for that case; oscillating is not.
-        const target = state.meshes.find((mesh) => mesh.id === anim.config.targetId);
-        const pending = meshUpdates.get(anim.config.targetId);
-        const standing = pending?.[anim.config.property] ?? target?.[anim.config.property];
-
-        if (target && !sameConfig(standing, current)) {
-          meshUpdates.set(anim.config.targetId, {
-            ...pending,
-            [anim.config.property]: current
-          });
-        }
-
-        // Check if animation is complete
-        if (progress >= 1) {
-          // A non-positive duration completes on the frame it starts, so
-          // looping it would complete on every frame for ever — a frame loop
-          // that can never produce a different pixel.
-          if (anim.config.loop && anim.config.duration > 0) {
-            // Carry the overshoot into the next lap. Resetting to the tick's
-            // own time discards however far past the boundary the frame landed,
-            // which on a 100ms loop ticked at 60fps drifts a whole frame a lap.
-            const overshoot = anim.config.duration > 0 ? elapsed % anim.config.duration : 0;
-            return { ...anim, startTime: action.time - overshoot };
-          } else {
-            // Stop animation
-            return { ...anim, startTime, isPlaying: false };
-          }
-        }
-
-        return anim.startTime === startTime ? anim : { ...anim, startTime };
-      });
-
+      const { animations: updatedAnimations, meshes } = advanceAnimations(
+        state.animations,
+        state.meshes,
+        action.time
+      );
       const hasActiveAnimations = updatedAnimations.some((a) => a.isPlaying);
-
-      // Identity is the signal the sync reads, so an idle tick has to return the
-      // very same array — otherwise every frame would look like a change.
-      const meshes =
-        meshUpdates.size === 0
-          ? state.meshes
-          : state.meshes.map((mesh) => {
-              const update = meshUpdates.get(mesh.id);
-              return update ? { ...mesh, ...update } : mesh;
-            });
 
       return [
         {
@@ -735,33 +619,3 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
 // ============================================================================
 // Helper Functions
 // ============================================================================
-
-/**
- * Apply easing function to progress value (0-1)
- */
-function applyEasing(
-  t: number,
-  easing: 'linear' | 'easeIn' | 'easeOut' | 'easeInOut'
-): number {
-  switch (easing) {
-    case 'linear':
-      return t;
-    case 'easeIn':
-      return t * t;
-    case 'easeOut':
-      return t * (2 - t);
-    case 'easeInOut':
-      return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-  }
-}
-
-/**
- * Interpolate between two Vector3 values
- */
-function interpolateVector3(from: Vector3, to: Vector3, t: number): Vector3 {
-  return [
-    from[0] + (to[0] - from[0]) * t,
-    from[1] + (to[1] - from[1]) * t,
-    from[2] + (to[2] - from[2]) * t
-  ];
-}

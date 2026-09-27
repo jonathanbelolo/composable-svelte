@@ -1,4 +1,4 @@
-import type { TurnEvent, InspectionEvent } from './turn-queue.js';
+import type { TurnEvent, InspectionEvent, InspectionResolution } from './turn-queue.js';
 /** Internal, per-root authority. No component receives the root's lifecycle controls. */
 import type { InitializationClaim } from './turn-queue.js';
 import type { Store } from '../types.js';
@@ -21,7 +21,7 @@ export interface Access<Action> {
     /** Child-domain actions reduced by exactly `origin`, after commit. Unbuffered; silent on retirement. */
     subscribeActions(origin: OwnerToken, listener: (action: unknown) => void): () => void;
     enqueue(action: Action, origin: OwnerToken): void;
-    enqueueInspection(resolve: () => {readonly action: Action} | undefined, origin: OwnerToken | undefined, observer: (event: InspectionEvent<unknown, Action>) => void): void;
+    enqueueInspection(resolve: () => InspectionResolution<Action> | undefined, origin: OwnerToken | undefined, observer: (event: InspectionEvent<unknown, Action>) => void): void;
     enqueueObserved(action: Action, origin: OwnerToken | undefined, observer: (event: TurnEvent<unknown, Action>) => void): void;
 }
 const roots = new WeakMap<object, Access<unknown>>();

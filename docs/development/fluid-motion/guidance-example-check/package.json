@@ -1,0 +1,6 @@
+{
+  "name": "fluid-motion-guidance-example-check",
+  "private": true,
+  "type": "module",
+  "description": "Verification copy of the public fluid-motion guidance examples. Resolves @composable-svelte/core through its package exports (node_modules symlink to packages/core, built dist); no source alias."
+}

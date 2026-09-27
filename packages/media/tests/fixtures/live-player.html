@@ -1,0 +1,24 @@
+<!doctype html>
+<!-- Fixture player for the live-media handoff tests: animates, counts keys, and accepts
+     the documented Vimeo ({method:'setMuted'}) and YouTube ({event:'command',func:'mute'})
+     postMessage commands. Reports {probe:'live-player', id, frames, keys, muted} to its parent. -->
+<body style="margin:0;background:#111"><canvas id="c" width="160" height="90" style="width:100%;height:100%;display:block"></canvas>
+<script>
+  const id = Math.random().toString(36).slice(2);
+  let frames = 0, keys = 0, muted = false;
+  const g = document.getElementById('c').getContext('2d');
+  (function tick(t) { frames++; g.fillStyle = 'hsl(' + ((t || 0) / 3 % 360) + ' 80% 50%)'; g.fillRect(0, 0, 160, 90); requestAnimationFrame(tick); })();
+  addEventListener('keydown', () => keys++);
+  // `ack=drop` models an API that is not ready or drops the command: no state is changed or reported.
+  const drop = new URLSearchParams(location.search).get('ack') === 'drop';
+  const reply = (message) => { if (!drop) parent.postMessage(JSON.stringify(message), '*'); };
+  addEventListener('message', (e) => {
+    if (drop) return;
+    let data = e.data; try { data = typeof data === 'string' ? JSON.parse(data) : data; } catch {}
+    if (data && data.method === 'setMuted') muted = !!data.value;
+    if (data && data.method === 'getMuted') reply({ method: 'getMuted', value: muted });
+    if (data && data.event === 'command' && data.func === 'mute') { muted = true; reply({ event: 'infoDelivery', info: { muted: true, volume: 100 }, channel: 'widget', id: 1 }); }
+  });
+  setInterval(() => parent.postMessage({ probe: 'live-player', id, frames, keys, muted, name: location.search }, '*'), 25);
+</script>
+</body>

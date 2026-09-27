@@ -109,6 +109,8 @@ export class TargetRegistry {
   private validationPending = false;
   readonly clock: MotionClock;
   readonly preferences: DocumentPreferences;
+  /** Root identity shared by choreography leases and motion target entries. */
+  get rootIdentity(): object { return this.root; }
   constructor(private readonly root: object, private readonly ownerLive: () => boolean, private readonly onFailure?: ((error:unknown)=>void)|undefined, private readonly rootResources?:RootTargetResources|undefined, clock?: MotionClock) {
     const resolvedClock = clock ?? rootResources?.clock;
     if (!resolvedClock) throw new TypeError('TargetRegistry requires a MotionClock');
@@ -380,4 +382,65 @@ export class TargetRegistry {
     this.registrations.clear(); this.addresses.clear();this.placements.clear();this.placementOwners.clear();this.#placementActivity.dispose();this.visuals.dispose();
     this.visualHostRecord?.dispose();
   }
+}
+
+/**
+ * Choreography writer through the node's single PropertyAuthority (shared with managed/legacy motion
+ * targets of the same root). Never takes a property held by a foreign lease or a managed binding group:
+ * those participants are captured with their displayed values and receive no choreography writes.
+ * Acquiring supersedes only an earlier choreography lease (successor), which then retires without
+ * restoring; releasing the current lease restores the stable projection; `abandon` retires without a
+ * write (node leaving in this flush).
+ */
+export interface ChoreographyLease {
+  readonly node: HTMLElement;
+  /** Participant's own stable projection (inline value before choreography; computed numeric). */
+  readonly stable: string;
+  readonly stableNumber: number;
+  readonly live: boolean;
+  write(value: string): void;
+  release(): void;
+  abandon(): void;
+}
+const choreographyLeases = new WeakSet<PropertyLease>();
+let liveLeases = 0;
+/** Diagnostic: choreography leases acquired and not yet released/abandoned. */
+export function liveChoreographyLeases(): number { return liveLeases; }
+/** Choreography-leased properties: paint opacity, and inset clip for clipped reveal of real destinations. */
+export type ChoreographyProperty = 'opacity' | 'clip-path' | 'translate';
+export function acquireChoreographyLease(root: object, node: HTMLElement, choreographyProperty: ChoreographyProperty, alive: () => boolean): ChoreographyLease | { readonly foreign: string } {
+  // `clip-path` is not a recipe motion property; the node authority still arbitrates it as one channel.
+  const property = choreographyProperty as Property;
+  let entry: NodeEntry;
+  try { entry = acquireNode(root, node); } catch { return { foreign: 'foreignRoot' }; }
+  const holder = entry.authority.holder(property);
+  if (holder.grouped || (holder.lease && holder.lease.live && !choreographyLeases.has(holder.lease))) { releaseNode(node, entry); return { foreign: holder.grouped ? 'managedGroup' : 'foreignLease' }; }
+  if (holder.stable === undefined) entry.authority.stable(property, node.style.getPropertyValue(property));
+  const stable = entry.authority.holder(property).stable ?? '';
+  const view = node.ownerDocument.defaultView;
+  const computed = Number.parseFloat(stable || (view ? view.getComputedStyle(node).getPropertyValue(property) : '1'));
+  let lease: PropertyLease;
+  try { lease = entry.authority.lease(property, alive); } catch (error) { releaseNode(node, entry); return { foreign: error instanceof Error ? error.message : 'leaseRejected' }; }
+  choreographyLeases.add(lease);
+  liveLeases++;
+  let done = false;
+  const finish = (restore: boolean) => {
+    if (done) return;
+    done = true;
+    liveLeases--;
+    try { if (restore) lease.release(); else lease.abandon(); }
+    finally { try { releaseNode(node, entry); } catch { /* disposal errors are diagnostics of the authority */ } }
+  };
+  return {
+    node, stable, stableNumber: Number.isFinite(computed) ? computed : 1,
+    get live() { return lease.live; },
+    write: value => lease.write(value),
+    release: () => finish(true),
+    abandon: () => finish(false)
+  };
+}
+/** Test/diagnostic: does a choreography lease currently hold this node's property? */
+export function hasChoreographyLease(node: HTMLElement, property: 'opacity' = 'opacity'): boolean {
+  const lease = nodes?.get(node)?.authority.holder(property).lease;
+  return !!lease && choreographyLeases.has(lease) && lease.live;
 }

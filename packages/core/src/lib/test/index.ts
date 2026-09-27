@@ -11,9 +11,20 @@ export {
 
 export type {
 	TestStoreConfig,
+	TestStoreStagingOptions,
 	StateAssertion,
 	PartialAction
 } from './test-store.js';
+
+export {
+	TestStagingFixture,
+	createStagingFixture
+} from './staged-fixtures.js';
+
+export type {
+	TestStagingFixtureOptions,
+	TestTraversal
+} from './staged-fixtures.js';
 
 // Deterministic waits for animation tests: scrub a Web Animation, poll a
 // ticking value, settle, and refuse fake timers and reduced motion.

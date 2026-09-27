@@ -168,3 +168,9 @@ export function placementDeclarations(views:object):ReadonlyMap<object,{field:st
 }
 
 export function placementOwner(views:object):object|undefined{return placementOwners.get(views);}
+
+/** Internal: does this handle render exactly `slot` at the root layout (not nested under a captured owner)? */
+export function isRootSlotView(view: object, slot: object): boolean {
+    const handle = handles.get(view);
+    return !!handle && handle.prefix === undefined && handle.parent === undefined && handle.entry.slot === slot;
+}

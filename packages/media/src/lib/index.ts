@@ -42,7 +42,11 @@ export {
 	type VideoPlatform,
 	type AspectRatio,
 	type PlatformConfig,
-	type EmbedOptions
+	type EmbedOptions,
+	mediaVisualProvider,
+	liveMediaResources,
+	type MediaVisualProvider,
+	type PlayerControl
 } from './video-embed/index.js';
 
 // VoiceInput - Standalone voice input component with push-to-talk and conversation modes

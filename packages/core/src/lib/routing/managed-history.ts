@@ -1,9 +1,15 @@
 /** Internal managed history protocol. No public export until binding qualification. */
+import { readPersistedScroll } from './scroll-restoration.js';
 export interface HistoryEntry {
   readonly version: 1;
   readonly chain: string;
   readonly id: string;
   readonly index: number;
+  /**
+   * Optional persisted scroll position of this physical entry, written only by an attached binding with scroll
+   * ownership (see ./scroll-restoration.ts). Opaque here; its reader validates it and ignores malformed values.
+   */
+  readonly scroll?: unknown;
 }
 export interface HistorySnapshot { readonly url: string; readonly state: unknown; readonly entryKey?: string | undefined }
 export interface HistoryPort {
@@ -62,10 +68,23 @@ export interface ManagedHistoryOptions {
   readonly id: () => string;
   readonly codec?: HistoryMetadataCodec | undefined;
   readonly report: (diagnostic: HistoryDiagnostic) => void;
-  /** Framework binding submits one captured-owner turn and settles its exact envelope. */
-  readonly traverse: (url: string, settle: (result: TraversalResult) => void) => void;
+  /**
+   * Framework binding submits one captured-owner turn and settles its exact envelope. `settle` returns true only
+   * when this settlement left the browser's current entry carrying the accepted entry (evidence that may clear
+   * history uncertainty); duplicate, retired, inactive or failed settlements and started corrections return false.
+   */
+  readonly traverse: (url: string, settle: (result: TraversalResult) => boolean) => void;
   /** Internal control signal, never a diagnostic: a reconciliation rebase write failed and the accepted URL has no browser entry. */
   readonly rebaseFailed?: (() => void) | undefined;
+  /** Internal correction lifecycle for the staging barrier (never a diagnostic or consumer hook). */
+  readonly correction?: ((signal: 'started' | 'arrived' | 'failed' | 'reestablished') => void) | undefined;
+  /**
+   * Internal traversal failure signal (never a diagnostic). `observation`: an observed traversal could
+   * not be processed before reaching `traverse` (identity claim/read/write failed), so the binding must
+   * still treat it as route-affecting. `settlement`: a physical write or rebase while settling or
+   * matching a traversal failed. Both leave history uncertain.
+   */
+  readonly traversalFailed?: ((phase: 'observation' | 'settlement') => void) | undefined;
 }
 const activePorts = new WeakSet<object>();
 
@@ -94,6 +113,12 @@ export function connectManagedHistory(options: ManagedHistoryOptions): ManagedHi
   const report = (diagnostic: HistoryDiagnostic) => {
     try { options.report(diagnostic); } catch { /* Diagnostics cannot change history control flow. */ }
   };
+  const signal = (value: 'started' | 'arrived' | 'failed' | 'reestablished') => {
+    try { options.correction?.(value); } catch { /* A control observer cannot change history control flow. */ }
+  };
+  const traversalFailed = (phase: 'observation' | 'settlement') => {
+    try { options.traversalFailed?.(phase); } catch { /* A control observer cannot change history control flow. */ }
+  };
   // Only the physical port write arms the binding's retry; codec, identity and read
   // failures stay ordinary traversal failures. The caller still reports the exact error.
   const rebase = (state: unknown) => {
@@ -117,7 +142,7 @@ export function connectManagedHistory(options: ManagedHistoryOptions): ManagedHi
       return undefined;
     }
     const liveKeys = new Set(keys);
-    if (pending && !liveKeys.has(pending.key)) pending = undefined;
+    if (pending && !liveKeys.has(pending.key)) { pending = undefined; signal('failed'); }
     for (const key of knownEntries.keys()) if (!liveKeys.has(key)) knownEntries.delete(key);
     return keys;
   };
@@ -139,11 +164,13 @@ export function connectManagedHistory(options: ManagedHistoryOptions): ManagedHi
     if (incoming.chain !== acceptedEntry.chain || from < 0 || to < 0 || from === to || !targetKey) return false;
     if (!pending) {
       pending = {entry: acceptedEntry, url: acceptedObservedURL, key: targetKey, snapshot, generation};
+      signal('started');
       if (port.traverseTo) {
         const correction = pending;
         void port.traverseTo(targetKey).catch(error => {
           if (!live || pending !== correction) return;
           pending = undefined;
+          signal('failed');
           report({type:'historyFailure',operation:'traverse',error});
           try {
             const current = port.read();
@@ -155,6 +182,7 @@ export function connectManagedHistory(options: ManagedHistoryOptions): ManagedHi
             acceptedObservedURL = acceptedURL;
             knownEntries.clear();
             remember(replacement);
+            signal('reestablished');
             report({type:'historyRebased',visitedURL:current.url,acceptedURL});
           } catch (recoveryError) { report({type:'historyFailure',operation:'traverse',error:recoveryError}); }
         });
@@ -167,13 +195,19 @@ export function connectManagedHistory(options: ManagedHistoryOptions): ManagedHi
     if (!entry(value)) throw new TypeError('Managed history identity or index is invalid');
     return value;
   };
+  // Rewriting the same physical entry (reclaiming it under a fresh identity, or retaining its identity) keeps that
+  // entry's current valid scroll record, never a stale cached copy. New pushed entries never inherit one.
+  const reclaimed = (physical: HistoryEntry | undefined, value: HistoryEntry): HistoryEntry => {
+    const {scroll: _cached, ...identity} = value;
+    return physical?.scroll !== undefined && readPersistedScroll(physical.scroll) !== undefined ? {...identity, scroll: physical.scroll} : identity;
+  };
   try {
     const initial = port.read();
     acceptedURL = preserveFragment(acceptedURL,initial.url);
     acceptedObservedURL = acceptedURL;
     // Validate before any mutation or listener enrollment, including reserved-key collisions.
-    codec.read(initial.state);
-    acceptedEntry = fresh();
+    const prior = codec.read(initial.state);
+    acceptedEntry = reclaimed(prior, fresh());
     const state = codec.write(initial.state, acceptedEntry);
     port.replace(acceptedURL, state);
     remember(acceptedEntry);
@@ -192,23 +226,25 @@ export function connectManagedHistory(options: ManagedHistoryOptions): ManagedHi
     try {
       snapshot = port.read();
       incoming = codec.read(snapshot.state);
+      const prior = incoming;
       prune();
       const known = snapshot.entryKey ? knownEntries.get(snapshot.entryKey) : undefined;
       if (!sameEntry(incoming, known)) incoming = undefined;
       // Give an unknown visited entry an identity before queued acceptance, without
       // changing its URL or user fields. A same-URL later entry is then distinguishable.
       if (incoming === undefined) {
-        incoming = fresh();
+        incoming = reclaimed(prior, fresh());
         const state = codec.write(snapshot.state, incoming);
         port.replace(snapshot.url, state);
         remember(incoming);
         snapshot = port.read();
       }
     }
-    catch (error) { pending = undefined; report({type: 'historyFailure', operation: 'traverse', error}); return; }
+    catch (error) { if (pending) signal('failed'); pending = undefined; traversalFailed('observation'); report({type: 'historyFailure', operation: 'traverse', error}); return; }
     if (sameEntry(incoming, pending?.entry) && snapshot.entryKey === pending?.key && snapshot.url === pending?.url) {
       pending = undefined;
       settledGeneration = eventGeneration;
+      signal('arrived');
       try {
         if (!acceptedHasEntry || !sameEntry(incoming, acceptedEntry)) {
           if (rollback(incoming!, snapshot)) return;
@@ -220,19 +256,20 @@ export function connectManagedHistory(options: ManagedHistoryOptions): ManagedHi
           remember(replacement);
           report({type:'historyRebased',visitedURL:snapshot.url,acceptedURL});
         } else if (snapshot.url !== acceptedURL) {
+          acceptedEntry = reclaimed(incoming, acceptedEntry);
           port.replace(acceptedURL, codec.write(snapshot.state, acceptedEntry));
           remember(acceptedEntry);
         }
         acceptedObservedURL = acceptedURL;
-      } catch (error) { report({type:'historyFailure',operation:'traverse',error}); }
+      } catch (error) { traversalFailed('settlement'); report({type:'historyFailure',operation:'traverse',error}); }
       return;
     }
     let settled = false;
-    const settle = (decision: TraversalResult) => {
+    const settle = (decision: TraversalResult): boolean => {
       const result = {...decision,acceptedURL:preserveFragment(decision.acceptedURL,decision.outcome === 'rejected' ? acceptedURL : snapshot.url)};
-      if (settled) return;
+      if (settled) return false;
       settled = true;
-      if (!live || eventGeneration < settledGeneration) return;
+      if (!live || eventGeneration < settledGeneration) return false;
       settledGeneration = eventGeneration;
       try {
         const current = port.read();
@@ -246,14 +283,14 @@ export function connectManagedHistory(options: ManagedHistoryOptions): ManagedHi
             acceptedURL = result.acceptedURL;
             acceptedObservedURL = snapshot.url;
           }
-          return;
+          return false;
         }
         if (result.outcome === 'rejected') {
           if (acceptedURL !== result.acceptedURL) { acceptedURL = result.acceptedURL; acceptedHasEntry = false; }
-          if (rollback(incoming!, snapshot)) return;
+          if (rollback(incoming!, snapshot)) return false;
           const replacement = fresh();
           const state = codec.write(current.state, replacement);
-          if (!live || eventGeneration !== generation) return;
+          if (!live || eventGeneration !== generation) return false;
           rebase(state);
           acceptedEntry = replacement;
           acceptedHasEntry = true;
@@ -261,13 +298,13 @@ export function connectManagedHistory(options: ManagedHistoryOptions): ManagedHi
           remember(replacement);
           acceptedObservedURL = acceptedURL;
           report({type: 'historyRebased', visitedURL: snapshot.url, acceptedURL});
-          return;
+          return true;
         }
         acceptedURL = result.acceptedURL;
         acceptedHasEntry = false;
         const next = incoming!;
         const state = codec.write(current.state, next);
-        if (!live || eventGeneration !== generation) return;
+        if (!live || eventGeneration !== generation) return false;
         // Claim unknown entries and canonicalize redirects without pushing.
         if (!sameEntry(incoming, next) || current.url !== result.acceptedURL) port.replace(result.acceptedURL, state);
         acceptedEntry = next;
@@ -275,7 +312,8 @@ export function connectManagedHistory(options: ManagedHistoryOptions): ManagedHi
         remember(next);
         acceptedURL = result.acceptedURL;
         acceptedObservedURL = result.acceptedURL;
-      } catch (error) { pending = undefined; report({type: 'historyFailure', operation: 'traverse', error}); }
+        return true;
+      } catch (error) { if (pending) signal('failed'); pending = undefined; traversalFailed('settlement'); report({type: 'historyFailure', operation: 'traverse', error}); return false; }
     };
     try { options.traverse(routeURL(snapshot.url), settle); }
     catch (error) { report({type: 'historyFailure', operation: 'traverse', error}); }
@@ -301,8 +339,9 @@ export function connectManagedHistory(options: ManagedHistoryOptions): ManagedHi
       generation++;
       settledGeneration = generation;
       try {
-        const replacingAcceptedEntry = replace && sameEntry(codec.read(current.state), acceptedEntry) && current.entryKey === keyFor(acceptedEntry);
-        const next = replacingAcceptedEntry ? acceptedEntry : fresh(replace ? acceptedEntry.index : acceptedEntry.index + 1, acceptedEntry.chain);
+        const physical = codec.read(current.state);
+        const replacingAcceptedEntry = replace && sameEntry(physical, acceptedEntry) && current.entryKey === keyFor(acceptedEntry);
+        const next = replacingAcceptedEntry ? reclaimed(physical, acceptedEntry) : fresh(replace ? acceptedEntry.index : acceptedEntry.index + 1, acceptedEntry.chain);
         // Replacements preserve current state; pushes do not copy entry-specific user payload.
         const state = codec.write(replace ? current.state : null, next);
         if (!live) return false;

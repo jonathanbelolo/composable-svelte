@@ -1,14 +1,20 @@
 <script lang="ts">
- import {onDestroy,type Snippet} from 'svelte';
+ import {onDestroy,onMount,type Snippet} from 'svelte';
  import type {Action} from 'svelte/action';
  import type {ViewInstance} from './view-binding.js';
  import type {CaptureChannel} from './renderer/capture-channel.js';
  import ViewScope from './ViewScope.svelte';
- import {optionalRegistry,provideTargetOwner} from './renderer/context.js';
+ import {optionalRegistry,provideTargetOwner,provideFeatureSource} from './renderer/context.js';
+ import {optionalRouteHost,provideRouteInstance} from './renderer/choreography/route-host.js';
 
- let {instance,channel,children}:{instance:ViewInstance;channel:CaptureChannel|undefined;children:Snippet<[Action<HTMLElement>]>}=$props();
+ let {instance,channel,children,onrendered}:{instance:ViewInstance;channel:CaptureChannel|undefined;children:Snippet<[Action<HTMLElement>]>;onrendered?:(()=>void)|undefined}=$props();
+ // Managed route `rendered` checkpoint: runs once this mount's DOM exists.
+ onMount(()=>{onrendered?.();});
 
  const registry=optionalRegistry();if(registry)provideTargetOwner(registry.ownerFor(instance.store));
+ provideFeatureSource(instance.store);
+ // Route participants are scoped by their route instance; nested feature instances inherit it.
+ const routeHost=optionalRouteHost();if(routeHost?.isRouteInstance(instance.store))provideRouteInstance(instance.key);
 
  let disposed=false;
  const surfaces=new Set<HTMLElement>();

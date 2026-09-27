@@ -7,6 +7,7 @@
  */
 
 import type { OverlayError } from '../utils/overlay-error.js';
+import type { RenderAuthority } from '../representation/visual-provider.js';
 
 /**
  * Supported element types for WebGL overlay
@@ -347,6 +348,12 @@ export interface OverlayContextAPI {
 	 * Destroy overlay and clean up all resources
 	 */
 	destroy(): void;
+
+	/**
+	 * The visual-only surface a fluid-motion run drives after the overlay's
+	 * owner retires. Used by `<WebGLOverlay>` with `graphicsVisualProvider`.
+	 */
+	renderAuthority?(): RenderAuthority;
 }
 
 /**

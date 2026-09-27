@@ -28,6 +28,7 @@ import { RenderPipeline } from '../shaders/render-pipeline.js';
 import { DEFAULT_VERTEX_SHADER, DEFAULT_FRAGMENT_SHADER } from '../shaders/default-shaders.js';
 import { getPreset, hasPreset, type PresetName } from '../shaders/presets/index.js';
 import { PositionTracker } from './position-tracker.js';
+import type { RenderAuthority } from '../representation/visual-provider.js';
 import type {
 	OverlayOptions,
 	OverlayInit,
@@ -147,6 +148,12 @@ class WebGLOverlay implements OverlayContextAPI {
 	}
 	private destroyed = false;
 
+	/** Frame and context-loss observers of a `RenderAuthority` (see `renderAuthority`). */
+	private readonly frameListeners = new Set<() => void>();
+	private readonly lossListeners = new Set<() => void>();
+	/** The consumer's callbacks were dropped at retention; none may run again. */
+	private consumerDetached = false;
+
 	constructor(options: OverlayInit = {}) {
 		// The logger comes first, before anything that might use it.
 		//
@@ -198,6 +205,7 @@ class WebGLOverlay implements OverlayContextAPI {
 			// question has. The callbacks run long after the merge below.
 			this.contextManager.onContextLost(() => {
 				console.warn('[WebGLOverlay] WebGL context lost');
+				for (const listener of [...this.lossListeners]) listener();
 				if (this.options.onContextLost) {
 					this.options.onContextLost();
 				}
@@ -688,6 +696,49 @@ class WebGLOverlay implements OverlayContextAPI {
 	}
 
 	/**
+	 * The visual-only surface a fluid-motion run drives after the overlay's
+	 * owner retires (see `graphicsVisualProvider`).
+	 *
+	 * Renderer-driven progression continues under it — shader time uniforms,
+	 * `uDeltaTime`, and the textures already uploaded, at their last tracked
+	 * bounds. Position tracking stops with the page: a detached element
+	 * measures 0×0 and would otherwise collapse its quad.
+	 */
+	renderAuthority(): RenderAuthority {
+		let lastTime: number | null = null;
+		return {
+			detachFromPage: () => {
+				this.renderLoop.stop();
+				this.positionTracker.destroy();
+				// The consumer's callbacks can close over its store; the retained
+				// overlay keeps none of them.
+				this.consumerDetached = true;
+				this.owedTextureLoaded.clear();
+				const silent = () => {};
+				this.options = { ...this.options, onError: silent, onContextLost: silent, onContextRestored: silent };
+			},
+			renderFrame: (time) => {
+				const deltaTime = lastTime === null ? 0 : Math.max(0, time - lastTime);
+				lastTime = time;
+				this.render(deltaTime);
+			},
+			onFrame: (listener) => {
+				this.frameListeners.add(listener);
+				return () => this.frameListeners.delete(listener);
+			},
+			onContextLost: (listener) => {
+				this.lossListeners.add(listener);
+				return () => this.lossListeners.delete(listener);
+			},
+			isContextLost: () => this.destroyed || this.contextIsLost(),
+			dispose: () => {
+				this.stop();
+				this.destroy();
+			}
+		};
+	}
+
+	/**
 	 * Destroy overlay and clean up all resources
 	 */
 	destroy(): void {
@@ -701,6 +752,8 @@ class WebGLOverlay implements OverlayContextAPI {
 		// rebuild every resource on a destroyed overlay. This flag was set at
 		// the very end, so the guard the class already had could not help.
 		this.destroyed = true;
+		this.frameListeners.clear();
+		this.lossListeners.clear();
 
 		// `destroy()`, not `stop()`. `stop()` cancels the pending frame and
 		// leaves the `visibilitychange` listener on `document`, so every overlay
@@ -880,7 +933,7 @@ class WebGLOverlay implements OverlayContextAPI {
 			// symptom this deferral was written to close, reopened by the
 			// generation guard added alongside it.
 			this.owedTextureLoaded.delete(registration.id);
-			onTextureLoaded?.();
+			if (!this.consumerDetached) onTextureLoaded?.();
 
 			// Store dimensions for memory tracking — in the fields
 			// `ElementRegistration` declares for them.
@@ -1024,6 +1077,10 @@ class WebGLOverlay implements OverlayContextAPI {
 				this.renderElement(registration, deltaTime);
 			}
 		}
+
+		// Same task as the draw: without `preserveDrawingBuffer` this is the
+		// only moment the frame can be read back.
+		for (const listener of [...this.frameListeners]) listener();
 	}
 
 	/**

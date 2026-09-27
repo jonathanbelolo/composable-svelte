@@ -1,0 +1,532 @@
+/**
+ * Horizon Gallery - Design System Stylesheet
+ * 
+ * Features:
+ * - Fluid typography & cohesive geometric design system
+ * - Accessible high-visibility focus indicators
+ * - Semantic landmark containers
+ * - Nested scroll layout styles
+ * - Interactive expanded state aesthetics
+ */
+
+:root {
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  
+  --bg-canvas: #0c0f17;
+  --bg-surface: #151a24;
+  --bg-surface-elevated: #1e2533;
+  --bg-surface-active: #2a3447;
+  
+  --text-primary: #f0f4fc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-prominent: rgba(255, 255, 255, 0.16);
+  --border-accent: #38bdf8;
+  
+  --color-accent: #38bdf8;
+  --color-accent-hover: #0ea5e9;
+  --color-accent-bg: rgba(56, 189, 248, 0.12);
+  --color-badge: #f59e0b;
+  --color-badge-bg: rgba(245, 158, 11, 0.16);
+  
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
+  
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  background-color: var(--bg-canvas);
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* Accessible focus styling */
+:focus-visible {
+  outline: 3px solid var(--border-accent);
+  outline-offset: 3px;
+}
+
+/* App container */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+/* Top utility bar */
+.utility-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  margin-bottom: 2rem;
+  font-size: 0.875rem;
+}
+
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.brand-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-accent);
+  box-shadow: 0 0 8px var(--color-accent);
+}
+
+.preference-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pref-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.pref-label input[type="checkbox"] {
+  accent-color: var(--color-accent);
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+}
+
+/* Hero Section */
+.hero-banner {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid var(--border-prominent);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem 2rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-md);
+}
+
+.hero-header-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid var(--border-prominent);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.hero-tag {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  background-color: var(--color-accent-bg);
+  border-radius: var(--radius-full);
+  margin-bottom: 0.75rem;
+}
+
+.hero-title {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.hero-title-compact {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.hero-subtitle {
+  color: var(--text-secondary);
+  font-size: 1.125rem;
+  max-width: 600px;
+}
+
+/* Nav & Filter Controls */
+.nav-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-subtle);
+  overflow-x: auto;
+}
+
+.nav-link, .nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.nav-link:hover, .nav-btn:hover {
+  background-color: var(--bg-surface-elevated);
+  color: var(--text-primary);
+  border-color: var(--border-prominent);
+}
+
+.nav-link.active, .nav-btn.active {
+  background-color: var(--color-accent-bg);
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+/* Exhibition Grid */
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+/* Exhibition Card */
+.exhibition-card {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.exhibition-card:hover {
+  border-color: var(--border-prominent);
+  box-shadow: var(--shadow-md);
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.card-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-badge);
+  background-color: var(--color-badge-bg);
+  border-radius: var(--radius-sm);
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.card-desc {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+  flex-grow: 1;
+}
+
+.card-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: auto;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  background-color: var(--color-accent);
+  color: #020617;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-accent-hover);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  background-color: var(--bg-surface-elevated);
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 0.875rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn-secondary:hover {
+  background-color: var(--bg-surface-active);
+  border-color: var(--border-prominent);
+}
+
+/* Nested Scroll Container: Reading List */
+.reading-list-panel {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.reading-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.reading-list-scroll {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem;
+  background-color: var(--bg-canvas);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-prominent) transparent;
+}
+
+.reading-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.875rem;
+}
+
+.reading-list-item:last-child {
+  border-bottom: none;
+}
+
+/* Expanded Card View Styles */
+.expanded-card-container {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-prominent);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem;
+  box-shadow: var(--shadow-lg);
+  margin-bottom: 2rem;
+}
+
+.expanded-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.interactive-panel {
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.interactive-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.zoom-viewport {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-canvas);
+  padding: 2rem;
+  text-align: center;
+  transform-origin: center center;
+}
+
+.notes-input {
+  width: 100%;
+  min-height: 80px;
+  background-color: var(--bg-canvas);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  resize: vertical;
+  margin-top: 0.5rem;
+}
+
+.notes-input:focus {
+  border-color: var(--color-accent);
+}
+
+/* Detail View Dossier */
+.detail-container {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+@media (max-width: 768px) {
+  .detail-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dossier-main {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 2rem;
+}
+
+.dossier-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.sidebar-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+}
+
+/* Footer & Status Bar */
+.app-footer {
+  margin-top: auto;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  background-color: var(--bg-surface-elevated);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---- Reference corrections (Opus): layouts, study and utility classes ---- */
+.brand-badge { text-decoration: none; color: inherit; }
+.home-layout { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+.home-main.reading .home-layout { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); align-items: start; }
+.home-main.reading .home-layout > aside { order: -1; }
+.home-main.reading .catalog-grid { grid-template-columns: 1fr; gap: 0.75rem; margin-bottom: 0; }
+.home-main.reading .card-desc { display: none; }
+.home-main.reading .reading-list-scroll { max-height: 420px; }
+.home-main.reading .hero-banner { padding: 1.25rem 1.5rem; }
+.hero-banner .btn-primary { margin-top: 1.25rem; }
+.layout-toggle { margin-left: auto; }
+.exhibition-card.featured { border-color: var(--border-prominent); }
+.btn-small { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+.reading-note { color: var(--text-secondary); margin: 0 0 1rem; line-height: 1.5; }
+.panel-title { font-size: 1rem; font-weight: 600; margin: 0 0 0.75rem; }
+.hero-compact { display: flex; align-items: center; gap: 1rem; }
+.dossier-intro { font-size: 1.125rem; line-height: 1.6; margin: 0 0 1.5rem; padding: 1rem 1.25rem; background: var(--bg-canvas); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); }
+.dossier-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1.25rem; }
+.dossier-heading h2 { font-size: 1.5rem; margin: 0 0 0.25rem; }
+.prose p { color: var(--text-secondary); line-height: 1.6; margin: 0 0 1rem; }
+.spec-grid { display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1rem; font-size: 0.875rem; margin: 0; }
+.spec-grid dt { color: var(--text-muted); }
+.spec-grid dd { margin: 0; }
+.quote { border-left: 3px solid var(--color-accent); padding-left: 1rem; font-style: italic; color: var(--text-secondary); margin: 0; }
+.study-title { font-size: 2rem; font-weight: 700; margin: 0.5rem 0 0.25rem; }
+.zoom-group { display: inline-flex; gap: 0.25rem; }
+.zoom-viewport { overflow: hidden; min-height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; margin: 1rem 0; }
+.model { width: 160px; height: 80px; border-radius: 8px; border: 2px dashed #64748b; background: rgba(56, 189, 248, 0.1); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; }
+.model.stress { border-color: #38bdf8; }
+.model.solar { background: rgba(245, 158, 11, 0.22); }
+.notes-label { display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 0.5rem; }
+.study-actions { display: flex; justify-content: flex-end; margin-top: 0.75rem; }
+.muted { color: var(--text-muted); }
+.small { font-size: 0.75rem; }
+.mono { font-family: var(--font-mono); }
+.reading-list-scroll { list-style: none; margin: 0; }
+
+/* Foreground layer for the study's Back control: an ordinary positioned box (no z-index) later in tree order than
+   the route plane, so decoration passing over it paints beneath the real control and its focus ring. The nav is
+   outside every captured participant, so capture qualification is unaffected. */
+.study-nav { position: relative; margin-bottom: 0.75rem; }
+.study-surface { margin-bottom: 1.5rem; }

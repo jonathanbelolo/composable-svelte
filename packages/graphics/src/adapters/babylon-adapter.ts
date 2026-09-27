@@ -3,25 +3,32 @@
  * @description Babylon.js adapter over the WebGL engine
  */
 
-import {
-  Engine,
-  Scene,
-  ArcRotateCamera,
-  HemisphericLight,
-  Vector3 as BabylonVector3,
-  Color3,
-  Color4,
-  Mesh,
-  MeshBuilder,
-  VertexData,
-  StandardMaterial,
-  DirectionalLight,
-  PointLight,
-  SpotLight,
-  type Nullable
-} from '@babylonjs/core';
-
-import { Camera as BabylonCamera } from '@babylonjs/core';
+// Deep imports, not the `@babylonjs/core` barrel. Babylon declares every file
+// side-effectful (`"sideEffects": ["**/*"]`), so importing the barrel bundles
+// the whole library — 5.9 MB minified, 1.3 MB gzip, measured — including WebGPU
+// shaders, XR, particles and post-processing this adapter never touches. These
+// are the modules it uses; Babylon's own shader loading stays dynamic.
+import { Engine } from '@babylonjs/core/Engines/engine.js';
+import type { AbstractEngine } from '@babylonjs/core/Engines/abstractEngine.js';
+import { EngineStore } from '@babylonjs/core/Engines/engineStore.js';
+import { Scene } from '@babylonjs/core/scene.js';
+import { ArcRotateCamera } from '@babylonjs/core/Cameras/arcRotateCamera.js';
+import { Camera as BabylonCamera } from '@babylonjs/core/Cameras/camera.js';
+import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight.js';
+import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight.js';
+import { PointLight } from '@babylonjs/core/Lights/pointLight.js';
+import { SpotLight } from '@babylonjs/core/Lights/spotLight.js';
+import { Vector3 as BabylonVector3 } from '@babylonjs/core/Maths/math.vector.js';
+import { Color3, Color4 } from '@babylonjs/core/Maths/math.color.js';
+import { Mesh } from '@babylonjs/core/Meshes/mesh.js';
+import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData.js';
+import { CreateBox } from '@babylonjs/core/Meshes/Builders/boxBuilder.js';
+import { CreateSphere } from '@babylonjs/core/Meshes/Builders/sphereBuilder.js';
+import { CreateCylinder } from '@babylonjs/core/Meshes/Builders/cylinderBuilder.js';
+import { CreatePlane } from '@babylonjs/core/Meshes/Builders/planeBuilder.js';
+import { CreateTorus } from '@babylonjs/core/Meshes/Builders/torusBuilder.js';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
+import type { Nullable } from '@babylonjs/core/types.js';
 import {
   DEFAULT_ORTHO_SIZE,
   orthographicBounds,
@@ -37,12 +44,75 @@ import type {
   Vector3
 } from '../core/types.js';
 import { customGeometryProblem } from '../core/geometry.js';
+import type { RenderAuthority } from '../lib/representation/visual-provider.js';
 
 /**
  * Babylon.js adapter - handles WebGL rendering
  */
+/**
+ * Release an engine whose asynchronous initialisation failed. Babylon's `WebGPUEngine.dispose()` assumes a
+ * completed `initAsync` (it disposes `_timestampQuery` first), so after, for example, a `requestDevice`
+ * rejection it throws before reaching the base disposal that removes the engine from `EngineStore.Instances`.
+ * The normal disposal is attempted; if it throws, the engine is removed from the public store directly so no
+ * instance is orphaned. The caller always reports the original initialisation failure, never this one.
+ */
+function releasePartialEngine(engine: AbstractEngine): void {
+  try {
+    engine.dispose();
+    return;
+  } catch {
+    // Partial engine: release what the failed initialisation did create — a device, if one was allocated
+    // (internal field; it must not outlive the failure) — and the engine's store registration.
+  }
+  try {
+    (engine as unknown as { _device?: GPUDevice })._device?.destroy();
+  } catch {
+    // Destroying an already-lost device is harmless.
+  }
+  const index = EngineStore.Instances.indexOf(engine);
+  if (index >= 0) EngineStore.Instances.splice(index, 1);
+}
+
+/**
+ * Babylon restores a WebGPU engine after device loss by re-running `initAsync`, unawaited, from its own
+ * `device.lost` handler. When the engine is released while that restoration is pending, the restoration later
+ * assigns a new live `GPUDevice` to the disposed engine and then rejects (its canvas is gone). Policy: once the
+ * engine is disposed, any (re)initialisation that settles afterwards destroys the device it created, and only
+ * that post-release rejection is suppressed. Restoration of a live engine, and every other failure, is unchanged.
+ */
+function guardReleasedRestoration(engine: AbstractEngine & { initAsync(...args: unknown[]): Promise<void> }): void {
+  const initialise = engine.initAsync.bind(engine);
+  const releaseLateDevice = () => {
+    // The device Babylon just created for this engine (internal field): it must not outlive the release.
+    (engine as unknown as { _device?: GPUDevice })._device?.destroy();
+  };
+  engine.initAsync = async (...args: unknown[]) => {
+    try {
+      await initialise(...args);
+    } catch (error) {
+      if (!engine.isDisposed) throw error;
+      releaseLateDevice();
+      return;
+    }
+    if (engine.isDisposed) releaseLateDevice();
+  };
+}
+
+/** Construction options for {@link BabylonAdapter}. */
+export interface BabylonAdapterOptions {
+  /**
+   * Which Babylon engine renders. `'webgl'` (default) is Babylon's WebGL `Engine`. `'webgpu'` is Babylon's
+   * `WebGPUEngine`, loaded on demand (emitted as separate lazy chunks that WebGL consumers never load). There is no silent
+   * fallback: when WebGPU is unavailable, or its adapter/device cannot be obtained, `initialize` rejects and
+   * `<Scene>` reports `rendererError`. Choose `'webgl'` or retry deliberately.
+   */
+  renderer?: 'webgl' | 'webgpu' | undefined;
+}
+
 export class BabylonAdapter {
-  private engine: Nullable<Engine> = null;
+  constructor(private readonly options: BabylonAdapterOptions = {}) {}
+
+  private engine: Nullable<AbstractEngine> = null;
   private scene: Nullable<Scene> = null;
   private camera: Nullable<ArcRotateCamera> = null;
   private meshes: Map<string, Mesh> = new Map();
@@ -74,20 +144,30 @@ export class BabylonAdapter {
    */
   async initialize(
     canvas: HTMLCanvasElement
-  ): Promise<{ renderer: 'webgl'; capabilities: RendererCapabilities }> {
-    // This package renders through Babylon's WebGL `Engine`, always.
-    //
-    // There used to be a "WebGPU first" branch here, and it constructed the
-    // same `new Engine(canvas, …)` as the fallback — its own comment said
-    // "Babylon.js automatically uses WebGPU when available". So detecting a
-    // WebGPU adapter changed nothing about rendering; it only changed the
-    // *label* this method returned, which the store surfaces as
-    // `renderer.activeRenderer` and `SceneDemo` prints to users. It reported
-    // `webgpu`, and `supportsWebGL: false`, while running WebGL.
-    //
-    // Real WebGPU is `WebGPUEngine` with its own async initialisation. That is
-    // a feature nobody built, so it is recorded as a gap rather than claimed —
-    // see the README and plans/hardening/README.md.
+  ): Promise<{ renderer: 'webgl' | 'webgpu'; capabilities: RendererCapabilities }> {
+    const renderer = this.options.renderer ?? 'webgl';
+    // WebGL (Babylon's `Engine`) unless WebGPU was explicitly requested. There is no detection and no
+    // relabelling: an earlier "WebGPU first" branch built the same WebGL `Engine` and only changed the label.
+    // Real WebGPU, when explicitly requested: Babylon's `WebGPUEngine`, with its own async initialisation.
+    // Built-in materials use WGSL, so no GLSL toolchain (glslang/twgsl, fetched from a CDN) is needed for this
+    // package's meshes; a custom GLSL material would trigger that download, which this package never adds.
+    if (!this.engine && renderer === 'webgpu') {
+      const { WebGPUEngine } = await import('@babylonjs/core/Engines/webgpuEngine.js');
+      if (!(await WebGPUEngine.IsSupportedAsync)) {
+        throw new Error('WebGPU is not available in this browser (no navigator.gpu or no adapter)');
+      }
+      const gpu = new WebGPUEngine(canvas, { adaptToDeviceRatio: true, antialias: true });
+      guardReleasedRestoration(gpu);
+      try {
+        await gpu.initAsync();
+      } catch (error) {
+        releasePartialEngine(gpu);
+        throw new Error(`WebGPU initialisation failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+      // `initialize` may have been superseded while awaiting; the caller disposes via `dispose()`.
+      if (!this.engine) this.engine = gpu;
+      else gpu.dispose();
+    }
     if (!this.engine) {
       this.engine = new Engine(canvas, true, {
         adaptToDeviceRatio: true,
@@ -126,13 +206,13 @@ export class BabylonAdapter {
 
     // Get capabilities
     const capabilities: RendererCapabilities = {
-      supportsWebGL: true,
+      supportsWebGL: renderer === 'webgl',
       maxTextureSize: this.engine.getCaps().maxTextureSize,
       maxVertexAttributes: this.engine.getCaps().maxVertexAttribs
     };
 
     return {
-      renderer: 'webgl',
+      renderer,
       capabilities
     };
   }
@@ -150,7 +230,7 @@ export class BabylonAdapter {
    * `initialize` keeps everything that genuinely needs the DOM: the canvas, the
    * control attachment, the render loop and the resize listener.
    */
-  attachEngine(engine: Engine): Scene {
+  attachEngine(engine: AbstractEngine): Scene {
     // Idempotence rather than a second scene: this is public, `initialize`'s
     // `if (!this.engine)` implies a second call was anticipated, and building
     // another `Scene` on the same engine would also register a second resize
@@ -171,6 +251,14 @@ export class BabylonAdapter {
     }
 
     this.engine = engine;
+
+    // Document tab order. Babylon defaults `canvasTabIndex` to 1, a positive
+    // tab index that pulls the canvas ahead of everything before it, and applies
+    // it both when the scene's inputs attach and again on every pointer move. 0
+    // keeps the canvas focusable — the camera's arrow-key orbit needs focus — in
+    // the position the document gives it. Set before the scene exists, because
+    // building it is what first applies the value.
+    engine.canvasTabIndex = 0;
 
     this.scene = new Scene(engine);
     this.scene.clearColor = new Color4(0.1, 0.1, 0.1, 1);
@@ -547,6 +635,67 @@ export class BabylonAdapter {
   }
 
   /**
+   * The visual-only surface a fluid-motion run drives after this renderer's
+   * feature retires (see `graphicsVisualProvider`). `null` before
+   * initialisation and after disposal.
+   *
+   * What keeps moving under it is what `scene.render()` advances by itself: the
+   * engine clock, camera inertia, Babylon animatables and `onBeforeRender`
+   * observers. Store-driven changes do not — nothing here reads the store.
+   */
+  renderAuthority(): RenderAuthority | null {
+    const engine = this.engine;
+    const scene = this.scene;
+    if (!engine || !scene) return null;
+
+    // Tracked from here, which `<Scene>` asks for right after initialising.
+    let lost = false;
+    engine.onContextLostObservable.add(() => {
+      lost = true;
+    });
+    engine.onContextRestoredObservable.add(() => {
+      lost = false;
+    });
+
+    return {
+      detachFromPage: () => {
+        engine.stopRenderLoop();
+        this.camera?.detachControl();
+        // A detached canvas measures 0×0, so a later resize would blank it.
+        if (this.onResize) {
+          window.removeEventListener('resize', this.onResize);
+          this.onResize = null;
+        }
+      },
+      renderFrame: () => {
+        if (engine.isDisposed || lost || this.scene !== scene) return;
+        // `_processFrame` without the render-loop list, which is now empty.
+        engine.beginFrame();
+        scene.render();
+        engine.endFrame();
+      },
+      onFrame: (listener) => {
+        const observer = engine.onEndFrameObservable.add(() => listener());
+        return () => {
+          engine.onEndFrameObservable.remove(observer);
+        };
+      },
+      onContextLost: (listener) => {
+        const observer = engine.onContextLostObservable.add(() => listener());
+        return () => {
+          engine.onContextLostObservable.remove(observer);
+        };
+      },
+      isContextLost: () => lost,
+      dispose: () => {
+        // Only the engine this authority was built for: a re-initialised
+        // adapter belongs to someone else by then.
+        if (this.engine === engine) this.dispose();
+      }
+    };
+  }
+
+  /**
    * Dispose of all resources
    */
   dispose(): void {
@@ -587,11 +736,11 @@ export class BabylonAdapter {
 
     switch (config.type) {
       case 'box': {
-        return MeshBuilder.CreateBox(id, { size: config.size }, this.scene);
+        return CreateBox(id, { size: config.size }, this.scene);
       }
 
       case 'sphere': {
-        return MeshBuilder.CreateSphere(
+        return CreateSphere(
           id,
           { diameter: config.radius * 2, segments: config.segments || 32 },
           this.scene
@@ -599,7 +748,7 @@ export class BabylonAdapter {
       }
 
       case 'cylinder': {
-        return MeshBuilder.CreateCylinder(
+        return CreateCylinder(
           id,
           { height: config.height, diameter: config.diameter },
           this.scene
@@ -607,7 +756,7 @@ export class BabylonAdapter {
       }
 
       case 'plane': {
-        return MeshBuilder.CreatePlane(
+        return CreatePlane(
           id,
           { width: config.width, height: config.height },
           this.scene
@@ -615,7 +764,7 @@ export class BabylonAdapter {
       }
 
       case 'torus': {
-        return MeshBuilder.CreateTorus(
+        return CreateTorus(
           id,
           { diameter: config.diameter, thickness: config.thickness, tessellation: config.segments || 32 },
           this.scene

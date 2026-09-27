@@ -75,8 +75,18 @@ Invalid initial configuration, request decisions, serialization, metadata, or st
 
 Root and Host each release the lifetime they own on immediate unmount, including before deferred Svelte mount effects run, and when rendering their content fails. SSR retires request-owned instances after rendering. Framework lifetime management adds no visual wrapper or element around the application content.
 
+## Staged routing and fluid motion
+
+By default, a route change is one immediate turn: the reducer runs, history is written, and the view changes. That remains the behaviour for every application that does not declare `routing.staging`.
+
+A routed application can opt in to staged navigation by adding `staging` (`policy`, `commit`, `routeSlot`, and optional `routeKey`, `onUnavailable`, `budgets`) inside `routing`. Components then call `useStagedRoute(application).request(intent, { motion })`. The request is bound to the calling feature's owner, and the domain `commit` action is dispatched once at the choreography's cue.
+
+Separately, `routing.scroll` opts in to framework scroll restoration for route commits. Scroll containers are elements marked `data-composable-scroll="<key>"`.
+
+The complete, compiled example, the request results and transaction outcomes, and the qualified limits are in [Fluid Layout Motion & Staged Routing](./fluid-motion.md).
+
 ## Current supported boundary
 
 This API supports one browser SPA writer and a request-injected SSR snapshot. Its default history metadata codec preserves plain record fields and accepts `null`; it refuses other structured history state before claiming an entry. It does not silently wrap or discard another integration's state.
 
-SvelteKit navigation coordination, a public memory router, framework link interception, scroll restoration, nested route outlets, and alternative metadata codecs are separate capabilities. They are not implied by this browser attachment API. Do not run another history-writing router alongside it or replace framework-owned routing with application timers or listeners.
+Opt-in staged navigation (`routing.staging`) and scroll restoration (`routing.scroll`) are described in [fluid-motion.md](./fluid-motion.md); without them, browser scroll restoration behaves as before. SvelteKit navigation coordination, a public memory router, framework link interception, nested route outlets, and alternative metadata codecs are separate capabilities. They are not implied by this browser attachment API. Do not run another history-writing router alongside it or replace framework-owned routing with application timers or listeners.

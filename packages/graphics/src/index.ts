@@ -49,3 +49,17 @@ export * from './lib/shaders/index.js';
 
 // Adapters (for advanced usage)
 export { BabylonAdapter } from './adapters/babylon-adapter.js';
+export type { BabylonAdapterOptions } from './adapters/babylon-adapter.js';
+
+// Fluid-motion representation: lets a <Scene> or <WebGLOverlay> keep rendering
+// under a visual run after its feature retires. `RenderAuthority` is what a
+// custom `GraphicsAdapter` implements to take part; the provider types are the
+// structural shape core's `fluidMotion({ providers })` accepts.
+export { graphicsVisualProvider } from './lib/representation/visual-provider.js';
+export type {
+	RenderAuthority,
+	GraphicsVisualProvider,
+	GraphicsRepresentation,
+	GraphicsRepresentationContext,
+	GraphicsRetainedRenderer
+} from './lib/representation/visual-provider.js';

@@ -31,6 +31,8 @@ Does component have animation?
     ├─ Infinite loop (spinner, shimmer) → CSS @keyframes ONLY
     ├─ Hover/focus/click → instant feedback unless application state drives the change
     ├─ Declared element/group state → MotionElement, useMotion, or useMotionGroup
+    ├─ Whole-layout / cross-route fluid motion → useStagedRoute + defineChoreography + MotionPlane
+    ├─ Intra-page layout choreography → useLayoutChoreography + defineChoreography
     └─ Store-observed completion/content lifetime → Motion One + PresentationState
 ```
 
@@ -476,7 +478,103 @@ animateAccordionExpand(element), animateAccordionCollapse(element)
 **CSS Animations**:
 - ✅ **Allowed**: Infinite loops (Spinner, Skeleton shimmer effects, Progress indicators)
 - ❌ **Prohibited**: Hover states, Focus states, Click/Active states
-- ❌ **Prohibited**: Any lifecycle animations (appearing, disappearing, expanding, collapsing)
+---
+
+## FLUID LAYOUT MOTION & STAGED ROUTING
+
+Opt-in, prospective API for whole-layout motion across a route change. Ordinary routing, `AnimatedNavigationStack` and overlay presentation are unchanged. The full compiled example and contracts are in `packages/core/docs/fluid-motion.md`.
+
+**Rules**
+
+1. Declare `routing.staging` (`policy`, `commit`, `routeSlot`) on `defineApplication`. `policy` is pure:
+   - It runs at admission: `false` → request result `rejected`.
+   - It runs again at commit: `false` → outcome `vetoed`.
+   - Do not refuse the current URL in it. The framework reports a current-URL request as `unchanged`, or `returned` (cancelling the pending transition) when one is pending.
+2. Call `useStagedRoute(application)` (from `@composable-svelte/core/application`), `useParticipant()` and `useLayoutChoreography()` (from `@composable-svelte/core/application/motion`) during component initialization. Requests are bound to the calling page's owner. Retirement → `cancelled/ownerRetired`.
+3. Plans (`defineChoreography`) need at least one track and use keyword easings only (`linear`, `ease`, `ease-in`, `ease-out`, `ease-in-out`). Shared tracks need the same participant key on both pages. Incoming tracks may add `slide: { dx, dy }` (px) next to `opacity`. Controls and focusable content slide but never fade, so keep buttons out of a fading incoming participant.
+4. Reduced motion is framework-owned: the request commits without choreography. Never build empty plans for it.
+5. `{ return: true }` abandons a pending transition (`returned`), or is `unchanged`. It never navigates. "Back" after a commit is an ordinary request with its own plan.
+6. `ApplicationRoot` options are `{ dependencies, initial: { input, url } }`, with `url` injected by the entry point. Never read `window` while constructing the root.
+7. The transaction outcome is recorded when the commit turn settles, at the cue or deadline. Tracks after `cueMs` are visual only.
+8. Style participants normally (grid, flex, gradients, positioning, SVG, canvas, video): the framework represents them as painted. Never restyle a page to make it animate. Optional `visual: fluidMotion({ providers, preparationBudgetMs, nativeSnapshot, onDiagnostic })` on `defineApplication` adds representation providers (for example `graphicsVisualProvider()` from `@composable-svelte/graphics`), a preparation budget, native snapshots for cross-origin embeds, and public diagnostics. A provider's retained renderer continues visuals only: the retired page's store and dispatch never outlive it, and destination state is never seeded. Components find a configured provider with `useRepresentationProvider(name)`. When a within-page commit removes participants, render them inside `<Presence when={…}>`, with `useParticipant()` called by a component inside it, so they hand off before removal.
+
+### Route page: participants, staged request, within-page choreography
+
+```svelte
+<script lang="ts">
+  import { useStagedRoute, type PresentationFeatureViewProps } from '@composable-svelte/core/application';
+  import { useLayoutChoreography, useParticipant } from '@composable-svelte/core/application/motion';
+  import { application, ITEMS, type CatalogAction, type CatalogState } from './model.js';
+  import { openDetail, resizeList } from './motion.js';
+
+  let { store }: PresentationFeatureViewProps<CatalogState, CatalogAction, {}> = $props();
+  const route = useStagedRoute(application);
+  const participant = useParticipant();
+  const layout = useLayoutChoreography();
+  const featuredOnly = $derived(store.state?.featuredOnly ?? false);
+  const visible = $derived(ITEMS.filter(item => !featuredOnly || item.featured));
+
+  function open(id: string) {
+    route.request({ to: `/items/${id}` }, { motion: openDetail(id) });
+  }
+  function toggleFeatured() {
+    layout.transition(resizeList, () => store.dispatch({ type: 'toggleFeatured' }));
+  }
+</script>
+
+<button type="button" onclick={toggleFeatured}>{featuredOnly ? 'Show all' : 'Featured only'}</button>
+<ul class="catalog" data-composable-scroll="catalog-list" use:participant={{ key: 'catalog-list' }}>
+  {#each visible as item (item.id)}
+    <li use:participant={{ key: `item-${item.id}` }}>
+      <button type="button" onclick={() => open(item.id)}>{item.title}</button>
+    </li>
+  {/each}
+</ul>
+```
+
+### Host
+
+```svelte
+<ApplicationRoot definition={application} options={{ dependencies: {}, initial: { input: url, url } }}>
+  {#snippet children(app)}
+    <ApplicationHost {app}>
+      <MotionPlane />
+      <FeatureViews store={app.store} definition={viewPlan}>
+        {#snippet children(views)}
+          <FeatureOutlet view={views.page}>
+            {#snippet fallback({ summary, attempt, retry })}
+              <section role="alert">
+                <h2>This page failed to render ({summary.name})</h2>
+                <p>{summary.message}</p>
+                <button type="button" onclick={retry}>Try again (attempt {attempt} failed)</button>
+              </section>
+            {/snippet}
+          </FeatureOutlet>
+        {/snippet}
+      </FeatureViews>
+    </ApplicationHost>
+  {/snippet}
+</ApplicationRoot>
+```
+
+### Testing: protocol events are not domain actions
+
+```typescript
+const store = createTestStore<AppState, AppAction>({
+  initialState: initialAppState('/'),
+  reducer: rootReducer,
+  staging: { staging, serialize: state => state.url } // wraps the app's declaration
+});
+const handle = store.request({ to: '/items/pavilion' });
+const status = handle.status;
+if (status === 'pending' || status.type !== 'admitted') throw new Error('expected admission');
+await store.receiveProtocol({ kind: 'request' });
+await store.receiveProtocol({ kind: 'admitted' });
+store.cue(status.transaction); // manual cue is the TestStore default
+await store.receive({ type: 'navigate', url: '/items/pavilion' });
+await store.receiveProtocol({ kind: 'terminal', outcome: { type: 'committed', route: 'accepted', attempted: 1, domainCommitted: true, url: '/items/pavilion', history: 'written' } });
+await store.finish();
+```
 
 ---
 
@@ -746,6 +844,8 @@ Does component animate?
     ├─ Infinite loop (spinner, shimmer) → CSS @keyframes ONLY
     ├─ Hover/focus/click → instant feedback unless application state drives the change
     ├─ Declared element/group state → MotionElement, useMotion, or useMotionGroup
+    ├─ Whole-layout / cross-route fluid motion → useStagedRoute + defineChoreography + MotionPlane
+    ├─ Intra-page layout choreography → useLayoutChoreography + defineChoreography
     └─ Store-observed completion/content lifetime → Motion One + PresentationState
 ```
 
@@ -772,6 +872,17 @@ Does component animate?
 - [ ] 4. If using that legacy explicit lifecycle, guard transitions and dispatch completion events
 - [ ] 5. Preserve the final state and completion behavior under reduced motion
 - [ ] 6. Test observable motion and, where present, the reducer lifecycle
+
+### Fluid Motion Feature Checklist
+
+- [ ] 1. Declare `routing.staging` in `defineApplication` with pure `policy`, `commit`, and `routeSlot`
+- [ ] 2. Inject the URL: `initial: { input: url, url }` plus `dependencies`
+- [ ] 3. Place `<MotionPlane />` inside `ApplicationHost`, outside transformed/filtered ancestors
+- [ ] 4. Declare participants with `const participant = useParticipant()` and `use:participant={{ key }}` on both pages for shared tracks (`role: 'control'` for interactive ones)
+- [ ] 5. Declare plans with `defineChoreography` (at least one track, keyword easing, `cueMs <= durationMs`)
+- [ ] 6. Request via `useStagedRoute(application).request(intent, { motion: plan })`; "back" is an ordinary request
+- [ ] 7. Mark scroll containers with `data-composable-scroll="<key>"` if `routing.scroll.containers` is used
+- [ ] 8. Test with `TestStore` `staging: { staging, serialize }`: `receiveProtocol` for request/admitted/terminal, `receive` for the one domain action
 
 ---
 
@@ -1075,8 +1186,9 @@ This skill covers navigation and animation patterns for Composable Svelte:
 10. **Public Motion**: `MotionElement` / `useMotion` for one target and `useMotionGroup` for a complete declared target set
 11. **URL Routing**: Sync browser history with state
 12. **Navigation components**: six dismissing PresentationView families plus non-dismissing ChildView stacks and tabs
+13. **Fluid Layout Motion**: Whole-layout and cross-route transitions via `useStagedRoute`, `defineChoreography`, `<MotionPlane />`, and `useLayoutChoreography`
 
-**Remember**: Use the public declared-motion APIs for element and group motion. Retain an explicit `PresentationState` lifecycle only when the application must observe completion or retain content; navigation overlays do not gain animation defaults automatically.
+**Remember**: Use the public declared-motion APIs for element and group motion, and staged routing (`useStagedRoute` + `defineChoreography`) for cross-route fluid transitions. Retain an explicit `PresentationState` lifecycle only when the application must observe completion or retain content; navigation overlays do not gain animation defaults automatically.
 
 For core architecture patterns, see **composable-svelte-core** skill.
 For testing navigation flows, see **composable-svelte-testing** skill.
