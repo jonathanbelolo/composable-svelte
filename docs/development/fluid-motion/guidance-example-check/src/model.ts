@@ -1,4 +1,4 @@
-import { Effect, createDestination, type PresentationAction, type Reducer } from '@composable-svelte/core';
+import { Effect, createDestination, type PresentationAction, type PresentationState, type Reducer } from '@composable-svelte/core';
 import {
   defineApplication,
   defineViews,
@@ -22,10 +22,36 @@ export type CatalogAction = { type: 'toggleFeatured' };
 const catalogReducer: Reducer<CatalogState, CatalogAction> = (state, action) =>
   action.type === 'toggleFeatured' ? [{ ...state, featuredOnly: !state.featuredOnly }, Effect.none()] : [state, Effect.none()];
 
-export interface DetailState { readonly item: Item; readonly saved: boolean }
-export type DetailAction = { type: 'toggleSaved' };
-const detailReducer: Reducer<DetailState, DetailAction> = (state, action) =>
-  action.type === 'toggleSaved' ? [{ ...state, saved: !state.saved }, Effect.none()] : [state, Effect.none()];
+// The notes dialog's lifecycle is store-owned presentation state. The Modal reports completion through its
+// callbacks (no timers); a pinned dialog refuses close, and a refused close starts no motion.
+export interface DetailState { readonly item: Item; readonly saved: boolean; readonly notes: PresentationState<string>; readonly pinned: boolean }
+export type DetailAction =
+  | { type: 'toggleSaved' }
+  | { type: 'openNotes' }
+  | { type: 'closeNotes' }
+  | { type: 'togglePinned' }
+  | { type: 'notesPresented' }
+  | { type: 'notesDismissed' };
+const detailReducer: Reducer<DetailState, DetailAction> = (state, action) => {
+  const notes = state.notes;
+  switch (action.type) {
+    case 'toggleSaved': return [{ ...state, saved: !state.saved }, Effect.none()];
+    case 'togglePinned': return [{ ...state, pinned: !state.pinned }, Effect.none()];
+    case 'openNotes':
+      return notes.status === 'idle' || notes.status === 'dismissing'
+        ? [{ ...state, notes: { status: 'presenting', content: state.item.summary } }, Effect.none()]
+        : [state, Effect.none()];
+    case 'closeNotes':
+      // Refused while pinned: the status does not change, so no close motion starts.
+      return !state.pinned && (notes.status === 'presented' || notes.status === 'presenting')
+        ? [{ ...state, notes: { status: 'dismissing', content: notes.content } }, Effect.none()]
+        : [state, Effect.none()];
+    case 'notesPresented':
+      return notes.status === 'presenting' ? [{ ...state, notes: { status: 'presented', content: notes.content } }, Effect.none()] : [state, Effect.none()];
+    case 'notesDismissed':
+      return notes.status === 'dismissing' ? [{ ...state, notes: { status: 'idle' } }, Effect.none()] : [state, Effect.none()];
+  }
+};
 
 export const pages = createDestination({ catalog: catalogReducer, detail: detailReducer });
 export type PagesState = typeof pages._types.State;
@@ -33,7 +59,7 @@ export type PagesAction = typeof pages._types.Action;
 
 export function pageFor(url: string): PagesState {
   const item = ITEMS.find(candidate => url === `/items/${candidate.id}`);
-  return item ? pages.initial('detail', { item, saved: false }) : pages.initial('catalog', { featuredOnly: false });
+  return item ? pages.initial('detail', { item, saved: false, notes: { status: 'idle' }, pinned: false }) : pages.initial('catalog', { featuredOnly: false });
 }
 
 // Root domain: the URL and the page it selects.

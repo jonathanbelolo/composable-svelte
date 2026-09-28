@@ -216,3 +216,30 @@ describe('every pinned skill', () => {
 		).toEqual([]);
 	});
 });
+
+/**
+ * The navigation skill once taught a reducer `Effect.afterDelay` completion alongside an app-owned
+ * animation effect, and keyword-only choreography easing. Overlays report completion through their
+ * own callbacks, and plans accept `cubicBezier` curves; these keep the skill from teaching the old shape.
+ */
+describe('navigation skill: overlay lifecycle and easing teaching', () => {
+	const skill = readFileSync(join(repoRoot, '.claude/skills/composable-svelte-navigation/SKILL.md'), 'utf8');
+	const fences = [...skill.matchAll(/```(\w+)\n([\s\S]*?)```/g)].map((match) => match[2] ?? '');
+
+	it('no example pairs a presentation completion with a reducer timer', () => {
+		const paired = fences.filter((body) => body.includes('afterDelay') && /presentationCompleted|dismissalCompleted/.test(body));
+		expect(paired).toEqual([]);
+	});
+
+	it('does not restrict choreography easing to keywords', () => {
+		expect(skill).not.toMatch(/keyword easings only|Other easing strings throw/);
+		expect(skill).toMatch(/cubicBezier/);
+	});
+
+	it('pins the overlay orchestration example: motion prop and component completion callbacks', () => {
+		const overlay = fences.find((body) => body.includes('useOverlayMotion') && body.includes('motion={dialog}'));
+		expect(overlay).toBeDefined();
+		expect(overlay).toMatch(/onPresentationComplete=/);
+		expect(overlay).not.toMatch(/afterDelay|animateModalIn/);
+	});
+});

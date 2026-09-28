@@ -1,8 +1,20 @@
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import App from '../src/App.svelte';
 import { visual, visualLog } from '../src/visual.js';
 import type { RepresentationProvider } from '@composable-svelte/core/application/motion';
+import { modalProbe } from './modal-probe.js';
+
+// Observes the completion callbacks the real Modal delivers: the public Modal is replaced by a probe that renders it
+// with every prop forwarded and records each delivery. Presentation status alone cannot prove that a cancelled
+// completion was never delivered, because the reducer ignores a stale notesPresented after the status changes.
+vi.mock('@composable-svelte/core/navigation-components', async importOriginal => {
+  const actual = await importOriginal<typeof import('@composable-svelte/core/navigation-components')>();
+  const { modalProbe: probe } = await import('./modal-probe.js');
+  probe.Modal = actual.Modal as never;
+  const { default: ModalProbe } = await import('./ModalProbe.svelte');
+  return { ...actual, Modal: ModalProbe };
+});
 
 const cleanups: (() => Promise<void>)[] = [];
 afterEach(async () => { for (const cleanup of cleanups.splice(0).reverse()) await cleanup(); });
@@ -157,4 +169,114 @@ it('a settling decline leaves the whole participant unrepresented', async () => 
   expect(visualLog).toContainEqual({ type: 'representation', participant: 'catalog-list', provider: 'settled', continuity: 'unrepresented', reason: 'settled:pulse:probe' });
   await until(() => location.pathname === '/items/pavilion', 'committed');
   await until(() => document.querySelector('[data-route-representation]') === null, 'plane cleared');
+});
+
+describe('overlay orchestration: the notes dialog (public package)', () => {
+  const status = (target: HTMLElement) => target.querySelector('main')?.getAttribute('data-notes');
+  const heading = () => document.querySelector('[data-route-representation="notes-heading"]');
+  const deliveries = () => modalProbe.deliveries;
+  beforeEach(() => { modalProbe.deliveries.length = 0; });
+  // Lets any late (stale) delivery arrive before the delivery log is asserted.
+  async function quiet() { for (let i = 0; i < 30; i++) await frame(); }
+  async function opened(target: HTMLElement) {
+    target.querySelector<HTMLButtonElement>('[data-open-notes]')!.click();
+    await until(() => status(target) === 'presented', 'notes presented');
+  }
+
+  it('default plans: the page heading flies into the dialog and back; completion needs no timer', async () => {
+    const target = start('/items/pavilion');
+    await until(() => !!target.querySelector('[data-open-notes]'), 'detail rendered');
+    target.querySelector<HTMLButtonElement>('[data-open-notes]')!.click();
+    await until(() => !!heading(), 'shared heading on the plane');
+    await until(() => status(target) === 'presented', 'open completed through onPresentationComplete');
+    document.querySelector<HTMLButtonElement>('[data-close-notes]')!.click();
+    await until(() => !!heading(), 'shared heading flies back');
+    await until(() => status(target) === 'idle', 'close completed through onDismissalComplete');
+    await until(() => document.querySelector('[data-route-representation]') === null, 'plane cleared');
+    expect(document.querySelector('[data-close-notes]')).toBeNull();
+    await quiet();
+    // Exactly one delivery of each completion, in order.
+    expect(deliveries()).toEqual(['presentationComplete', 'dismissalComplete']);
+  });
+
+  it('a refused close (pinned) starts no motion and keeps the dialog', async () => {
+    const target = start('/items/pavilion');
+    await until(() => !!target.querySelector('[data-open-notes]'), 'detail rendered');
+    await opened(target);
+    await until(() => document.querySelector('[data-route-representation]') === null, 'open settled');
+    document.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
+    document.querySelector<HTMLButtonElement>('[data-close-notes]')!.click();
+    for (let i = 0; i < 20; i++) {
+      await frame();
+      expect(document.querySelector('[data-route-representation]')).toBeNull();
+    }
+    expect(status(target)).toBe('presented');
+    // The refused close delivers no dismissal completion.
+    expect(deliveries()).toEqual(['presentationComplete']);
+  });
+
+  it('the explicit entry replaces the default close for that transition only', async () => {
+    const target = start('/items/pavilion');
+    await until(() => !!target.querySelector('[data-open-notes]'), 'detail rendered');
+    await opened(target);
+    await until(() => document.querySelector('[data-route-representation]') === null, 'open settled');
+    document.querySelector<HTMLButtonElement>('[data-close-quickly]')!.click();
+    let flew = false;
+    await until(() => { flew ||= !!heading(); return status(target) === 'idle'; }, 'quick close completed');
+    // notesQuickClose has no shared heading track, unlike the default close.
+    expect(flew).toBe(false);
+    await quiet();
+    expect(deliveries()).toEqual(['presentationComplete', 'dismissalComplete']);
+  });
+
+  it('a close during the opening reverses it; the cancelled open never completes', async () => {
+    const target = start('/items/pavilion');
+    await until(() => !!target.querySelector('[data-open-notes]'), 'detail rendered');
+    target.querySelector<HTMLButtonElement>('[data-open-notes]')!.click();
+    await until(() => status(target) === 'presenting', 'opening');
+    await frame(); await frame();
+    document.querySelector<HTMLButtonElement>('[data-close-notes]')!.click();
+    const seen = new Set<string>();
+    await until(() => { seen.add(status(target) ?? ''); return status(target) === 'idle'; }, 'reversed to idle');
+    expect(seen.has('presented')).toBe(false);
+    await until(() => document.querySelector('[data-route-representation]') === null, 'plane cleared');
+    await quiet();
+    // The Modal itself never delivered the cancelled open's completion (the status alone cannot show this: the
+    // reducer ignores a late notesPresented once the status is no longer 'presenting'); the close completed once.
+    expect(deliveries()).toEqual(['dismissalComplete']);
+  });
+
+  it("lifetime: 'overlay' holds the page's resting state while the dialog is open; a refused close keeps it", async () => {
+    const target = start('/items/pavilion');
+    await until(() => !!target.querySelector('[data-open-notes]'), 'detail rendered');
+    const body = target.querySelector<HTMLElement>('article')!;
+    const paint = () => ({ opacity: Number(getComputedStyle(body).opacity), scale: getComputedStyle(body).scale });
+    const resting = () => Math.abs(paint().opacity - 0.6) < 0.01 && paint().scale.startsWith('0.98');
+    await opened(target);
+    // Open completed once, without waiting for the hold; the hold outlives the open run and its duration.
+    await until(() => document.querySelector('[data-route-representation]') === null, 'open settled');
+    expect(deliveries()).toEqual(['presentationComplete']);
+    await quiet();
+    expect(paint()).toEqual({ opacity: 0.6, scale: '0.98' });
+    // A refused close keeps the resting state.
+    document.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
+    document.querySelector<HTMLButtonElement>('[data-close-notes]')!.click();
+    await quiet();
+    expect(status(target)).toBe('presented');
+    expect(resting()).toBe(true);
+    // The accepted close starts from the displayed resting values and returns the page to stable.
+    document.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
+    document.querySelector<HTMLButtonElement>('[data-close-notes]')!.click();
+    const opacities: number[] = [];
+    await until(() => { opacities.push(paint().opacity); return status(target) === 'idle'; }, 'close completed');
+    await until(() => document.querySelector('[data-route-representation]') === null, 'plane cleared');
+    await quiet();
+    expect(Math.min(...opacities)).toBeGreaterThanOrEqual(0.59);
+    expect(opacities.some(value => value > 0.6 && value < 1)).toBe(true);
+    expect(paint().opacity).toBe(1);
+    expect(['none', '1']).toContain(paint().scale);
+    expect(body.style.opacity).toBe('');
+    expect(body.style.scale).toBe('');
+    expect(deliveries()).toEqual(['presentationComplete', 'dismissalComplete']);
+  });
 });

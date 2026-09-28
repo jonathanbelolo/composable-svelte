@@ -11,6 +11,13 @@ import type {
   HermiteSegment
 } from './channel-types.js';
 
+/** Smallest power of two >= max(1, magnitude): dividing and multiplying by it is exact (no rounding). */
+export function powerOfTwoAbove(magnitude: number): number {
+  if (!(magnitude > 1)) return 1;
+  let k = 2 ** Math.ceil(Math.log2(magnitude));
+  while (k < magnitude) k *= 2;
+  return Number.isFinite(k) ? k : 2 ** 1023;
+}
 function isVelocityValid(
   v: number,
   p0: number,
@@ -71,16 +78,21 @@ export const hermite: HermiteFactory = (request: HermiteRequest): HermiteSegment
     }
   }
 
-  const p0 = from.value;
-  const p1 = to;
-  const v0 = from.velocity;
+  // Every quantity below is in units of k, a power of two (exact scaling): k = 1 for ordinary magnitudes, so
+  // results are bit-identical to unscaled arithmetic; for states near the double range (e.g. a continuation from a
+  // clamped ±Number.MAX_VALUE display) no intermediate (p1 - p0, v0 * T, …) can overflow.
+  const k = powerOfTwoAbove(Math.max(Math.abs(from.value), Math.abs(to), Math.abs(from.velocity)) / 2 ** 500);
+  const scaledRange = range === undefined || k === 1 ? range : { min: range.min / k, max: range.max / k };
+  const p0 = from.value / k;
+  const p1 = to / k;
+  const v0 = from.velocity / k;
   const T = durationMs;
   const delta = p1 - p0;
 
   let startVelocity = v0;
   let constrained = false;
 
-  if (isVelocityValid(v0, p0, p1, T, range, allowOvershoot)) {
+  if (isVelocityValid(v0, p0, p1, T, scaledRange, allowOvershoot)) {
     startVelocity = v0;
     constrained = false;
   } else {
@@ -95,11 +107,11 @@ export const hermite: HermiteFactory = (request: HermiteRequest): HermiteSegment
       }
     } else {
       if (delta === 0) {
-        if (range !== undefined) {
+        if (scaledRange !== undefined) {
           if (v0 > 0) {
-            startVelocity = Math.min(v0, (27 / (4 * T)) * (range.max - p0));
+            startVelocity = Math.min(v0, scaledRange.max === p0 ? 0 : (27 / (4 * T)) * (scaledRange.max - p0));
           } else {
-            startVelocity = Math.max(v0, (27 / (4 * T)) * (range.min - p0));
+            startVelocity = Math.max(v0, scaledRange.min === p0 ? 0 : (27 / (4 * T)) * (scaledRange.min - p0));
           }
         } else {
           startVelocity = v0;
@@ -110,7 +122,7 @@ export const hermite: HermiteFactory = (request: HermiteRequest): HermiteSegment
         let hi = v0;
         for (let i = 0; i < 60; i++) {
           const mid = (lo + hi) / 2;
-          if (isVelocityValid(mid, p0, p1, T, range, true)) {
+          if (isVelocityValid(mid, p0, p1, T, scaledRange, true)) {
             lo = mid;
           } else {
             hi = mid;
@@ -121,22 +133,36 @@ export const hermite: HermiteFactory = (request: HermiteRequest): HermiteSegment
     }
   }
 
+  // Beyond the double range a sample is clamped to ±Number.MAX_VALUE (never ±Infinity/NaN) and the segment
+  // reports `constrained` from then on (observable at runtime). A clamped position reports velocity 0 (the
+  // displayed trajectory is flat there); a velocity beyond the range alone is ±MAX_VALUE.
+  let overflowed = false;
+  const unscale = (scaled: number): number => {
+    const value = scaled * k;
+    if (Number.isFinite(value)) return value;
+    overflowed = true;
+    return value > 0 ? Number.MAX_VALUE : -Number.MAX_VALUE;
+  };
+  const reportedStart = unscale(startVelocity);
   return {
     durationMs,
-    constrained,
-    startVelocity,
+    get constrained() { return constrained || overflowed; },
+    startVelocity: reportedStart,
     sample(elapsedMs: number): ChannelState {
       if (elapsedMs <= 0) {
-        return { value: p0, velocity: startVelocity };
+        return { value: from.value, velocity: reportedStart };
       }
       if (elapsedMs >= T) {
-        return { value: p1, velocity: 0 };
+        return { value: to, velocity: 0 };
       }
       const s = elapsedMs / T;
       const s2 = s * s;
       const value = p0 + s2 * (3 - 2 * s) * (p1 - p0) + elapsedMs * (1 - s) * (1 - s) * startVelocity;
       const velocity = (6 * s * (1 - s) * (p1 - p0)) / T + (1 - s) * (1 - 3 * s) * startVelocity;
-      return { value, velocity };
+      const shown = unscale(value);
+      // A saturated display is flat at ±MAX_VALUE: its velocity is 0 (continuation starts at rest there).
+      if (Math.abs(shown) === Number.MAX_VALUE && !Number.isFinite(value * k)) return { value: shown, velocity: 0 };
+      return { value: shown, velocity: unscale(velocity) };
     }
   };
 };

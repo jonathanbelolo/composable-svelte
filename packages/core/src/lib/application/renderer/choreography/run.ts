@@ -5,16 +5,18 @@
  * Contract: fluid-layout-motion-design.md "Svelte realization" through "Plane and scrolling".
  */
 import type { TransactionId, TransactionOutcome, VisualTerminalReason } from '../../../routing/staged/types.js';
-import type { ChannelName, ChannelState, ChannelTrack } from './channel-types.js';
+import type { ChannelEasing, ChannelName, ChannelState, ChannelTrack } from './channel-types.js';
 import { CHANNEL_RANGES } from './channel-types.js';
-import { channelTracks } from './channels.js';
+import { channelTracks, normalizeEasing } from './channels.js';
 import { hermite } from './hermite.js';
 import { Representer, accumulatedLinear, affinePlacement, axisAligned, layoutSize, clipInset, insetCss, sampleClip, type Linear, type CaptureOutcome, type ClipSample, type PendingCapture, type RepresentationHandle } from '../representation/representer.js';
 import type { VisualConfiguration, VisualDiagnostic } from '../representation/types.js';
 import { NativeSnapshotSession, type NativeEntry } from '../representation/native-snapshot.js';
 import { tick as flushed } from 'svelte';
-import { acquireChoreographyLease, type ChoreographyLease } from '../target-registry.js';
-import type { ChoreographyPlan, ChoreographyTrack, Corners, Inset, Pose } from './plan.js';
+import { acquireChoreographyLease, hasChoreographyLease, type ChoreographyLease } from '../target-registry.js';
+import { layerOf, nativeSurfaceOf, nativeSurfaceSlot } from '../../../actions/overlayLayers.js';
+import { keyOf, type ChoreographyPlan, type ChoreographyTrack, type Corners, type Inset, type ParticipantSelector, type Pose } from './plan.js';
+import { overlayScopeOwner } from './overlay-scopes.js';
 import { visualDriver, type VisualDriver, type VisualDriverOutput } from './drivers.js';
 
 /** Implementation defaults (Q7); reported in visual-report.md. */
@@ -27,7 +29,8 @@ let observers = 0;
 /** Diagnostic: MutationObservers owned by choreography runs and still connected. */
 export function liveObservers(): number { return observers; }
 /** Declarations the framework itself writes on participants; their changes are not content invalidation. */
-const OWN_PROPERTIES = ['opacity', 'clip-path'] as const;
+/** Framework-written properties: paint opacity, reveal clip, and the slide/scale transform leases. */
+const OWN_PROPERTIES = ['opacity', 'clip-path', 'translate', 'scale'] as const;
 /**
  * Is `before → after` exactly a framework write? The framework's own opacity/clip-path values (and priority) from
  * `after` are replayed onto `before` in a scratch element of the same engine; the write is ours only if that
@@ -96,7 +99,7 @@ export interface VisualClock {
   clearTimeout(handle: unknown): void;
 }
 export interface Participant { readonly node: HTMLElement; readonly key: string; readonly owner: object | undefined; readonly role: 'surface' | 'control' }
-export type SettleReason = VisualTerminalReason | 'superseded' | 'returned' | 'redirected' | 'hostDisposed';
+export type SettleReason = VisualTerminalReason | 'superseded' | 'returned' | 'redirected' | 'hostDisposed' | 'unclaimed'; // unclaimed: a deferred preparation discarded before acceptance (acquired nothing)
 export type RunDiagnostic =
   | { readonly type: 'prepared'; readonly transaction: TransactionId; readonly at: number; readonly skipped: readonly string[] }
   | { readonly type: 'cue'; readonly transaction: TransactionId; readonly t: number }
@@ -126,7 +129,35 @@ export interface RunHost {
   diagnose(event: RunDiagnostic): void;
   cue(transaction: TransactionId): void;
   visualTerminal(transaction: TransactionId, reason: VisualTerminalReason): void;
+  /**
+   * Conflict arbitration (design §3a.5): `holder` (an earlier run) yields `node` to the caller, returning its
+   * paint lease un-restored so the caller acquires as its declared successor. Undefined: nothing to yield.
+   */
+  arbitrate?: ((node: HTMLElement, holder: object) => ChoreographyLease | undefined) | undefined;
+  /** Retire a retained resting reaction on `node` (no restoring write) and return its displayed opacity. */
+  takeRetained?: ((node: HTMLElement, channel?: RestingChannelName) => { readonly displayed: number | readonly [number, number]; readonly base: number | readonly [number, number]; retire(): void } | undefined) | undefined;
 }
+
+/** Per-run options the Host supplies (overlay transitions). */
+export interface RunOptions {
+  /** Overlay role nodes (backdrop/content): their paint's stable value is visible (1), not a presenting-state 0. */
+  readonly overlayRoles?: ReadonlySet<HTMLElement> | undefined;
+  /**
+   * Explicit overlay entry (C2/C5): capture sources before the commit, but acquire nothing — no lease, no write, no
+   * arbitration of another run — until `accept()` (the committed transition was accepted). Unaccepted, `settle`
+   * only disposes the captures: an earlier run keeps progressing untouched.
+   */
+  readonly deferAcquisition?: boolean | undefined;
+  /**
+   * Overlay runs: completed `lifetime: 'overlay'` reactions hand their leases here (the overlay-open resting state,
+   * held by the Host for the instance epoch). Undefined: every track ends with its run.
+   */
+  readonly retain?: ((node: HTMLElement, pose: RestingPose, source?: object) => boolean) | undefined;
+}
+export type RestingChannelName = 'opacity' | 'translate' | 'scale';
+/** One retained channel: displayed value (opacity / [dx, dy] / scale factor), its base, and the lease holding it. */
+export interface RestingChannel { readonly value: number | readonly [number, number]; readonly base: number | readonly [number, number]; lease?: ChoreographyLease | undefined }
+export type RestingPose = { [K in RestingChannelName]?: RestingChannel };
 
 /** A continuous numeric sampler (tracks from channels.ts, or Hermite continuations). */
 interface Sampler { sample(ms: number): ChannelState; readonly endMs: number; readonly constrained: boolean }
@@ -140,24 +171,30 @@ function continueFrom(channel: ChannelName, previous: Sampler, atMs: number, to:
   const clamped = range ? Math.min(range.max, Math.max(range.min, to)) : to;
   const segment = hermite({ from, to: clamped, durationMs: Math.max(1, durationMs), ...(range ? { range } : {}), allowOvershoot: channel === 'x' || channel === 'y' });
   return {
-    endMs: atMs + segment.durationMs, constrained: segment.constrained || previous.constrained,
+    endMs: atMs + segment.durationMs, get constrained() { return segment.constrained || previous.constrained; },
     sample: ms => ms < atMs ? previous.sample(ms) : segment.sample(ms - atMs)
   };
 }
-/** Piecewise planned path (eased tweens between waypoint values). */
-function piecewise(channel: ChannelName, start: number, startMs: number, points: readonly { atMs: number; value: number }[], easing: ChoreographyTrack['easing']): Sampler {
+/**
+ * Piecewise planned path (eased tweens between waypoint values). A point's own `easing` governs the segment
+ * that ends at it; other segments use the track easing (default ease-in-out).
+ */
+function piecewise(channel: ChannelName, start: number, startMs: number, points: readonly { atMs: number; value: number; easing?: ChannelEasing | undefined }[], easing: ChoreographyTrack['easing']): Sampler {
   const segments: ChannelTrack[] = [];
   let value = start, at = startMs;
   for (const point of points) {
-    segments.push(channelTracks.tween(channel, { from: value, to: point.value, startMs: at, durationMs: Math.max(0, point.atMs - at), easing: easing ?? 'ease-in-out' }));
+    segments.push(channelTracks.tween(channel, { from: value, to: point.value, startMs: at, durationMs: Math.max(0, point.atMs - at), easing: point.easing ?? channelEasing(easing, 'ease-in-out') }));
     value = point.value; at = point.atMs;
   }
   if (!segments.length) return hold(channel, start, startMs);
   return {
-    endMs: at, constrained: false,
+    endMs: at, get constrained() { return segments.some(segment => segment.constrained); },
     sample: ms => { let active = segments[0]!; for (const segment of segments) if (ms >= segment.startMs) active = segment; return active.sample(ms); }
   };
 }
+/** A plan's easing is normalized at `defineChoreography`; the CSS string form never reaches a run. */
+const channelEasing = (easing: ChoreographyTrack['easing'], fallback: ChannelEasing): ChannelEasing => easing === undefined ? fallback : normalizeEasing(easing);
+const easingOf = (waypoint: { readonly easing?: ChoreographyTrack['easing'] }): ChannelEasing | undefined => waypoint.easing === undefined ? undefined : normalizeEasing(waypoint.easing);
 const rectOf = (rect: DOMRectReadOnly) => [rect.x, rect.y, rect.width, rect.height] as const;
 function poseRect(pose: Pose, source: readonly [number, number, number, number], win: Window): readonly [number, number, number, number] {
   if (pose.relativeTo === 'source') return [source[0] + (pose.dx ?? 0), source[1] + (pose.dy ?? 0), Math.max(0, source[2] + (pose.dw ?? 0)), Math.max(0, source[3] + (pose.dh ?? 0))];
@@ -228,7 +265,45 @@ function localPolygon(points: readonly (readonly [number, number])[], rect: DOMR
   return `polygon(${points.map(([x, y]) => { const dx = x - cx, dy = y - cy; return `${(d * dx - c * dy) / det + size[0] / 2}px ${(-b * dx + a * dy) / det + size[1] / 2}px`; }).join(', ')})`;
 }
 /** Release a representation and everything its content owns. */
-function dropRep(rep: Representation | undefined): void { if (!rep) return; rep.handle?.dispose(); rep.wrapper.remove(); }
+function dropRep(rep: Representation | undefined): void {
+  if (!rep) return;
+  rep.handle?.dispose();
+  const parent = rep.wrapper.parentElement;
+  rep.wrapper.remove();
+  // A decoration slot in an overlay layer or native surface leaves with its last copy.
+  if (parent?.hasAttribute('data-composable-overlay-slot') && !parent.childElementCount) parent.remove();
+}
+/**
+ * C3: a flight whose endpoint lies in an overlay layer (or an app-authored native top-layer surface) renders in that
+ * layer's local slot, so it paints above that layer's backdrop and below any later layer — never hidden under the
+ * backdrop in the page plane. Copies are inert DOM; `moveBefore` keeps any live content when available.
+ */
+/**
+ * Re-home a copy into its endpoint's overlay layer slot (C3). Copies are portable across layers: projections never
+ * hold a live browsing context (same-origin frames are projected, cross-origin frames are declined as sources), and the
+ * media they carry — canvas underlays, decorative or detached real `<video>` players — survive a synchronous
+ * re-insertion (a media element re-connected before the next stable state is not paused; a canvas keeps its bitmap).
+ * `moveBefore` is used where available and is not required. The only unreachable case is a real capability absence:
+ * the endpoint's slot lives in another document (a same-origin frame), or no slot can be created. The caller then
+ * settles that participant faithfully (never a hidden flight left under a backdrop).
+ */
+function homeInLayer(rep: Representation, endpoint: Element): 'moved' | 'kept' | 'unreachable:crossDocument' | 'unreachable:noSlot' {
+  const layer = layerOf(endpoint);
+  const surface = layer ? undefined : nativeSurfaceOf(endpoint);
+  if (!layer && !surface) return 'kept';
+  if ((layer?.wrapper ?? surface!).ownerDocument !== rep.wrapper.ownerDocument) return 'unreachable:crossDocument';
+  let slot: HTMLElement;
+  try { slot = layer ? layer.slot('content') : nativeSurfaceSlot(surface!); } catch { return 'unreachable:noSlot'; }
+  if (rep.wrapper.parentElement === slot) return 'kept';
+  const previous = rep.wrapper.parentElement;
+  const move = (slot as Element & { moveBefore?: (node: Node, child: Node | null) => void }).moveBefore;
+  let moved = false;
+  if (typeof move === 'function' && rep.wrapper.isConnected) { try { move.call(slot, rep.wrapper, null); moved = true; } catch { /* re-insert */ } }
+  if (!moved) slot.appendChild(rep.wrapper);
+  // A slot the copy left (another layer's or native surface's) goes with its last copy.
+  if (previous?.hasAttribute('data-composable-overlay-slot') && !previous.childElementCount) previous.remove();
+  return 'moved';
+}
 /**
  * The plane is an isolated stacking context: a copy whose root blends (`mix-blend-mode`) with what is behind it would
  * blend with nothing there. Such a wrapper (fixed, inert, aria-hidden) is placed beside the plane in the same parent
@@ -296,13 +371,37 @@ interface OutgoingItem {
   clip?: ClipSample | undefined;
   /** Accumulated 2D linear transform (rotation/skew/scale) and layout size, sampled per frame. */
   linear?: Linear | undefined; size?: readonly [number, number] | undefined;
+  /** Outgoing slide/scale: the real node before reveal, then the copy (relative to `sampledMotion`). */
+  motion?: TransformMotion | undefined;
+  /** The motion values [dx, dy, factor] painted when `rect` was sampled (the copy's placement basis). */
+  sampledMotion?: readonly [number, number, number] | undefined;
+  /** R1: the ancestors' accumulated 2D linear map at sampling (local translate delta → viewport); undefined = not 2D. */
+  sampledAncestors?: Linear | undefined;
+  /** R2: the node's transform-origin as a fraction of its layout box at sampling (the copy scales about it). */
+  sampledOrigin?: readonly [number, number] | undefined;
 }
 interface IncomingItem { readonly track: ChoreographyTrack; readonly node: HTMLElement; readonly lease: ChoreographyLease | undefined; readonly stable: number; readonly control: boolean;
-  /** Incoming movement through a `translate` lease: [dx, dy] samplers to zero (undefined when not declared/foreign). */
-  slide?: { readonly lease: ChoreographyLease; readonly x: Sampler; readonly y: Sampler } | undefined; opacity: Sampler; readonly anchor: 'timeline' | 'render' }
+  /** Incoming slide/scale of the real element to its stable transform (undefined when not declared, foreign or unsupported). */
+  motion: TransformMotion | undefined; opacity: Sampler; readonly anchor: 'timeline' | 'render' }
+/**
+ * Slide and uniform scale of one real element through individual `translate`/`scale` leases, composed with the
+ * element's stable values: translate = stable + [dx, dy] (px), scale = stable × factor. The CSS order is fixed by
+ * the individual properties (translate, then scale about the transform origin, then any existing `transform`).
+ * Samplers are offsets (px) and a factor relative to stable; `written` is the last written [dx, dy, factor].
+ */
+interface TransformMotion {
+  translate?: { readonly lease: ChoreographyLease; readonly base: readonly [number, number]; x: Sampler; y: Sampler } | undefined;
+  scale?: { readonly lease: ChoreographyLease; readonly base: number; factor: Sampler } | undefined;
+  written: [number, number, number];
+}
 /** Shared items a successor adopts from the displayed poses of a superseded run. */
 /** Outgoing-content leases a successor adopts (same node), with the displayed value at hand-off. */
-export interface OutgoingAdoption { readonly lease: ChoreographyLease; readonly displayed: number }
+export interface OutgoingAdoption {
+  readonly lease: ChoreographyLease; readonly displayed: number;
+  /** Active transform channels handed over with their displayed values (whole-run successor continues them). */
+  readonly translate?: { readonly lease: ChoreographyLease; readonly value: readonly [number, number]; readonly base: readonly [number, number] } | undefined;
+  readonly scale?: { readonly lease: ChoreographyLease; readonly value: number; readonly base: number } | undefined;
+}
 /** A running native snapshot session handed to a successor: entries are rebound to shared items by participant key. */
 export interface NativeAdoption { readonly session: NativeSnapshotSession; readonly keys: readonly (string | undefined)[] }
 /** One native snapshot entry and the representation it follows (outgoing or shared). */
@@ -310,11 +409,23 @@ interface NativeBinding { readonly entry: NativeEntry; out?: OutgoingItem | unde
 /** Displayed state at hand-off (what was painted, incl. driver output and followed offset), with velocity. */
 export interface Adoption {
   readonly key: string; readonly rep: Representation; readonly displayed: Record<(typeof GEOMETRY)[number], ChannelState>;
+  /** For a scoped track: the owner (instance epoch) its selector resolved to. Identity is key + scope, never key alone. */
+  readonly scopedOwner?: object | undefined;
   readonly sourceLease: ChoreographyLease | undefined; readonly source: HTMLElement | undefined;
   readonly corners?: readonly ChannelState[] | undefined; readonly clip?: readonly ChannelState[] | undefined;
   readonly repOpacity?: number | undefined; readonly ancestorOpacity?: number | undefined; readonly stable?: number | undefined;
   readonly suppressed?: boolean | undefined; readonly nested?: readonly HTMLElement[] | undefined;
 }
+
+/** The earlier run holding a lease (its `holder`) yields `node` directly: FIFO adoption without a Host registry. */
+const yieldFrom = (holder: object, node: HTMLElement): ChoreographyLease | undefined =>
+  typeof (holder as { yieldNode?: unknown }).yieldNode === 'function' ? (holder as { yieldNode(node: HTMLElement): ChoreographyLease | undefined }).yieldNode(node) : undefined;
+/** Transform leases a yielding run hands to its successor for the same node (arbitration; see `yieldNode`). */
+/** Displayed geometry of shared flights an earlier run yielded by arbitration (the successor continues from it). */
+const yieldedShared = new WeakMap<HTMLElement, Pick<Adoption, 'displayed' | 'corners' | 'clip' | 'repOpacity'>>();
+/** Displayed transform of leases handed over by a yielding run (consumed with the lease by the successor). */
+const yieldedTransformPose = new WeakMap<HTMLElement, { translate?: { value: readonly [number, number]; base: readonly [number, number] }; scale?: { value: number; base: number } }>();
+const yieldedTransforms = new WeakMap<HTMLElement, { translate?: ChoreographyLease | undefined; scale?: ChoreographyLease | undefined; 'clip-path'?: ChoreographyLease | undefined }>();
 
 export class ChoreographyRun {
   private phase: 'preparing' | 'playing' | 'returning' | 'settled' = 'preparing';
@@ -348,7 +459,7 @@ export class ChoreographyRun {
   private nativeAdopted: NativeAdoption | undefined;
   /** Successor: continue a predecessor's native session (no new transition, no restart). */
   adoptNative(adoption: NativeAdoption): void { if (adoption.session.live) { this.nativeAdopted = adoption; adoption.session.owner = this; } }
-  constructor(private readonly host: RunHost, readonly transaction: TransactionId, private readonly plan: ChoreographyPlan, readonly source: object, private readonly adopted: readonly Adoption[], private readonly done: () => void, private readonly adoptedOutgoing: Map<HTMLElement, OutgoingAdoption> = new Map(), localCommit?: () => void, config?: VisualConfiguration) {
+  constructor(private readonly host: RunHost, readonly transaction: TransactionId, private readonly plan: ChoreographyPlan, readonly source: object, private readonly adopted: readonly Adoption[], private readonly done: () => void, private readonly adoptedOutgoing: Map<HTMLElement, OutgoingAdoption> = new Map(), localCommit?: () => void, config?: VisualConfiguration, private readonly options: RunOptions = {}) {
     this.local = localCommit !== undefined;
     this.budgetMs = plan.preparationBudgetMs ?? config?.preparationBudgetMs ?? VISUAL_DEFAULTS.preparationBudgetMs;
     this.nativeRequested = config?.nativeSnapshot === 'namedParticipants';
@@ -361,7 +472,14 @@ export class ChoreographyRun {
     // Successor authority: acquire our own leases on adopted nodes now (superseding the predecessor's
     // without any restoring write), so writes keep working after the predecessor settles.
     for (const adoption of adopted) if (adoption.sourceLease) (adoption as { sourceLease: ChoreographyLease | undefined }).sourceLease = this.succeed(adoption.sourceLease);
-    for (const [node, entry] of adoptedOutgoing) { const lease = this.succeed(entry.lease); if (lease) adoptedOutgoing.set(node, { ...entry, lease }); else adoptedOutgoing.delete(node); }
+    for (const [node, entry] of adoptedOutgoing) {
+      // Transform channels are succeeded like paint (no restoring write between the runs).
+      const translate = entry.translate ? this.succeed(entry.translate.lease, 'translate') : undefined;
+      const scale = entry.scale ? this.succeed(entry.scale.lease, 'scale') : undefined;
+      const lease = this.succeed(entry.lease);
+      if (translate || scale) this.adoptedTransforms.set(node, { translate: translate && entry.translate ? { ...entry.translate, lease: translate } : undefined, scale: scale && entry.scale ? { ...entry.scale, lease: scale } : undefined });
+      if (lease) adoptedOutgoing.set(node, { lease, displayed: entry.displayed }); else adoptedOutgoing.delete(node);
+    }
     if (localCommit) {
       // Within-page choreography: capture now (before the immediate business commit), then commit.
       // Decorative preparation can never prevent or swallow the explicit business commit.
@@ -385,13 +503,135 @@ export class ChoreographyRun {
     this.host.diagnose({ type: 'preparation', transaction: this.transaction, workMs: Math.round(workMs * 100) / 100, slices: this.preparation.slices, cached, projected, elements, outcome, waitedMs: Math.round(waitedMs), readinessPending: this.readinessPending });
   }
   /** Replace a predecessor's lease by one owned by this run's lifetime; no restoring write happens. */
-  private succeed(previous: ChoreographyLease): ChoreographyLease | undefined {
-    const acquired = this.lease(previous.node);
+  private succeed(previous: ChoreographyLease, property: 'opacity' | 'translate' | 'scale' = 'opacity'): ChoreographyLease | undefined {
+    const acquired = acquireChoreographyLease(this.host.root, previous.node, property, () => this.phase !== 'settled', { holder: this, successorOf: previous });
     previous.release(); // superseded (not current): releases the predecessor's hold without writing
     return 'foreign' in acquired ? undefined : acquired;
   }
+  /**
+   * Paint lease for this run. A live lease of another run is a conflict (design §3a.5): the Host asks that earlier
+   * run to yield this node (its representation and tracks for it end, un-restored) and this run succeeds it —
+   * one writer and one representation per node, the later accepted run adopting only the conflicting node.
+   */
+  /** Displayed paint of nodes this run adopted from an earlier run by arbitration (continued, never reset). */
+  private readonly adoptedPaint = new Map<HTMLElement, number>();
+  /** The true stable paint of a node adopted from a resting reaction (its inline/computed value is the held dim). */
+  private readonly restingStable = new Map<HTMLElement, number>();
   private lease(node: HTMLElement): ChoreographyLease | { readonly foreign: string } {
-    return acquireChoreographyLease(this.host.root, node, 'opacity', () => this.phase !== 'settled');
+    // A resting overlay reaction on this node: continue from its displayed value (the Host retires the hold, no write).
+    const resting = this.host.takeRetained?.(node, 'opacity');
+    if (resting && Number.isFinite(resting.displayed as number)) { this.adoptedPaint.set(node, resting.displayed as number); this.restingStable.set(node, resting.base as number); this.liveReactions.add(node); } // the same live page region returning, not an entering control
+    const acquired = acquireChoreographyLease(this.host.root, node, 'opacity', () => this.phase !== 'settled', { holder: this });
+    resting?.retire(); // after our acquisition: the node's recorded stable value is kept
+    if ('foreign' in acquired && acquired.foreign === 'choreography' && acquired.holder && acquired.holder !== this) {
+      const shown = Number.parseFloat(node.style.opacity);
+      if (Number.isFinite(shown)) this.adoptedPaint.set(node, Math.min(1, Math.max(0, shown)));
+      const yielded = yieldFrom(acquired.holder, node) ?? this.host.arbitrate?.(node, acquired.holder);
+      if (yielded) { const lease = this.succeed(yielded); if (lease) { this.host.diagnose({ type: 'unsupported', transaction: this.transaction, participant: '*', reason: 'adoptedFromEarlierRun' }); return lease; } }
+    }
+    return acquired;
+  }
+  /** Selector resolution: plain keys in `fallback` (the run's scope); scoped selectors to their bound instance. */
+  private resolve(selector: ParticipantSelector, fallback: object | undefined): { readonly key: string; readonly owner: object | undefined; readonly scoped: boolean; readonly unresolved?: 'unknownScope' | 'unboundScope' | undefined } {
+    if (typeof selector === 'string') return { key: selector, owner: fallback, scoped: false };
+    const owner = overlayScopeOwner(selector.scope);
+    if (owner === null) return { key: selector.key, owner: undefined, scoped: true, unresolved: 'unknownScope' };
+    if (owner === undefined) return { key: selector.key, owner: undefined, scoped: true, unresolved: 'unboundScope' };
+    return { key: selector.key, owner, scoped: true };
+  }
+  /** Source endpoint (source phase: before the commit, against the current epoch). */
+  private sourceOf(track: ChoreographyTrack) { return this.resolve(track.side === 'shared' ? track.from ?? track.participant : track.participant, this.source); }
+  /** Destination endpoint (destination phase: after the committed render, against the committed epoch). */
+  private destinationOf(track: ChoreographyTrack) { return this.resolve(track.side === 'shared' ? track.to ?? track.participant : track.participant, this.local ? this.source : this.destinationOwner); }
+  /** Tracks whose destination was ambiguous (reported once; nothing acquired for them). */
+  private readonly ambiguousDestinations = new Set<ChoreographyTrack>();
+  /** Route registrations that arrived before the destination owner was known (reconciled at `rendered`). */
+  private early: Participant[] = [];
+  /** Replay existing registrations of incoming/shared destinations (a run started after they mounted). */
+  discoverDestinations(): void {
+    const entries: Participant[] = [];
+    for (const track of this.plan.tracks) {
+      if (track.side !== 'incoming') continue;
+      const destination = this.destinationOf(track);
+      if (destination.unresolved) continue;
+      for (const entry of this.host.find(destination.key, destination.owner)) if (!entries.includes(entry)) entries.push(entry);
+    }
+    this.admitDestinations(entries);
+  }
+  /**
+   * Destination phase for a batch of candidates: a track with more than one fresh candidate is ambiguous BEFORE any of
+   * them is acquired or suppressed (nothing to roll back); the others are admitted normally.
+   */
+  private admitDestinations(entries: readonly Participant[]): void {
+    const fresh = entries.filter(entry => entry.node.isConnected && !(this.local && this.initialNodes.has(entry.node)));
+    this.decideAmbiguity(fresh);
+    for (const entry of fresh) this.registered(entry, true);
+  }
+  /** A track whose fresh candidates (plus any destination already assigned) name more than one node is ambiguous. */
+  private decideAmbiguity(entries: readonly Participant[]): void {
+    for (const track of this.plan.tracks) {
+      if (track.side === 'outgoing' || this.ambiguousDestinations.has(track)) continue;
+      const destination = this.destinationOf(track);
+      if (destination.unresolved || destination.owner === undefined) continue;
+      const candidates = new Set(entries.filter(entry => entry.node.isConnected && entry.key === destination.key && entry.owner === destination.owner).map(entry => entry.node));
+      for (const item of this.incoming) if (item.track === track) candidates.add(item.node);
+      const shared = this.shared.find(candidate => candidate.track === track);
+      if (shared?.destination && shared.destination !== shared.source) candidates.add(shared.destination);
+      if (candidates.size > 1) this.ambiguous(track);
+    }
+  }
+  /** The batch checkpoint: admit this flush's registrations together (pre-paint). */
+  private flushDestinations(): void {
+    const entries = this.batch.splice(0);
+    if (this.phase === 'playing' && entries.length) this.admitDestinations(entries);
+  }
+  /** Overlay runs admit registrations of one flush together (instance scopes re-resolve in a microtask). */
+  private batch: Participant[] = [];
+  /** The Host reports the destination route instance mounting (before its participants register). */
+  destinationMounted(owner: object): void { if (this.reserved && !this.local && owner !== this.source && this.destinationOwner === undefined) this.destinationOwner = owner; }
+  /**
+   * Arbitration: a later run takes `node`. Every item of this run for that node ends without restoring (its copy
+   * removed); the paint lease is returned for the successor. Other properties on the node are abandoned.
+   */
+  yieldNode(node: HTMLElement): ChoreographyLease | undefined {
+    let paint: ChoreographyLease | undefined;
+    const handTransforms = (motion: TransformMotion | undefined) => {
+      if (!motion) return;
+      const handed = yieldedTransforms.get(node) ?? {};
+      // The displayed transform travels with its lease: the successor continues from it (accepted conflicting writer).
+      const pose = yieldedTransformPose.get(node) ?? {};
+      if (motion.translate) { handed.translate = motion.translate.lease; pose.translate = { value: [motion.written[0], motion.written[1]], base: motion.translate.base }; motion.translate = undefined; }
+      if (motion.scale) { handed.scale = motion.scale.lease; pose.scale = { value: motion.written[2], base: motion.scale.base }; motion.scale = undefined; }
+      yieldedTransformPose.set(node, pose);
+      yieldedTransforms.set(node, handed);
+      this.handedNodes.add(node);
+    };
+    for (const out of [...this.outgoing]) if (out.node === node) {
+      dropRep(out.rep); (out as { rep: Representation | undefined }).rep = undefined; out.observer?.(); handTransforms(out.motion);
+      if (out.lease) { paint ??= out.lease; (out as { lease: ChoreographyLease | undefined }).lease = undefined; }
+      this.outgoing.splice(this.outgoing.indexOf(out), 1);
+    }
+    for (const item of [...this.shared]) if (item.source === node || item.destination === node) {
+      if (item.source === node && item.sourceLease) { paint ??= item.sourceLease; item.sourceLease = undefined; }
+      if (item.destination === node && item.destinationLease) { paint ??= item.destinationLease; item.destinationLease = undefined; }
+      // A reveal clip is handed over too (never abandoned): the successor continues it, or it is restored when we settle.
+      if (item.destination === node && item.clipLease) { const handed = yieldedTransforms.get(node) ?? {}; handed['clip-path'] = item.clipLease; item.clipLease = undefined; yieldedTransforms.set(node, handed); this.handedNodes.add(node); }
+      // The successor continues this flight from its displayed state; its driver ends here, exactly once.
+      if (this.phase === 'playing') { const t = this.elapsed(); yieldedShared.set(node, this.displayedState(item, t)); this.disposeDriver(item, t); }
+      // The item's OTHER endpoint is not yielded: restore it now (a suppressed source becomes visible again).
+      if (item.sourceLease) { item.sourceLease.release(); item.sourceLease = undefined; }
+      if (item.destinationLease) { item.destinationLease.release(); item.destinationLease = undefined; }
+      if (item.clipLease) { item.clipLease.release(); item.clipLease = undefined; }
+      dropRep(item.rep); item.unobserve?.();
+      this.shared.splice(this.shared.indexOf(item), 1);
+    }
+    for (const item of [...this.incoming]) if (item.node === node) {
+      handTransforms(item.motion);
+      if (item.lease) { paint ??= item.lease; (item as { lease: ChoreographyLease | undefined }).lease = undefined; }
+      this.incoming.splice(this.incoming.indexOf(item), 1);
+    }
+    // (The shared plane is not released here: the adopting run is about to place its copy in it.)
+    return paint;
   }
   /**
    * Foreign ancestor appearance (opacity product) of a participant, applied once on its representation. Ancestors
@@ -423,19 +663,18 @@ export class ChoreographyRun {
     if (this.phase !== 'preparing') return;
     const doc = this.host.win.document;
     // (Adopted outgoing leases stay held until this plan decides to continue or release them.)
-    // Unsupported stacking: an open modal/top-layer surface; decorative tracks are skipped (no z-index games).
-    if (doc.querySelector('dialog[open]:modal, [popover]:popover-open, [aria-modal="true"]')) {
-      this.host.diagnose({ type: 'unsupported', transaction: this.transaction, participant: '*', reason: 'topLayer' });
-      this.settle('unsupported');
-      return;
-    }
+    // Overlays are layered (overlayLayers.ts): an open modal, popover or native top-layer surface elsewhere in the
+    // document no longer refuses the run; each participant resolves its own scope and layer.
+    void doc;
     const skipped: string[] = [...(this.plan.diagnostics ?? [])];
     const tracked = this.plan.tracks.filter(track => track.side !== 'incoming');
     const nodes = new Map<ChoreographyTrack, Participant>();
     for (const track of tracked) {
-      if (track.side === 'shared' && this.adopted.some(item => item.key === track.participant)) continue;
-      const found = this.host.find(track.participant, this.source);
-      if (found.length !== 1) { skipped.push(`${track.participant}:${found.length ? 'ambiguous' : 'missingSource'}`); continue; }
+      if (track.side === 'shared' && this.adopted.some(item => this.adopts(item, track))) continue;
+      const endpoint = this.sourceOf(track);
+      if (endpoint.unresolved) { skipped.push(`${keyOf(track)}:${endpoint.unresolved}`); continue; }
+      const found = this.host.find(endpoint.key, endpoint.owner);
+      if (found.length !== 1) { skipped.push(`${keyOf(track)}:${found.length ? 'ambiguous' : 'missingSource'}`); continue; }
       nodes.set(track, found[0]!);
     }
     // Representation work: resumable projections, chunked across Host frames within the preparation budget
@@ -443,7 +682,7 @@ export class ChoreographyRun {
     for (const participant of nodes.values()) this.initialNodes.add(participant.node);
     this.pending = [...nodes].map(([track, participant]) => {
       const nested = [...nodes.values()].filter(other => other !== participant && participant.node.contains(other.node)).map(other => other.node);
-      const entry = { track, participant, nested, capture: this.representer.begin(participant.node, track.participant, new Set(nested)), restarts: 0, dirty: false, stop: () => {} };
+      const entry = { track, participant, nested, capture: this.representer.begin(participant.node, keyOf(track), new Set(nested)), restarts: 0, dirty: false, stop: () => {} };
       if (!this.local) (entry as { stop: () => void }).stop = observe(participant.node, () => { entry.dirty = true; });
       return entry;
     });
@@ -457,7 +696,7 @@ export class ChoreographyRun {
     const deadline = this.local ? Number.POSITIVE_INFINITY : performance.now() + PREPARATION_SLICE_MS;
     let complete = true;
     for (const entry of this.pending) {
-      if (entry.dirty && entry.restarts < 3) { entry.dirty = false; entry.restarts++; entry.capture.abandon(); entry.capture = this.representer.begin(entry.participant.node, entry.track.participant, new Set(entry.nested)); }
+      if (entry.dirty && entry.restarts < 3) { entry.dirty = false; entry.restarts++; entry.capture.abandon(); entry.capture = this.representer.begin(entry.participant.node, keyOf(entry.track), new Set(entry.nested)); }
       if (!entry.capture.step(deadline)) { complete = false; break; }
     }
     if (!complete) { this.frameHandle = this.host.clock.frame(() => this.continuePreparation(skipped)); return; }
@@ -467,8 +706,63 @@ export class ChoreographyRun {
     // Readiness never holds t0 or the cue: live providers show their captured underlay until their first live frame.
     const pendingReadiness = reads.reduce((count, read) => count + (read.capture.kind === 'captured' ? read.capture.ready.length : 0), 0);
     this.readinessPending = pendingReadiness;
+    if (this.options.deferAcquisition && !this.accepted) { this.deferred = { reads, skipped }; this.pendingReads = reads; return; }
     this.finalize(reads, skipped, 0);
   }
+  private accepted = false;
+  /** Nodes whose leases this run handed to a successor (`yieldNode`). */
+  private readonly handedNodes = new Set<HTMLElement>();
+  private deferred: { readonly reads: Parameters<ChoreographyRun['finalize']>[0]; readonly skipped: string[] } | undefined;
+  /**
+   * The deferred explicit run's transition was accepted: acquire now from the pre-commit captures. A source the commit
+   * already removed exits (or departs) from its pre-commit geometry.
+   */
+  accept(): void {
+    this.accepted = true;
+    const deferred = this.deferred;
+    if (!deferred || this.phase !== 'preparing') return;
+    this.deferred = undefined;
+    this.renderAt = this.host.clock.now();
+    this.finalize(deferred.reads, deferred.skipped, 0);
+    for (const out of [...this.outgoing]) if (!out.revealed && !out.node.isConnected) this.reveal(out, 0);
+    // A shared source the commit already removed retires its representation now (live providers resume detached media).
+    for (const item of this.shared) if (item.source && !item.source.isConnected) item.rep.handle?.retire();
+  }
+  holds(node: HTMLElement): boolean {
+    if (this.phase === 'settled') return false;
+    return this.outgoing.some(out => out.node === node) || this.incoming.some(item => item.node === node) || this.shared.some(item => item.source === node || item.destination === node)
+      || !!this.deferred?.reads.some(read => read.participant.node === node);
+  }
+  /**
+   * C3 faithful per-participant settlement: a flight that cannot reach its destination's layer ends now — its copy is
+   * removed, its source and any destination leases are restored (the live endpoints show), and every other track of
+   * the run keeps running.
+   */
+  private settleUnreachable(item: SharedItem, reach: string): void {
+    item.destination = undefined;
+    this.disposeDriver(item, this.elapsed()); // exactly once: the item leaves this run (settle never sees it again)
+    dropRep(item.rep); item.unobserve?.();
+    item.sourceLease?.release(); item.sourceLease = undefined;
+    item.destinationLease?.release(); item.destinationLease = undefined;
+    item.clipLease?.release(); item.clipLease = undefined;
+    const index = this.shared.indexOf(item);
+    if (index >= 0) this.shared.splice(index, 1);
+    this.ambiguousDestinations.add(item.track); // later registrations of this track are not re-admitted
+    this.host.diagnose({ type: 'unsupported', transaction: this.transaction, participant: item.key, reason: `layerUnreachable:${reach.slice('unreachable:'.length)}` });
+  }
+  /** The owner a scoped track's source selector resolves to (undefined for plain keys). */
+  private scopedOwnerOf(track: ChoreographyTrack): object | undefined {
+    const selector = track.side === 'shared' ? track.from ?? track.participant : track.participant;
+    return typeof selector === 'string' ? undefined : this.sourceOf(track).owner;
+  }
+  /** Whole-run handoff identity: same key AND same scope (a scoped owner, or both plain) — never key alone. */
+  private adopts(adoption: Adoption, track: ChoreographyTrack): boolean {
+    return adoption.key === keyOf(track) && adoption.scopedOwner === this.scopedOwnerOf(track);
+  }
+  /** Overlay roles fade as the overlay's own presentation even when they contain controls (their shell is inert then). */
+  private paintKept(node: HTMLElement, role: 'surface' | 'control'): boolean { return !this.options.overlayRoles?.has(node) && !this.liveReactions.has(node) && keepsPaint(node, role); }
+  /** Still-mounted, control-bearing page regions reacting under an overlay (see finalize). */
+  private readonly liveReactions = new Set<HTMLElement>();
   /** Completed captures not yet enrolled (disposed if the run settles while waiting for readiness). */
   private pendingReads: readonly { readonly capture: CaptureOutcome }[] = [];
   private readinessPending = 0;
@@ -489,14 +783,14 @@ export class ChoreographyRun {
     // Writes.
     for (const [index, { track, participant, capture, nested }] of reads.entries()) {
       // S4: a settled participant is neither represented nor leased: its live source stays as it is until the commit.
-      if (capture.kind !== 'captured' && capture.reason.startsWith('settled:')) { skipped.push(`${track.participant}:${capture.reason}`); continue; }
-      if (capture.kind !== 'captured') { skipped.push(`${track.participant}:${capture.reason}`); this.host.diagnose({ type: 'unsupported', transaction: this.transaction, participant: track.participant, reason: capture.reason }); if (track.side === 'shared') continue; }
+      if (capture.kind !== 'captured' && capture.reason.startsWith('settled:')) { skipped.push(`${keyOf(track)}:${capture.reason}`); continue; }
+      if (capture.kind !== 'captured') { skipped.push(`${keyOf(track)}:${capture.reason}`); this.host.diagnose({ type: 'unsupported', transaction: this.transaction, participant: keyOf(track), reason: capture.reason }); if (track.side === 'shared') continue; }
       const inherited = this.adoptedOutgoing.get(participant.node);
       if (inherited) this.adoptedOutgoing.delete(participant.node);
       const acquired = inherited?.lease ?? this.lease(participant.node);
       const lease = 'foreign' in acquired ? undefined : acquired;
-      if (!lease) skipped.push(`${track.participant}:${(acquired as { foreign: string }).foreign}:displayedOnly`);
-      const stable = lease ? lease.stableNumber : Number.parseFloat(win.getComputedStyle(participant.node).opacity) || 1;
+      if (!lease) skipped.push(`${keyOf(track)}:${(acquired as { foreign: string }).foreign}:displayedOnly`);
+      const stable = lease ? (this.restingStable.get(participant.node) ?? lease.stableNumber) : Number.parseFloat(win.getComputedStyle(participant.node).opacity) || 1;
       const rep: Representation | undefined = capture.kind === 'captured' ? { wrapper: capture.node, copyRoot: capture.copyRoot, handle: capture.handle, sourceClip: capture.clip ? { inset: clipInset(capture.rect, capture.clip) as [number, number, number, number], radius: capture.clip.radius, ...(capture.clip.polygon ? { polygon: capture.clip.polygon.map(([x, y]) => [x - capture.rect.x, y - capture.rect.y] as const) } : {}) } : undefined } : undefined;
       if (rep) {
         // Own lease: the copy carries our stable projection, not the displayed value. Foreign lease: the copy
@@ -504,21 +798,30 @@ export class ChoreographyRun {
         // (Nested participants are hidden inside the projection itself: layout-preserving placeholders.)
         if (rep.copyRoot && lease) rep.copyRoot.style.opacity = String(stable);
         void nested;
-        rep.wrapper.setAttribute('data-route-representation', track.participant);
+        rep.wrapper.setAttribute('data-route-representation', keyOf(track));
       }
       if (track.side === 'outgoing') {
         const opacity = track.opacity ?? { from: 1, to: 0 };
+        // Persistent page reaction (overlay runs, post-commit): a participant that STAYS mounted is a live page region
+        // reacting under the overlay (dim/scale/slide), not a leaving copy. Its focusable descendants do not distort its
+        // declared curve; focus/interaction behind a modal remain the dismissal coordinator's authority (unchanged).
+        const liveReaction = !!this.options.overlayRoles && !!lease && participant.node.isConnected && !this.options.overlayRoles.has(participant.node) && keepsPaint(participant.node, participant.role);
+        if (liveReaction) this.liveReactions.add(participant.node);
         if (rep) { rep.wrapper.style.opacity = '0'; placeInPlane(plane, rep, 'outgoing', index <= lastBlended); rep.handle?.attach(); }
         // Controls (declared, native focusable, containing focusable content or visibly focused), and
         // participants whose paint is foreign-held, keep stable paint before commit (hold-then-fade).
-        const control = keepsPaint(participant.node, participant.role) || !lease;
+        const control = this.paintKept(participant.node, participant.role) || !lease;
+        // Handed over (successor) or arbitrated from a running run: continue from the displayed paint (no reset).
+        const continued = inherited?.displayed ?? (lease ? this.adoptedPaint.get(participant.node) : undefined);
+        this.adoptedPaint.delete(participant.node);
         // Hold-then-fade: control paint holds at stable before commit.
         // A successor continues outgoing paint from the displayed value it adopted (no restoration frame).
         const sampler = control ? hold('opacity', stable)
-          : inherited ? continueFrom('opacity', hold('opacity', inherited.displayed), track.startMs, opacity.to * stable, Math.max(1, track.durationMs))
-          : channelTracks.tween('opacity', { from: opacity.from * stable, to: opacity.to * stable, startMs: track.startMs, durationMs: track.durationMs, easing: track.easing ?? 'linear' });
+          : continued !== undefined ? continueFrom('opacity', hold('opacity', continued), track.startMs, opacity.to * stable, Math.max(1, track.durationMs))
+          : channelTracks.tween('opacity', { from: opacity.from * stable, to: opacity.to * stable, startMs: track.startMs, durationMs: track.durationMs, easing: channelEasing(track.easing, 'linear') });
         let observer: (() => void) | undefined;
-        const item: OutgoingItem = { track, key: track.participant, node: participant.node, control, lease, stable, rep, rect: capture.kind === 'captured' ? capture.rect : undefined, sampleAt: 0, revealed: false, opacity: sampler, pinned: false, dirty: false, observer: undefined, nested, ancestorOpacity: capture.kind === 'captured' ? capture.ancestorOpacity : 1, scale: capture.kind === 'captured' ? capture.scale : undefined, displayedOpacity: lease ? undefined : stable, clip: capture.kind === 'captured' ? capture.clip : undefined, linear: capture.kind === 'captured' ? capture.linear : undefined, size: capture.kind === 'captured' && !axisAligned(capture.linear) ? capture.size : undefined };
+        const item: OutgoingItem = { track, key: keyOf(track), node: participant.node, control, lease, stable, rep, rect: capture.kind === 'captured' ? capture.rect : undefined, sampleAt: 0, revealed: false, opacity: sampler, pinned: false, dirty: false, observer: undefined, nested, ancestorOpacity: capture.kind === 'captured' ? capture.ancestorOpacity : 1, scale: capture.kind === 'captured' ? capture.scale : undefined, displayedOpacity: lease ? undefined : stable, clip: capture.kind === 'captured' ? capture.clip : undefined, linear: capture.kind === 'captured' ? capture.linear : undefined, size: capture.kind === 'captured' && !axisAligned(capture.linear) ? capture.size : undefined };
+        item.motion = this.transformMotion(participant.node, track, 'outgoing', control);
         observer = observe(participant.node, () => { item.dirty = true; });
         (item as { observer: (() => void) | undefined }).observer = observer;
         // Within-page removal has no route checkpoint: a pre-paint microtask observer reveals the copy.
@@ -532,7 +835,7 @@ export class ChoreographyRun {
         if (capture.kind === 'captured') for (const entry of capture.unreachable) this.nativeBindings.push({ entry, out: item });
       } else {
         // A shared source whose paint is foreign-held cannot be suppressed: no duplicate paint, skip honestly.
-        if (!lease) { dropRep(rep); this.host.diagnose({ type: 'unsupported', transaction: this.transaction, participant: track.participant, reason: 'foreignSourcePaint' }); continue; }
+        if (!lease) { dropRep(rep); this.host.diagnose({ type: 'unsupported', transaction: this.transaction, participant: keyOf(track), reason: 'foreignSourcePaint' }); continue; }
         const r = rectOf(capture.kind === 'captured' ? capture.rect : participant.node.getBoundingClientRect());
         rep!.wrapper.style.left = '0px'; rep!.wrapper.style.top = '0px'; rep!.wrapper.style.transformOrigin = '0 0';
         if (capture.kind === 'captured' && !axisAligned(capture.linear) && rep!.copyRoot) {
@@ -544,12 +847,23 @@ export class ChoreographyRun {
           rep!.rotated = true;
         }
         placeInPlane(plane, rep!, 'shared', index >= firstBlendedShared);
+        // A flight leaving an overlay (its source is in an overlay layer) starts in that layer's slot (C3).
+        const reach = homeInLayer(rep!, participant.node);
+        if (reach.startsWith('unreachable')) {
+          // Faithful per-participant settlement: no copy, no suppression; the live source stays as it is.
+          dropRep(rep); lease.release();
+          this.host.diagnose({ type: 'unsupported', transaction: this.transaction, participant: keyOf(track), reason: `layerUnreachable:${reach.slice('unreachable:'.length)}` });
+          continue;
+        }
         rep!.handle?.attach();
         // Controls, focusable or already-focused participants (and surfaces containing them) keep their
         // real visible paint; the decoration duplicates rather than hiding a usable control or focus ring.
         const keep = keepsPaint(participant.node, participant.role);
         if (!keep) lease.write('0');
-        const item = this.sharedItem(track, rep!, r, participant.node, lease, undefined);
+        // Arbitrated from a running flight: continue from its displayed pose and velocity (no jump back to the source).
+        const shown = yieldedShared.get(participant.node);
+        if (shown) yieldedShared.delete(participant.node);
+        const item = this.sharedItem(track, rep!, r, participant.node, lease, shown?.displayed, shown as Adoption | undefined);
         item.stable = stable;
         item.suppressed = !keep;
         item.nested = nested;
@@ -567,7 +881,7 @@ export class ChoreographyRun {
     for (const binding of this.nativeBindings) this.host.diagnose({ type: 'representation', transaction: this.transaction, participant: binding.out?.key ?? binding.shared?.key ?? '*', provider: 'native', continuity: 'unrepresented', reason: this.nativeRequested ? (!this.local && NativeSnapshotSession.available(this.host.win.document) ? 'nativeSnapshotAtCue' : this.local ? 'nativeSnapshotUnavailable:withinPage' : 'nativeSnapshotUnavailable:api') : binding.entry.element.localName === 'iframe' ? 'crossOriginFrame' : 'opaqueDeclared' });
     // Successor adoption: continue shared representations from displayed pose and velocity.
     for (const adoption of this.adopted) {
-      const track = tracked.find(candidate => candidate.side === 'shared' && candidate.participant === adoption.key);
+      const track = tracked.find(candidate => candidate.side === 'shared' && this.adopts(adoption, candidate)); // key + scope identity
       this.enrolled.add(adoption);
       if (!track) { dropRep(adoption.rep); adoption.sourceLease?.release(); continue; }
       const sourceRect = adoption.source?.isConnected ? rectOf(adoption.source.getBoundingClientRect()) : ([adoption.displayed.x.value, adoption.displayed.y.value, adoption.displayed.width.value, adoption.displayed.height.value] as const);
@@ -592,8 +906,15 @@ export class ChoreographyRun {
       this.nativeAdopted = undefined;
     }
     // Adopted outgoing leases this plan does not continue are released normally (their node is current).
-    for (const { lease } of this.adoptedOutgoing.values()) lease.release();
-    this.adoptedOutgoing.clear();
+    // Adopted paint an INCOMING track of this plan may continue (a reopen during dismissal, an open superseding a
+    // close) stays held until destination discovery (synchronous for overlay/local runs, before any paint);
+    // anything not continued is then released normally.
+    const releaseAdopted = () => {
+      for (const { lease } of this.adoptedOutgoing.values()) lease.release(); this.adoptedOutgoing.clear();
+      for (const { translate, scale } of this.adoptedTransforms.values()) { translate?.lease.release(); scale?.lease.release(); } this.adoptedTransforms.clear();
+    };
+    if (this.adoptedOutgoing.size && this.plan.tracks.some(track => track.side === 'incoming')) queueMicrotask(() => { if (this.phase === 'playing') releaseAdopted(); });
+    else releaseAdopted();
     this.phase = 'playing';
     this.t0 = this.host.clock.now();
     this.host.diagnose({ type: 'prepared', transaction: this.transaction, at: this.t0, skipped });
@@ -603,10 +924,10 @@ export class ChoreographyRun {
   }
   private sharedItem(track: ChoreographyTrack, rep: Representation, source: readonly [number, number, number, number], sourceNode: HTMLElement | undefined, sourceLease: ChoreographyLease | undefined, displayed: Adoption['displayed'] | undefined, displayedExtra?: Adoption): SharedItem {
     const end = track.startMs + track.durationMs;
-    const points = (track.path ?? []).map(waypoint => ({ atMs: waypoint.atMs, rect: poseRect(waypoint.pose, source, this.host.win) }));
+    const points = (track.path ?? []).map(waypoint => ({ atMs: waypoint.atMs, rect: poseRect(waypoint.pose, source, this.host.win), easing: easingOf(waypoint) }));
     const geo = {} as Geometry;
     GEOMETRY.forEach((channel, index) => {
-      const planned = points.map(point => ({ atMs: point.atMs, value: point.rect[index]! }));
+      const planned = points.map(point => ({ atMs: point.atMs, value: point.rect[index]!, easing: point.easing }));
       if (displayed) {
         // Successor: Hermite from the displayed state to its first planned value (or the source pose).
         const target = planned[0]?.value ?? source[index]!;
@@ -617,13 +938,13 @@ export class ChoreographyRun {
         const head = continueFrom(channel, start, track.startMs, target, duration);
         const rest = planned.slice(1);
         geo[channel] = rest.length ? chain(head, piecewise(channel, target, head.endMs, rest, track.easing)) : head;
-        if (channel === 'height') this.host.diagnose({ type: 'retarget', transaction: this.transaction, participant: track.participant, t: 0, cause: 'successor', from: [displayed.x.value, displayed.y.value, displayed.width.value, displayed.height.value], velocity: [displayed.x.velocity, displayed.y.velocity, displayed.width.velocity, displayed.height.velocity], to: points[0]?.rect ?? source, constrained: GEOMETRY.some(name => geo[name]?.constrained) });
+        if (channel === 'height') this.host.diagnose({ type: 'retarget', transaction: this.transaction, participant: keyOf(track), t: 0, cause: 'successor', from: [displayed.x.value, displayed.y.value, displayed.width.value, displayed.height.value], velocity: [displayed.x.velocity, displayed.y.velocity, displayed.width.velocity, displayed.height.velocity], to: points[0]?.rect ?? source, constrained: GEOMETRY.some(name => geo[name]?.constrained) });
       } else geo[channel] = piecewise(channel, source[index]!, track.startMs, planned, track.easing);
     });
     const radiusPoints = (track.path ?? []).filter(waypoint => waypoint.radius !== undefined);
-    const corners = track.radius || radiusPoints.length ? CORNERS.map((channel, index) => piecewise(channel, cornersOf(track.radius?.from ?? 0)[index]!, track.startMs, radiusPoints.map(waypoint => ({ atMs: waypoint.atMs, value: cornersOf(waypoint.radius!)[index]! })), track.easing)) : undefined;
+    const corners = track.radius || radiusPoints.length ? CORNERS.map((channel, index) => piecewise(channel, cornersOf(track.radius?.from ?? 0)[index]!, track.startMs, radiusPoints.map(waypoint => ({ atMs: waypoint.atMs, value: cornersOf(waypoint.radius!)[index]!, easing: easingOf(waypoint) })), track.easing)) : undefined;
     const clipPoints = (track.path ?? []).filter(waypoint => waypoint.clip !== undefined);
-    const clip = track.clip || clipPoints.length ? INSETS.map((channel, index) => piecewise(channel, (track.clip?.from ?? [0, 0, 0, 0])[index]!, track.startMs, clipPoints.map(waypoint => ({ atMs: waypoint.atMs, value: waypoint.clip![index]! })), track.easing)) : undefined;
+    const clip = track.clip || clipPoints.length ? INSETS.map((channel, index) => piecewise(channel, (track.clip?.from ?? [0, 0, 0, 0])[index]!, track.startMs, clipPoints.map(waypoint => ({ atMs: waypoint.atMs, value: waypoint.clip![index]!, easing: easingOf(waypoint) })), track.easing)) : undefined;
     // A successor continues radius/clip channels from their displayed values and velocities.
     const continueArray = (names: readonly ChannelName[], shown: readonly ChannelState[] | undefined, planned: Sampler[] | undefined): Sampler[] | undefined => {
       if (!shown) return planned;
@@ -638,7 +959,7 @@ export class ChoreographyRun {
       });
     };
     const driver = track.driver ? visualDriver(track.driver) : undefined;
-    return { track, key: track.participant, rep, geo, corners: continueArray(CORNERS, displayedExtra?.corners, corners), clip: continueArray(INSETS, displayedExtra?.clip, clip), source: sourceNode, sourceLease, destination: undefined, destinationLease: undefined, destinationControl: false, measured: false, repOpacity: hold('opacity', 1), crossfadeAt: undefined,
+    return { track, key: keyOf(track), rep, geo, corners: continueArray(CORNERS, displayedExtra?.corners, corners), clip: continueArray(INSETS, displayedExtra?.clip, clip), source: sourceNode, sourceLease, destination: undefined, destinationLease: undefined, destinationControl: false, measured: false, repOpacity: hold('opacity', 1), crossfadeAt: undefined,
       content: track.content ?? 'crossfade', sourceSize: [source[2], source[3]], clipLease: undefined, revealClip: undefined, offset: [0, 0], sourceRect: source, ancestorOpacity: 1,
       dirty: false, unobserve: undefined, stable: 1, driver, driverActive: !!driver && !displayed, lastDriver: undefined,
       suppressed: false, sourcePaint: undefined, nested: [], restoring: undefined, measuredRect: undefined, replan: false };
@@ -788,28 +1109,31 @@ export class ChoreographyRun {
   private tick(): void {
     this.frameHandle = undefined;
     if (this.phase !== 'playing' && this.phase !== 'returning') return;
+    if (this.batch.length) this.flushDestinations(); // frame checkpoint for deferred destination admission
     const t = this.elapsed();
     // Read phase.
     for (const rep of this.representations()) rep.handle?.read();
     if (this.phase === 'playing') {
       for (const out of this.outgoing) {
         if (out.revealed || !out.node.isConnected) continue;
-        out.rect = out.node.getBoundingClientRect(); out.sampleAt = t; out.ancestorOpacity = this.foreignAncestorOpacity(out.node); { const svgGraphic = out.node.namespaceURI === 'http://www.w3.org/2000/svg' && out.node.localName !== 'svg'; const linear = svgGraphic ? [1, 0, 0, 1] as const : accumulatedLinear(out.node); out.linear = linear; out.size = linear && !axisAligned(linear) ? layoutSize(out.node) : undefined; out.scale = linear ? (axisAligned(linear) ? [linear[0], linear[3]] : [1, 1]) : undefined; } out.clip = sampleClip(out.node);
+        out.rect = out.node.getBoundingClientRect(); out.sampleAt = t; out.sampledMotion = out.motion ? [...out.motion.written] : undefined; if (out.motion) this.sampleMotionFrame(out); out.ancestorOpacity = this.foreignAncestorOpacity(out.node); { const svgGraphic = out.node.namespaceURI === 'http://www.w3.org/2000/svg' && out.node.localName !== 'svg'; const linear = svgGraphic ? [1, 0, 0, 1] as const : accumulatedLinear(out.node); out.linear = linear; out.size = linear && !axisAligned(linear) ? layoutSize(out.node) : undefined; out.scale = linear ? (axisAligned(linear) ? [linear[0], linear[3]] : [1, 1]) : undefined; } out.clip = sampleClip(out.node);
         if (!out.lease) out.displayedOpacity = Number.parseFloat(this.host.win.getComputedStyle(out.node).opacity);
         // Dynamic control obligation: content that becomes interactive holds stable paint immediately.
-        if (!out.control && keepsPaint(out.node, 'surface') && !focusVisible(out.node)) {
+        if (!out.control && this.paintKept(out.node, 'surface') && !focusVisible(out.node)) {
           (out as { control: boolean }).control = true;
           out.opacity = hold('opacity', out.stable, t);
+          this.returnMotion(out, t);
           this.host.diagnose({ type: 'focusPinned', transaction: this.transaction, participant: out.key, t });
         }
         if (!out.pinned && focusVisible(out.node)) {
           out.pinned = true;
           out.opacity = continueFrom('opacity', out.opacity, t, out.stable, VISUAL_DEFAULTS.focusSettleMs);
+          this.returnMotion(out, t);
           this.host.diagnose({ type: 'focusPinned', transaction: this.transaction, participant: out.key, t });
         }
         if (out.dirty) { out.dirty = false; this.recapture(out, t); }
       }
-      for (const item of this.shared) {
+      for (const item of [...this.shared]) {
         // Source following/recapture apply only before the commit: after it (always for within-page runs)
         // source movement and mutation are the new state, not something to follow.
         if (item.replan) { item.replan = false; this.replan(item, t); }
@@ -827,11 +1151,18 @@ export class ChoreographyRun {
           item.offset = [now.x - item.sourceRect[0], now.y - item.sourceRect[1]];
           item.ancestorOpacity = this.foreignAncestorOpacity(item.source);
         }
-        if (this.local && !item.destination) {
-          const found = this.host.find(item.key, this.source);
+        if (this.local && !item.destination && !this.ambiguousDestinations.has(item.track)) {
+          const destination = this.destinationOf(item.track);
+          const all = destination.unresolved ? [] : this.host.find(destination.key, destination.owner);
+          // Ambiguity counts only candidates that appeared after the capture (the leaving source may share the key).
+          const fresh = all.filter(entry => !this.initialNodes.has(entry.node));
+          if (fresh.length > 1) this.ambiguous(item.track);
+          const found = fresh.length === 1 ? fresh : fresh.length === 0 && all.length === 1 ? all : [];
           if (found.length === 1) {
             const target = found[0]!;
             item.destination = target.node;
+            const reach = homeInLayer(item.rep, target.node);
+            if (reach.startsWith('unreachable')) { this.settleUnreachable(item, reach); continue; }
             item.destinationControl = keepsPaint(target.node, target.role);
             if (target.node === item.source) { item.destinationLease = item.sourceLease; item.sourceLease = undefined; }
             else if (!item.destinationControl) { const acquired = this.lease(target.node); if (!('foreign' in acquired)) { item.destinationLease = acquired; acquired.write('0'); } else item.destinationControl = true; }
@@ -924,7 +1255,14 @@ export class ChoreographyRun {
         return;
       }
       item.clipLease?.release(); item.clipLease = undefined;
-      const acquired = acquireChoreographyLease(this.host.root, item.destination, 'clip-path', () => this.phase !== 'settled');
+      let acquired = acquireChoreographyLease(this.host.root, item.destination, 'clip-path', () => this.phase !== 'settled', { holder: this });
+      // Succeed a reveal clip handed over by a yielding earlier run (no restoring write in between).
+      const handedClip = yieldedTransforms.get(item.destination)?.['clip-path'];
+      if ('foreign' in acquired && acquired.foreign === 'choreography' && handedClip) {
+        acquired = acquireChoreographyLease(this.host.root, item.destination, 'clip-path', () => this.phase !== 'settled', { holder: this, successorOf: handedClip });
+        handedClip.release();
+        yieldedTransforms.get(item.destination)!['clip-path'] = undefined;
+      }
       if (!('foreign' in acquired)) {
         item.clipLease = acquired;
         item.revealClip = INSETS.map((channel, index) => channelTracks.tween(channel, { from: start[index]!, to: 0, startMs: t, durationMs: Math.max(VISUAL_DEFAULTS.minimumRetargetMs, end - t), easing: 'ease-out' }));
@@ -954,7 +1292,8 @@ export class ChoreographyRun {
     this.nativeBindings.forEach((binding, index) => {
       if (binding.out?.rep && binding.out.rect && binding.out.revealed) {
         const [sx, sy] = binding.out.scale ?? [1, 1];
-        session.drive(index, binding.out.rect.x, binding.out.rect.y, sx, sy, Number(binding.out.rep.wrapper.style.opacity || '1'));
+        const [tx, ty, ratio] = copyMotion(binding.out, t, true);
+        session.drive(index, binding.out.rect.x + tx, binding.out.rect.y + ty, sx * ratio, sy * ratio, Number(binding.out.rep.wrapper.style.opacity || '1'));
       } else if (binding.shared) {
         const c = this.safeCompose(binding.shared, t);
         const item = binding.shared;
@@ -976,14 +1315,14 @@ export class ChoreographyRun {
     }
     if (this.renderAt === undefined) return this.incoming.length === 0;
     const since = this.host.clock.now() - this.renderAt;
-    return this.incoming.every(item => (item.anchor === 'render' ? since : t) >= item.opacity.endMs) && this.outgoing.every(item => !item.revealed || t >= item.opacity.endMs);
+    return this.incoming.every(item => (item.anchor === 'render' ? since : t) >= item.opacity.endMs) && this.outgoing.every(item => !item.revealed || t >= Math.max(item.opacity.endMs, motionEnd(item.motion)));
   }
   private write(t: number): void {
     for (const out of this.outgoing) {
       const value = Math.min(1, Math.max(0, out.opacity.sample(t).value));
       // Revealed copies carry the track value times the last sampled foreign ancestor appearance (exactly once).
-      if (out.revealed) { if (out.rep) out.rep.wrapper.style.opacity = String(this.relative(out, value) * out.ancestorOpacity); }
-      else if (out.node.isConnected) out.lease?.write(String(value));
+      if (out.revealed) { if (out.rep) { out.rep.wrapper.style.opacity = String(this.relative(out, value) * out.ancestorOpacity); if (out.motion) this.moveCopy(out, t); } }
+      else if (out.node.isConnected) { out.lease?.write(String(value)); if (out.motion) writeMotion(out.motion, t); }
     }
     for (const item of [...this.shared]) {
       const c = this.safeCompose(item, t), p = this.safeCompose(item, t - 1);
@@ -1030,9 +1369,9 @@ export class ChoreographyRun {
       for (const item of this.incoming) {
         const at = item.anchor === 'render' ? since : t;
         // Paint obligation for the whole track: interactive/focused incoming content never paints below stable.
-        const floor = item.control || keepsPaint(item.node, 'surface') ? item.stable : 0;
+        const floor = item.control || this.paintKept(item.node, 'surface') ? item.stable : 0;
         item.lease?.write(String(Math.min(1, Math.max(floor, item.opacity.sample(at).value))));
-        if (item.slide) item.slide.lease.write(`${item.slide.x.sample(at).value}px ${item.slide.y.sample(at).value}px`);
+        if (item.motion) writeMotion(item.motion, at);
       }
     }
   }
@@ -1057,13 +1396,150 @@ export class ChoreographyRun {
     const leaving = (node: HTMLElement) => nodes.some(candidate => candidate === node || candidate.contains(node));
     for (const out of this.outgoing) {
       if (out.revealed || !leaving(out.node) || !out.node.isConnected) continue;
-      out.rect = out.node.getBoundingClientRect(); out.sampleAt = t; out.ancestorOpacity = this.foreignAncestorOpacity(out.node); out.clip = sampleClip(out.node);
+      out.rect = out.node.getBoundingClientRect(); out.sampleAt = t; out.sampledMotion = out.motion ? [...out.motion.written] : undefined; if (out.motion) this.sampleMotionFrame(out); out.ancestorOpacity = this.foreignAncestorOpacity(out.node); out.clip = sampleClip(out.node);
       { const svgGraphic = out.node.namespaceURI === 'http://www.w3.org/2000/svg' && out.node.localName !== 'svg'; const linear = svgGraphic ? [1, 0, 0, 1] as const : accumulatedLinear(out.node); out.linear = linear; out.size = linear && !axisAligned(linear) ? layoutSize(out.node) : undefined; out.scale = linear ? (axisAligned(linear) ? [linear[0], linear[3]] : [1, 1]) : undefined; }
       this.reveal(out, t);
     }
     for (const item of this.shared) if (item.source && leaving(item.source)) item.rep.handle?.retire();
   }
   /** The copy root already carries the participant's own opacity (stable or foreign displayed): apply the track relatively. */
+  /**
+   * Slide/scale leases for a real incoming or outgoing element, composed with its stable computed values.
+   * Incoming: from the declared offset/factor to stable. Outgoing: from stable to the declared offset/factor;
+   * a `held` (control) element keeps its stable transform before commit (hold-then-move, as hold-then-fade:
+   * the control stays where it is targeted and focused), and its copy moves after reveal. Foreign leases and
+   * non-2D-px translate or non-uniform scale are skipped with `slideSkipped:`/`scaleSkipped:` diagnostics.
+   */
+  /**
+   * R1/R2: at sampling, record how the node's LOCAL slide delta maps to the viewport (its ancestors' linear map:
+   * CSS `translate` applies in the parent's coordinate system) and where its transform-origin sits in its box, so the
+   * copy continues the same trajectory after removal.
+   */
+  private sampleMotionFrame(out: OutgoingItem): void {
+    const parent = out.node.parentElement;
+    out.sampledAncestors = parent ? accumulatedLinear(parent) : [1, 0, 0, 1];
+    if (!out.sampledAncestors && out.motion?.translate) this.host.diagnose({ type: 'unsupported', transaction: this.transaction, participant: out.key, reason: 'slideCopyUnmapped:nonAffineAncestor' });
+    const style = this.host.win.getComputedStyle(out.node);
+    const [ox, oy] = style.transformOrigin.split(/\s+/).map(part => Number.parseFloat(part));
+    const width = out.node.offsetWidth || 0, height = out.node.offsetHeight || 0;
+    out.sampledOrigin = width > 0 && height > 0 && Number.isFinite(ox) && Number.isFinite(oy) ? [ox! / width, oy! / height] : [0.5, 0.5];
+  }
+  /**
+   * R3: the stable base of a transform property when the stable projection has no inline value: the style UNDER any
+   * live inline write (a predecessor's displayed value must not become this run's base). Read by momentarily
+   * removing the inline declaration (synchronous; no paint in between).
+   */
+  private underlying(node: HTMLElement, property: 'translate' | 'scale'): string {
+    const inline = node.style.getPropertyValue(property);
+    if (!inline) return this.host.win.getComputedStyle(node).getPropertyValue(property);
+    const priority = node.style.getPropertyPriority(property);
+    node.style.removeProperty(property);
+    const value = this.host.win.getComputedStyle(node).getPropertyValue(property);
+    node.style.setProperty(property, inline, priority);
+    return value;
+  }
+  /** A transform lease for this run; a conflicting earlier run yields the node and this run succeeds its lease. */
+  /** Transform leases handed over by a whole-run predecessor (succeeded, un-restored), consumed by `transformLease`. */
+  private readonly adoptedTransforms = new Map<HTMLElement, { translate?: OutgoingAdoption['translate']; scale?: OutgoingAdoption['scale'] }>();
+  /** Resting transform channels this run adopted (displayed delta/factor and the node's true base). */
+  private readonly restingTransforms = new Map<HTMLElement, { translate?: { value: readonly [number, number]; base: readonly [number, number] }; scale?: { value: number; base: number } }>();
+  private transformLease(node: HTMLElement, property: 'translate' | 'scale'): ChoreographyLease | { readonly foreign: string } {
+    const alive = () => this.phase !== 'settled';
+    // Whole-run successor: the predecessor's active transform (already succeeded, un-restored) continues from its
+    // displayed value — the same continuation as a partial arbitration yield.
+    const adopted = this.adoptedTransforms.get(node);
+    const inherited = adopted?.[property];
+    if (adopted && inherited) {
+      const record = this.restingTransforms.get(node) ?? {};
+      (record as Record<string, unknown>)[property] = { value: inherited.value, base: inherited.base };
+      this.restingTransforms.set(node, record);
+      adopted[property] = undefined;
+      return inherited.lease;
+    }
+    const resting = this.host.takeRetained?.(node, property);
+    if (resting) { const record = this.restingTransforms.get(node) ?? {}; (record as Record<string, unknown>)[property] = { value: resting.displayed, base: resting.base }; this.restingTransforms.set(node, record); }
+    let acquired = acquireChoreographyLease(this.host.root, node, property, alive, { holder: this });
+    resting?.retire();
+    if ('foreign' in acquired && acquired.foreign === 'choreography' && acquired.holder && acquired.holder !== this) {
+      if (!yieldedTransforms.get(node)?.[property]) { const paint = yieldFrom(acquired.holder, node) ?? this.host.arbitrate?.(node, acquired.holder); if (paint) { const lease = this.succeed(paint); lease?.release(); } }
+      const previous = yieldedTransforms.get(node)?.[property];
+      if (previous) {
+        acquired = acquireChoreographyLease(this.host.root, node, property, alive, { holder: this, successorOf: previous });
+        previous.release(); // superseded: retires without a restoring write
+        const handed = yieldedTransforms.get(node); if (handed) handed[property] = undefined;
+        // Adopt the displayed transform of the conflicting writer we succeed (no reset to the declared from).
+        const shown = yieldedTransformPose.get(node)?.[property];
+        if (shown) { const record = this.restingTransforms.get(node) ?? {}; (record as Record<string, unknown>)[property] = shown; this.restingTransforms.set(node, record); delete yieldedTransformPose.get(node)![property]; }
+      }
+    }
+    return acquired;
+  }
+  private transformMotion(node: HTMLElement, track: ChoreographyTrack, side: 'incoming' | 'outgoing', held: boolean): TransformMotion | undefined {
+    const dx = track.slide?.dx ?? 0, dy = track.slide?.dy ?? 0, scale = track.scale;
+    const scales = !!scale && (scale.from !== 1 || scale.to !== 1);
+    if (!dx && !dy && !scales) return undefined;
+    const easing = channelEasing(track.easing, side === 'incoming' ? 'ease-out' : 'linear');
+    const tween = (channel: 'x' | 'y' | 'scale', from: number, to: number, identity: number): Sampler => held ? hold(channel, identity)
+      : channelTracks.tween(channel, { from, to, startMs: track.startMs, durationMs: track.durationMs, easing });
+    const unsupported = (reason: string) => this.host.diagnose({ type: 'unsupported', transaction: this.transaction, participant: keyOf(track), reason });
+    const style = this.host.win.getComputedStyle(node);
+    const motion: TransformMotion = { written: [0, 0, 1] };
+    if (dx || dy) {
+      const moved = this.transformLease(node, 'translate');
+      if ('foreign' in moved) unsupported(`slideSkipped:${moved.foreign}`);
+      else {
+        // Compose with the element's own stable translation (2D px); an unsupported one is preserved.
+        const stable = moved.stable || this.underlying(node, 'translate');
+        const parts = stable === 'none' || !stable ? ['0px', '0px'] : stable.trim().split(/\s+/);
+        const px = parts.map(part => /^-?\d+(\.\d+)?px$/.test(part) ? Number.parseFloat(part) : Number.NaN);
+        if (parts.length > 2 || px.some(value => !Number.isFinite(value))) { moved.release(); unsupported('slideSkipped:unsupportedStableTranslate'); }
+        else {
+          // A resting slide continues from its displayed offset (true base kept); otherwise the declared endpoints.
+          const rest = this.restingTransforms.get(node)?.translate;
+          const base = rest ? rest.base : [px[0] ?? 0, px[1] ?? 0] as const;
+          const [fx, fy] = rest ? rest.value : side === 'incoming' ? [dx, dy] : [0, 0];
+          const [tx, ty] = side === 'incoming' ? [0, 0] : [dx, dy];
+          motion.translate = { lease: moved, base: [base[0], base[1]], x: tween('x', fx, tx, 0), y: tween('y', fy, ty, 0) };
+        }
+      }
+    }
+    if (scale && scales) {
+      // `scale` is arbitrated like `translate` (a ChoreographyProperty of its own).
+      const scaled = this.transformLease(node, 'scale');
+      if ('foreign' in scaled) unsupported(`scaleSkipped:${scaled.foreign}`);
+      else {
+        const stable = scaled.stable || this.underlying(node, 'scale');
+        const parts = stable === 'none' || !stable ? ['1'] : stable.trim().split(/\s+/);
+        const values = parts.map(part => /^-?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i.test(part) ? Number(part) : Number.NaN);
+        const uniform = values.length <= 2 && values.every(value => Number.isFinite(value) && value === values[0]) && values[0]! > 0;
+        const rest = this.restingTransforms.get(node)?.scale;
+        if (rest) motion.scale = { lease: scaled, base: rest.base, factor: tween('scale', rest.value, scale.to, 1) }; // continue from the displayed factor
+        else if (!uniform) { scaled.release(); unsupported('scaleSkipped:unsupportedStableScale'); }
+        else motion.scale = { lease: scaled, base: values[0]!, factor: tween('scale', scale.from, scale.to, 1) };
+      }
+    }
+    return motion.translate || motion.scale ? motion : undefined;
+  }
+  /** A node that becomes a control (or focus-pinned) before commit returns to its stable transform within the focus bound. */
+  private returnMotion(out: OutgoingItem, t: number): void {
+    const motion = out.motion;
+    if (!motion) return;
+    if (motion.translate) { motion.translate.x = continueFrom('x', motion.translate.x, t, 0, VISUAL_DEFAULTS.focusSettleMs); motion.translate.y = continueFrom('y', motion.translate.y, t, 0, VISUAL_DEFAULTS.focusSettleMs); }
+    if (motion.scale) motion.scale.factor = continueFrom('scale', motion.scale.factor, t, 1, VISUAL_DEFAULTS.focusSettleMs);
+  }
+  /**
+   * The outgoing copy continues the node's motion after reveal, relative to the motion painted when its rect was
+   * sampled (the copy's placement already includes it): translate by the offset change (viewport px) and scale by
+   * the factor ratio about the painted centre (the axis-aligned wrapper's origin is its top-left corner).
+   */
+  private moveCopy(out: OutgoingItem, t: number): void {
+    const wrapper = out.rep?.wrapper;
+    if (!wrapper) return;
+    const centred = !!(out.linear && out.size && !axisAligned(out.linear));
+    const [tx, ty, ratio] = copyMotion(out, t, !centred);
+    wrapper.style.translate = tx || ty || ratio !== 1 ? `${tx}px ${ty}px` : '';
+    wrapper.style.scale = ratio !== 1 ? String(ratio) : '';
+  }
   private relative(out: OutgoingItem, value: number): number {
     const own = out.displayedOpacity ?? out.stable;
     return own > 0 ? Math.min(1, value / own) : 0;
@@ -1100,8 +1576,26 @@ export class ChoreographyRun {
         if (out.track.startMs > t) {
           // The remainder of the declared track: hold the displayed value until startMs, then fade to `to` by its original end.
           const start = out.track.startMs;
-          out.opacity = chain({ endMs: start, constrained: false, sample: () => ({ value, velocity: 0 }) }, channelTracks.tween('opacity', { from: value, to, startMs: start, durationMs: Math.max(1, out.track.durationMs), easing: out.track.easing ?? 'linear' }));
+          out.opacity = chain({ endMs: start, constrained: false, sample: () => ({ value, velocity: 0 }) }, channelTracks.tween('opacity', { from: value, to, startMs: start, durationMs: Math.max(1, out.track.durationMs), easing: channelEasing(out.track.easing, 'linear') }));
         } else out.opacity = continueFrom('opacity', displayed, t, to, end > t ? end - t : VISUAL_DEFAULTS.postRevealFadeMs);
+      }
+      if (out.motion) {
+        // Held (control) motion starts on the copy: continue from the displayed values to the declared end.
+        const end = out.track.startMs + out.track.durationMs;
+        const motion = out.motion;
+        const held = out.control || out.pinned;
+        if (held && t > out.track.startMs) {
+          const span = Math.max(VISUAL_DEFAULTS.minimumRetargetMs, end - t);
+          if (motion.translate) { motion.translate.x = continueFrom('x', motion.translate.x, t, out.track.slide?.dx ?? 0, span); motion.translate.y = continueFrom('y', motion.translate.y, t, out.track.slide?.dy ?? 0, span); }
+          if (motion.scale) motion.scale.factor = continueFrom('scale', motion.scale.factor, t, out.track.scale?.to ?? 1, span);
+        } else if (held) {
+          const easing = channelEasing(out.track.easing, 'linear');
+          if (motion.translate) { motion.translate.x = channelTracks.tween('x', { from: 0, to: out.track.slide?.dx ?? 0, startMs: out.track.startMs, durationMs: out.track.durationMs, easing }); motion.translate.y = channelTracks.tween('y', { from: 0, to: out.track.slide?.dy ?? 0, startMs: out.track.startMs, durationMs: out.track.durationMs, easing }); }
+          if (motion.scale) motion.scale.factor = channelTracks.tween('scale', { from: 1, to: out.track.scale?.to ?? 1, startMs: out.track.startMs, durationMs: out.track.durationMs, easing });
+        }
+        // The real node leaves: its transform leases retire without a restoring write, like its paint lease.
+        motion.translate?.lease.abandon(); motion.scale?.lease.abandon();
+        this.moveCopy(out, t);
       }
       // The real node leaves in this same flush: retire its lease without any restoring write.
       out.lease?.abandon();
@@ -1112,49 +1606,78 @@ export class ChoreographyRun {
     if (this.phase !== 'playing' || !this.reserved || owner === this.source) return;
     this.destinationOwner = owner;
     this.renderAt = this.host.clock.now();
+    this.decideAmbiguity([...this.batch, ...this.early]);
+    this.flushDestinations(); // the render checkpoint admits this flush's registrations now
+    // Registrations that arrived before the destination owner was known are reconciled against it now.
+    const early = this.early; this.early = [];
+    for (const entry of early) if (entry.node.isConnected) this.registered(entry);
   }
-  /** Registration precedes first paint: incoming initial pose and destination suppression are written now. */
-  registered(entry: Participant): void {
+  /**
+   * Registration precedes first paint: incoming initial pose and destination suppression are written now.
+   * Destinations match exactly (design §3a): the committed destination owner for plain keys (route runs), the
+   * run's scope (local runs), or the bound overlay instance for scoped selectors — never another owner's
+   * same-key participant. A second candidate for one track is an ambiguity: the first acquisition is rolled
+   * back before paint and the track is reported, not guessed.
+   */
+  registered(entry: Participant, admitted = false): void {
     if (this.phase !== 'playing' || !this.reserved) return;
-    if (this.local ? this.initialNodes.has(entry.node) || entry.owner !== this.source : entry.owner === this.source) return;
+    if (!admitted) {
+      // Every destination registration (route, local, overlay) joins a batch: uniqueness is decided synchronously
+      // HERE, before anything is acquired or arbitrated; acquisition follows at the batch checkpoint (a pre-paint
+      // microtask, or the route's `rendered()`), so an ambiguous candidate never yields another run's node.
+      if (this.local && this.initialNodes.has(entry.node)) return;
+      if (!this.local && entry.owner === this.source) return;
+      // Deferred: overlay roles (a flush's registrations together), and any candidate another run animates (its
+      // arbitration is irreversible). Unheld candidates are admitted at once (a later rollback only restores).
+      const contested = hasChoreographyLease(entry.node) && !this.holds(entry.node);
+      if (this.options.overlayRoles || contested || this.batch.length) {
+        this.batch.push(entry);
+        this.decideAmbiguity(this.batch);
+        if (this.batch.length === 1) queueMicrotask(() => this.flushDestinations());
+        return;
+      }
+    }
+    if (this.local && this.initialNodes.has(entry.node)) return;
+    if (!this.local && entry.owner === this.source) return;
     for (const track of this.plan.tracks) {
-      if (track.participant !== entry.key) continue;
-      if (track.side === 'incoming' && !this.incoming.some(item => item.node === entry.node)) {
+      if (track.side === 'outgoing' || this.ambiguousDestinations.has(track)) continue;
+      const destination = this.destinationOf(track);
+      if (destination.unresolved || destination.key !== entry.key) continue;
+      if (!destination.scoped && !this.local && this.destinationOwner === undefined) { if (!this.early.includes(entry)) this.early.push(entry); continue; }
+      if (entry.owner !== destination.owner) continue;
+      if (track.side === 'incoming') {
+        const existing = this.incoming.find(item => item.track === track);
+        if (existing && existing.node !== entry.node) { this.ambiguous(track); continue; }
+        if (existing) continue;
         const opacity = track.opacity ?? { from: 0, to: 1 };
-        const acquired = this.lease(entry.node);
+        // A handed-over (reopen) or arbitrated (cross-run) paint continues from its displayed value: no reset jump.
+        const inherited = this.adoptedOutgoing.get(entry.node);
+        if (inherited) this.adoptedOutgoing.delete(entry.node);
+        const acquired = inherited?.lease ?? this.lease(entry.node);
         const lease = 'foreign' in acquired ? undefined : acquired;
-        const stable = lease ? lease.stableNumber : 1;
+        const shown = inherited ? inherited.displayed : lease ? this.adoptedPaint.get(entry.node) : undefined;
+        this.adoptedPaint.delete(entry.node);
+        // Overlay roles are hidden by their presenting state (inline opacity 0); their stable paint is visible.
+        const stable = this.options.overlayRoles?.has(entry.node) ? 1 : lease ? (this.restingStable.get(entry.node) ?? lease.stableNumber) : 1;
         const anchor = track.anchor ?? 'render';
         // Controls enter visibly usable: no paint reduction below stable for interactive destinations.
-        const from = keepsPaint(entry.node, entry.role) ? stable : opacity.from * stable;
+        const from = this.paintKept(entry.node, entry.role) ? stable : shown ?? opacity.from * stable;
         lease?.write(String(from));
-        const easing = track.easing ?? 'ease-out';
-        let slide: IncomingItem['slide'];
-        if (track.slide && (track.slide.dx || track.slide.dy)) {
-          const moved = acquireChoreographyLease(this.host.root, entry.node, 'translate', () => this.phase !== 'settled');
-          if ('foreign' in moved) this.host.diagnose({ type: 'unsupported', transaction: this.transaction, participant: track.participant, reason: `slideSkipped:${moved.foreign}` });
-          else {
-            // Compose with the element's own stable translation (2D px); an unsupported one is preserved.
-            const stable = this.host.win.getComputedStyle(entry.node).translate;
-            const parts = stable === 'none' || !stable ? ['0px', '0px'] : stable.trim().split(/\s+/);
-            const px = parts.map(part => /^-?\d+(\.\d+)?px$/.test(part) ? Number.parseFloat(part) : Number.NaN);
-            if (parts.length > 2 || px.some(value => !Number.isFinite(value))) {
-              moved.release();
-              this.host.diagnose({ type: 'unsupported', transaction: this.transaction, participant: track.participant, reason: 'slideSkipped:unsupportedStableTranslate' });
-            } else {
-              const bx = px[0] ?? 0, by = px[1] ?? 0;
-              const dx = track.slide.dx ?? 0, dy = track.slide.dy ?? 0;
-              slide = { lease: moved, x: channelTracks.tween('x', { from: bx + dx, to: bx, startMs: track.startMs, durationMs: track.durationMs, easing }), y: channelTracks.tween('y', { from: by + dy, to: by, startMs: track.startMs, durationMs: track.durationMs, easing }) };
-              moved.write(`${bx + dx}px ${by + dy}px`);
-            }
-          }
-        }
-        this.incoming.push({ track, node: entry.node, lease, stable, anchor, slide, control: keepsPaint(entry.node, entry.role), opacity: channelTracks.tween('opacity', { from, to: opacity.to * stable, startMs: track.startMs, durationMs: track.durationMs, easing }) });
+        const easing = channelEasing(track.easing, 'ease-out');
+        const motion = this.transformMotion(entry.node, track, 'incoming', false);
+        if (motion) writeMotion(motion, Number.NEGATIVE_INFINITY);
+        const sampler = shown !== undefined && !this.paintKept(entry.node, entry.role)
+          ? continueFrom('opacity', hold('opacity', shown), track.startMs, opacity.to * stable, Math.max(1, track.durationMs))
+          : channelTracks.tween('opacity', { from, to: opacity.to * stable, startMs: track.startMs, durationMs: track.durationMs, easing });
+        this.incoming.push({ track, node: entry.node, lease, stable, anchor, motion, control: this.paintKept(entry.node, entry.role), opacity: sampler });
       }
       if (track.side === 'shared') {
         const item = this.shared.find(candidate => candidate.track === track);
+        if (item?.destination && item.destination !== entry.node && item.destination !== item.source) { this.ambiguous(track); continue; }
         if (item && !item.destination) {
           item.destination = entry.node;
+          const reach = homeInLayer(item.rep, entry.node);
+          if (reach.startsWith('unreachable')) { this.settleUnreachable(item, reach); continue; }
           item.destinationControl = keepsPaint(entry.node, entry.role);
           if (!item.destinationControl) {
             const acquired = this.lease(entry.node);
@@ -1165,6 +1688,15 @@ export class ChoreographyRun {
       }
     }
   }
+  /** Destination ambiguity: roll back what this track acquired for its destination and report it once. */
+  private ambiguous(track: ChoreographyTrack): void {
+    this.ambiguousDestinations.add(track);
+    for (const item of [...this.incoming]) if (item.track === track) { item.lease?.release(); item.motion?.translate?.lease.release(); item.motion?.scale?.lease.release(); this.incoming.splice(this.incoming.indexOf(item), 1); }
+    const shared = this.shared.find(candidate => candidate.track === track);
+    if (shared?.destination) { shared.destinationLease?.release(); shared.destinationLease = undefined; shared.destination = undefined; shared.destinationControl = false; }
+    this.host.diagnose({ type: 'unsupported', transaction: this.transaction, participant: keyOf(track), reason: 'destinationAmbiguous' });
+  }
+
   /** Scroll/reflow rebase: remeasure committed destinations next frame and retarget from displayed state. */
   rebase(): void {
     if (this.phase !== 'playing') return;
@@ -1187,7 +1719,7 @@ export class ChoreographyRun {
     const shown = this.displayedState(item, t);
     let target: readonly [number, number, number, number] = basis;
     GEOMETRY.forEach((channel, index) => {
-      const points = future.map(waypoint => ({ atMs: waypoint.atMs, value: poseRect(waypoint.pose, basis, this.host.win)[index]! }));
+      const points = future.map(waypoint => ({ atMs: waypoint.atMs, value: poseRect(waypoint.pose, basis, this.host.win)[index]!, easing: easingOf(waypoint) }));
       const head = continueFrom(channel, item.geo[channel], at, points[0]!.value, Math.max(1, points[0]!.atMs - at));
       item.geo[channel] = points.length > 1 ? chain(head, piecewise(channel, points[0]!.value, points[0]!.atMs, points.slice(1), item.track.easing)) : head;
     });
@@ -1241,14 +1773,29 @@ export class ChoreographyRun {
     if (this.frameHandle === undefined) this.frameHandle = this.host.clock.frame(() => this.tick());
   }
   /** Supersession: shared representations transfer (with displayed pose/velocity) to the successor. */
+  /** Hand an item's active transform leases off with their displayed values (they leave this run un-restored). */
+  private handTransformsOff(motion: TransformMotion | undefined): Pick<OutgoingAdoption, 'translate' | 'scale'> {
+    if (!motion) return {};
+    const handed: { translate?: OutgoingAdoption['translate']; scale?: OutgoingAdoption['scale'] } = {};
+    if (motion.translate) { handed.translate = { lease: motion.translate.lease, value: [motion.written[0], motion.written[1]], base: motion.translate.base }; motion.translate = undefined; }
+    if (motion.scale) { handed.scale = { lease: motion.scale.lease, value: motion.written[2], base: motion.scale.base }; motion.scale = undefined; }
+    return handed;
+  }
   handOff(): { readonly shared: Adoption[]; readonly outgoing: Map<HTMLElement, OutgoingAdoption>; readonly native?: NativeAdoption } {
     const outgoing = new Map<HTMLElement, OutgoingAdoption>();
     if (this.phase !== 'playing') return { shared: [], outgoing };
     const t = this.elapsed();
     for (const out of this.outgoing) {
       if (out.revealed || !out.lease || !out.node.isConnected) continue;
-      outgoing.set(out.node, { lease: out.lease, displayed: Math.min(1, Math.max(0, out.opacity.sample(t).value)) });
+      outgoing.set(out.node, { lease: out.lease, displayed: Math.min(1, Math.max(0, out.opacity.sample(t).value)), ...this.handTransformsOff(out.motion) });
       (out as { lease: ChoreographyLease | undefined }).lease = undefined;
+    }
+    // Incoming paint is handed over with its displayed value too (a close superseding an open continues from it).
+    for (const item of this.incoming) {
+      if (!item.lease || !item.node.isConnected || outgoing.has(item.node)) continue;
+      const shown = Number.parseFloat(item.node.style.opacity);
+      outgoing.set(item.node, { lease: item.lease, displayed: Math.min(1, Math.max(0, Number.isFinite(shown) ? shown : item.stable)), ...this.handTransformsOff(item.motion) });
+      (item as { lease: ChoreographyLease | undefined }).lease = undefined;
     }
     const adoptions = this.shared.map(item => {
       // Everything not transferred is cleaned up here: observers, drivers, destination/clip leases.
@@ -1259,7 +1806,7 @@ export class ChoreographyRun {
       if (item.destinationLease && item.destinationLease !== movedLease) item.destinationLease.release();
       item.clipLease?.release();
       return {
-      key: item.key, rep: item.rep, sourceLease: movedLease, source: item.source ?? item.destination, ...shown,
+      key: item.key, scopedOwner: this.scopedOwnerOf(item.track), rep: item.rep, sourceLease: movedLease, source: item.source ?? item.destination, ...shown,
       ancestorOpacity: item.ancestorOpacity, stable: item.stable, suppressed: item.suppressed, nested: item.nested
     }; });
     this.shared.length = 0;
@@ -1273,6 +1820,12 @@ export class ChoreographyRun {
   settle(reason: SettleReason): void {
     if (this.phase === 'settled') return;
     const t = this.elapsed();
+    // Handed leases no successor took are released normally (restoring the stable value), never left dead.
+    for (const node of this.handedNodes) {
+      const handed = yieldedTransforms.get(node);
+      for (const property of ['translate', 'scale', 'clip-path'] as const) { const lease = handed?.[property]; if (lease && lease.holder === this) { handed![property] = undefined; lease.release(); } }
+    }
+    this.handedNodes.clear();
     this.phase = 'settled';
     if (this.frameHandle !== undefined) this.host.clock.cancelFrame(this.frameHandle);
     for (const timer of this.timers) this.host.clock.clearTimeout(timer);
@@ -1280,6 +1833,8 @@ export class ChoreographyRun {
     this.resize.stop();
     const finish = (lease: ChoreographyLease | undefined) => { if (!lease) return; if (lease.node.isConnected) lease.release(); else lease.abandon(); };
     for (const { lease } of this.adoptedOutgoing.values()) finish(lease);
+    for (const { translate, scale } of this.adoptedTransforms.values()) { finish(translate?.lease); finish(scale?.lease); }
+    this.adoptedTransforms.clear();
     this.adoptedOutgoing.clear();
     // Early terminal before enrollment: adopted shared representations/leases are released exactly once.
     for (const adoption of this.adopted) {
@@ -1295,12 +1850,23 @@ export class ChoreographyRun {
     this.pending = [];
     for (const read of this.pendingReads) if (read.capture.kind === 'captured') read.capture.handle.dispose();
     this.pendingReads = [];
-    for (const out of this.outgoing) { out.observer?.(); dropRep(out.rep); finish(out.lease); }
+    for (const out of this.outgoing) {
+      out.observer?.(); dropRep(out.rep);
+      // Overlay-lifetime resting reaction: a completed, still-mounted reaction keeps its terminal values (held by the Host).
+      if (reason === 'completed' && out.track.lifetime === 'overlay' && !out.revealed && out.node.isConnected && this.options.retain) {
+        const pose: RestingPose = {};
+        if (out.lease) pose.opacity = { value: Number.parseFloat(out.node.style.opacity), base: this.restingStable.get(out.node) ?? out.stable, lease: out.lease };
+        if (out.motion?.translate) pose.translate = { value: [out.motion.written[0], out.motion.written[1]], base: out.motion.translate.base, lease: out.motion.translate.lease };
+        if (out.motion?.scale) pose.scale = { value: out.motion.written[2], base: out.motion.scale.base, lease: out.motion.scale.lease };
+        if (Object.keys(pose).length && this.options.retain(out.node, pose, this.sourceOf(out.track).owner)) continue;
+      }
+      finish(out.lease); finish(out.motion?.translate?.lease); finish(out.motion?.scale?.lease);
+    }
     for (const item of this.shared) {
       item.unobserve?.(); dropRep(item.rep); finish(item.sourceLease); finish(item.destinationLease); finish(item.clipLease);
       this.disposeDriver(item, t);
     }
-    for (const item of this.incoming) { finish(item.lease); finish(item.slide?.lease); }
+    for (const item of this.incoming) { finish(item.lease); finish(item.motion?.translate?.lease); finish(item.motion?.scale?.lease); }
     this.host.releasePlane();
     this.host.diagnose({ type: 'settled', transaction: this.transaction, reason, t });
     this.done();
@@ -1312,7 +1878,44 @@ const cornersOf = (value: Corners): readonly [number, number, number, number] =>
 const CORNERS = ['radiusTopLeft', 'radiusTopRight', 'radiusBottomRight', 'radiusBottomLeft'] as const;
 const INSETS = ['clipTop', 'clipRight', 'clipBottom', 'clipLeft'] as const;
 const hasText = (node: Node): boolean => { for (const child of node.childNodes) { if (child.nodeType === Node.TEXT_NODE && (child.textContent ?? '').trim()) return true; if (hasText(child)) return true; } return false; };
+/**
+ * The copy's motion since its rect was sampled: [tx, ty, ratio]. With a top-left origin (`corner`), tx/ty include the
+ * compensation that keeps the scale about the painted centre.
+ */
+function copyMotion(out: OutgoingItem, t: number, corner: boolean): readonly [number, number, number] {
+  const motion = out.motion, rect = out.rect;
+  if (!motion || !rect) return [0, 0, 1];
+  const [dx0, dy0, f0] = out.sampledMotion ?? [0, 0, 1];
+  const lx = motion.translate ? motion.translate.x.sample(t).value - dx0 : 0;
+  const ly = motion.translate ? motion.translate.y.sample(t).value - dy0 : 0;
+  // R1: the local delta maps to the viewport through the ancestors' linear map (unmapped: no copy translation).
+  const m = out.sampledAncestors;
+  const dx = m ? m[0] * lx + m[2] * ly : 0, dy = m ? m[1] * lx + m[3] * ly : 0;
+  const ratio = motion.scale && f0 > 0 ? Math.max(0, motion.scale.factor.sample(t).value) / f0 : 1;
+  // R2: the copy scales about the node's own transform-origin (as a fraction of its box), like the real node.
+  const [fx, fy] = out.sampledOrigin ?? [0.5, 0.5];
+  if (corner) return [dx + rect.width * fx * (1 - ratio), dy + rect.height * fy * (1 - ratio), ratio];
+  // R6: a rotated/skewed copy scales about its centre; the node scales about its origin, a fixed point of its own
+  // transform. Shift by (1 - ratio) x the origin's offset from the centre, mapped by the accumulated linear map.
+  if (!out.linear || !out.size) return [dx, dy, ratio];
+  const [a, b, c, d] = out.linear, ox = (fx - 0.5) * out.size[0], oy = (fy - 0.5) * out.size[1];
+  return [dx + (1 - ratio) * (a * ox + c * oy), dy + (1 - ratio) * (b * ox + d * oy), ratio];
+}
+const motionEnd = (motion: TransformMotion | undefined): number => motion ? Math.max(motion.translate?.x.endMs ?? 0, motion.translate?.y.endMs ?? 0, motion.scale?.factor.endMs ?? 0) : 0;
+/** Writes a real element's slide/scale at `at` through its leases (composed with stable values). */
+function writeMotion(motion: TransformMotion, at: number): void {
+  if (motion.translate) {
+    const dx = motion.translate.x.sample(at).value, dy = motion.translate.y.sample(at).value;
+    motion.translate.lease.write(`${motion.translate.base[0] + dx}px ${motion.translate.base[1] + dy}px`);
+    motion.written[0] = dx; motion.written[1] = dy;
+  }
+  if (motion.scale) {
+    const factor = Math.max(0, motion.scale.factor.sample(at).value);
+    motion.scale.lease.write(String(motion.scale.base * factor));
+    motion.written[2] = factor;
+  }
+}
 /** Sequential composition: `head` then `tail` (tail begins where head ends). */
 function chain(head: Sampler, tail: Sampler): Sampler {
-  return { endMs: tail.endMs, constrained: head.constrained || tail.constrained, sample: ms => ms < head.endMs ? head.sample(ms) : tail.sample(ms) };
+  return { endMs: tail.endMs, get constrained() { return head.constrained || tail.constrained; }, sample: ms => ms < head.endMs ? head.sample(ms) : tail.sample(ms) };
 }

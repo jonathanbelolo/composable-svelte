@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import PopoverPrimitive from './primitives/PopoverPrimitive.svelte';
+  import type { OverlayMotionHandle } from '../application/renderer/choreography/overlay-motion.js';
   import { assertPresentationView, type PresentationView } from '../navigation/managed-integration.js';
   import type { PresentationState } from '../navigation/types.js';
   import type { SpringConfig } from '../animation/spring-config.js';
@@ -11,6 +12,12 @@
   // ============================================================================
 
   interface PopoverProps<State, Action> {
+    /**
+     * Declarative overlay motion from `useOverlayMotion`: default open/close plans and a presentation-bound
+     * explicit entry. Without it (or without a motion engine) the built-in spring runs as before.
+     */
+    motion?: OverlayMotionHandle | undefined;
+
     /**
      * Managed presentation view for the popover content.
      */
@@ -91,7 +98,8 @@
     disableClickOutside = false,
     disableEscapeKey = false,
     style = '',
-    children: renderContent
+    children: renderContent,
+    motion
   }: PopoverProps<unknown, unknown> = $props();
 
   const admittedStore = $derived.by(() => {
@@ -132,6 +140,7 @@
 <!-- ============================================================================ -->
 
 <PopoverPrimitive
+  {motion}
   store={admittedStore}
   {presentation}
   {onPresentationComplete}

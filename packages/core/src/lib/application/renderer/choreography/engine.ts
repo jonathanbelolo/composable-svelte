@@ -39,16 +39,17 @@ export function fluidMotion(options: FluidMotionOptions = {}): VisualConfigurati
     warm: node => cache.warm(node, () => ({ document: node.ownerDocument, signal: new AbortController().signal, reducedMotion: false, diagnose: () => {} })),
     forget: node => cache.forget(node),
     get configuration() { return configuration; },
-    createRun(host, transaction, plan, source, handoff, done, localCommit) {
+    createRun(host, transaction, plan, source, handoff, done, localCommit, options) {
       const adopted = (handoff?.shared ?? []) as Adoption[];
       const outgoing = new Map(handoff?.outgoing as ReadonlyMap<HTMLElement, OutgoingAdoption> | undefined ?? []);
-      const run = new ChoreographyRun(host, transaction, plan, source, adopted, done, outgoing, localCommit, configuration);
+      const run = new ChoreographyRun(host, transaction, plan, source, adopted, done, outgoing, localCommit, configuration, options);
       if (handoff?.native) run.adoptNative(handoff.native as NativeAdoption);
       return run;
     },
     discard(handoff: EngineHandoff) {
       for (const item of handoff.shared as Adoption[]) { item.rep.handle?.dispose(); item.rep.wrapper.remove(); item.sourceLease?.release(); }
-      for (const { lease } of (handoff.outgoing as ReadonlyMap<HTMLElement, OutgoingAdoption>).values()) lease.release();
+      // Every handed channel is released (restoring its stable value): paint and any active translate/scale.
+      for (const { lease, translate, scale } of (handoff.outgoing as ReadonlyMap<HTMLElement, OutgoingAdoption>).values()) { lease.release(); translate?.lease.release(); scale?.lease.release(); }
       (handoff.native as NativeAdoption | undefined)?.session.end();
     },
     resources: () => ({ observers: liveObservers() + livePseudoOrderGuards(), handles: liveRepresentationHandles(), media: liveMediaResources() + liveNativeSessions() })

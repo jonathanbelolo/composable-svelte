@@ -5,6 +5,7 @@
 import type { Action } from 'svelte/action';
 import { optionalPresence, optionalRouteHost, optionalRouteInstance } from './route-host.js';
 import type { RepresentationProvider } from '../representation/types.js';
+import { overlayScopeOf } from '../../../actions/overlayLayers.js';
 
 export interface ParticipantOptions {
   /** Explicit visual identity within its route instance (or shell) scope. */
@@ -28,11 +29,23 @@ export function useParticipant(): Action<HTMLElement | SVGElement, ParticipantOp
     const node = element as HTMLElement;
     if (!host) return {};
     if (!options || typeof options.key !== 'string' || options.key.length === 0) throw new TypeError('A participant declares a nonempty key');
-    let release = host.register(node, options.key, owner, options.role ?? 'surface');
+    // Scope is resolved at attach by DOM containment: a node inside an overlay instance's content belongs to that
+    // instance (a new owner per open), even when this action was initialised by the page that renders the overlay.
+    // Inner actions run before an enclosing overlay container's action registers its scope root, so the scope
+    // is re-resolved once after the current flush (a microtask, before rendering) and re-registered if it changed.
+    const scope = () => overlayScopeOf(node) ?? owner;
+    let current = { key: options.key, role: options.role ?? 'surface', scope: scope() };
+    let release = host.register(node, current.key, current.scope, current.role);
+    let live = true;
+    queueMicrotask(() => {
+      if (!live) return;
+      const resolved = scope();
+      if (resolved !== current.scope) { release(); current = { ...current, scope: resolved }; release = host.register(node, current.key, current.scope, current.role); }
+    });
     presence?.add(node);
     return {
-      update(next: ParticipantOptions) { release(); release = host.register(node, next.key, owner, next.role ?? 'surface'); },
-      destroy() { presence?.delete(node); release(); }
+      update(next: ParticipantOptions) { release(); current = { key: next.key, role: next.role ?? 'surface', scope: scope() }; release = host.register(node, current.key, current.scope, current.role); },
+      destroy() { live = false; presence?.delete(node); release(); }
     };
   };
 }

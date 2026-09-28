@@ -3,12 +3,14 @@
 Staged routing lets a routed application animate a whole layout across a route change. The framework measures the current page, plays a declared choreography on a motion plane, commits the route's domain action at a cue point, and finishes the motion against the new page. Applications do not own history writers, timers, element clones or coordinators.
 
 > **Introduced in `@composable-svelte/core` 0.14.0.** The first-party providers mentioned here are introduced in `@composable-svelte/graphics` 0.4.0 (`graphicsVisualProvider`) and `@composable-svelte/media` 0.6.0 (`mediaVisualProvider`). Earlier versions (core 0.13.x, graphics 0.3.x, media 0.5.x) do not include these APIs. They follow the 0.x line, where a minor release may still change them (see [Versioning](https://github.com/jonathanbelolo/composable-svelte/blob/codex/fluid-layout-motion/README.md#versioning)).
+>
+> **Not yet in a published release:** overlay orchestration (§12, `useOverlayMotion`, the overlays' `motion` prop and `lifetime: 'overlay'` page reactions), scoped selectors and shared `from`/`to`, custom easing curves (`cubicBezier`, `'cubic-bezier(…)'`, per-waypoint `easing`), `slide` on outgoing tracks and `scale`. They are on the development branch; the published 0.14.0 accepts keyword easings and incoming `slide` only.
 
 Everything below is compiled, run with TestStore and server rendering, and played in Chromium by [`guidance-example-check`](https://github.com/jonathanbelolo/composable-svelte/tree/codex/fluid-layout-motion/docs/development/fluid-motion/guidance-example-check) against the package exports. Participants are styled like any other markup: grid, flex, gradients, positioning, pseudo-elements, SVG, canvas and video are represented as they are painted (§8). Do not restyle a page to make it animate.
 
 Use something else when:
 
-- **Overlay lifecycles** (modal, sheet, drawer) → `PresentationState` and the navigation components.
+- **Overlay lifecycles** (modal, sheet, drawer) keep their store-owned `PresentationState` and the navigation components. To choreograph an overlay's open and close with the page, bind plans to it with `useOverlayMotion` (§12).
 - **Declared property motion on one element or group** → compiled recipes (`useMotion`, `useMotionGroup`), see [application-motion.md](./application-motion.md).
 - **Ordinary route changes that need no choreography** → plain routing, see [application-routing.md](./application-routing.md).
 
@@ -82,15 +84,22 @@ The "back" button above is an ordinary request with its own plan. See §6 for wh
   - Timeline tracks end within `durationMs`.
   - Incoming tracks default to `anchor: 'render'` (timed from the destination render); outgoing tracks are timeline-relative.
 - **All tracks**
-  - `participant` and `side` (`'shared' | 'outgoing' | 'incoming'`).
+  - `participant` and `side` (`'shared' | 'outgoing' | 'incoming'`). A participant is a key (a string, in the plan's default scope) or an exact selector from an overlay, `overlay.select(key)` (§12).
   - `startMs` and `durationMs`.
-  - `easing`: one of `'linear' | 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out'`. Other easing strings throw.
+  - `easing`: a keyword (`'linear' | 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out'`), explicit control points `{ cubicBezier: [x1, y1, x2, y2] }`, or the CSS string `'cubic-bezier(x1, y1, x2, y2)'`.
+    - Values are finite and `x1`, `x2` lie in `[0, 1]`; `y1`, `y2` may overshoot. Anything else throws at `defineChoreography`.
+    - Points on the diagonal become `linear`. On a bounded channel (opacity, size, radius, inset), an overshooting curve is clamped into the channel's range; positions and scale may overshoot.
+    - A retarget (for example a new destination or supersession) continues from the displayed value and velocity. The remaining motion is then a continuation curve, not the rest of the declared bezier.
   - `anchor`.
   - `paint`: control paint policy, `{ kind: 'holdThenFade' }`. It is the only qualified policy (`QUALIFIED_PAINT_POLICIES`); others fall back with a plan diagnostic.
-- **Outgoing/incoming tracks**: `opacity: { from, to }`, each value in `[0, 1]`.
-- **Incoming tracks only**: `slide: { dx?, dy? }`, in px (finite, within ±4096). The real incoming element starts offset and moves to its layout position with the track's timing and anchor, alongside its opacity. The movement is written through a choreography lease on the CSS `translate` property, which is released at settlement. If another owner holds `translate`, the element does not move and a `slideSkipped` diagnostic is reported. A slide on any other side throws.
+- **Outgoing/incoming tracks**
+  - `opacity: { from, to }`, each value in `[0, 1]`.
+  - `scale: { from, to }`: uniform factors (finite, nonnegative), multiplied into the element's stable `scale` about its transform origin; a post-commit outgoing copy scales about its painted centre. Hit boxes follow the real transform. The stable scale is restored at settlement, so an incoming `to` other than 1 is released then (plan diagnostic `scaleReleasedAtSettle`).
+  - `slide: { dx?, dy? }`, in px (finite, within ±4096); see below.
+- **`slide` on incoming and outgoing tracks**: an incoming element starts offset and moves to its layout position; an outgoing one (its copy after the commit) moves from its position to the offset. Both follow the track's timing and anchor, alongside opacity and scale, composed as `translate` (slide), then `scale`, then any existing transform. The movement of a real element is written through a choreography lease on the CSS `translate` property, released at settlement. If another owner holds `translate`, the element does not move and a `slideSkipped` diagnostic is reported. A slide or scale on a shared track throws.
 - **Shared tracks only**
-  - `path`: ordered waypoints `{ atMs, pose, radius?, clip? }` inside the track. A pose is `{ relativeTo: 'source', dx?, dy?, dw?, dh? }` or viewport fractions `{ relativeTo: 'viewport', x, y, width, height }`. The final endpoint is always the measured destination.
+  - `from` and `to`: the source and destination endpoints (each a key or an overlay selector). `from` resolves before the change, `to` after the destination renders; both default to `participant`.
+  - `path`: ordered waypoints `{ atMs, pose, radius?, clip?, easing? }` inside the track. A waypoint's `easing` governs the authored segment that **ends** at that waypoint; other authored segments use the track's easing. A pose is `{ relativeTo: 'source', dx?, dy?, dw?, dh? }` or viewport fractions `{ relativeTo: 'viewport', x, y, width, height }`. The final endpoint is always the measured destination. Once the destination is measured, the last segment to it becomes a continuation curve from the displayed value and velocity, like a retarget. That curve replaces the track easing, and the easing of any waypoint placed at the track's end, for that final segment. Intermediate waypoints keep their authored easing.
   - `radius: { from, to }`: a number, or four `Corners`.
   - `clip: { from, to }`: `Inset` `[top, right, bottom, left]`.
   - `content`: see §8.
@@ -315,7 +324,7 @@ Before a route run starts, participants are projected in slices across frames, w
 | `type` | Fields | Meaning |
 |---|---|---|
 | `representation` | `participant`, `provider`, `continuity`, `reason?` | How a participant is represented, for example `provider: 'projection+pulse'`, `continuity: 'retained'`. Provider `settled` reports a participant left out by a settling decline (`settled:…`). |
-| `unsupported` | `participant`, `reason` | A skipped participant or element, a declined or failed provider, an animation, media or native-snapshot outcome, or a Host-level issue (`participant: '*'`, for example `topLayer`, `planeOutletUnqualified`). Some reasons are informational (for example `animationReconstructed`). |
+| `unsupported` | `participant`, `reason` | A skipped participant or element, a declined or failed provider, an animation, media or native-snapshot outcome, an overlay layer that cannot be reached (§12), or a Host-level issue (`participant: '*'`, for example `planeOutletUnqualified`). Some reasons are informational (for example `animationReconstructed`). |
 | `preparation` | `transaction`, `workMs`, `slices`, `elements`, `projected`, `cached`, `outcome`, `readinessPending?` | Preparation cost and whether it finished within budget. |
 | `settled` | `transaction`, `reason` | The visual run ended. |
 
@@ -332,7 +341,7 @@ Reason strings are descriptive and may be added to. `content` fallbacks, driver 
 - **Chromium text at fractional positions:** when text sits at a fractional x, Chromium antialiases its glyphs slightly differently on the motion plane than in normal flow. Layout and position are identical, and no paint is missing. In a measured witness at x + 0.234375, 13.75% of the line's pixels differ, but the ink amount matches within 0.05% and its centre within 0.31 px: a sub-pixel antialiasing difference, not displacement. At integer x the copy is identical. Firefox and WebKit matched exactly at both.
 - **Not yet qualified:** `::first-letter` and WebGPU canvases.
 - **Geometry.** Tracks animate 2D position and size, radius and inset clip. Shared tracks do not animate rotation or 3D transforms; a rotated or skewed participant keeps its own matrix inside the moving box.
-- **Top layer.** If a modal `dialog`, an open popover or `[aria-modal="true"]` is present at preparation, the run is `unsupported` (diagnostic `topLayer`), and the transaction commits without choreography.
+- **Overlays and the native top layer.** An open overlay no longer refuses runs. Library overlays and app-authored `<dialog>`/`[popover]` surfaces follow the layering and fallback rules in §12.
 - **Route boundary.** It catches failures when a route component initializes or renders, when a template `$derived` throws, and when a conditional child mounts. Failures inside the fallback, and shell failures, reach the `ApplicationHost` boundary. A user `$effect` that throws on a later update escapes both boundaries in Svelte 5.43.3 (unsupported); active choreography still settles at its deadline. Event handlers and detached async callbacks are ordinary JavaScript errors.
 - **Scope.** There is one managed route outlet per staged application. Nested route outlets are not supported.
 
@@ -367,3 +376,85 @@ Fluid motion is opt-in by import:
 - Graphics and media providers are separate packages. Import them only where they are configured. The WebGPU engine in `@composable-svelte/graphics` is a lazy chunk loaded only when requested.
 
 Preparation cost is described in §8 (*Preparation*). As a guide from measured runs, a 1,500-element participant takes about 320–340 ms of copying work, which is why the default preparation budget is 600 ms.
+
+## 12. Overlay orchestration
+
+`Modal`, `Sheet`, `Drawer`, `Alert` and `Popover` (and their primitives), `Command` and `ImageLightbox` accept an optional `motion` prop. It binds choreography plans to that overlay's open and close. Without it, or when the application has no motion engine, the overlay's built-in spring runs exactly as before.
+
+The detail page in §3 binds a notes dialog. Its plans are `notesOpen`, `notesClose` and `notesQuickClose` in §4, and its store-owned `notes: PresentationState` is in `model.ts` (§2).
+
+### Binding plans
+
+- Call `useOverlayMotion(init)` during component initialization and pass the handle as `motion`. `init` runs **once**, synchronously, when the handle is created. It receives the bound overlay reference, so plans can name the overlay's participants without reading anything before initialization.
+- `open` and `close` are **default plans**. They apply to every accepted open or close of that overlay, whatever caused it:
+  - a reducer action or a button;
+  - with a managed presentation `store`, also Escape, an outside click and `view.dismiss()`;
+  - Browser Back.
+- `handle.transition(plan, commit)` is the **explicit** entry. `commit` runs synchronously and must be a real change: a `store.dispatch(…)`, `view.dismiss()`, or setting `open`. If the overlay's committed presentation then starts `presenting` or `dismissing`, `plan` replaces the default plan for that transition only (`closeQuickly` in §3).
+
+### Source capture and where to declare the handle
+
+- **Sources are captured before anything is removed.** A page participant removed by the same accepted action, such as a card that the dialog replaces, still departs from where it was.
+  - **Explicit plans:** `transition(plan, commit)` captures the sources **before** it runs `commit`.
+  - **Default plans:** for every change committed through a store (a plain `dispatch` or a managed presentation, including Escape, outside clicks and `view.dismiss()`), the sources are captured **after** the accepted change is reduced and **before** its render removes anything.
+  - The app needs no capture hook, delay, `tick()` or effect timing.
+  - Until the change is accepted, nothing is acquired, hidden or superseded. A refused change only discards its captures.
+- **Declare the handle in an owner that survives the change:** the page, shell or component that holds the presentation state. Declare its plans once; ordinary accepted actions do the rest.
+- **When the overlay component mounts only with the change** (inside an `{#if}`, or inside a child component that appears with it), also pass `presentation`. It is a read-only function returning the reducer-owned presentation, for example `useOverlayMotion(overlay => ({ open, close, presentation: () => store.state?.notes }))`. The framework reads it at the same pre-render checkpoint, before the overlay exists. When the overlay is always rendered and receives `presentation` as a prop (the notes dialog in §3), this option is not needed.
+- **Temporal precondition.** The declaration must exist **before** the action that removes the source. A handle cannot animate a source that was already gone when the handle was created. For example, a handle created inside a component that mounts with the dialog cannot capture a page source that the same action removed. Such a track is skipped and diagnosed as `missingSource`, and its destination simply appears. A handle created later, while its source is still on screen, works normally.
+
+### Participants, scopes and selectors
+
+- Each open overlay instance has its own participant scope, with two role participants: `'backdrop'` (not for `Popover`) and `'content'`.
+- A participant whose element is **inside the overlay's content** belongs to that instance's scope. This is decided by DOM containment when the element attaches, so the page's own `useParticipant()` action used inside the `<Modal>` snippet (`notes-title` in §3) binds to the dialog. The same key in a page, a modal and a nested modal never collides.
+- In an overlay plan, a plain string names a participant of the scope that called `useOverlayMotion` (its page or shell), and `overlay.select(key)` names one inside the bound overlay instance. There is no global or ambiguous matching.
+- Every open is a new instance epoch: registrations from an earlier open never match a later one.
+- For a shared track, `from` resolves **before** the change, against the current instance, and `to` resolves **after** the committed render, against the new one. `notesOpen` flies the page heading into the dialog's title; `notesClose` flies it back.
+
+### Acceptance, completion and refusal
+
+- **Only a committed presentation change starts overlay tracks:** `presenting` for an open, `dismissing` for a close. A refused or guarded intent starts nothing, acquires nothing and supersedes nothing. In the example, "Keep open" makes the reducer refuse `closeNotes`, and the dialog stays open without motion.
+- A preparation that no committed transition claims, such as a refused `transition()`, is discarded. Its visual run settles with reason `unclaimed`, not `superseded`.
+- **Completion is delivered once**, through the overlay's existing `onPresentationComplete` / `onDismissalComplete`, while that transition is still current. The reducer needs **no completion timer and no subscription**: it handles the completion actions the callbacks dispatch.
+  - Under reduced motion, over-budget preparation or an engine failure, completion is delivered immediately (while current).
+  - A completion is cancelled without dispatch when its transition is superseded, the overlay is reopened (a new epoch), its owner retires or is destroyed, or the Host is disposed.
+- **Supersession.** A later accepted open or close, whether default or explicit, supersedes only the conflicting motion and continues from the displayed values. So a close during an opening reverses from where the dialog is. Unrelated work, such as a route transition under an open modal, runs concurrently.
+- **One writer.** When a plan claims a transition, the overlay's spring does not start.
+- **Nesting.** Nested overlays are separate instances with their own scopes and completions. An inner overlay stacks above its parent, and a descendant's pending completions are cancelled when its owner retires.
+- **Combined nested motion.** To move a parent and a live child overlay in one timeline, name the child's participants from the parent's **explicit** entry through the child's handle, for example tracks on `child.select('content')` in `parent.transition(plan, commit)`. The child joins that run instead of starting its own transition: there is no second writer. Each overlay's completion is delivered once, when the combined run settles.
+
+### Page reaction while an overlay is open
+
+A track in an overlay's `open` plan (default or explicit) may declare `lifetime: 'overlay'`. Its end values then become the page's **resting state while that overlay instance is open**:
+
+```ts
+{ participant: 'detail-body', side: 'outgoing', startMs: 0, durationMs: 300,
+  opacity: { from: 1, to: 0.6 }, scale: { from: 1, to: 0.98 }, lifetime: 'overlay' }
+```
+
+`notesOpen` in §4 declares exactly this for the detail page, and `notesClose` brings the page back.
+
+- **Default is `lifetime: 'transition'`**: the track ends with its run, as every other track does. Only a declared track is held, only on its declared channels, and only for that overlay instance (epoch). Nothing else is retained.
+- **Completion does not wait.** The open completion is delivered once, when the open run settles, not when the hold ends.
+- **The next accepted transition of that instance ends the hold.** This is usually its close, or a replacement. That transition starts from the displayed values, so a close plan can bring the page back from where it rests. A **refused** close keeps the resting state.
+- **The hold also ends on disposal:** when the participant or its owner is disposed, or the Host is destroyed.
+- **Nested overlays** each unwind only their own reaction, never a snapshot of an earlier state.
+- **Under reduced motion,** the resting state is reached immediately.
+
+### Layering
+
+- Each overlay renders in its own framework-owned layer above the page. A later overlay stacks above an earlier one, and each layer's backdrop covers everything below it, including earlier overlays' content.
+- Copies of page participants stay below every overlay layer. A flight into an overlay moves into that overlay's layer when it renders. Flights never paint above a higher interactive layer.
+- **Styling contract.** Style an overlay through its own class props. Do not set `z-index` or `position` on the overlay's portal or layer, and do not depend on particular stacking numbers: layer order is framework-owned.
+- On a close, the overlay's live exit shell stays mounted until the run completes the dismissal.
+
+### Native top layer and faithful fallback
+
+- An app-authored `<dialog>` shown with `showModal()`, or an open `[popover]`, does not refuse runs. Unrelated dialogs and `aria-modal` never refuse them either.
+- Decoration for participants inside such a surface paints in an ordinary inert decoration layer **inside** that surface, so it stays in the surface's top-layer box.
+- **An unreachable layer settles only that participant.** This happens when a participant's copy cannot reach the layer it must appear in, for example a destination in another document, or a layer slot that cannot be created. Its copy is removed, and its real source and destination show as they are. The settlement is reported as an `unsupported` diagnostic with reason `layerUnreachable:<reason>`. Every other track keeps running. A participant hidden under a backdrop is never counted as animated.
+- Portable representations, including video and provider-rendered canvases, move between layers with their flight. Only a representation that cannot reach its intended layer settles.
+
+### Command and ImageLightbox
+
+`Command` and `ImageLightbox` accept the same `motion` handle. Its default `open` and `close` plans apply when an accepted change of their bindable `open` state opens or closes them, and `transition(plan, commit)` works as above (for example `commit = () => (open = false)`). Their existing bindable `open`, interaction and completion events are unchanged.

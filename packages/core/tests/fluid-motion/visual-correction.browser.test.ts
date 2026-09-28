@@ -176,7 +176,7 @@ it('incoming slide: the real incoming element moves from its offset to layout wi
   f.step(1100);
   expect(text.style.translate).toBe('');
   expect(f.host.resources().leases).toBe(0);
-  expect(()=>f.plan([{participant:'x',side:'shared',startMs:0,durationMs:100,slide:{dy:5}} as never])).toThrow('Only incoming tracks declare slide');
+  expect(()=>f.plan([{participant:'x',side:'shared',startMs:0,durationMs:100,slide:{dy:5}} as never])).toThrow('Only incoming and outgoing tracks declare slide');
 });
 it('V10: non-unit stable opacity is applied exactly once through recapture and destination crossfade', async () => {
   const f=rig(); const source=f.node('x'); source.style.opacity='0.6';

@@ -106,5 +106,6 @@ Whole-layout motion across a route change, or a layout change within a page, use
 
 - **Across a route change**: `useStagedRoute` from `@composable-svelte/core/application`, plus `defineChoreography`, `useParticipant` and `<MotionPlane />` from `@composable-svelte/core/application/motion`. The route's domain action commits at the plan's `cueMs`, and shared surfaces finish against the new page.
 - **Within a page**: `useLayoutChoreography`, also from `@composable-svelte/core/application/motion`. Content that the commit removes goes inside `<Presence when={…}>` (same subpath), so it can hand off before Svelte removes it.
+- **An overlay's open and close with the page** (not yet in a published release): bind plans with `useOverlayMotion` and pass the handle to the overlay's `motion` prop. The overlay keeps its store-owned `PresentationState` and reports completion through its callbacks; see [overlay orchestration](./fluid-motion.md#12-overlay-orchestration).
 
 Both animate only inside a mounted `ApplicationHost`. During SSR, under reduced motion, or without a Host, they commit without choreography. See [Fluid Layout Motion & Staged Routing](./fluid-motion.md).

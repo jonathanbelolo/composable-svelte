@@ -14,5 +14,9 @@ export const viewPlan = defineViews(composition, {
     }
   },
   // The pavilion model has no view of its own: pages render it through the shared scene context.
-  scene: { headless: true }
+  scene: { headless: true },
+  // Overlays are managed components mounted directly in Gallery.svelte
+  curator: { headless: true },
+  confirmAlert: { headless: true },
+  drawer: { headless: true }
 });

@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import SheetPrimitive from './primitives/SheetPrimitive.svelte';
+  import type { OverlayMotionHandle } from '../application/renderer/choreography/overlay-motion.js';
   import { assertPresentationView, type PresentationView } from '../navigation/managed-integration.js';
   import type { PresentationState } from '../navigation/types.js';
   import type { SpringConfig } from '../animation/spring-config.js';
@@ -11,6 +12,12 @@
   // ============================================================================
 
   interface SheetProps<State, Action> {
+    /**
+     * Declarative overlay motion from `useOverlayMotion`: default open/close plans and a presentation-bound
+     * explicit entry. Without it (or without a motion engine) the built-in spring runs as before.
+     */
+    motion?: OverlayMotionHandle | undefined;
+
     /**
      * Managed presentation view for the sheet content.
      */
@@ -128,7 +135,8 @@
     disableEscapeKey = false,
     side = 'bottom',
     height = '60vh',
-    children: renderContent
+    children: renderContent,
+    motion
   }: SheetProps<unknown, unknown> = $props();
 
   const admittedStore = $derived.by(() => {
@@ -162,6 +170,7 @@
 <!-- ============================================================================ -->
 
 <SheetPrimitive
+  {motion}
   store={admittedStore}
   {presentation}
   {onPresentationComplete}

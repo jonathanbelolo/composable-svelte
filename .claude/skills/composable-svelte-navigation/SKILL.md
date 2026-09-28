@@ -16,9 +16,11 @@ This skill covers state-driven navigation patterns, PresentationState lifecycle 
 **Principle**: State-driven animation uses the public motion layer. For declared motion
 recipes, use `useMotion` or `MotionElement` for a recipe with exactly one target, and
 `useMotionGroup` when one recipe coordinates its complete declared target set. These APIs
-provide managed target ownership and do not imply default animation behavior for navigation
-overlays. Keep an explicit `PresentationState` lifecycle only when application state must observe
-completion or keep presentation content alive through dismissal. CSS transitions remain
+provide managed target ownership. Navigation overlays (`Modal`, `Sheet`, `Drawer`, `Alert`,
+`Popover`) animate themselves from their store-owned `PresentationState` and report completion
+through `onPresentationComplete` / `onDismissalComplete`; to choreograph an overlay with the page,
+bind plans with `useOverlayMotion` and pass the handle as `motion`. The reducer never schedules a
+completion timer and never runs animation effects. CSS transitions remain
 unsupported for UI interactions. See `guides/ANIMATION-GUIDELINES.md` and
 `specs/frontend/application-authoring-and-motion.md`; import the public APIs from
 `@composable-svelte/core/application/motion`.
@@ -33,7 +35,8 @@ Does component have animation?
     ├─ Declared element/group state → MotionElement, useMotion, or useMotionGroup
     ├─ Whole-layout / cross-route fluid motion → useStagedRoute + defineChoreography + MotionPlane
     ├─ Intra-page layout choreography → useLayoutChoreography + defineChoreography
-    └─ Store-observed completion/content lifetime → Motion One + PresentationState
+    ├─ Overlay open/close with the page → useOverlayMotion + the overlay's motion prop
+    └─ Store-observed completion/content lifetime → PresentationState + the component's completion callbacks
 ```
 
 #### ❌ WRONG - CSS Transitions
@@ -47,39 +50,24 @@ Does component have animation?
 }
 ```
 
-#### ✅ CORRECT - State-Driven with Motion One
+#### ✅ CORRECT - State-driven lifecycle, component-owned animation
 ```typescript
 interface ModalState {
-  content: Content | null;
   presentation: PresentationState<Content>;
 }
 
-// Reducer manages lifecycle
+// The reducer only moves the lifecycle. No timer, no animation effect:
+// the overlay animates and reports completion through its callbacks.
 case 'show':
-  return [
-    {
-      ...state,
-      content,
-      presentation: { status: 'presenting', content, duration: 0.3 }
-    },
-    Effect.afterDelay(300, (d) => d({
-      type: 'presentation',
-      event: { type: 'presentationCompleted' }
-    }))
-  ];
-
-// Component executes animation
-$effect(() => {
-  if (store.state.presentation.status === 'presenting') {
-    animateModalIn(element).then(() => {
-      store.dispatch({
-        type: 'presentation',
-        event: { type: 'presentationCompleted' }
-      });
-    });
-  }
-});
+  return [{ ...state, presentation: { status: 'presenting', content } }, Effect.none()];
+case 'presentationCompleted': // dispatched by onPresentationComplete
+  return state.presentation.status === 'presenting'
+    ? [{ ...state, presentation: { status: 'presented', content: state.presentation.content } }, Effect.none()]
+    : [state, Effect.none()];
 ```
+
+Render the overlay with `presentation`, the two completion callbacks and, for choreography,
+`motion={useOverlayMotion(...)}` (see "Overlay orchestration" below).
 
 **WHY**: State-driven animations are predictable, testable with TestStore, and composable with the navigation system.
 
@@ -406,10 +394,12 @@ $effect(() => {
 
 1. **One declared element**: use `MotionElement` or `useMotion`.
 2. **Several declared targets sharing one lifecycle**: use `useMotionGroup`.
-3. **Application-owned completion or presentation lifetime**: retain the explicit
-   `PresentationState` and completion-event pattern below.
-4. **Overlay defaults**: do not assume managed presentation supplies an automatic animation;
-   choose and declare the motion required by that view.
+3. **Overlay presentation**: keep `PresentationState` in the store and let the overlay component
+   animate and report completion (`onPresentationComplete` / `onDismissalComplete`). The
+   component's built-in spring is the default; bind choreography with `useOverlayMotion`.
+4. **Legacy explicit helpers** (`animateModalIn` and the rest below) remain for existing code that
+   drives its own elements. Do not use them for navigation overlays, and never pair them with a
+   reducer completion timer.
 
 ### All Animation Helpers (26 functions)
 
@@ -491,7 +481,7 @@ Opt-in API for whole-layout motion across a route change. Introduced in core 0.1
    - It runs again at commit: `false` → outcome `vetoed`.
    - Do not refuse the current URL in it. The framework reports a current-URL request as `unchanged`, or `returned` (cancelling the pending transition) when one is pending.
 2. Call `useStagedRoute(application)` (from `@composable-svelte/core/application`), `useParticipant()` and `useLayoutChoreography()` (from `@composable-svelte/core/application/motion`) during component initialization. Requests are bound to the calling page's owner. Retirement → `cancelled/ownerRetired`.
-3. Plans (`defineChoreography`) need at least one track and use keyword easings only (`linear`, `ease`, `ease-in`, `ease-out`, `ease-in-out`). Shared tracks need the same participant key on both pages. Incoming tracks may add `slide: { dx, dy }` (px) next to `opacity`. Controls and focusable content slide but never fade, so keep buttons out of a fading incoming participant.
+3. Plans (`defineChoreography`) need at least one track. `easing` is a keyword (`linear`, `ease`, `ease-in`, `ease-out`, `ease-in-out`), `{ cubicBezier: [x1, y1, x2, y2] }` or `'cubic-bezier(…)'` (x1/x2 in [0, 1]; y may overshoot); a waypoint's `easing` governs the authored segment ending at it. The final segment to the measured destination is a continuation curve, so don't rely on it keeping the track easing. Shared tracks need the same participant key on both pages. Incoming and outgoing tracks may add `slide: { dx, dy }` (px) and `scale: { from, to }` next to `opacity`; shared tracks may not. Controls and focusable content slide but never fade, so keep buttons out of a fading incoming participant.
 4. Reduced motion is framework-owned: the request commits without choreography. Never build empty plans for it.
 5. `{ return: true }` abandons a pending transition (`returned`), or is `unchanged`. It never navigates. "Back" after a commit is an ordinary request with its own plan.
 6. `ApplicationRoot` options are `{ dependencies, initial: { input, url } }`, with `url` injected by the entry point. Never read `window` while constructing the root.
@@ -556,6 +546,80 @@ Opt-in API for whole-layout motion across a route change. Introduced in core 0.1
   {/snippet}
 </ApplicationRoot>
 ```
+
+### Overlay orchestration
+
+Bind open/close choreography to one overlay instance with `useOverlayMotion` and pass the handle as the
+overlay's `motion` prop. Rules:
+
+1. Default `open`/`close` plans apply to every **accepted** open or close: reducer action, Escape, outside click,
+   `view.dismiss()`, Browser Back. `dialog.transition(plan, commit)` runs a real commit and replaces the default
+   plan only if the committed presentation then starts `presenting`/`dismissing`.
+2. A refused or guarded intent (the reducer keeps the status) starts nothing and supersedes nothing. A later
+   accepted intent supersedes conflicting motion from the displayed values; disjoint work runs concurrently.
+3. Completion arrives once through `onPresentationComplete` / `onDismissalComplete`. No `Effect.afterDelay`
+   completion, no subscription, no animation `$effect`.
+4. A plain key names a participant of the calling page; `overlay.select(key)` names one inside the bound
+   instance (roles `'backdrop'`, `'content'`). A participant inside the overlay content belongs to the overlay
+   by DOM containment, even when the page's `useParticipant()` action is used in the overlay snippet.
+5. Shared `from` resolves before the change and `to` after the committed render. Do not set `z-index` or
+   `position` on overlay layers; stacking is framework-owned.
+6. Sources are captured by the framework before the accepted change renders (explicit plans, and default plans
+   of any change committed through a store), so a page source removed by the same action still flies. Create
+   the handle once (its `init` runs once) in an owner that survives the change, before the removing action. If the overlay component itself mounts only with the change, add
+   `presentation: () => store.state?.notes` (read-only) to the options. A handle created after its source is
+   gone cannot animate it: the track is skipped as `missingSource`. No capture hook, delay or effect timing.
+7. Combined nested motion: name a live child's roles from the parent's explicit
+   `parent.transition(plan, commit)` via `child.select('content')`; the child joins that run and each
+   completion is delivered once when it settles. An unreachable layer settles only that participant
+   (`layerUnreachable:<reason>`).
+8. To keep the page dimmed while an overlay is open, add `lifetime: 'overlay'` to that page track in the open
+   plan (default `'transition'` ends with the run). Its end values are held for that overlay instance until its
+   next accepted transition (a refused close keeps them) or disposal; the close starts from the displayed
+   values. Never hold page state for this in the store or with an app timer.
+
+```svelte
+<script lang="ts">
+  import { Modal } from '@composable-svelte/core/navigation-components';
+  import { defineChoreography, useOverlayMotion, useParticipant } from '@composable-svelte/core/application/motion';
+  import type { PresentationView } from '@composable-svelte/core/application';
+  import type { PresentationState } from '@composable-svelte/core';
+
+  let { store, presentation, dispatch }: {
+    store: PresentationView<unknown, unknown>;
+    presentation: PresentationState<unknown>;
+    dispatch: (action: { type: 'presentationCompleted' | 'dismissalCompleted' }) => void;
+  } = $props();
+
+  const participant = useParticipant();
+  const dialog = useOverlayMotion((overlay) => ({
+    open: defineChoreography({ cueMs: 0, durationMs: 420, tracks: [
+      { participant: 'card', side: 'shared', from: 'card', to: overlay.select('hero'), startMs: 0, durationMs: 420, easing: { cubicBezier: [0.2, 0, 0, 1] } },
+      { participant: overlay.select('backdrop'), side: 'incoming', startMs: 0, durationMs: 300, opacity: { from: 0, to: 1 } },
+      { participant: overlay.select('content'), side: 'incoming', startMs: 60, durationMs: 360, scale: { from: 0.94, to: 1 } }
+    ] }),
+    close: defineChoreography({ cueMs: 0, durationMs: 360, tracks: [
+      { participant: 'card', side: 'shared', from: overlay.select('hero'), to: 'card', startMs: 0, durationMs: 360 },
+      { participant: overlay.select('content'), side: 'outgoing', startMs: 0, durationMs: 240, opacity: { from: 1, to: 0 }, slide: { dy: 16 } },
+      { participant: overlay.select('backdrop'), side: 'outgoing', startMs: 60, durationMs: 300, opacity: { from: 1, to: 0 } }
+    ] })
+  }));
+</script>
+
+<div use:participant={{ key: 'card' }}>Pavilion of Light</div>
+<Modal
+  {store}
+  {presentation}
+  motion={dialog}
+  onPresentationComplete={() => dispatch({ type: 'presentationCompleted' })}
+  onDismissalComplete={() => dispatch({ type: 'dismissalCompleted' })}
+>
+  <img use:participant={{ key: 'hero' }} src="/pavilion.jpg" alt="Pavilion of Light" />
+</Modal>
+```
+
+The complete, executable example (default plans, explicit override, refused close, reversal) is §12 of
+`packages/core/docs/fluid-motion.md`.
 
 ### Testing: protocol events are not domain actions
 
@@ -807,14 +871,18 @@ interface State {
 ```
 
 #### ✅ CORRECT
-```typescript
-$effect(() => {
-  if ($store.presentation.status === 'presenting') {
-    animateModalIn(element).then(() => {
-      store.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } });
-    });
-  }
-});
+Let the overlay own its animation and completion; bind plans only when you need choreography:
+
+```svelte
+<Modal
+  {store}
+  {presentation}
+  motion={dialog}
+  onPresentationComplete={() => dispatch({ type: 'presentationCompleted' })}
+  onDismissalComplete={() => dispatch({ type: 'dismissalCompleted' })}
+>
+  <img use:participant={{ key: 'hero' }} src="/pavilion.jpg" alt="Pavilion of Light" />
+</Modal>
 ```
 
 **WHY**: State-driven animations are testable, predictable, and composable.
@@ -846,7 +914,8 @@ Does component animate?
     ├─ Declared element/group state → MotionElement, useMotion, or useMotionGroup
     ├─ Whole-layout / cross-route fluid motion → useStagedRoute + defineChoreography + MotionPlane
     ├─ Intra-page layout choreography → useLayoutChoreography + defineChoreography
-    └─ Store-observed completion/content lifetime → Motion One + PresentationState
+    ├─ Overlay open/close with the page → useOverlayMotion + the overlay's motion prop
+    └─ Store-observed completion/content lifetime → PresentationState + the component's completion callbacks
 ```
 
 ---
@@ -879,7 +948,7 @@ Does component animate?
 - [ ] 2. Inject the URL: `initial: { input: url, url }` plus `dependencies`
 - [ ] 3. Place `<MotionPlane />` inside `ApplicationHost`, outside transformed/filtered ancestors
 - [ ] 4. Declare participants with `const participant = useParticipant()` and `use:participant={{ key }}` on both pages for shared tracks (`role: 'control'` for interactive ones)
-- [ ] 5. Declare plans with `defineChoreography` (at least one track, keyword easing, `cueMs <= durationMs`)
+- [ ] 5. Declare plans with `defineChoreography` (at least one track, valid easing: keyword, `cubicBezier` or `'cubic-bezier(…)'`, `cueMs <= durationMs`)
 - [ ] 6. Request via `useStagedRoute(application).request(intent, { motion: plan })`; "back" is an ordinary request
 - [ ] 7. Mark scroll containers with `data-composable-scroll="<key>"` if `routing.scroll.containers` is used
 - [ ] 8. Test with `TestStore` `staging: { staging, serialize }`: `receiveProtocol` for request/admitted/terminal, `receive` for the one domain action

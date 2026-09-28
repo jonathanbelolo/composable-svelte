@@ -57,6 +57,8 @@ interface Coordinator {
   release(entry: Entry, restoreFocus: boolean): void;
   /** Live entries whose node now belongs to another document. */
   adopted(): Entry[];
+  /** Live entries bottom→top, by the same priority/ancestry/latest rule that selects the top layer. */
+  order(): Entry[];
   detach(entry: Entry): void;
   attach(entry: Entry): void;
 }
@@ -144,6 +146,23 @@ function createCoordinator(document: Document): Coordinator {
       if (!entry.options.ancestry || !ancestors.has(entry.options.ancestry)) return entry;
     }
     return undefined;
+  }
+  /** Bottom→top order of every live entry (inert exits included), repeatedly taking `select`'s top among the rest. */
+  function order(): Entry[] {
+    const remaining = layers.filter(entry => live(entry));
+    const topDown: Entry[] = [];
+    while (remaining.length) {
+      const priority = Math.max(...remaining.map(entry => entry.options.priority ?? 1));
+      const peers = remaining.filter(entry => (entry.options.priority ?? 1) === priority);
+      const ancestors = new Set<DismissalIdentity>();
+      for (const entry of peers) { let parent = entry.options.ancestry?.parent; while (parent) { ancestors.add(parent); parent = parent.parent; } }
+      let chosen: Entry | undefined;
+      for (let index = peers.length - 1; index >= 0; index--) { const entry = peers[index]!; if (!entry.options.ancestry || !ancestors.has(entry.options.ancestry)) { chosen = entry; break; } }
+      chosen ??= peers[peers.length - 1]!;
+      topDown.push(chosen);
+      remaining.splice(remaining.indexOf(chosen), 1);
+    }
+    return topDown.reverse();
   }
   // Each predicate getter runs at most once per gate; a throw is reported once and skips that entry for the phase only.
   function top(kind: 'pointer' | 'escape', gate: Gate = new Map()): Entry | undefined {
@@ -557,6 +576,7 @@ function createCoordinator(document: Document): Coordinator {
     for (const [timer, owner] of pending) if (owner === entry) { clearTimeout(timer); pending.delete(timer); }
   }
   const coordinator: Coordinator = {
+    order,
     add(options: DismissalLayer): LayerHandle {
       // Defensive only: enrollLayer() already rejected this shape before any coordinator lookup, so no stopIfEmpty() may dispose a coordinator mid-flush here.
       rejectUncontainedModal(options);
@@ -564,7 +584,7 @@ function createCoordinator(document: Document): Coordinator {
       const entry: Entry = { options, live: true, focusActive: options.focusActive !== false, identity: options.identity?.(),
         trigger: eligible(trigger, document) ? trigger as FocusElement : null, lastFocus: null, home: coordinator };
       listen();
-      layers.push(entry); revision++;
+      layers.push(entry); revision++, notifyOrder(document);
       if (options.focus && entry.focusActive) { advanceFocusEpoch(); scheduleFocus(); }
       return handleFor(entry);
     },
@@ -611,7 +631,7 @@ function createCoordinator(document: Document): Coordinator {
         onEscape: snapshot.onEscape
       };
       entry.identity = nextIdentity;
-      revision++;
+      revision++, notifyOrder(document);
 
       if (!identityChanged || !entry.options.focus || !entry.focusActive) return;
       const active = deepActive(document);
@@ -632,7 +652,7 @@ function createCoordinator(document: Document): Coordinator {
       if (next === entry.identity) return;
       // A stale identity already hides this entry from focusOwner(); focusedOwner is the stable authority signal.
       const wasAuthority = focusedOwner === entry;
-      entry.identity = next; revision++;
+      entry.identity = next; revision++, notifyOrder(document);
       if (!entry.options.focus || !entry.focusActive) return;
       const active = deepActive(document);
       // One identity-fault phase spans the region read and the authority read, so a throwing sibling is reported once.
@@ -647,7 +667,7 @@ function createCoordinator(document: Document): Coordinator {
     release(entry: Entry, restoreFocus: boolean): void {
       if (!entry.live) return;
       retireFocus(entry, restoreFocus);
-      entry.live = false; revision++;
+      entry.live = false; revision++, notifyOrder(document);
       cancelPending(entry);
       layers.splice(layers.indexOf(entry), 1);
       entry.trigger = null; entry.lastFocus = null;
@@ -658,7 +678,7 @@ function createCoordinator(document: Document): Coordinator {
     detach(entry: Entry): void {
       const index = layers.indexOf(entry);
       if (index < 0) return;
-      layers.splice(index, 1); revision++;
+      layers.splice(index, 1); revision++, notifyOrder(document);
       cancelPending(entry);
       if (restore?.owner === entry) restore = undefined;
       if (entry.options.focus) {
@@ -676,7 +696,7 @@ function createCoordinator(document: Document): Coordinator {
     attach(entry: Entry): void {
       entry.home = coordinator;
       if (!layers.includes(entry)) layers.push(entry);
-      revision++;
+      revision++, notifyOrder(document);
       listen();
       const focusOptions = entry.options.focus;
       if (!focusOptions || !entry.focusActive) return;
@@ -690,6 +710,28 @@ function createCoordinator(document: Document): Coordinator {
     }
   };
   return coordinator;
+}
+const orderListeners = new WeakMap<Document, Set<() => void>>();
+const orderQueued = new WeakSet<Document>();
+/** Coalesced (one microtask) notification that the document's layer set or order changed. */
+function notifyOrder(document: Document): void {
+  if (orderQueued.has(document) || !orderListeners.get(document)?.size) return;
+  orderQueued.add(document);
+  queueMicrotask(() => { orderQueued.delete(document); for (const listener of [...(orderListeners.get(document) ?? [])]) { try { listener(); } catch (error) { report(error); } } });
+}
+/**
+ * Enrolled layer nodes of `document`, bottom→top, in the coordinator's own selection order (priority, then
+ * ancestry, then latest), inert exits included. Visual stacking derives from this; it keeps no order of its own.
+ */
+export function dismissalLayerOrder(document: Document): readonly HTMLElement[] {
+  return documents.get(document)?.order().map(entry => entry.options.node) ?? [];
+}
+/** Subscribe to layer set/order changes of `document` (coalesced per microtask). Returns the unsubscribe. */
+export function onDismissalLayersChanged(document: Document, listener: () => void): () => void {
+  let set = orderListeners.get(document);
+  if (!set) { set = new Set(); orderListeners.set(document, set); }
+  set.add(listener);
+  return () => { set!.delete(listener); };
 }
 function forDocument(document: Document) {
   let coordinator = documents.get(document);

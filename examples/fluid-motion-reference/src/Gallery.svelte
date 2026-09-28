@@ -1,5 +1,10 @@
 <script lang="ts">
-  import { ApplicationHost, FeatureViews, FeatureOutlet, type ApplicationInstance } from '@composable-svelte/core/application';
+  import {
+    ApplicationHost,
+    FeatureViews,
+    FeatureOutlet,
+    type ApplicationInstance
+  } from '@composable-svelte/core/application';
   import { MotionPlane } from '@composable-svelte/core/application/motion';
   import type { AppState, AppAction } from './model.js';
   import SceneScope from './SceneScope.svelte';
@@ -14,7 +19,7 @@
     }
   });
 
-  const state = $derived(app.store.state);
+  const appState = $derived(app.store.state);
 </script>
 
 <div class="app-shell">
@@ -27,7 +32,7 @@
       <input
         data-reduced-motion-toggle
         type="checkbox"
-        checked={state.reducedMotion}
+        checked={appState.reducedMotion}
         onchange={event => app.store.dispatch({ type: 'setReducedMotion', enabled: event.currentTarget.checked })}
       />
       <span>Reduce motion</span>

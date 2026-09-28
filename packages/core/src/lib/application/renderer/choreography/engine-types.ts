@@ -6,7 +6,7 @@
 import type { TransactionId } from '../../../routing/staged/types.js';
 import type { VisualConfiguration, VisualEngineCapability } from '../representation/types.js';
 import type { ChoreographyPlan } from './plan.js';
-import type { Participant, RunHost, SettleReason } from './run.js';
+import type { Participant, RunHost, RunOptions, SettleReason } from './run.js';
 
 /** Non-enumerable engine reference on plans created by `defineChoreography`. */
 export const PLAN_ENGINE: unique symbol = Symbol.for('composable-svelte.choreography-engine') as never;
@@ -24,12 +24,22 @@ export interface EngineRun {
   settle(reason: SettleReason): void;
   lifecycle(event: Parameters<import('./run.js').ChoreographyRun['lifecycle']>[0]): void;
   rebase(): void;
+  /** The destination route instance mounted (before its participants register). */
+  destinationMounted?: ((owner: object) => void) | undefined;
+  /** A deferred explicit overlay run's transition was accepted: acquire from its pre-commit captures. */
+  accept?: (() => void) | undefined;
+  /** Whether this run captured or drives `node` (a combined overlay transition naming another instance's roles). */
+  holds?: ((node: HTMLElement) => boolean) | undefined;
+  /** Arbitration: a later run takes `node`; this run ends its items for it and returns the paint lease. */
+  yieldNode?: ((node: HTMLElement) => import('../target-registry.js').ChoreographyLease | undefined) | undefined;
+  /** Replay existing registrations of this run's incoming destinations (overlay runs start after mount). */
+  discoverDestinations?: (() => void) | undefined;
 }
 /** Opaque adopted state passed from a superseded run to its successor (or discarded). */
 export interface EngineHandoff { readonly shared: readonly unknown[]; readonly outgoing: ReadonlyMap<HTMLElement, unknown>; readonly native?: unknown }
 
 export interface VisualEngine extends VisualEngineCapability {
-  createRun(host: RunHost, transaction: TransactionId, plan: ChoreographyPlan, source: object, handoff: EngineHandoff | undefined, done: () => void, localCommit?: () => void): EngineRun;
+  createRun(host: RunHost, transaction: TransactionId, plan: ChoreographyPlan, source: object, handoff: EngineHandoff | undefined, done: () => void, localCommit?: () => void, options?: RunOptions): EngineRun;
   /** Release adopted state that no successor continues (reduced motion, no current page). */
   discard(handoff: EngineHandoff): void;
   /** Resource ledger contributions (observers, representation handles, media). */

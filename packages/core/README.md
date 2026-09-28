@@ -68,7 +68,7 @@ so an application that includes it needs Svelte 5.30 or newer.
 - ✅ **Complete Backend**: API client, WebSocket, Storage, Clock dependencies
 - ✅ **Component library**: shadcn-svelte integration with reducer-driven patterns — browse the full set in [the styleguide](https://github.com/jonathanbelolo/composable-svelte/tree/main/examples/styleguide)
 - ✅ **URL Routing**: Browser history sync with pattern matching
-- ✅ **Fluid layout motion** (opt-in; introduced in 0.14.0): staged route transitions and within-page choreography with representation providers, from `@composable-svelte/core/application/motion`. See [Fluid Layout Motion & Staged Routing](./docs/fluid-motion.md)
+- ✅ **Fluid layout motion** (opt-in; introduced in 0.14.0): staged route transitions and within-page choreography with representation providers, from `@composable-svelte/core/application/motion`. Overlay orchestration (`useOverlayMotion`) and custom easing curves are in development and not in a published release yet. See [Fluid Layout Motion & Staged Routing](./docs/fluid-motion.md)
 - ✅ **3,116 tests**: browser and node suites, measured at the R1 closure's exit (2026-09-05)
 
 ## Installation

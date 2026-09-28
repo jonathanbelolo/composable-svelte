@@ -13,7 +13,7 @@
 	@component
 -->
 <script lang="ts" module>
-	import { setContext, getContext } from 'svelte';
+	import { setContext, getContext, untrack } from 'svelte';
 	import type { Store as CommandStore } from '../../types.js';
 	import type { CommandState as CmdState, CommandAction as CmdAction } from './command.types.js';
 
@@ -59,6 +59,8 @@
 	import type { Store } from '../../types.js';
 	import { createInitialCommandState } from './command.types.js';
 	import { animateModalIn, animateModalOut, animateBackdropIn, animateBackdropOut } from '../../animation/animate.js';
+	import { overlayInstance, claimPresentationMotion, noteOverlayRoles, registerOverlayProbe } from '../../navigation-components/primitives/overlayMotion.js';
+	import type { OverlayMotionHandle } from '../../application/renderer/choreography/overlay-motion.js';
 
 	interface CommandProps {
 		/**
@@ -111,6 +113,13 @@
 		 * assignable under TypeScript's fewer-parameters rule.
 		 */
 		children?: Snippet<[{ store: Store<CommandState, CommandAction> }]> | undefined;
+
+		/**
+		 * Declarative overlay motion from `useOverlayMotion`: default open/close plans (every open and close,
+		 * including Escape, backdrop click, command execution and `open = false`). Without it, or without a
+		 * motion engine, the built-in spring runs as before.
+		 */
+		motion?: OverlayMotionHandle | undefined;
 	}
 
 	let {
@@ -122,7 +131,8 @@
 		groups,
 		caseSensitive,
 		class: className = '',
-		children
+		children,
+		motion
 	}: CommandProps = $props();
 
 	// Create dependencies
@@ -253,6 +263,10 @@
 	// different way.
 	let lastAnimated: { status: string; content: unknown } | null = null;
 
+	// Pre-render checkpoint: the committed status is read before the destructive render (default-plan sources).
+	$effect(() => registerOverlayProbe(motion, () => store.state.presentation?.status));
+	// The bound instance's roles are known while mounted (an explicit close captures them before its commit).
+	$effect(() => noteOverlayRoles(backdropElement, { backdrop: backdropElement, content: contentElement }));
 	// Watch presentation status and trigger animations
 	$effect(() => {
 		if (!$store.presentation || !contentElement || !backdropElement) return;
@@ -267,6 +281,20 @@
 		const { status, content } = presentation;
 		if (lastAnimated?.status === status && lastAnimated.content === content) return;
 		lastAnimated = { status, content };
+
+		// An engine may take over this accepted transition's visuals: then no spring; completion still once.
+		if (status === 'presenting' || status === 'dismissing') {
+			const completion = status === 'presenting' ? 'presentationCompleted' : 'dismissalCompleted';
+			const cancelMotion = untrack(() => claimPresentationMotion(motion, backdropElement, status, { backdrop: backdropElement, content: contentElement }, () => {
+				store.dispatch({ type: 'presentation', event: { type: completion } });
+			}));
+			if (cancelMotion) {
+				return () => {
+					cancelMotion('superseded');
+					lastAnimated = null;
+				};
+			}
+		}
 
 		if (status === 'presenting') {
 			// Animate in: content + backdrop in parallel
@@ -293,6 +321,7 @@
 				});
 			});
 		}
+		return undefined;
 	});
 
 	// Visible when presentation is not idle
@@ -305,7 +334,7 @@
 	<!-- Backdrop -->
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div bind:this={backdropElement} class="command-backdrop" onclick={handleBackdropClick}>
+	<div bind:this={backdropElement} use:overlayInstance={motion} class="command-backdrop" onclick={handleBackdropClick}>
 		<!-- Modal Container -->
 		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 		<div

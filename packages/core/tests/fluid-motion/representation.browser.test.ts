@@ -564,6 +564,9 @@ describe('animation stack continuation after retirement (source never mutated)',
     // the copy's times and value together and evaluate the reference at exactly those times.
     running.forEach(animation => animation.pause());
     await frame(); await Promise.all(running.map(animation => animation.ready));
+    // Diagnostic test-only synchronization: Firefox's settled pause can expose a hold time different from its style sample.
+    // Commit that same exposed hold time explicitly on the decorative replay before constructing the reference.
+    running.forEach(animation => { animation.currentTime = animation.currentTime; });
     const copyTimes = running.map(animation => animation.currentTime);
     const copyValue = getComputedStyle(copy).getPropertyValue(property);
     effects.forEach((effect, index) => { const animation = new Animation(new KeyframeEffect(reference, effect.frames as Keyframe[], effect.options as KeyframeEffectOptions), document.timeline); animation.currentTime = copyTimes[index]!; });
@@ -572,7 +575,9 @@ describe('animation stack continuation after retirement (source never mutated)',
     expect(got.length).toBe(want.length);
     got.forEach((value, index) => expect(Math.abs(value - want[index]!), `${got} vs ${want}`).toBeLessThan(0.2));
   }
-  // Firefox 142: known open gap (post-retirement residual 0.2–1.2 px; engine time/style skew beyond a constant offset). Kept visible as expected failures.
+  // Firefox 142 (diagnosed, core-astra-evidence/firefox-timing/report.md): the earlier residual was Firefox's post-pause
+  // hold-time vs style-sample skew in this TEST's sampling, not a runtime continuation failure; the hold time is committed
+  // explicitly above. A wrong-underlying negative control still fails these cases (2.0006 / 1.3666 px).
   it('composite add onto a non-zero underlying value', () => continues('', 'margin-left:10px', node => [node.animate([{ marginLeft: '0px' }, { marginLeft: '40px' }], { duration: 1000, iterations: Infinity, composite: 'add' })], 'margin-left'));
   it('two animations on one property (replace, then add)', () => continues('', 'margin-left:5px', node => [
     node.animate([{ marginLeft: '40px' }], { duration: 1000, iterations: Infinity }),

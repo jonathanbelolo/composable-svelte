@@ -1,6 +1,9 @@
 <script lang="ts">
-  import { onDestroy, type Snippet } from 'svelte';
+  import { onDestroy, type Snippet, untrack } from 'svelte';
   import { portal } from '../../actions/portal.js';
+  import { overlayLayer } from '../../actions/overlayLayers.js';
+  import { overlayInstance, claimPresentationMotion, noteOverlayRoles, registerOverlayProbe } from './overlayMotion.js';
+  import type { OverlayMotionHandle } from '../../application/renderer/choreography/overlay-motion.js';
   import { createDismissalBoundary } from '../../actions/dismissalBoundary.js';
   const registerDismissalLayer = createDismissalBoundary();
   import { documentScrollLock } from '../../actions/documentScrollLock.js';
@@ -20,6 +23,12 @@
   // ============================================================================
 
   interface AlertPrimitiveProps<State, Action> {
+    /**
+     * Declarative overlay motion (`useOverlayMotion`). When its plan claims an accepted transition, the
+     * choreography drives this overlay's visuals instead of the built-in spring; completion callbacks still fire once.
+     */
+    motion?: OverlayMotionHandle | undefined;
+
     /**
      * Managed presentation view for the alert content.
      * When undefined or retired, alert is hidden (unless presentation retains exit shell).
@@ -92,7 +101,8 @@
     disableClickOutside = false,
     disableEscapeKey = false,
     returnFocusTo = null,
-    children
+    children,
+    motion
   }: AlertPrimitiveProps<unknown, unknown> = $props();
 
   // ============================================================================
@@ -126,6 +136,8 @@
   // ============================================================================
 
   let contentElement: HTMLElement | undefined = $state();
+  // Read only under untrack in the status effect: binding it never re-runs that effect (or restarts a spring).
+  let overlayContainer: HTMLElement | undefined = $state();
   // The internal bind:this backdrop stays the fallback; a consumer-bound backdrop owns the slot only while its action is active.
   let internalBackdropElement: HTMLElement | undefined = $state();
   let boundBackdropElement: HTMLElement | undefined = $state();
@@ -151,6 +163,10 @@
   const removedContentSettlement = createRemovedContentDismissal();
 
   // Watch presentation status and trigger animations
+  // The bound instance's roles are known while mounted (an explicit close captures them before its commit).
+  // Pre-render checkpoint: the committed status is read before the destructive render (default-plan sources).
+  $effect(() => registerOverlayProbe(motion, () => presentation?.status));
+  $effect(() => noteOverlayRoles(overlayContainer, { backdrop: backdropElement, content: contentElement }));
   $effect(() => {
     // Retire a completed marker even when idle/cleared content cannot reach the backdrop-dependent animation branch.
     if (!presentation || presentation.status === 'idle') lastAnimated = null;
@@ -174,6 +190,21 @@
     if (status !== 'presenting' && status !== 'dismissing') return;
     const owner = new AbortController();
     let completed = false;
+
+    // An engine may take over this accepted transition's visuals (never its acceptance): no spring then.
+    const cancelMotion = untrack(() => claimPresentationMotion(motion, overlayContainer, status, { backdrop: backdropElement, content: contentElement }, () => {
+      if (owner.signal.aborted) return;
+      completed = true;
+      if (status === 'presenting') onPresentationComplete?.();
+      else onDismissalComplete?.();
+    }));
+    if (cancelMotion) {
+      return () => {
+        owner.abort();
+        cancelMotion('superseded');
+        if (!completed) lastAnimated = null;
+      };
+    }
 
     if (status === 'presenting') {
       Promise.all([
@@ -317,7 +348,7 @@
 <!-- ============================================================================ -->
 
 {#if visible}
-  <div use:portal>
+  <div use:portal use:overlayLayer>
     <!-- Backdrop (separate element for independent animation) -->
     <!-- Note: pointer-events: none allows clicks to pass through to clickOutside handler -->
     <div
@@ -330,6 +361,8 @@
     <!-- Content Container -->
     <div
       use:documentScrollLock={visible}
+      bind:this={overlayContainer}
+      use:overlayInstance={motion}
       use:presentationLayer={{ view: admittedStore, focusActive }}
       style:pointer-events={interactionsEnabled ? 'auto' : 'none'}
     >

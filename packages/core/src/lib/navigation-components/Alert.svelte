@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import AlertPrimitive from './primitives/AlertPrimitive.svelte';
+  import type { OverlayMotionHandle } from '../application/renderer/choreography/overlay-motion.js';
   import { assertPresentationView, type PresentationView } from '../navigation/managed-integration.js';
   import type { PresentationState } from '../navigation/types.js';
   import type { SpringConfig } from '../animation/spring-config.js';
@@ -11,6 +12,12 @@
   // ============================================================================
 
   interface AlertProps<State, Action> {
+    /**
+     * Declarative overlay motion from `useOverlayMotion`: default open/close plans and a presentation-bound
+     * explicit entry. Without it (or without a motion engine) the built-in spring runs as before.
+     */
+    motion?: OverlayMotionHandle | undefined;
+
     /**
      * Managed presentation view for the alert content.
      */
@@ -115,7 +122,8 @@
     class: className,
     disableClickOutside = false,
     disableEscapeKey = false,
-    children: renderContent
+    children: renderContent,
+    motion
   }: AlertProps<unknown, unknown> = $props();
 
   const admittedStore = $derived.by(() => {
@@ -149,6 +157,7 @@
 <!-- ============================================================================ -->
 
 <AlertPrimitive
+  {motion}
   store={admittedStore}
   {presentation}
   {onPresentationComplete}

@@ -1,19 +1,62 @@
 <script lang="ts">
-  import { useStagedRoute, type PresentationFeatureViewProps } from '@composable-svelte/core/application';
+  import {
+    useStagedRoute,
+    useApplication,
+    scopeTo,
+    type PresentationFeatureViewProps,
+    type PresentationView
+  } from '@composable-svelte/core/application';
   import { useParticipant, useLayoutChoreography } from '@composable-svelte/core/application/motion';
-  import { applicationDefinition, visibleWorks, type Category, type HomePageState, type HomePageAction } from './model.js';
+  import {
+    applicationDefinition,
+    visibleWorks,
+    curatorSlot,
+    confirmAlertSlot,
+    drawerSlot,
+    type Category,
+    type HomePageState,
+    type HomePageAction,
+    type CuratorModalState,
+    type CuratorModalAction,
+    type ConfirmAlertState,
+    type ConfirmAlertAction,
+    type DrawerState,
+    type DrawerAction
+  } from './model.js';
   import { cardKey, toDossier, openStudy, featureWork, filterCatalog, reconfigure } from './motion.js';
   import { motionPreference } from './preferences.js';
   import PavilionArtwork from './PavilionArtwork.svelte';
   import PavilionModel from './PavilionModel.svelte';
   import Turntable from './Turntable.svelte';
+  import CuratorModal from './CuratorModal.svelte';
+  import ArchiveDrawer from './ArchiveDrawer.svelte';
 
   let { store }: PresentationFeatureViewProps<HomePageState, HomePageAction, {}> = $props();
 
+  const app = useApplication(applicationDefinition);
   const route = useStagedRoute(applicationDefinition);
   const participant = useParticipant();
   const layout = useLayoutChoreography();
   const preference = motionPreference();
+
+  const appState = $derived(app.store.state);
+
+  // Capability identity is WeakSet-backed: use raw state to prevent deep Svelte proxy wrapping
+  let boundCurator = $state.raw<PresentationView<CuratorModalState, CuratorModalAction> | undefined>(undefined);
+  let boundConfirmAlert = $state.raw<PresentationView<ConfirmAlertState, ConfirmAlertAction> | undefined>(undefined);
+  let boundDrawer = $state.raw<PresentationView<DrawerState, DrawerAction> | undefined>(undefined);
+
+  $effect(() => {
+    boundCurator = appState.curator !== null ? scopeTo(app.store, curatorSlot) : undefined;
+  });
+
+  $effect(() => {
+    boundConfirmAlert = appState.confirmAlert !== null ? scopeTo(app.store, confirmAlertSlot) : undefined;
+  });
+
+  $effect(() => {
+    boundDrawer = appState.drawer !== null ? scopeTo(app.store, drawerSlot) : undefined;
+  });
 
   /** Undefined only while this page is being replaced by another. */
   const current = $derived(store.state);
@@ -72,6 +115,14 @@
     >
       {reading ? 'Back to gallery' : 'Reading room'}
     </button>
+    <button
+      data-open-drawer
+      type="button"
+      class="btn-secondary"
+      onclick={() => store.dispatch({ type: 'openDrawer' })}
+    >
+      Technical Archive
+    </button>
     </div>
   </nav>
 
@@ -107,6 +158,14 @@
               </button>
               <Turntable />
             {/if}
+            <button
+              data-open-curator={work.id}
+              type="button"
+              class="btn-secondary"
+              onclick={() => store.dispatch({ type: 'openCurator', id: work.id })}
+            >
+              Curator Specs
+            </button>
             {#if work.id !== state.featured}
               <button data-feature={work.id} type="button" class="btn-secondary" onclick={() => change(() => featureWork(work.id), { type: 'feature', id: work.id })}>
                 Feature first
@@ -145,7 +204,30 @@
   </div>
 </main>
 
+  <!-- Stacked overlay orchestration: modal, nested alert, and drawer layers scoped to the page owner -->
+  {#if appState.curatorPresentation.status !== 'idle'}
+    {@const activeWorkId = appState.curatorPresentation.content?.spec.id ?? appState.curator?.spec.id}
+    {#if activeWorkId}
+      {#key activeWorkId}
+        <CuratorModal
+          workId={activeWorkId}
+          store={boundCurator}
+          alertStore={boundConfirmAlert}
+          presentation={appState.curatorPresentation}
+          alertPresentation={appState.confirmAlertPresentation}
+          dispatch={app.store.dispatch}
+        />
+      {/key}
+    {/if}
+  {/if}
 
+  {#if appState.drawerPresentation.status !== 'idle'}
+    <ArchiveDrawer
+      store={boundDrawer}
+      presentation={appState.drawerPresentation}
+      dispatch={app.store.dispatch}
+    />
+  {/if}
 {/if}
 
 <script lang="ts" module>

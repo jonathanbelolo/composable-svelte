@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { animate } from 'motion';
+	import { overlayInstance, claimPresentationMotion, noteOverlayRoles, registerOverlayProbe } from '../../navigation-components/primitives/overlayMotion.js';
+	import type { OverlayMotionHandle } from '../../application/renderer/choreography/overlay-motion.js';
 	import { untrack } from 'svelte';
 	import type { Store } from '../../types.js';
 	import type { ImageGalleryState, ImageGalleryAction } from './image-gallery.types.js';
@@ -28,6 +30,13 @@
 
 		// Styling
 		class?: string | undefined;
+
+		/**
+		 * Declarative overlay motion from `useOverlayMotion`: default open/close plans for every open and close
+		 * (Escape, the close button, `closeLightbox`). The whole viewer is the `content` role. Without it, or
+		 * without a motion engine, the built-in animation runs as before.
+		 */
+		motion?: OverlayMotionHandle | undefined;
 	}
 
 	const {
@@ -38,7 +47,8 @@
 		enableSwipe = true,
 		onClose,
 		onImageChange,
-		class: className = ''
+		class: className = '',
+		motion
 	}: Props = $props();
 
 	// Component refs
@@ -171,6 +181,10 @@
 	// restart it; cleanup retires completions even when the next owner has the same phase.
 	const presentation = $derived(storeState.lightbox.presentation);
 	const reducedMotion = $derived(storeState.prefersReducedMotion);
+	// The bound instance's roles are known while mounted (an explicit close captures them before its commit).
+	// Pre-render checkpoint: the committed status is read before the destructive render (default-plan sources).
+	$effect(() => registerOverlayProbe(motion, () => store.state.lightbox.presentation.status));
+	$effect(() => noteOverlayRoles(lightboxElement, { content: lightboxElement }));
 	$effect(() => {
 		const element = lightboxElement;
 		const owner = presentation;
@@ -182,6 +196,9 @@
 			if (!active || store.state.lightbox.presentation !== owner) return;
 			store.dispatch({type:'presentation',event:{type:opening ? 'presentationCompleted' : 'dismissalCompleted'}});
 		};
+		// An engine may take over this accepted transition's visuals: then no built-in animation; completion once.
+		const cancelMotion = untrack(() => claimPresentationMotion(motion, element, opening ? 'presenting' : 'dismissing', { content: element }, complete));
+		if (cancelMotion) return () => { active = false; cancelMotion('superseded'); };
 		if (reduced) {
 			element.style.opacity = opening ? '1' : '0';
 			element.style.transform = opening ? 'scale(1)' : 'scale(0.95)';
@@ -272,6 +289,7 @@
 {#if storeState.lightbox.isOpen}
 	<div
 		bind:this={lightboxElement}
+		use:overlayInstance={motion}
 		class="image-lightbox {className}"
 		role="dialog"
 		aria-modal="true"

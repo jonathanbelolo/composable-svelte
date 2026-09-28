@@ -63,7 +63,12 @@ it('C1 at the destination retarget: position and velocity continue exactly from 
   // Endpoint: the measured destination rect, reached with zero velocity.
   const last = f.diagnostics('frame').filter(event => event.participant === 'hero').at(-1)!;
   expect(last.x).toBeCloseTo(retarget.to[0], 3);
-  expect(last.vx).toBeCloseTo(0, 6);
+  // Frame `vx` is a backward 1 ms secant (compose(t).x - compose(t - 1).x), not the instantaneous derivative. The final
+  // Hermite continuation (from the displayed state to the destination, terminal velocity 0, ending at 700 ms) is
+  // evaluated in closed form, and the last frame's secant must equal its exact secant (unchanged tolerance).
+  const T = 700 - retarget.t;
+  const hermiteX = (ms: number) => { const u = Math.min(1, Math.max(0, (ms - retarget.t) / T)); return (2 * u ** 3 - 3 * u ** 2 + 1) * retarget.from[0] + (u ** 3 - 2 * u ** 2 + u) * T * retarget.velocity[0] + (-2 * u ** 3 + 3 * u ** 2) * retarget.to[0]; };
+  expect(last.vx).toBeCloseTo(hermiteX(last.t) - hermiteX(last.t - 1), 6);
   // Interactive destination (header link): visibly usable from commit, never suppressed.
   expect(f.target.querySelector<HTMLElement>('[data-hero-link]')!.style.opacity).toBe('');
   assertClean(f);
@@ -242,7 +247,7 @@ it('nested participants become layout-preserving placeholders in the ancestor co
   assertClean(f);
 });
 
-it('an open modal (top layer) skips decorative tracks; the transaction still commits by the next-turn cue', async () => {
+it('an unrelated open native modal (top layer) no longer refuses route choreography: the run plays and commits once (fluid-overlays §10)', async () => {
   const f = setup();
   await ready(f);
   const dialog = document.createElement('dialog');
@@ -252,10 +257,12 @@ it('an open modal (top layer) skips decorative tracks; the transaction still com
   cleanups.push(() => { dialog.close(); dialog.remove(); });
   const handle = f.requester('home').request({ to: '/detail' }, { motion: heroPlan() });
   expect(handle.status).toMatchObject({ type: 'admitted' });
-  await wait(() => f.trace.length === 1);
-  expect(f.diagnostics('unsupported')).toContainEqual(expect.objectContaining({ reason: 'topLayer' }));
-  expect(f.diagnostics('settled')[0]!.reason).toBe('unsupported');
-  expect(document.querySelector('[data-composable-route-plane]')).toBeNull();
+  await settled(f);
+  expect(f.trace).toHaveLength(1);
+  expect(f.diagnostics('unsupported').some(event => event.reason === 'topLayer')).toBe(false);
+  expect(f.diagnostics('settled')[0]!.reason).toBe('completed');
+  expect(f.diagnostics('frame').some(event => event.participant === 'hero')).toBe(true);
+  assertClean(f);
 });
 
 it('card expands through an intermediate viewport pose to a real interactive expanded state, with independent tracks', async () => {

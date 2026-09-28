@@ -6,8 +6,9 @@ import { ChoreographyRun, type VisualClock } from '../../src/lib/application/ren
 import { defineChoreography } from '../../src/lib/application/renderer/choreography/plan.js';
 import { defineVisualDriver } from '../../src/lib/application/renderer/choreography/drivers.js';
 
-const stops: (() => void)[] = [];
-afterEach(() => { for (const stop of stops.splice(0).reverse()) stop(); });
+const stops: (() => void | Promise<unknown>)[] = [];
+// Awaited teardown: a viewport restore must complete before the next test reads/sets the viewport (no cross-test race).
+afterEach(async () => { for (const stop of stops.splice(0).reverse()) await stop(); });
 function rig() {
   let now = 0, id = 0;
   const frames = new Map<number, () => void>();
@@ -66,10 +67,11 @@ it('incoming slide preserves existing stable CSS translate throughout its path',
   const release=f.host.register(node,'text',f.owner);stops.push(()=>{release();node.remove();});
   expect.soft(node.style.translate).toBe('44px 10px'); f.step(300);expect(node.style.translate).toBe('20px 10px');
 });
-it('V1/V6: top-layer fallback disposes adopted shared state and restores paint', () => {
+it('V1/V6: a successor fallback (reduced motion) disposes adopted shared state and restores paint', () => {
   const f=rig();const source=f.node('x');const p=f.plan([{participant:'x',side:'shared',startMs:0,durationMs:1000}]);
   f.host.local(p,f.owner,()=>{});f.step(100);
-  const modal=document.createElement('div');modal.setAttribute('aria-modal','true');document.body.append(modal);stops.push(()=>modal.remove());
+  // (The former trigger, a document-wide top-layer refusal, no longer exists: fluid-overlays §10.)
+  (f.host as unknown as { reduced: () => boolean }).reduced = () => true;
   let commits=0;f.host.local(p,f.owner,()=>commits++);expect(commits).toBe(1);
   expect.soft(source.style.opacity).toBe('');expect.soft(f.host.resources().representations).toBe(0);
   f.host.dispose();expect(f.host.resources().leases).toBe(0);
@@ -82,7 +84,7 @@ const frameAt = (f: ReturnType<typeof rig>, key: string, t: number) => (f.host.d
 it('R1: a viewport resize before the waypoint re-resolves the viewport-relative pose (local run)', async () => {
   const f = rig(); f.node('x');
   const original = { width: window.innerWidth, height: window.innerHeight };
-  stops.push(() => { void page.viewport(original.width, original.height); });
+  stops.push(() => page.viewport(original.width, original.height));
   f.host.local(f.plan([{ participant: 'x', side: 'shared', startMs: 0, durationMs: 1000, easing: 'linear', path: [{ atMs: 300, pose: { relativeTo: 'viewport', x: 0.1, y: 0.1, width: 0.5, height: 0.3 } }] }]), f.owner, () => {});
   f.step(16); f.step(60);
   await page.viewport(600, 700);
@@ -151,7 +153,7 @@ it('C1 (guidance): an incoming control with opacity 1→0 and slide never paints
 it('replan retains a delayed track start: no movement before startMs after a viewport resize', async () => {
   const f = rig(); const node = f.node('x'); const from = node.getBoundingClientRect();
   const original = { width: window.innerWidth, height: window.innerHeight };
-  stops.push(() => { void page.viewport(original.width, original.height); });
+  stops.push(() => page.viewport(original.width, original.height));
   f.host.local(f.plan([{ participant: 'x', side: 'shared', startMs: 200, durationMs: 800, easing: 'linear', path: [{ atMs: 400, pose: { relativeTo: 'viewport', x: 0.2, y: 0.2, width: 0.4, height: 0.2 } }] }]), f.owner, () => {});
   f.step(16); f.step(40);
   await page.viewport(640, 700);
@@ -164,7 +166,7 @@ it('replan retains a delayed track start: no movement before startMs after a vie
 it('replan keeps the original source basis for source-relative poses after a local same-node commit', async () => {
   const f = rig(); const node = f.node('x'); const from = node.getBoundingClientRect();
   const original = { width: window.innerWidth, height: window.innerHeight };
-  stops.push(() => { void page.viewport(original.width, original.height); });
+  stops.push(() => page.viewport(original.width, original.height));
   f.host.local(f.plan([{ participant: 'x', side: 'shared', startMs: 0, durationMs: 1000, easing: 'linear', path: [{ atMs: 300, pose: { relativeTo: 'source', dx: 80 } }, { atMs: 600, pose: { relativeTo: 'viewport', x: 0.1, y: 0.1, width: 0.3, height: 0.2 } }] }]), f.owner, () => { node.style.marginLeft = '500px'; });
   f.step(16); f.step(60);
   await page.viewport(660, 700);

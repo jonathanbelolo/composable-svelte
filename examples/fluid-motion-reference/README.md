@@ -14,6 +14,7 @@ integration run is 42/42 browser tests and 3/3 SSR, on the final core and graphi
 | The card expands through a viewport-relative half-page pose into the real study (zoom, overlays, notes, save). Closing it is a separate request that recontracts through a smaller pose. | "Open study" / "Back to the catalogue" | viewport `Pose`, `radius`, study state in the `study` page reducer |
 | Whole-layout reconfiguration: the reading list takes the main column, the catalogue contracts to a side column, the title compacts, and text leaves and enters, each on its own timing. | "Reading room" / "Back to gallery" | `useLayoutChoreography().transition(plan, () => dispatch(...))` |
 | Within-page card expansion and recontraction into a new grid slot, plus category filtering. | "Feature first", category buttons | same |
+| Stacked overlays: the card flies into the modal's hero plate and back, with the backdrop and content on the same timeline. Close is an explicit `transition()` entry: its quicker plan applies only when the dismiss is accepted. With unsaved notes, close is refused and a nested discard alert opens. Save & Close awaits the save. Only after it succeeds does the view commit the close, synchronously, through the same explicit entry; notes typed during the save keep the modal open. A failed save keeps the draft and shows the error. There is also a technical specifications drawer. While an overlay is open, the page catalogue rests dimmed and slightly contracted (modal) or pushed aside (drawer). These are `lifetime: 'overlay'` page reactions; the close returns the catalogue from its displayed rest, and reduced motion reaches the same pose immediately. | "Curator Specs", "Technical Archive" | `useOverlayMotion(overlay => ({ open, close }))`, `handle.transition(plan, commit)`, `scopeTo()`, managed `Modal`, `Alert`, `Drawer` |
 
 **Rich content, unmodified for capture.**
 - Participants use ordinary web content: flex and grid layout, gradients, `::before` ribbons, transforms and `clip-path`.
@@ -70,11 +71,13 @@ pnpm test:browser   # browser suite only
 | File | Covers |
 | --- | --- |
 | `domain` | Reducers and plan data |
+| `overlay.domain` | Overlay lifecycles, unsaved-change refusal, async save with failure, edits during the save and a save arriving after discard, and choreography plans |
 | `entry` | Direct-load initialization |
 | `focus` | The Back control and its focus ring in front of decoration, with composited-pixel positive and negative controls |
 | `hydration` | Adoption of SSR markup |
 | `reference` | The four scenarios: protocol results, history, retirement, scroll, resize, late geometry, reduced motion, teardown |
 | `rich` | Rich participants, live WebGL and video continuity after the commit, interruption, teardown ledgers, reduced motion, responsiveness |
+| `overlay.browser` | Trusted input with motion witnesses: mid-flight backdrop/content paint; card→hero flight frames and settle reasons; explicit Close versus default timing; a refused close drives nothing; hit-test stacking of the nested alert; nested Escape and outside click; reduced motion with no geometry frames; drawer; focus restoration; scroll lock |
 
 ## Limits (as measured)
 

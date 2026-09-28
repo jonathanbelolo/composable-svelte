@@ -22,6 +22,20 @@ import { ProductionScheduler } from './execution/scheduler.js';
 import { EffectRuntime } from './execution/runtime.js';
 import { TurnQueue } from './execution/turn-queue.js';
 
+const stateCommitObservers = new Set<() => void>();
+/**
+ * @internal Framework pipeline hook (fluid overlays C2): called synchronously after any store commits a changed state
+ * and before Svelte renders it — the destructive render has not happened, so outgoing geometry still exists.
+ * Refused actions (unchanged state) and throwing reducers commit nothing and notify nothing.
+ */
+export function onStateCommitted(observer: () => void): () => void {
+  stateCommitObservers.add(observer);
+  return () => { stateCommitObservers.delete(observer); };
+}
+function notifyStateCommitted(): void {
+  for (const observer of stateCommitObservers) { try { observer(); } catch (error) { console.error('[Composable Svelte] State-commit observer error:', error); } }
+}
+
 /**
  * Create a Store for a feature.
  *
@@ -221,6 +235,9 @@ export function createStore<State, Action, Dependencies = any>(
       // Reduction and imperative observers always use the latest committed value.
       currentState = newState;
       state = newState;
+
+      // Framework pre-render checkpoint: the committed state is known, the DOM still shows the previous state.
+      notifyStateCommitted();
 
       // Notify subscribers
       subscribers.forEach(listener => {
@@ -654,8 +671,10 @@ function createManagedStore<State, Action, Dependencies = any>(
     maxHistorySize: config.maxHistorySize,
     runtime,
     onStateCommitted: newState => {
+      const changed = !Object.is(reactiveState, newState);
       reactiveState = newState;
       reactiveLifecycle = turnQueue.getLifecycle();
+      if (changed) notifyStateCommitted(); // framework pre-render checkpoint (managed stores; refused turns excluded)
     },
     onSubscriberError: error => console.error('[Composable Svelte] Subscriber error:', error)
   });

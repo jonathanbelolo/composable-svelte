@@ -38,6 +38,9 @@
     useLayoutChoreography,
     useParticipant
   } from '../../src/lib/application/motion-public.js';
+  // Overlay orchestration fence: the plan-free binding keeps this pin compiling against source while the
+  // public export and scoped selectors land; the markup below is what the skill-examples guard compares.
+  import { useOverlayMotion } from '../../src/lib/application/renderer/choreography/overlay-motion.js';
 
   // Fluid-motion section: a minimal staged application for the Host and route-page fences.
   interface CatalogState { readonly featuredOnly: boolean }
@@ -107,6 +110,7 @@
   const viewPlan = defineViews(composition, { page: { cases: { catalog: { render: CatalogPage } } } });
   const route = useStagedRoute(application);
   const participant = useParticipant();
+  const dialog = useOverlayMotion();
   const layout = useLayoutChoreography();
   const featuredOnly = $derived(catalogStore.state?.featuredOnly ?? false);
   const visible = $derived(ITEMS.filter((item) => !featuredOnly || item.featured));
@@ -134,6 +138,17 @@
   onDismissalComplete={() => dispatch({ type: 'dismissalCompleted' })}
 >
   <section use:surface>...</section>
+</Modal>
+
+<div use:participant={{ key: 'card' }}>Pavilion of Light</div>
+<Modal
+  {store}
+  {presentation}
+  motion={dialog}
+  onPresentationComplete={() => dispatch({ type: 'presentationCompleted' })}
+  onDismissalComplete={() => dispatch({ type: 'dismissalCompleted' })}
+>
+  <img use:participant={{ key: 'hero' }} src="/pavilion.jpg" alt="Pavilion of Light" />
 </Modal>
 
 <Modal {store} ariaLabel="Details"><section use:surface>...</section></Modal>

@@ -5,6 +5,7 @@
  import {getApplicationInternal,type ApplicationOwner} from './instance.svelte.js';
  import {BROWSER} from 'esm-env';
  import {RouteHost,provideRouteHost} from './renderer/choreography/route-host.js';
+ import {onOverlayProbesChanged,trackOverlayStatuses} from './renderer/choreography/overlay-motion.js';
  import {provideStagedRoute} from './renderer/route-render.js';
  // `owner` remains an internal compatibility path; public wrapper requires app.
  let {app,owner,children}:({app:ApplicationOwner;owner?:undefined}|{owner:RendererOwner;app?:undefined})&{children:Snippet}=$props();
@@ -28,6 +29,12 @@
   routeHost.setScrollSeam(()=>internal?.scroll);
  }
  $effect.pre(()=>()=>routeHost?.dispose());
+ // C2 before-removal lifecycle (fluid overlays): a root-level pre-effect tracking every bound overlay's committed status.
+ // Render effects run depth-first in tree order, so this runs before any descendant block of the same update removes a
+ // source — including status changes that arrive through a bindable/prop write with no store commit.
+ let overlayProbes=$state(0);
+ if(routeHost){const stop=onOverlayProbesChanged(()=>{overlayProbes++;});onDestroy(stop);}
+ $effect.pre(()=>{void overlayProbes;if(routeHost)trackOverlayStatuses();});
  onDestroy(()=>routeHost?.dispose());
  // Host boundary: one teardown (Host visuals and leases, claim release, application destruction).
  // The first failure keeps propagating exactly as before; later failures are stale diagnostics only.

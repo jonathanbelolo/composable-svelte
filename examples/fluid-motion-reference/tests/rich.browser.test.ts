@@ -121,10 +121,24 @@ it('rich participants are represented, not skipped: flex/grid, gradients, ::befo
   const canvasSemantics = { role: modelCanvas.getAttribute('role'), label: modelCanvas.getAttribute('aria-label'), tabIndex: modelCanvas.tabIndex };
   expect(canvasSemantics).toEqual({ role: 'img', label: 'Pavilion model — drag or use arrow keys to orbit', tabIndex: 0 });
   const { result: shot, longTasks: tasks } = await longTasks(async () => {
+    // Bounded observer armed BEFORE the trusted click's asynchronous round trip. It captures the live representation
+    // synchronously, in the same frame in which the run is still active past 290 ms, so it can never sample an
+    // expired window after cleanup (a later frame's run time stays > 290 once the run has settled).
+    const settledBefore = settled(f);
+    const observer = (async (): Promise<{ wrapper: number[]; surface: number[] | null; runMs: number } | null> => {
+      const t0 = performance.now();
+      while (performance.now() - t0 < 8000) {
+        if (settled(f) > settledBefore) return null;
+        const last = f.host().diagnostics.filter(event => event.type === 'frame' && event.participant === 'card-pavilion').at(-1);
+        const runMs = (last?.t as number | undefined) ?? -1;
+        const rep = document.querySelector('[data-route-representation="card-pavilion"]');
+        if (rep && runMs > 290) return { wrapper: box(rep), surface: rep.firstElementChild ? box(rep.firstElementChild) : null, runMs };
+        await frame();
+      }
+      return null;
+    })();
     await userEvent.click(q('[data-open-study]'));
-    await waitFor(() => runTime(f) > 290);
-    const rep = document.querySelector('[data-route-representation="card-pavilion"]');
-    const at = rep ? { wrapper: box(rep), surface: rep.firstElementChild ? box(rep.firstElementChild) : null, runMs: runTime(f) } : null;
+    const at = await observer;
     await pixels([0, 0, innerWidth, innerHeight], 'study-open-rich-waypoint');
     await waitFor(() => settled(f) > 0, 8000);
     return { rep: at };

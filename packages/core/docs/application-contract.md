@@ -68,6 +68,7 @@ An observer attached to a component is not a durable business handoff.
 | Open a dialog | Set the composed child state and render its genuine presentation view | Subscribe to a store to synchronize a separate dialog controller |
 | Change pages | Dispatch navigation intent and declare pure route decisions | Handwrite `popstate` listeners and history writes in application features |
 | Animate a panel or several modules | Declare a supported single-target or grouped motion recipe under the Host | Manage playback timers and detached-element cleanup in each view |
+| Choreograph an overlay's open/close with the page (not yet released) | Keep `PresentationState` in the store; pass `motion={useOverlayMotion(…)}` to the overlay and handle its `onPresentationComplete`/`onDismissalComplete` callbacks; see [overlay orchestration](./fluid-motion.md#12-overlay-orchestration) | Schedule completion with `Effect.afterDelay`, subscribe to presentation status, or animate overlay elements from `$effect` |
 | Move a layout across a route change or a within-page commit (0.14.0) | Request the route with a `defineChoreography` plan (`useStagedRoute`), or use `useLayoutChoreography`, with `useParticipant` and `<Presence>`; see [fluid layout motion](./fluid-motion.md) | Clone elements, run timers or delay the business commit in application code |
 
 Moving a violation into `useWorkspaceSetup()`, `helpers/` or `adapters/` does not change its responsibility.

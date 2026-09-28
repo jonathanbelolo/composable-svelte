@@ -9,7 +9,9 @@ export type ChannelName =
   | 'x' | 'y' | 'width' | 'height'
   | 'radiusTopLeft' | 'radiusTopRight' | 'radiusBottomRight' | 'radiusBottomLeft'
   | 'clipTop' | 'clipRight' | 'clipBottom' | 'clipLeft'
-  | 'opacity';
+  | 'opacity'
+  /** Uniform scale factor relative to the element's stable scale (nonnegative). */
+  | 'scale';
 
 /** Displayed value and instantaneous velocity (units per millisecond). */
 export interface ChannelState {
@@ -79,6 +81,13 @@ export interface ChannelTrack {
   readonly endMs: number;
 }
 
+/** Named easings shared with motion tokens (CSS keyword curves). */
+export type NamedChannelEasing = 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out';
+/** CSS cubic-bezier control points [x1, y1, x2, y2]; x1, x2 in [0,1], y1, y2 finite (may overshoot). */
+export type CubicBezierPoints = readonly [number, number, number, number];
+/** Normalized channel easing: `linear`, a named curve, or explicit control points. */
+export type ChannelEasing = 'linear' | NamedChannelEasing | { readonly cubicBezier: CubicBezierPoints };
+
 export type ChannelValues = Readonly<Partial<Record<ChannelName, number>>>;
 
 /** Default ranges for bounded channels. Position and size channels are unbounded except size >= 0. */
@@ -94,13 +103,17 @@ export const CHANNEL_RANGES: Readonly<Partial<Record<ChannelName, ChannelRange>>
   clipRight: Object.freeze({ min: 0, max: Number.POSITIVE_INFINITY }),
   clipBottom: Object.freeze({ min: 0, max: Number.POSITIVE_INFINITY }),
   clipLeft: Object.freeze({ min: 0, max: Number.POSITIVE_INFINITY }),
+  scale: Object.freeze({ min: 0, max: Number.POSITIVE_INFINITY }),
 });
 
 /** Module signatures the choreography run imports (implemented by hermite.ts / channels.ts). */
 export type HermiteFactory = (request: HermiteRequest) => HermiteSegment;
 export interface ChannelTrackFactory {
-  /** Eased tween from `from` to `to` starting at rest, used for fresh (non-retargeted) tracks. */
-  tween(channel: ChannelName, input: { readonly from: number; readonly to: number; readonly startMs: number; readonly durationMs: number; readonly easing: 'linear' | 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out' }): ChannelTrack;
+  /**
+   * Eased tween from `from` to `to` starting at rest, used for fresh (non-retargeted) tracks. On a bounded
+   * channel an overshooting curve is clamped into the range and the track reports `constrained`.
+   */
+  tween(channel: ChannelName, input: { readonly from: number; readonly to: number; readonly startMs: number; readonly durationMs: number; readonly easing: ChannelEasing }): ChannelTrack;
   /** Constant track (held value). */
   hold(channel: ChannelName, value: number, startMs?: number): ChannelTrack;
 }

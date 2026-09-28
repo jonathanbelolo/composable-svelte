@@ -51,10 +51,15 @@ export { defineChoreography, type ChoreographyPlan, type ChoreographyTrack } fro
 export { useParticipant, useLayoutChoreography, type ParticipantOptions, type LayoutChoreography } from './renderer/choreography/participant.js';
 export { defineVisualDriver, type VisualDriver, type VisualDriverInput, type VisualDriverOutput } from './renderer/choreography/drivers.js';
 export { default as MotionPlane } from './MotionPlane.svelte';
-export { QUALIFIED_PAINT_POLICIES, type PaintPolicy, type Pose, type Waypoint, type Corners, type Inset, type ContentPolicy } from './renderer/choreography/plan.js';
+export { QUALIFIED_PAINT_POLICIES, type PaintPolicy, type Pose, type Waypoint, type Corners, type Inset, type ContentPolicy, type ChoreographyEasing, type ScaleChannel } from './renderer/choreography/plan.js';
+export type { CubicBezierPoints } from './renderer/choreography/channel-types.js';
 // Representation providers and per-application visual configuration: introduced in 0.14.0.
 export { fluidMotion } from './renderer/choreography/engine.js';
 // S2/S3 core seams (docs/development/fluid-motion/core-media-seam-interface.md).
 export { useRepresentationProvider } from './renderer/choreography/participant.js';
 export { default as Presence } from './Presence.svelte';
+// Overlay orchestration (fluid-overlays): declarative motion bound to one overlay instance (`motion` prop of Modal,
+// Sheet, Drawer, Alert, Popover, Command, ImageLightbox), with exact scoped selectors for plan tracks.
+export { useOverlayMotion, type OverlayMotionHandle, type OverlayMotionOptions } from './renderer/choreography/overlay-motion.js';
+export type { OverlayScopeRef, ScopedParticipantSelector, ParticipantSelector } from './renderer/choreography/plan.js';
 export type { RepresentationProvider, ProvidedRepresentation, RetainedRenderer, RepresentationContext, RepresentationContinuity, RepresentationDecline, VisualConfiguration, VisualDiagnostic, FluidMotionOptions } from './renderer/representation/types.js';
