@@ -1,0 +1,16 @@
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-firefox-timing/packages/core
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+Port 63315 is in use, trying another one...
+Port 63316 is in use, trying another one...
+stdout | tests/fluid-motion/firefox-native-pause.browser.test.ts > animation stack continuation after retirement native oracle diagnostic > native add animation pause exposes the same currentTime/style skew
+[astra-native-control] {"time":316.66,"value":"22.8718px","want":"22.6664px","later":"22.8718px","explicit":"22.6664px","current":316.66,"underlying":"10px"}
+ ✓ |firefox| tests/fluid-motion/firefox-native-pause.browser.test.ts (1 test) 346ms
+     ✓ native add animation pause exposes the same currentTime/style skew  345ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  00:18:55
+   Duration  2.25s (transform 0ms, setup 8ms, collect 3ms, tests 346ms, environment 0ms, prepare 131ms)
+

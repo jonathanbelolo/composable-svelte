@@ -1,0 +1,29 @@
+8:33:12 PM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference - using default configuration.
+
+ RUN  v4.0.7 /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference
+
+8:33:12 PM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference - using default configuration.
+stdout | tests/rich.browser.test.ts > rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas
+BJS - [20:33:14]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas
+BJS - [20:33:15]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/rich.browser.test.ts > rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas
+BJS - [20:33:15]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas
+BJS - [20:33:15]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas
+BJS - [20:33:15]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/rich.browser.test.ts > rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas
+BJS - [20:33:15]: Babylon.js v8.36.1 - WebGL2
+ ✓ |chromium| tests/rich.browser.test.ts (9 tests | 8 skipped) 1379ms
+   ✓ rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas  1377ms
+ ✓ |webkit| tests/rich.browser.test.ts (9 tests | 8 skipped) 1311ms
+   ✓ rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas  1308ms
+ ✓ |firefox| tests/rich.browser.test.ts (9 tests | 8 skipped) 1155ms
+   ✓ rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas  1152ms
+
+ Test Files  3 passed (3)
+      Tests  3 passed | 24 skipped (27)
+   Start at  20:33:12
+   Duration  3.50s (transform 0ms, setup 0ms, collect 2.18s, tests 3.84s, environment 0ms, prepare 390ms)
+

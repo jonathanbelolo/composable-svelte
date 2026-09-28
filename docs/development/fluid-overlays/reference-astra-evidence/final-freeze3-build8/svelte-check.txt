@@ -1,0 +1,4 @@
+Loading svelte-check in workspace: /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference
+Getting Svelte diagnostics...
+
+svelte-check found 0 errors and 0 warnings

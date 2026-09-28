@@ -1,0 +1,21 @@
+{
+  "manifest_sha256": "cc7b9adb8db728c4014376f036c75b00f115601bb4d73b993f449cf8ffbf084a",
+  "manifest": {
+    "examples/fluid-motion-reference/README.md": "492777720296594795762692a1836a4c866c5da1934bc34542e6ace0b4c5c334",
+    "examples/fluid-motion-reference/src/ArchiveDrawer.svelte": "3d52f57cbfcc1521fa2dcf1a1671995b4e53492348f262d1f7216b097f51e1a2",
+    "examples/fluid-motion-reference/src/CuratorModal.svelte": "82f4a50e7c12fc35e182892338b5484b3dbf31661c15e89a457601ce2a83a3c2",
+    "examples/fluid-motion-reference/src/Gallery.svelte": "00e2f5d24752f97e58aaf23dc5669ea7c8c586d9b085d2a88c2f0c83f9d6b94d",
+    "examples/fluid-motion-reference/src/HomeView.svelte": "f171617fef0284eb75d78dab172393d3f088334b635652e62751421d99d53c2a",
+    "examples/fluid-motion-reference/src/model.ts": "698c699bd670d5d8bfd0e4fc67cff37f68d147a010293c516a1d0881ad495162",
+    "examples/fluid-motion-reference/src/overlay-motion.ts": "7fdee7766d8449d5dd8af6cdc6522c78b5b2dc5c7d9580091a6eb17443cc3edb",
+    "examples/fluid-motion-reference/src/views.ts": "0e0089b083a3e170fd9fc67013872d38bdcff83fc4253f2200e8a9a244b2a4f9",
+    "examples/fluid-motion-reference/tests/fixtures/ssr-home.html": "e9ff1ca6578988ab29295d26de2d158c0544e768f5d98bd97c40fcfb9e7c9ea1",
+    "examples/fluid-motion-reference/tests/overlay.browser.test.ts": "3e726648cf1b2b8b939b0f5cdbb758343fee2215f83bc52b807754302f0c1f49",
+    "examples/fluid-motion-reference/tests/overlay.domain.test.ts": "2fc185404f8c114c9d7bfa0d60335017af2d40d9a68cf735d2c49ab1257edba6",
+    "examples/fluid-motion-reference/tests/astra.counterexamples.test.ts": "f8bcaa2966868cdf797fc573c53addb81a113917932db9125eaa94655fe5bf22",
+    "examples/fluid-motion-reference/tests/astra.browser.test.ts": "416017e700d6ca3bc30cb593ba888080bc47a50f7c62a252c79c009260f71944",
+    "docs/development/fluid-overlays/reference-opus-review.md": "f96ce35f0450e50075abbbeffa890650bd20d404cc8308e0c8254e751f42b658",
+    "_core_dist_run_js": "1f5dafa02c80900d0af4064d98a74baf5d6de8577bbc4c3f147a580f105fcfb4 (unpublished intermediate, not build 3)"
+  },
+  "actual_review_runtime_run_sha256": "ef4faa97447edb44a442c3c20fcce6df997e940a457ffe2e672e2235ea5051ee"
+}

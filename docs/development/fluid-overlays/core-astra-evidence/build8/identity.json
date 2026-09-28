@@ -1,0 +1,17 @@
+{
+  "baseline": "2e07f650c1421c25f6b29d2db9c0cc885ea891ed",
+  "manifest": "6761bff555833b76d7dd387350d8d07aa9dfe1b3ef60f6a75af255dc3aeecaf3",
+  "manifest_entries": 116,
+  "src": "266d4b46c7379379002d803a1a306d460075396cb5a22c1884c023e08962dbc5",
+  "dist": "9190602581b154907533347dd01ab3dbd391982086f69b3cc555bbc290660db2",
+  "evidence": {
+    "core-astra-correction.browser.test.ts": "bc5bc5a4fc287a6833493030428a4a9aaa6ed60fa1b7dff46be0aa9f9bd96c98",
+    "whole-transform-boundary.log": "cdb5a27effaa195d86b5b4bfbc73fe07b5c816a40c41c4cf376198a4413126c6",
+    "core-astra-final-boundary.browser.test.ts": "d359d9e68e9e8d248d97f980b2fc3b556a12f0268e97ea36d5a3dfcfa2d9b884",
+    "core-astra-c2-public.browser.test.ts": "f7ac91278e96df68f43dcbfc284ee9be418b27b45e2e1ba9150a755dc2300ae9",
+    "media-back-native-witnesses.log": "59f550960b3982b64bd60e45f189687b3be3c74eb7758a5d4b09d0eae2ad27ce",
+    "vitest.witness.config.ts": "5b4baa5b0fe9affbef9497027f23d0e6c601b14f078e3e781494bd2a783bdec0",
+    "unchanged-correction-probes.log": "85c4b2aecff02fcb07b5656183f745dfeb26abbd427dc1e1afaddd31bb99247a",
+    "vitest.review.config.ts": "45f34d3612cd4a61cf43e94a562bfc93c9937b4b60c98c1df5e7acd979caa1a5"
+  }
+}

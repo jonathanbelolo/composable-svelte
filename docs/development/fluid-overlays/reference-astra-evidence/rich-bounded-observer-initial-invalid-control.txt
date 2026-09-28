@@ -1,0 +1,41 @@
+12:38:46 AM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference - using default configuration.
+
+ RUN  v4.0.7 /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference
+
+12:38:46 AM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference - using default configuration.
+stdout | tests/astra.rich-observer.test.ts > early armed bounded rich observer witnesses the real live surface
+BJS - [00:38:48]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/astra.rich-observer.test.ts > early armed bounded rich observer witnesses the real live surface
+BJS - [00:38:49]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/astra.rich-observer.test.ts > early armed bounded rich observer witnesses the real live surface
+ASTRA_RICH_BOUNDED {"remove":false,"captured":{"runMs":303.7000000476837,"width":972.796875,"height":450},"removals":0,"skipped":[],"unsupported":[]}
+stdout | tests/astra.rich-observer.test.ts > negative control: removed rich paint must fail the same mandatory witness
+BJS - [00:38:49]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/astra.rich-observer.test.ts > negative control: removed rich paint must fail the same mandatory witness
+BJS - [00:38:50]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/astra.rich-observer.test.ts > negative control: removed rich paint must fail the same mandatory witness
+ASTRA_RICH_BOUNDED {"remove":true,"captured":null,"removals":1,"skipped":[],"unsupported":[]}
+ ❯ |chromium| tests/astra.rich-observer.test.ts (2 tests | 1 failed) 2588ms
+   ✓ early armed bounded rich observer witnesses the real live surface  1336ms
+   × negative control: removed rich paint must fail the same mandatory witness 1251ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |chromium| tests/astra.rich-observer.test.ts > negative control: removed rich paint must fail the same mandatory witness
+AssertionError: no live card representation observed in the required motion window: expected undefined to be defined
+ ❯ witness tests/astra.rich-observer.test.ts:27:87
+     25|  console.log('ASTRA_RICH_BOUNDED',JSON.stringify({remove,captured:capt…
+     26|  // Same required assertion applies to both healthy and deliberate mis…
+     27|  expect(captured,'no live card representation observed in the required…
+       |                                                                                       ^
+     28|  expect(captured!.width).toBeGreaterThan(500);expect(captured!.height)…
+     29|  }finally{await f.restore();}
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  00:38:46
+   Duration  4.09s (transform 0ms, setup 0ms, collect 1.03s, tests 2.59s, environment 0ms, prepare 42ms)
+

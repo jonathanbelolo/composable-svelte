@@ -1,0 +1,100 @@
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-firefox-timing/packages/core
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+ ❯ |firefox| tests/fluid-motion/representation.browser.test.ts (68 tests | 1 failed | 64 skipped) 1476ms
+     ↓ reproduces a rich grid/flex/gradient/pseudo/SVG/scrolled participant faithfully and safely
+     ↓ SVG references are representation-scoped; paint servers keep their attributes (gradient preserved)
+     ↓ declarative animations continue on the copy without mutating the source (explicit replay, implicit live tracking)
+     ↓ a row inside a scrolled rounded scroller is represented and carries the ancestor clip chain
+     ↓ a default non-preserved WebGL canvas is mirrored live without app cooperation; retirement without a renderer provider is reported
+     ↓ large participants prepare in bounded slices within the budget; a mid-copy mutation restarts and is reflected
+     ↓ public configuration: providers are consulted per element; diagnostics reach onDiagnostic; retained render authority keeps a canvas live after retirement
+     ↓ a URL video keeps playing on its muted decorative player after retirement and disposes cleanly
+     ↓ a throwing provider frame is isolated, reported publicly, and its representation is still disposed exactly once
+     ↓ fluidMotion validates providers and budgets; plans carry the engine as non-enumerable data; definitions accept only fluidMotion configurations
+     ↓ within-page runs report that native snapshots need a route commit (immediate commits cannot be wrapped); the commit stays immediate
+     ↓ the browser image of a cross-origin frame follows its representation after the commit; real controls stay usable; everything is released
+     ↓ a successor adopts a shared participant's native snapshot on supersession (same transition, no restart) and releases it at settle
+     ↓ another view transition ends the native snapshot: reported and released (mechanism constraint)
+     ↓ a rotated/skewed outgoing participant is revealed with its exact 2D matrix at its painted bounds
+     ↓ an inline <svg> element is itself a participant (scoped references, no skip)
+     ↓ a script-created transform animation with an implicit identity start is reconstructed by verified hypothesis and keeps running
+     ↓ script-created animations with implicit keyframes keep running on the copy after retirement (reconstructed without mutating the source)
+     ✓ composite add onto a non-zero underlying value  355ms
+     ✓ two animations on one property (replace, then add)  351ms
+     ✓ per-keyframe easing with an implicit start  353ms
+     × a non-identity implicit underlying transform from a stylesheet 417ms
+     ↓ F1: a live provider whose retire() returns nothing receives no frame() afterwards
+     ↓ F2: a paused animation with an implicit keyframe is continued paused
+     ↓ F3: canvas content inside a same-origin frame is represented and nested provider hooks run
+     ↓ F4: the clip of a scaled clipping ancestor uses its painted (scaled) dimensions
+     ↓ F5: an SVG group participant paints at its geometry with the owner svg resources
+     ↓ F6: a rejected provider readiness is reported, never an unhandled rejection
+     ↓ F7: indeterminate checkbox state and SVG image hrefs are preserved
+     ↓ R8: a selected file input does not abort capture; its visible selection is copied by reference (not read, source untouched)
+     ↓ a registered participant is warmed in idle time and reused (identical to a fresh projection); edits, ancestor classes and hover invalidate
+     ↓ the cache is bounded (entries and elements) and releases unregistered participants
+     ↓ sticky header in a scrolled container keeps its stuck position
+     ↓ a fixed badge inside a participant keeps its viewport position
+     ↓ list markers and numbering are reproduced natively
+     ↓ CSS counters in generated content are resolved by read-only simulation (pixel-equal)
+     ↓ counters scoped outside the participant, nested counters() and counter styles resolve to the rendered text
+     ↓ a selected file input keeps its native label (synthetic File; nothing read, source selection untouched)
+     ↓ a display:none element does not contribute counter increments (pixel-equal to the live rendering)
+     ↓ a following sibling counter-reset replaces (does not nest under) the preceding sibling counter
+     ↓ open shadow roots (with slots) are reproduced; closed shadow roots are reported for the native provider
+     ↓ a control-bearing outgoing copy holds until its declared start, then fades to its original end
+     ↓ a MediaSource object URL cannot attach to the decorative player: underlay kept, failure reported, player released, the detached fallback held until disposal
+     ↓ a provider whose frame throws is disposed at the failure, exactly once
+     ↓ C1: warm templates never replace provider participation (custom providers disable the cache; live content is never templated)
+     ↓ C2: same-turn content and CSSOM changes are never served from a stale template
+     ↓ C3: a provider disposed at a frame failure is not retired; only its own signal aborts
+     ↓ C4: a nested same-origin frame provider readiness rejection is reported, never unhandled
+     ↓ iframe: shared source keeps its real paint before the cue
+     ↓ iframe tabindex=-1 (pointer-operable, outside tab order): shared source keeps its real paint before the cue
+     ↓ video[controls]: shared source keeps its real paint before the cue
+     ↓ video[controls][tabindex=-1]: shared source keeps its real paint before the cue
+     ↓ video without controls (not operable): shared source does not keep its real paint before the cue
+     ↓ generic [tabindex=-1] (programmatic focus only): shared source does not keep its real paint before the cue
+     ↓ an outgoing row inside a rotated scroll container is clipped exactly by the rotated container (pixel-equal at reveal)
+     ↓ the outer axis-aligned clip is preserved together with the rotated polygon (pixel-equal at reveal)
+     ↓ a closed-shadow element in an outgoing participant is named at the cue and its browser image follows the copy
+     ↓ F1: a disabled cache installs no global subscriptions; dispose leaves none
+     ↓ F2: a same-turn property scroll is copied from the live source, not the warm offset
+     ↓ F3: a CSSOM declaration edit with an unchanged rule count is not served from a stale template
+     ↓ F4: inside a same-origin frame, one failing provider is disposed alone; its sibling keeps its frames and signal
+     ↓ a thin rotated clip polygon is released continuously and covers the whole box just before completion (no endpoint pop)
+     ↓ a participant that is essentially the player settles: no representation, no lease, usable until the commit, nothing after removal
+     ↓ settle:true settles the containing participant deterministically even when the player is a small part (no size threshold)
+     ↓ settle:true inside a same-origin iframe settles the outer participant; nested acquisitions are disposed and aborted exactly once
+     ↓ nested settlement through a run: the participant is not represented or leased; an unrelated participant is; two levels of frames propagate
+     ↓ inline iframe: the provided box keeps its size and the following text its position
+     ↓ inline canvas: the provided box keeps its size and the following text its position
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |firefox| tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > a non-identity implicit underlying transform from a stylesheet
+AssertionError: 0.984607,0.174782,-0.174782,0.984607,26.8866,0 vs 0.984808,0.173645,-0.173645,0.984808,26.666,0: expected 0.22060000000000102 to be less than 0.2
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/representation.browser.test.ts/animation-stack-continuation-after-retirement--source-never-mutated--a-non-identity-implicit-underlying-transform-from-a-stylesheet-1.png
+
+ ❯ continues/< tests/fluid-motion/representation.browser.test.ts:573:94
+    571|     const got = nums(copyValue), want = nums(getComputedStyle(referenc…
+    572|     expect(got.length).toBe(want.length);
+    573|     got.forEach((value, index) => expect(Math.abs(value - want[index]!…
+       |                                                                                              ^
+    574|   }
+    575|   // Firefox 142: known open gap (post-retirement residual 0.2–1.2 px;…
+ ❯ continues tests/fluid-motion/representation.browser.test.ts:573:8
+ ❯ async* tests/fluid-motion/representation.browser.test.ts:582:87
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed | 64 skipped (68)
+   Start at  00:15:27
+   Duration  3.06s (transform 0ms, setup 8ms, collect 141ms, tests 1.48s, environment 0ms, prepare 120ms)
+

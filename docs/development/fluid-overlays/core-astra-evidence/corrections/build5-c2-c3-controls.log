@@ -1,0 +1,59 @@
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-core-build5-review/packages/core
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+Port 63315 is in use, trying another one...
+ ✓ |chromium| tests/fluid-motion/overlay-motion.browser.test.ts (24 tests | 11 skipped) 14050ms
+   ✓ W-C3: during choreographed open/close the primitive keeps focus, inertness and scroll-lock authority (visuals only are claimed)  1367ms
+   ✓ C2 explicit entry: transition() prepares BEFORE the commit — a page source the commit removes is still captured and exits as a copy  365ms
+   ✓ C2 epoch: a pending explicit plan applies only to its own epoch; a stale one is discarded (nothing acquired) and the default plan runs  367ms
+   ✓ C5: a REFUSED explicit transition overlapping a running open leaves that run progressing untouched (same copy, leases, tracks, obligation)  1067ms
+   ✓ C2 explicit open: the shared source is captured before the commit removes it; the flight departs from its pre-commit geometry  933ms
+   ✓ C2 default phase (Main disposition): one accepted action removes the page card AND opens the modal — the DEFAULT open plan captured the card before the destructive render; the flight departs from its pre-render geometry into the modal layer  1083ms
+   ✓ C3 portable media: a live canvas flight is re-homed into the modal layer (with or without moveBefore) and keeps its content; a cross-origin frame copy carries no live browsing context; other tracks run  1067ms
+   ✓ C2 default phase, CONDITIONAL overlay component: the Modal mounts in the same render that removes the card; the page-created handle's presentation probe captures the card before that render  1065ms
+   ✓ C2 default phase: a REFUSED close (guard) prepares nothing at the checkpoint and leaves a running open untouched  1083ms
+   ✓ conditional declaration: repeated epochs, refusal and replacement — each accepted open captures the removed card pre-render; a refused close prepares nothing; a rapid reversal continues the displayed paint  2951ms
+   ✓ conditional declaration: absent destination settles the flight honestly with balanced cleanup; owner (Host) disposal mid-flight cancels the obligation and releases everything  1217ms
+   ✓ C2 bindable/prop-only update (no store commit): one Svelte update removes the page card and presents the modal — the Host pre-effect captured the card before the destructive render  749ms
+   ✓ source-owner disposal: the conditional overlay owner is unmounted mid-dismissal by an external accepted change — its obligation is cancelled (never dispatched), resources released, page intact  734ms
+ ✓ |chromium| tests/fluid-motion/overlay-identity.browser.test.ts (9 tests | 7 skipped) 10ms
+ ✓ |webkit| tests/fluid-motion/overlay-motion.browser.test.ts (24 tests | 11 skipped) 14038ms
+   ✓ W-C3: during choreographed open/close the primitive keeps focus, inertness and scroll-lock authority (visuals only are claimed)  1371ms
+   ✓ C2 explicit entry: transition() prepares BEFORE the commit — a page source the commit removes is still captured and exits as a copy  364ms
+   ✓ C2 epoch: a pending explicit plan applies only to its own epoch; a stale one is discarded (nothing acquired) and the default plan runs  366ms
+   ✓ C5: a REFUSED explicit transition overlapping a running open leaves that run progressing untouched (same copy, leases, tracks, obligation)  1069ms
+   ✓ C2 explicit open: the shared source is captured before the commit removes it; the flight departs from its pre-commit geometry  932ms
+   ✓ C2 default phase (Main disposition): one accepted action removes the page card AND opens the modal — the DEFAULT open plan captured the card before the destructive render; the flight departs from its pre-render geometry into the modal layer  1084ms
+   ✓ C3 portable media: a live canvas flight is re-homed into the modal layer (with or without moveBefore) and keeps its content; a cross-origin frame copy carries no live browsing context; other tracks run  1067ms
+   ✓ C2 default phase, CONDITIONAL overlay component: the Modal mounts in the same render that removes the card; the page-created handle's presentation probe captures the card before that render  1050ms
+   ✓ C2 default phase: a REFUSED close (guard) prepares nothing at the checkpoint and leaves a running open untouched  1066ms
+   ✓ conditional declaration: repeated epochs, refusal and replacement — each accepted open captures the removed card pre-render; a refused close prepares nothing; a rapid reversal continues the displayed paint  2950ms
+   ✓ conditional declaration: absent destination settles the flight honestly with balanced cleanup; owner (Host) disposal mid-flight cancels the obligation and releases everything  1233ms
+   ✓ C2 bindable/prop-only update (no store commit): one Svelte update removes the page card and presents the modal — the Host pre-effect captured the card before the destructive render  750ms
+   ✓ source-owner disposal: the conditional overlay owner is unmounted mid-dismissal by an external accepted change — its obligation is cancelled (never dispatched), resources released, page intact  734ms
+ ✓ |chromium| tests/fluid-motion/overlay-store-checkpoint.browser.test.ts (2 tests) 2ms
+ ✓ |webkit| tests/fluid-motion/overlay-identity.browser.test.ts (9 tests | 7 skipped) 13ms
+ ✓ |webkit| tests/fluid-motion/overlay-store-checkpoint.browser.test.ts (2 tests) 3ms
+ ✓ |firefox| tests/fluid-motion/overlay-motion.browser.test.ts (24 tests | 11 skipped) 13847ms
+   ✓ W-C3: during choreographed open/close the primitive keeps focus, inertness and scroll-lock authority (visuals only are claimed)  1340ms
+   ✓ C2 explicit entry: transition() prepares BEFORE the commit — a page source the commit removes is still captured and exits as a copy  353ms
+   ✓ C2 epoch: a pending explicit plan applies only to its own epoch; a stale one is discarded (nothing acquired) and the default plan runs  364ms
+   ✓ C5: a REFUSED explicit transition overlapping a running open leaves that run progressing untouched (same copy, leases, tracks, obligation)  1038ms
+   ✓ C2 explicit open: the shared source is captured before the commit removes it; the flight departs from its pre-commit geometry  920ms
+   ✓ C2 default phase (Main disposition): one accepted action removes the page card AND opens the modal — the DEFAULT open plan captured the card before the destructive render; the flight departs from its pre-render geometry into the modal layer  1064ms
+   ✓ C3 portable media: a live canvas flight is re-homed into the modal layer (with or without moveBefore) and keeps its content; a cross-origin frame copy carries no live browsing context; other tracks run  1096ms
+   ✓ C2 default phase, CONDITIONAL overlay component: the Modal mounts in the same render that removes the card; the page-created handle's presentation probe captures the card before that render  1050ms
+   ✓ C2 default phase: a REFUSED close (guard) prepares nothing at the checkpoint and leaves a running open untouched  1057ms
+   ✓ conditional declaration: repeated epochs, refusal and replacement — each accepted open captures the removed card pre-render; a refused close prepares nothing; a rapid reversal continues the displayed paint  2941ms
+   ✓ conditional declaration: absent destination settles the flight honestly with balanced cleanup; owner (Host) disposal mid-flight cancels the obligation and releases everything  1189ms
+   ✓ C2 bindable/prop-only update (no store commit): one Svelte update removes the page card and presents the modal — the Host pre-effect captured the card before the destructive render  704ms
+   ✓ source-owner disposal: the conditional overlay owner is unmounted mid-dismissal by an external accepted change — its obligation is cancelled (never dispatched), resources released, page intact  730ms
+ ✓ |firefox| tests/fluid-motion/overlay-identity.browser.test.ts (9 tests | 7 skipped) 17ms
+ ✓ |firefox| tests/fluid-motion/overlay-store-checkpoint.browser.test.ts (2 tests) 3ms
+
+ Test Files  9 passed (9)
+      Tests  51 passed | 54 skipped (105)
+   Start at  00:47:57
+   Duration  15.87s (transform 0ms, setup 43ms, collect 724ms, tests 41.98s, environment 0ms, prepare 87.51s)
+

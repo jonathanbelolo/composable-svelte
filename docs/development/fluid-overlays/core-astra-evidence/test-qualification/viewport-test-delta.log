@@ -1,0 +1,13 @@
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-core-build10-review/packages/core
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+ ✓ |chromium| tests/fluid-motion/visual-correction2.browser.test.ts (16 tests) 156ms
+ ✓ |webkit| tests/fluid-motion/visual-correction2.browser.test.ts (16 tests) 177ms
+ ✓ |firefox| tests/fluid-motion/visual-correction2.browser.test.ts (16 tests) 110ms
+
+ Test Files  3 passed (3)
+      Tests  48 passed (48)
+   Start at  20:51:12
+   Duration  1.71s (transform 0ms, setup 24ms, collect 260ms, tests 443ms, environment 0ms, prepare 226ms)
+

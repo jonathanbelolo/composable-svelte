@@ -1,0 +1,261 @@
+8:32:09 PM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference - using default configuration.
+
+ RUN  v4.0.7 /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference
+
+8:32:09 PM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference - using default configuration.
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > open and close paint backdrop/content mid-flight and fly the card to the hero and back
+BJS - [20:32:10]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > open and close paint backdrop/content mid-flight and fly the card to the hero and back
+BJS - [20:32:11]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > open and close paint backdrop/content mid-flight and fly the card to the hero and back
+BJS - [20:32:11]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > explicit Close entry drives the accepted close with its own quicker plan
+BJS - [20:32:12]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > explicit Close entry drives the accepted close with its own quicker plan
+BJS - [20:32:12]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > explicit Close entry drives the accepted close with its own quicker plan
+BJS - [20:32:12]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > a refused explicit close acquires nothing, stacks the alert above the modal, and nested Escape closes only the alert
+BJS - [20:32:15]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > a refused explicit close acquires nothing, stacks the alert above the modal, and nested Escape closes only the alert
+BJS - [20:32:15]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > a refused explicit close acquires nothing, stacks the alert above the modal, and nested Escape closes only the alert
+BJS - [20:32:15]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > Save & Close keeps the modal presented while saving, then its explicit plan drives the accepted close
+BJS - [20:32:17]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > Save & Close keeps the modal presented while saving, then its explicit plan drives the accepted close
+BJS - [20:32:17]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > Save & Close keeps the modal presented while saving, then its explicit plan drives the accepted close
+BJS - [20:32:17]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > reduced motion: fades only, no geometry frames
+BJS - [20:32:19]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > reduced motion: fades only, no geometry frames
+BJS - [20:32:19]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > reduced motion: fades only, no geometry frames
+BJS - [20:32:20]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > drawer: trusted open paints mid-flight, tabs switch, Escape closes and restores focus
+BJS - [20:32:20]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > drawer: trusted open paints mid-flight, tabs switch, Escape closes and restores focus
+BJS - [20:32:20]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > drawer: trusted open paints mid-flight, tabs switch, Escape closes and restores focus
+BJS - [20:32:20]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > opens curator modal from card: page, backdrop, and content mounted together
+BJS - [20:32:21]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > opens curator modal from card: page, backdrop, and content mounted together
+BJS - [20:32:21]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > opens non-pavilion curator modal instance (lattice), binding actual workId to instance plans
+BJS - [20:32:21]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > opens non-pavilion curator modal instance (lattice), binding actual workId to instance plans
+BJS - [20:32:21]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > opens curator modal from card: page, backdrop, and content mounted together
+BJS - [20:32:21]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > permits disjoint page interaction while overlay is presented (S7)
+BJS - [20:32:22]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > permits disjoint page interaction while overlay is presented (S7)
+BJS - [20:32:22]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > refuses close when dirty (I3), stacks nested discard alert (O8), then closes after save (I4)
+BJS - [20:32:22]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > opens non-pavilion curator modal instance (lattice), binding actual workId to instance plans
+BJS - [20:32:22]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > refuses close when dirty (I3), stacks nested discard alert (O8), then closes after save (I4)
+BJS - [20:32:22]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > permits disjoint page interaction while overlay is presented (S7)
+BJS - [20:32:23]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > Save & Close saves then closes (presence check; the explicit-plan witness is in the motion suite above)
+BJS - [20:32:23]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > supports rapid reopen without epoch corruption (I1/I2)
+BJS - [20:32:23]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > Save & Close saves then closes (presence check; the explicit-plan witness is in the motion suite above)
+BJS - [20:32:23]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > refuses close when dirty (I3), stacks nested discard alert (O8), then closes after save (I4)
+BJS - [20:32:23]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > opens technical specifications drawer and switches tabs (O5/O6)
+BJS - [20:32:24]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > supports rapid reopen without epoch corruption (I1/I2)
+BJS - [20:32:24]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > restores focus to opener element upon dismissal
+BJS - [20:32:24]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > Save & Close saves then closes (presence check; the explicit-plan witness is in the motion suite above)
+BJS - [20:32:24]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > opens technical specifications drawer and switches tabs (O5/O6)
+BJS - [20:32:24]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > restores focus to opener element upon dismissal
+BJS - [20:32:25]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > honors reduced motion preference for overlays
+BJS - [20:32:25]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > supports rapid reopen without epoch corruption (I1/I2)
+BJS - [20:32:25]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > the catalog rests dimmed and contracted past the open duration, through a refused close and the nested alert, and returns on close
+BJS - [20:32:25]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > honors reduced motion preference for overlays
+BJS - [20:32:25]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > the catalog rests dimmed and contracted past the open duration, through a refused close and the nested alert, and returns on close
+BJS - [20:32:25]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > opens technical specifications drawer and switches tabs (O5/O6)
+BJS - [20:32:25]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > restores focus to opener element upon dismissal
+BJS - [20:32:26]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > honors reduced motion preference for overlays
+BJS - [20:32:27]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > the catalog rests dimmed and contracted past the open duration, through a refused close and the nested alert, and returns on close
+BJS - [20:32:27]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > the drawer pushes the catalog aside and holds it there; closing slides it back
+BJS - [20:32:28]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > the drawer pushes the catalog aside and holds it there; closing slides it back
+BJS - [20:32:28]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > reduced motion reaches the same full resting pose immediately (no intermediate geometry), and the close releases it
+BJS - [20:32:29]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > reduced motion reaches the same full resting pose immediately (no intermediate geometry), and the close releases it
+BJS - [20:32:30]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > the drawer pushes the catalog aside and holds it there; closing slides it back
+BJS - [20:32:30]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > rapid reopen during the close re-rests the catalog for the new instance, then releases it once
+BJS - [20:32:31]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > rapid reopen during the close re-rests the catalog for the new instance, then releases it once
+BJS - [20:32:32]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > reduced motion reaches the same full resting pose immediately (no intermediate geometry), and the close releases it
+BJS - [20:32:32]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > rapid reopen during the close re-rests the catalog for the new instance, then releases it once
+RAPID_REOPEN {"midClose":0.894869,"rest":0.88,"scale":0.98}
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > rapid reopen during the close re-rests the catalog for the new instance, then releases it once
+BJS - [20:32:34]: Babylon.js v8.36.1 - WebGL2
+ ✓ |firefox| tests/overlay.browser.test.ts (19 tests) 23363ms
+     ✓ open and close paint backdrop/content mid-flight and fly the card to the hero and back  1382ms
+     ✓ explicit Close entry drives the accepted close with its own quicker plan  2474ms
+     ✓ a refused explicit close acquires nothing, stacks the alert above the modal, and nested Escape closes only the alert  2025ms
+     ✓ Save & Close keeps the modal presented while saving, then its explicit plan drives the accepted close  2600ms
+     ✓ reduced motion: fades only, no geometry frames  489ms
+     ✓ drawer: trusted open paints mid-flight, tabs switch, Escape closes and restores focus  833ms
+     ✓ opens curator modal from card: page, backdrop, and content mounted together  351ms
+     ✓ opens non-pavilion curator modal instance (lattice), binding actual workId to instance plans  434ms
+     ✓ permits disjoint page interaction while overlay is presented (S7)  418ms
+     ✓ refuses close when dirty (I3), stacks nested discard alert (O8), then closes after save (I4)  716ms
+     ✓ Save & Close saves then closes (presence check; the explicit-plan witness is in the motion suite above)  407ms
+     ✓ supports rapid reopen without epoch corruption (I1/I2)  484ms
+     ✓ opens technical specifications drawer and switches tabs (O5/O6)  434ms
+     ✓ restores focus to opener element upon dismissal  591ms
+     ✓ the catalog rests dimmed and contracted past the open duration, through a refused close and the nested alert, and returns on close  3058ms
+     ✓ the drawer pushes the catalog aside and holds it there; closing slides it back  1452ms
+     ✓ reduced motion reaches the same full resting pose immediately (no intermediate geometry), and the close releases it  1688ms
+     ✓ rapid reopen during the close re-rests the catalog for the new instance, then releases it once  3326ms
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > rapid reopen during the close re-rests the catalog for the new instance, then releases it once
+RAPID_REOPEN {"midClose":0.894256,"rest":0.88,"scale":0.98}
+ ✓ |firefox| tests/overlay.domain.test.ts (19 tests) 8ms
+stdout | tests/astra.browser.test.ts > trusted failure/retry and edits during save preserve the draft, then one successful bridge close
+BJS - [20:32:35]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/astra.browser.test.ts > trusted failure/retry and edits during save preserve the draft, then one successful bridge close
+BJS - [20:32:35]: Babylon.js v8.36.1 - WebGL2
+ ✓ |webkit| tests/overlay.browser.test.ts (19 tests) 24612ms
+     ✓ open and close paint backdrop/content mid-flight and fly the card to the hero and back  1500ms
+     ✓ explicit Close entry drives the accepted close with its own quicker plan  2612ms
+     ✓ a refused explicit close acquires nothing, stacks the alert above the modal, and nested Escape closes only the alert  2133ms
+     ✓ Save & Close keeps the modal presented while saving, then its explicit plan drives the accepted close  2637ms
+     ✓ reduced motion: fades only, no geometry frames  597ms
+     ✓ drawer: trusted open paints mid-flight, tabs switch, Escape closes and restores focus  866ms
+     ✓ opens curator modal from card: page, backdrop, and content mounted together  415ms
+     ✓ opens non-pavilion curator modal instance (lattice), binding actual workId to instance plans  435ms
+     ✓ permits disjoint page interaction while overlay is presented (S7)  516ms
+     ✓ refuses close when dirty (I3), stacks nested discard alert (O8), then closes after save (I4)  783ms
+     ✓ Save & Close saves then closes (presence check; the explicit-plan witness is in the motion suite above)  499ms
+     ✓ supports rapid reopen without epoch corruption (I1/I2)  534ms
+     ✓ opens technical specifications drawer and switches tabs (O5/O6)  450ms
+     ✓ restores focus to opener element upon dismissal  500ms
+     ✓ the catalog rests dimmed and contracted past the open duration, through a refused close and the nested alert, and returns on close  3115ms
+     ✓ the drawer pushes the catalog aside and holds it there; closing slides it back  1500ms
+     ✓ reduced motion reaches the same full resting pose immediately (no intermediate geometry), and the close releases it  1801ms
+     ✓ rapid reopen during the close re-rests the catalog for the new instance, then releases it once  3466ms
+ ✓ |webkit| tests/overlay.domain.test.ts (19 tests) 7ms
+stdout | tests/astra.browser.test.ts > trusted failure/retry and edits during save preserve the draft, then one successful bridge close
+BJS - [20:32:36]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/astra.browser.test.ts > trusted failure/retry and edits during save preserve the draft, then one successful bridge close
+BJS - [20:32:36]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/astra.browser.test.ts > trusted save then full discard dismissal retains the late successful saved revision
+BJS - [20:32:36]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > rapid reopen during the close re-rests the catalog for the new instance, then releases it once
+RAPID_REOPEN {"midClose":0.895933,"rest":0.88,"scale":0.98}
+stdout | tests/astra.browser.test.ts > trusted save then full discard dismissal retains the late successful saved revision
+BJS - [20:32:37]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+ ✓ |chromium| tests/overlay.browser.test.ts (19 tests) 27050ms
+     ✓ open and close paint backdrop/content mid-flight and fly the card to the hero and back  1606ms
+     ✓ explicit Close entry drives the accepted close with its own quicker plan  2747ms
+     ✓ a refused explicit close acquires nothing, stacks the alert above the modal, and nested Escape closes only the alert  2250ms
+     ✓ Save & Close keeps the modal presented while saving, then its explicit plan drives the accepted close  2782ms
+     ✓ reduced motion: fades only, no geometry frames  652ms
+     ✓ drawer: trusted open paints mid-flight, tabs switch, Escape closes and restores focus  983ms
+     ✓ opens curator modal from card: page, backdrop, and content mounted together  549ms
+     ✓ opens non-pavilion curator modal instance (lattice), binding actual workId to instance plans  517ms
+     ✓ permits disjoint page interaction while overlay is presented (S7)  667ms
+     ✓ refuses close when dirty (I3), stacks nested discard alert (O8), then closes after save (I4)  916ms
+     ✓ Save & Close saves then closes (presence check; the explicit-plan witness is in the motion suite above)  664ms
+     ✓ supports rapid reopen without epoch corruption (I1/I2)  636ms
+     ✓ opens technical specifications drawer and switches tabs (O5/O6)  600ms
+     ✓ restores focus to opener element upon dismissal  651ms
+     ✓ honors reduced motion preference for overlays  367ms
+     ✓ the catalog rests dimmed and contracted past the open duration, through a refused close and the nested alert, and returns on close  3264ms
+     ✓ the drawer pushes the catalog aside and holds it there; closing slides it back  1684ms
+     ✓ reduced motion reaches the same full resting pose immediately (no intermediate geometry), and the close releases it  1916ms
+     ✓ rapid reopen during the close re-rests the catalog for the new instance, then releases it once  3599ms
+stdout | tests/astra.browser.test.ts > trusted failure/retry and edits during save preserve the draft, then one successful bridge close
+BJS - [20:32:38]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/astra.browser.test.ts > trusted failure/retry and edits during save preserve the draft, then one successful bridge close
+BJS - [20:32:38]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/astra.browser.test.ts > trusted save then full discard dismissal retains the late successful saved revision
+ASTRA_MOUNTED_LATE {"status":"idle","catalog":"Late saved revision","trace":["home:openCurator","openCuratorModal","curatorPresentation","curator:editNotes","curator:save","curator:dismiss","confirmAlertPresentation","confirmAlert:confirmDiscard","confirmAlertPresentation","curatorPresentation","curatorSaveSucceeded"]}
+stdout | tests/astra.browser.test.ts > trusted reopen and second save cannot be rolled back by the first late result
+BJS - [20:32:38]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/astra.browser.test.ts > trusted save then full discard dismissal retains the late successful saved revision
+ASTRA_MOUNTED_LATE {"status":"idle","catalog":"Late saved revision","trace":["home:openCurator","openCuratorModal","curatorPresentation","curator:editNotes","curator:save","curator:dismiss","confirmAlertPresentation","confirmAlert:confirmDiscard","confirmAlertPresentation","curatorPresentation","curatorSaveSucceeded"]}
+stdout | tests/astra.browser.test.ts > trusted reopen and second save cannot be rolled back by the first late result
+BJS - [20:32:39]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/astra.browser.test.ts > trusted save then full discard dismissal retains the late successful saved revision
+BJS - [20:32:39]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/astra.browser.test.ts > trusted reopen and second save cannot be rolled back by the first late result
+ASTRA_MOUNTED_ORDER {"catalog":"New revision","draft":"New revision","trace":["home:openCurator","openCuratorModal","curatorPresentation","curator:editNotes","curator:save","curator:dismiss","confirmAlertPresentation","confirmAlert:confirmDiscard","confirmAlertPresentation","curatorPresentation","home:openCurator","openCuratorModal","curatorPresentation","curator:editNotes","curator:save","curatorSaveSucceeded","curatorSaveSucceeded"]}
+ ✓ |firefox| tests/astra.browser.test.ts (3 tests) 5438ms
+   ✓ trusted failure/retry and edits during save preserve the draft, then one successful bridge close  1372ms
+   ✓ trusted save then full discard dismissal retains the late successful saved revision  1650ms
+   ✓ trusted reopen and second save cannot be rolled back by the first late result  2415ms
+stdout | tests/astra.counterexamples.test.ts > a successful save after full dismissal is retained in the catalog
+late-save {"notes":"Saved before leaving","status":"idle"}
+stdout | tests/astra.counterexamples.test.ts > a stale result does not roll back a newer saved catalog revision
+out-of-order {"catalog":"new","draft":"new","dirty":false}
+stdout | tests/astra.counterexamples.test.ts > a duplicate success before the view flush preserves the pending accepted Save & Close
+duplicate-before-bridge {"first":1,"duplicate":1,"status":"presented"}
+ ✓ |firefox| tests/astra.counterexamples.test.ts (3 tests) 2ms
+stdout | tests/astra.browser.test.ts > trusted save then full discard dismissal retains the late successful saved revision
+ASTRA_MOUNTED_LATE {"status":"idle","catalog":"Late saved revision","trace":["home:openCurator","openCuratorModal","curatorPresentation","curator:editNotes","curator:save","curator:dismiss","confirmAlertPresentation","confirmAlert:confirmDiscard","confirmAlertPresentation","curatorPresentation","curatorSaveSucceeded"]}
+stdout | tests/astra.browser.test.ts > trusted reopen and second save cannot be rolled back by the first late result
+BJS - [20:32:41]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/astra.browser.test.ts > trusted reopen and second save cannot be rolled back by the first late result
+ASTRA_MOUNTED_ORDER {"catalog":"New revision","draft":"New revision","trace":["home:openCurator","openCuratorModal","curatorPresentation","curator:editNotes","curator:save","curator:dismiss","confirmAlertPresentation","confirmAlert:confirmDiscard","confirmAlertPresentation","curatorPresentation","home:openCurator","openCuratorModal","curatorPresentation","curator:editNotes","curator:save","curatorSaveSucceeded","curatorSaveSucceeded"]}
+ ✓ |webkit| tests/astra.browser.test.ts (3 tests) 5684ms
+   ✓ trusted failure/retry and edits during save preserve the draft, then one successful bridge close  1452ms
+   ✓ trusted save then full discard dismissal retains the late successful saved revision  1732ms
+   ✓ trusted reopen and second save cannot be rolled back by the first late result  2500ms
+stdout | tests/astra.counterexamples.test.ts > a successful save after full dismissal is retained in the catalog
+late-save {"notes":"Saved before leaving","status":"idle"}
+stdout | tests/astra.counterexamples.test.ts > a stale result does not roll back a newer saved catalog revision
+out-of-order {"catalog":"new","draft":"new","dirty":false}
+stdout | tests/astra.counterexamples.test.ts > a duplicate success before the view flush preserves the pending accepted Save & Close
+duplicate-before-bridge {"first":1,"duplicate":1,"status":"presented"}
+ ✓ |webkit| tests/astra.counterexamples.test.ts (3 tests) 2ms
+stdout | tests/astra.browser.test.ts > trusted reopen and second save cannot be rolled back by the first late result
+ASTRA_MOUNTED_ORDER {"catalog":"New revision","draft":"New revision","trace":["home:openCurator","openCuratorModal","curatorPresentation","curator:editNotes","curator:save","curator:dismiss","confirmAlertPresentation","confirmAlert:confirmDiscard","confirmAlertPresentation","curatorPresentation","home:openCurator","openCuratorModal","curatorPresentation","curator:editNotes","curator:save","curatorSaveSucceeded","curatorSaveSucceeded"]}
+ ✓ |chromium| tests/astra.browser.test.ts (3 tests) 6112ms
+   ✓ trusted failure/retry and edits during save preserve the draft, then one successful bridge close  1596ms
+   ✓ trusted save then full discard dismissal retains the late successful saved revision  1850ms
+   ✓ trusted reopen and second save cannot be rolled back by the first late result  2666ms
+ ✓ |chromium| tests/overlay.domain.test.ts (19 tests) 4ms
+stdout | tests/astra.counterexamples.test.ts > a successful save after full dismissal is retained in the catalog
+late-save {"notes":"Saved before leaving","status":"idle"}
+stdout | tests/astra.counterexamples.test.ts > a stale result does not roll back a newer saved catalog revision
+out-of-order {"catalog":"new","draft":"new","dirty":false}
+stdout | tests/astra.counterexamples.test.ts > a duplicate success before the view flush preserves the pending accepted Save & Close
+duplicate-before-bridge {"first":1,"duplicate":1,"status":"presented"}
+ ✓ |chromium| tests/astra.counterexamples.test.ts (3 tests) 1ms
+
+ Test Files  12 passed (12)
+      Tests  132 passed (132)
+   Start at  20:32:09
+   Duration  35.23s (transform 0ms, setup 0ms, collect 3.58s, tests 92.28s, environment 0ms, prepare 260.27s)
+

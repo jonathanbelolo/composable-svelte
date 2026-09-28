@@ -1,0 +1,17 @@
+{
+  "visual.browser.test.ts": "eee248467331db409bba98eae3e8bc27fe4dfbb81732a76ad0ea33013ec6a564",
+  "vitest.c1.config.ts": "a7ca7ba2d60e81b7202cfc96fb26139f936c976f3417b252e33640bc2267e3b4",
+  "astra-c1-negative-velocity.browser.test.ts": "d734e47388dfad30b16a8e0bf66627630a85c662963c2bd9e5c6ac2c5527688d",
+  "c1-corrected-repeat.log": "6e5adbb0696ead48d62af4a9fda458db669c99c97db70a7bc9d0ba1c8deea5bb",
+  "viewport-test-delta.log": "1114151c6a3892f5112a284559903070a64469fded8cc5aed83e92582cc674ab",
+  "vitest.viewport.config.ts": "964bcf420acb1e9f3d50f4efbcf2d522fdb70ae59287f4337bca222b2590076e",
+  "vitest.c1-corrected.config.ts": "c02da5726e29ce21f427d77a695f10214dac4502fcfce035d716cd9c9557b2e9",
+  "visual-correction2.browser.test.ts": "e2f5769fe392303cb9962b63ad16b3af0d4d94933c5ffb3e2b1313038d115a19",
+  "astra-c1-diagnostic.browser.test.ts": "cbd8eff2538e1e3355353e928172f7dcd437640ae759662a04aa61d159311195",
+  "astra-c1-corrected.browser.test.ts": "6fbc3621972003ce34636c7dc2d64e9a6d61dd2a55716628a06713a33d082292",
+  "c1-diagnostic-repeat.log": "704d7677a1e771019bb3a5ccd7ae4b9981e48b980d8aab71cd1bb8d76faffaa5",
+  "c1-secant-analysis.json": "a9911f2fac2c687feebcd1723774c9a65a1922c06a94baeb4529298284c2fe23",
+  "astra-c1-negative-endpoint.browser.test.ts": "2331a71ed5101183d6511f9b6905d845bc33e6ab1c36d5574a80ba7652ed1b58",
+  "c1-exact-and-negative-controls.log": "27e600cb053b6fc8fb20ba03632d3a67182904a5dbb772d440a949a2e028f373",
+  "vitest.c1-negative.config.ts": "0dddb38fd30e90d904abe5ccd174597f314f08f13feb1134dc4a4e1bb8bf1567"
+}

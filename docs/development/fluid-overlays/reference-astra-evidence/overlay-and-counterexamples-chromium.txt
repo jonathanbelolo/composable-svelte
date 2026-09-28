@@ -1,0 +1,101 @@
+12:33:57 AM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference - using default configuration.
+
+ RUN  v4.0.7 /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference
+
+12:33:57 AM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference - using default configuration.
+Port 63315 is in use, trying another one...
+ ✓ |chromium| tests/overlay.domain.test.ts (19 tests) 6ms
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > open and close paint backdrop/content mid-flight and fly the card to the hero and back
+BJS - [00:33:59]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > explicit Close entry drives the accepted close with its own quicker plan
+BJS - [00:34:00]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > a refused explicit close acquires nothing, stacks the alert above the modal, and nested Escape closes only the alert
+BJS - [00:34:03]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > Save & Close keeps the modal presented while saving, then its explicit plan drives the accepted close
+BJS - [00:34:05]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > reduced motion: fades only, no geometry frames
+BJS - [00:34:08]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > drawer: trusted open paints mid-flight, tabs switch, Escape closes and restores focus
+BJS - [00:34:08]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > opens curator modal from card: page, backdrop, and content mounted together
+BJS - [00:34:09]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > opens non-pavilion curator modal instance (lattice), binding actual workId to instance plans
+BJS - [00:34:10]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > permits disjoint page interaction while overlay is presented (S7)
+BJS - [00:34:11]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > refuses close when dirty (I3), stacks nested discard alert (O8), then closes after save (I4)
+BJS - [00:34:11]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > Save & Close saves then closes
+BJS - [00:34:12]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > supports rapid reopen without epoch corruption (I1/I2)
+BJS - [00:34:13]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > opens technical specifications drawer and switches tabs (O5/O6)
+BJS - [00:34:13]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > restores focus to opener element upon dismissal
+BJS - [00:34:14]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > honors reduced motion preference for overlays
+BJS - [00:34:15]: Babylon.js v8.36.1 - WebGL2
+ ✓ |chromium| tests/overlay.browser.test.ts (15 tests) 16521ms
+     ✓ open and close paint backdrop/content mid-flight and fly the card to the hero and back  1391ms
+     ✓ explicit Close entry drives the accepted close with its own quicker plan  2715ms
+     ✓ a refused explicit close acquires nothing, stacks the alert above the modal, and nested Escape closes only the alert  2250ms
+     ✓ Save & Close keeps the modal presented while saving, then its explicit plan drives the accepted close  2783ms
+     ✓ reduced motion: fades only, no geometry frames  583ms
+     ✓ drawer: trusted open paints mid-flight, tabs switch, Escape closes and restores focus  984ms
+     ✓ opens curator modal from card: page, backdrop, and content mounted together  633ms
+     ✓ opens non-pavilion curator modal instance (lattice), binding actual workId to instance plans  600ms
+     ✓ permits disjoint page interaction while overlay is presented (S7)  651ms
+     ✓ refuses close when dirty (I3), stacks nested discard alert (O8), then closes after save (I4)  899ms
+     ✓ Save & Close saves then closes  649ms
+     ✓ supports rapid reopen without epoch corruption (I1/I2)  700ms
+     ✓ opens technical specifications drawer and switches tabs (O5/O6)  584ms
+     ✓ restores focus to opener element upon dismissal  752ms
+     ✓ honors reduced motion preference for overlays  348ms
+stdout | tests/astra.counterexamples.test.ts > a successful save after full dismissal is retained in the catalog
+late-save {"notes":"Lightweight double-skin ETFE inflated at 250 Pa gauge pressure.","status":"idle"}
+stdout | tests/astra.counterexamples.test.ts > a stale result does not roll back a newer saved catalog revision
+out-of-order {"catalog":"old","draft":"new","dirty":false}
+ ❯ |chromium| tests/astra.counterexamples.test.ts (2 tests | 2 failed) 3ms
+   × a successful save after full dismissal is retained in the catalog 2ms
+   × a stale result does not roll back a newer saved catalog revision 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |chromium| tests/astra.counterexamples.test.ts > a successful save after full dismissal is retained in the catalog
+AssertionError: expected 'Lightweight double-skin ETFE inflated…' to be 'Saved before leaving' // Object.is equality
+
+Expected: [32m"Saved before leaving"[39m
+Received: [31m"Lightweight double-skin ETFE inflated at 250 Pa gauge pressure."[39m
+
+ ❯ tests/astra.counterexamples.test.ts:14:37
+     12|  s=step(s,complete);
+     13|  console.log('late-save',JSON.stringify({notes:s.specs.cloud!.curatorN…
+     14|  expect(s.specs.cloud!.curatorNotes).toBe('Saved before leaving');
+       |                                     ^
+     15|  expect(s.curator).toBeNull();
+     16| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |chromium| tests/astra.counterexamples.test.ts > a stale result does not roll back a newer saved catalog revision
+AssertionError: expected 'old' to be 'new' // Object.is equality
+
+Expected: [32m"new"[39m
+Received: [31m"old"[39m
+
+ ❯ tests/astra.counterexamples.test.ts:27:37
+     25|  s=step(step(b,resultB),resultA);
+     26|  console.log('out-of-order',JSON.stringify({catalog:s.specs.cloud!.cur…
+     27|  expect(s.specs.cloud!.curatorNotes).toBe('new');
+       |                                     ^
+     28| });
+     29| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 2 passed (3)
+      Tests  2 failed | 34 passed (36)
+   Start at  00:33:57
+   Duration  18.40s (transform 0ms, setup 0ms, collect 1.23s, tests 16.53s, environment 0ms, prepare 19.21s)
+

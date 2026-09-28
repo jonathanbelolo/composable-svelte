@@ -1,0 +1,112 @@
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-core-build10-review/packages/core
+
+ ✓ |chromium| tests/fluid-motion/visual.browser.test.ts (15 tests | 14 skipped) 744ms
+   ✓ C1 at the destination retarget: position and velocity continue exactly from the displayed state  743ms
+ ✓ |webkit| tests/fluid-motion/visual.browser.test.ts (15 tests | 14 skipped) 782ms
+   ✓ C1 at the destination retarget: position and velocity continue exactly from the displayed state  781ms
+ ✓ |firefox| tests/fluid-motion/visual.browser.test.ts (15 tests | 14 skipped) 730ms
+   ✓ C1 at the destination retarget: position and velocity continue exactly from the displayed state  729ms
+ ❯ |chromium| tests/fluid-motion/astra-c1-negative-velocity.browser.test.ts (1 test | 1 failed) 827ms
+   × C1 negative velocity at the destination retarget: position and velocity continue exactly from the displayed state 827ms
+ ❯ |webkit| tests/fluid-motion/astra-c1-negative-velocity.browser.test.ts (1 test | 1 failed) 824ms
+   × C1 negative velocity at the destination retarget: position and velocity continue exactly from the displayed state 824ms
+ ❯ |firefox| tests/fluid-motion/astra-c1-negative-velocity.browser.test.ts (1 test | 1 failed) 790ms
+   × C1 negative velocity at the destination retarget: position and velocity continue exactly from the displayed state 790ms
+ ❯ |chromium| tests/fluid-motion/astra-c1-negative-endpoint.browser.test.ts (1 test | 1 failed) 819ms
+   × C1 negative endpoint at the destination retarget: position and velocity continue exactly from the displayed state 818ms
+ ❯ |webkit| tests/fluid-motion/astra-c1-negative-endpoint.browser.test.ts (1 test | 1 failed) 816ms
+   × C1 negative endpoint at the destination retarget: position and velocity continue exactly from the displayed state 816ms
+ ❯ |firefox| tests/fluid-motion/astra-c1-negative-endpoint.browser.test.ts (1 test | 1 failed) 784ms
+   × C1 negative endpoint at the destination retarget: position and velocity continue exactly from the displayed state 783ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |chromium| tests/fluid-motion/astra-c1-negative-endpoint.browser.test.ts > C1 negative endpoint at the destination retarget: position and velocity continue exactly from the displayed state
+AssertionError: expected 301 to be close to 300, received difference is 1, but expected 0.0005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/astra-c1-negative-endpoint.browser.test.ts/C1-negative-endpoint-at-the-destination-retarget--position-and-velocity-continue-exactly-from-the-displayed-state-1.png
+
+ ❯ tests/fluid-motion/astra-c1-negative-endpoint.browser.test.ts:65:46
+     63|   // Endpoint: the measured destination rect, reached with zero veloci…
+     64|   const last = f.diagnostics('frame').filter(event => event.participan…
+     65|   (last as {x:number}).x += 1; expect(last.x).toBeCloseTo(retarget.to[…
+       |                                              ^
+     66|   // Frame `vx` is a backward 1 ms secant (compose(t).x - compose(t - …
+     67|   // Hermite continuation (from the displayed state to the destination…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  |chromium| tests/fluid-motion/astra-c1-negative-velocity.browser.test.ts > C1 negative velocity at the destination retarget: position and velocity continue exactly from the displayed state
+AssertionError: expected 0.01 to be close to +0, received difference is 0.01, but expected 5e-7
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/astra-c1-negative-velocity.browser.test.ts/C1-negative-velocity-at-the-destination-retarget--position-and-velocity-continue-exactly-from-the-displayed-state-1.png
+
+ ❯ tests/fluid-motion/astra-c1-negative-velocity.browser.test.ts:71:18
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  |firefox| tests/fluid-motion/astra-c1-negative-endpoint.browser.test.ts > C1 negative endpoint at the destination retarget: position and velocity continue exactly from the displayed state
+AssertionError: expected 301 to be close to 300, received difference is 1, but expected 0.0005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/astra-c1-negative-endpoint.browser.test.ts/C1-negative-endpoint-at-the-destination-retarget--position-and-velocity-continue-exactly-from-the-displayed-state-1.png
+
+ ❯ tests/fluid-motion/astra-c1-negative-endpoint.browser.test.ts:65:46
+     63|   // Endpoint: the measured destination rect, reached with zero veloci…
+     64|   const last = f.diagnostics('frame').filter(event => event.participan…
+     65|   (last as {x:number}).x += 1; expect(last.x).toBeCloseTo(retarget.to[…
+       |                                              ^
+     66|   // Frame `vx` is a backward 1 ms secant (compose(t).x - compose(t - …
+     67|   // Hermite continuation (from the displayed state to the destination…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  |firefox| tests/fluid-motion/astra-c1-negative-velocity.browser.test.ts > C1 negative velocity at the destination retarget: position and velocity continue exactly from the displayed state
+AssertionError: expected 0.01 to be close to +0, received difference is 0.01, but expected 5e-7
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/astra-c1-negative-velocity.browser.test.ts/C1-negative-velocity-at-the-destination-retarget--position-and-velocity-continue-exactly-from-the-displayed-state-1.png
+
+ ❯ tests/fluid-motion/astra-c1-negative-velocity.browser.test.ts:71:18
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  |webkit| tests/fluid-motion/astra-c1-negative-endpoint.browser.test.ts > C1 negative endpoint at the destination retarget: position and velocity continue exactly from the displayed state
+AssertionError: expected 301 to be close to 300, received difference is 1, but expected 0.0005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/astra-c1-negative-endpoint.browser.test.ts/C1-negative-endpoint-at-the-destination-retarget--position-and-velocity-continue-exactly-from-the-displayed-state-1.png
+
+ ❯ tests/fluid-motion/astra-c1-negative-endpoint.browser.test.ts:65:58
+     63|   // Endpoint: the measured destination rect, reached with zero veloci…
+     64|   const last = f.diagnostics('frame').filter(event => event.participan…
+     65|   (last as {x:number}).x += 1; expect(last.x).toBeCloseTo(retarget.to[…
+       |                                                          ^
+     66|   // Frame `vx` is a backward 1 ms secant (compose(t).x - compose(t - …
+     67|   // Hermite continuation (from the displayed state to the destination…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  |webkit| tests/fluid-motion/astra-c1-negative-velocity.browser.test.ts > C1 negative velocity at the destination retarget: position and velocity continue exactly from the displayed state
+AssertionError: expected 0.01 to be close to +0, received difference is 0.01, but expected 5e-7
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/astra-c1-negative-velocity.browser.test.ts/C1-negative-velocity-at-the-destination-retarget--position-and-velocity-continue-exactly-from-the-displayed-state-1.png
+
+ ❯ tests/fluid-motion/astra-c1-negative-velocity.browser.test.ts:71:30
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  6 failed | 3 passed (9)
+      Tests  6 failed | 3 passed | 42 skipped (51)
+   Start at  20:56:17
+   Duration  4.09s (transform 0ms, setup 39ms, collect 752ms, tests 7.12s, environment 0ms, prepare 10.00s)
+

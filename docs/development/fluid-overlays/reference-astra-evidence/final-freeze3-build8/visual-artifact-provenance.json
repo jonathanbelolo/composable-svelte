@@ -1,0 +1,56 @@
+{
+  "audited_utc": "2026-09-28T18:58:08.773641+00:00",
+  "source_directory": "/private/tmp/overlay-reference-astra-20260928/docs/development/fluid-motion/reference-evidence/rich-representation",
+  "final_healthy_raster_retained": false,
+  "reason": "Healthy and negative-control runs used the same screenshot/JSON paths. The 18:33:50 negative run overwrote them at 18:33:53; JSON representationAtWaypoint is null. Other rasters date to September 27 original review.",
+  "files": [
+    {
+      "name": "airflow-after-commit-paused.png",
+      "mtime_utc": "2026-09-27T22:35:27.148565+00:00",
+      "sha256": "125eb9870e9bed379543ac4bce9f055cf04688d4ef8edba13ce9259a1c360353",
+      "classification": "earlier 2026-09-27 initial review full Chromium run; NOT regenerated on final freeze3/build8"
+    },
+    {
+      "name": "airflow-after-commit.png",
+      "mtime_utc": "2026-09-27T22:35:28.361051+00:00",
+      "sha256": "e7a68a500ed65319253b056b3255d91eddd65d586d4f1381c055343a09ad0367",
+      "classification": "earlier 2026-09-27 initial review full Chromium run; NOT regenerated on final freeze3/build8"
+    },
+    {
+      "name": "outgoing-model-after-retirement.png",
+      "mtime_utc": "2026-09-27T22:35:36.872645+00:00",
+      "sha256": "94af61b70162f492143f500370efcaedc78734e070d68d8059cc87708d784355",
+      "classification": "earlier 2026-09-27 initial review full Chromium run; NOT regenerated on final freeze3/build8"
+    },
+    {
+      "name": "outgoing-model-control.png",
+      "mtime_utc": "2026-09-27T22:35:35.339633+00:00",
+      "sha256": "6216417431fb1ce1cf0c29579b0e9d3be28b8b51a0e522f299f7bd41f268134c",
+      "classification": "earlier 2026-09-27 initial review full Chromium run; NOT regenerated on final freeze3/build8"
+    },
+    {
+      "name": "rich-evidence.json",
+      "mtime_utc": "2026-09-28T18:33:53.730746+00:00",
+      "sha256": "cb861d841115304b26840e9fbb1fff5a466b8a3c6e375ea80b1796fa997ce53e",
+      "classification": "final freeze3/build8 negative-control run; NOT healthy acceptance raster"
+    },
+    {
+      "name": "study-open-rich-waypoint.png",
+      "mtime_utc": "2026-09-28T18:33:53.712176+00:00",
+      "sha256": "16f00772d9273f18c8a31dd9f7edbe7dd412654ef7738aa3890ee681fb93972c",
+      "classification": "final freeze3/build8 negative-control run; NOT healthy acceptance raster"
+    },
+    {
+      "name": "turntable-after-commit.png",
+      "mtime_utc": "2026-09-27T22:35:23.877693+00:00",
+      "sha256": "87186b82a85e60ddb6d798be16f952b91ab529301bc1a3ab404ee4aad1bce9f3",
+      "classification": "earlier 2026-09-27 initial review full Chromium run; NOT regenerated on final freeze3/build8"
+    },
+    {
+      "name": "turntable-study-settled.png",
+      "mtime_utc": "2026-09-27T22:35:24.687382+00:00",
+      "sha256": "078c5640377006d15f2e0b5420544f28eaf76bfa9bf17b9ad7dbdcf1ea24b32b",
+      "classification": "earlier 2026-09-27 initial review full Chromium run; NOT regenerated on final freeze3/build8"
+    }
+  ]
+}

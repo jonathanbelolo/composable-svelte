@@ -1,0 +1,194 @@
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-core-build6-review/packages/core
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+Port 63315 is in use, trying another one...
+ ❯ |chromium| tests/fluid-motion/overlay-motion.browser.test.ts (26 tests | 1 failed | 10 skipped) 16852ms
+   ↓ close then open are choreographed live on one timeline; completion exactly once each; no spring, copies or leases left
+   ↓ a refused close claims and completes nothing; a reopen during dismissal cancels the old obligation without dispatch
+   ✓ reduced motion: a claimed close completes immediately, exactly once, with no run or leases 30ms
+   ↓ Host destroyed mid-dismissal: the obligation is cancelled (never dispatched into the destroyed owner); leases and copies are released
+   ✓ W-C3: during choreographed open/close the primitive keeps focus, inertness and scroll-lock authority (visuals only are claimed)  1365ms
+   ✓ C2 explicit entry: transition() prepares BEFORE the commit — a page source the commit removes is still captured and exits as a copy  366ms
+   ✓ C2 epoch: a pending explicit plan applies only to its own epoch; a stale one is discarded (nothing acquired) and the default plan runs  367ms
+   ✓ C5: a REFUSED explicit transition overlapping a running open leaves that run progressing untouched (same copy, leases, tracks, obligation)  1068ms
+   ✓ C2 explicit open: the shared source is captured before the commit removes it; the flight departs from its pre-commit geometry  932ms
+   ↓ destination-phase ambiguity is decided before any destination is suppressed (no acquire-then-rollback)
+   ↓ U2 nested combined dismissal: one parent plan staggers the live child and the parent on one timeline; the child joins (no spring), both complete once; authority stays with the primitives
+   ✓ C2 default phase (Main disposition): one accepted action removes the page card AND opens the modal — the DEFAULT open plan captured the card before the destructive render; the flight departs from its pre-render geometry into the modal layer  1066ms
+   ✓ C3 portable media: a live canvas flight is re-homed into the modal layer (with or without moveBefore) and keeps its content; a cross-origin frame copy carries no live browsing context; other tracks run  1067ms
+   ✓ C2 default phase, CONDITIONAL overlay component: the Modal mounts in the same render that removes the card; the page-created handle's presentation probe captures the card before that render  1067ms
+   ✓ C2 default phase: a REFUSED close (guard) prepares nothing at the checkpoint and leaves a running open untouched  1066ms
+   ↓ persistent page reaction: a still-mounted catalog WITH focusable controls follows its declared dim under the opening modal; DOM kept; focus stays with the modal coordinator
+   ↓ R-11: a refused explicit transition's discarded preparation settles "unclaimed" — never reported as superseding motion; no frames, no paint
+   ✓ conditional declaration: repeated epochs, refusal and replacement — each accepted open captures the removed card pre-render; a refused close prepares nothing; a rapid reversal continues the displayed paint  2949ms
+   ✓ conditional declaration: absent destination settles the flight honestly with balanced cleanup; owner (Host) disposal mid-flight cancels the obligation and releases everything  1235ms
+   ✓ C2 bindable/prop-only update (no store commit): one Svelte update removes the page card and presents the modal — the Host pre-effect captured the card before the destructive render  734ms
+   ✓ source-owner disposal: the conditional overlay owner is unmounted mid-dismissal by an external accepted change — its obligation is cancelled (never dispatched), resources released, page intact  731ms
+   ↓ overlay-lifetime resting reaction: the page dim is HELD past its duration while presented (open completes without waiting), survives a refused close, and the accepted close continues from the displayed value to baseline; balanced cleanup
+   ↓ overlay-lifetime resting reaction: Host destruction while presented restores the page and leaves no leases
+   ✓ overlay-lifetime resting reaction under reduced motion: the open reaches the same resting state immediately (no animation), the close releases it immediately; balanced  435ms
+   × C3 live MSE video across layers: the removed card's playing MediaSource video flies into the modal layer (moveBefore or re-insertion) without pausing; currentTime keeps advancing 2373ms
+   ↓ control (no re-home): the same explicit removal with the MSE card as a plain OUTGOING page track
+ ✓ |chromium| tests/fluid-motion/overlay-identity.browser.test.ts (9 tests | 7 skipped) 10ms
+ ❯ |webkit| tests/fluid-motion/overlay-motion.browser.test.ts (26 tests | 1 failed | 10 skipped) 16918ms
+   ↓ close then open are choreographed live on one timeline; completion exactly once each; no spring, copies or leases left
+   ↓ a refused close claims and completes nothing; a reopen during dismissal cancels the old obligation without dispatch
+   ✓ reduced motion: a claimed close completes immediately, exactly once, with no run or leases 52ms
+   ↓ Host destroyed mid-dismissal: the obligation is cancelled (never dispatched into the destroyed owner); leases and copies are released
+   ✓ W-C3: during choreographed open/close the primitive keeps focus, inertness and scroll-lock authority (visuals only are claimed)  1365ms
+   ✓ C2 explicit entry: transition() prepares BEFORE the commit — a page source the commit removes is still captured and exits as a copy  368ms
+   ✓ C2 epoch: a pending explicit plan applies only to its own epoch; a stale one is discarded (nothing acquired) and the default plan runs  367ms
+   ✓ C5: a REFUSED explicit transition overlapping a running open leaves that run progressing untouched (same copy, leases, tracks, obligation)  1067ms
+   ✓ C2 explicit open: the shared source is captured before the commit removes it; the flight departs from its pre-commit geometry  932ms
+   ↓ destination-phase ambiguity is decided before any destination is suppressed (no acquire-then-rollback)
+   ↓ U2 nested combined dismissal: one parent plan staggers the live child and the parent on one timeline; the child joins (no spring), both complete once; authority stays with the primitives
+   ✓ C2 default phase (Main disposition): one accepted action removes the page card AND opens the modal — the DEFAULT open plan captured the card before the destructive render; the flight departs from its pre-render geometry into the modal layer  1084ms
+   ✓ C3 portable media: a live canvas flight is re-homed into the modal layer (with or without moveBefore) and keeps its content; a cross-origin frame copy carries no live browsing context; other tracks run  1067ms
+   ✓ C2 default phase, CONDITIONAL overlay component: the Modal mounts in the same render that removes the card; the page-created handle's presentation probe captures the card before that render  1082ms
+   ✓ C2 default phase: a REFUSED close (guard) prepares nothing at the checkpoint and leaves a running open untouched  1084ms
+   ↓ persistent page reaction: a still-mounted catalog WITH focusable controls follows its declared dim under the opening modal; DOM kept; focus stays with the modal coordinator
+   ↓ R-11: a refused explicit transition's discarded preparation settles "unclaimed" — never reported as superseding motion; no frames, no paint
+   ✓ conditional declaration: repeated epochs, refusal and replacement — each accepted open captures the removed card pre-render; a refused close prepares nothing; a rapid reversal continues the displayed paint  2934ms
+   ✓ conditional declaration: absent destination settles the flight honestly with balanced cleanup; owner (Host) disposal mid-flight cancels the obligation and releases everything  1216ms
+   ✓ C2 bindable/prop-only update (no store commit): one Svelte update removes the page card and presents the modal — the Host pre-effect captured the card before the destructive render  735ms
+   ✓ source-owner disposal: the conditional overlay owner is unmounted mid-dismissal by an external accepted change — its obligation is cancelled (never dispatched), resources released, page intact  732ms
+   ↓ overlay-lifetime resting reaction: the page dim is HELD past its duration while presented (open completes without waiting), survives a refused close, and the accepted close continues from the displayed value to baseline; balanced cleanup
+   ↓ overlay-lifetime resting reaction: Host destruction while presented restores the page and leaves no leases
+   ✓ overlay-lifetime resting reaction under reduced motion: the open reaches the same resting state immediately (no animation), the close releases it immediately; balanced  432ms
+   × C3 live MSE video across layers: the removed card's playing MediaSource video flies into the modal layer (moveBefore or re-insertion) without pausing; currentTime keeps advancing 2400ms
+   ↓ control (no re-home): the same explicit removal with the MSE card as a plain OUTGOING page track
+ ✓ |webkit| tests/fluid-motion/overlay-identity.browser.test.ts (9 tests | 7 skipped) 12ms
+ ❯ |firefox| tests/fluid-motion/overlay-motion.browser.test.ts (26 tests | 1 failed | 10 skipped) 16819ms
+   ↓ close then open are choreographed live on one timeline; completion exactly once each; no spring, copies or leases left
+   ↓ a refused close claims and completes nothing; a reopen during dismissal cancels the old obligation without dispatch
+   ✓ reduced motion: a claimed close completes immediately, exactly once, with no run or leases 20ms
+   ↓ Host destroyed mid-dismissal: the obligation is cancelled (never dispatched into the destroyed owner); leases and copies are released
+   ✓ W-C3: during choreographed open/close the primitive keeps focus, inertness and scroll-lock authority (visuals only are claimed)  1388ms
+   ✓ C2 explicit entry: transition() prepares BEFORE the commit — a page source the commit removes is still captured and exits as a copy  369ms
+   ✓ C2 epoch: a pending explicit plan applies only to its own epoch; a stale one is discarded (nothing acquired) and the default plan runs  362ms
+   ✓ C5: a REFUSED explicit transition overlapping a running open leaves that run progressing untouched (same copy, leases, tracks, obligation)  1054ms
+   ✓ C2 explicit open: the shared source is captured before the commit removes it; the flight departs from its pre-commit geometry  910ms
+   ↓ destination-phase ambiguity is decided before any destination is suppressed (no acquire-then-rollback)
+   ↓ U2 nested combined dismissal: one parent plan staggers the live child and the parent on one timeline; the child joins (no spring), both complete once; authority stays with the primitives
+   ✓ C2 default phase (Main disposition): one accepted action removes the page card AND opens the modal — the DEFAULT open plan captured the card before the destructive render; the flight departs from its pre-render geometry into the modal layer  1050ms
+   ✓ C3 portable media: a live canvas flight is re-homed into the modal layer (with or without moveBefore) and keeps its content; a cross-origin frame copy carries no live browsing context; other tracks run  1125ms
+   ✓ C2 default phase, CONDITIONAL overlay component: the Modal mounts in the same render that removes the card; the page-created handle's presentation probe captures the card before that render  1065ms
+   ✓ C2 default phase: a REFUSED close (guard) prepares nothing at the checkpoint and leaves a running open untouched  1062ms
+   ↓ persistent page reaction: a still-mounted catalog WITH focusable controls follows its declared dim under the opening modal; DOM kept; focus stays with the modal coordinator
+   ↓ R-11: a refused explicit transition's discarded preparation settles "unclaimed" — never reported as superseding motion; no frames, no paint
+   ✓ conditional declaration: repeated epochs, refusal and replacement — each accepted open captures the removed card pre-render; a refused close prepares nothing; a rapid reversal continues the displayed paint  2948ms
+   ✓ conditional declaration: absent destination settles the flight honestly with balanced cleanup; owner (Host) disposal mid-flight cancels the obligation and releases everything  1224ms
+   ✓ C2 bindable/prop-only update (no store commit): one Svelte update removes the page card and presents the modal — the Host pre-effect captured the card before the destructive render  713ms
+   ✓ source-owner disposal: the conditional overlay owner is unmounted mid-dismissal by an external accepted change — its obligation is cancelled (never dispatched), resources released, page intact  734ms
+   ↓ overlay-lifetime resting reaction: the page dim is HELD past its duration while presented (open completes without waiting), survives a refused close, and the accepted close continues from the displayed value to baseline; balanced cleanup
+   ↓ overlay-lifetime resting reaction: Host destruction while presented restores the page and leaves no leases
+   ✓ overlay-lifetime resting reaction under reduced motion: the open reaches the same resting state immediately (no animation), the close releases it immediately; balanced  418ms
+   × C3 live MSE video across layers: the removed card's playing MediaSource video flies into the modal layer (moveBefore or re-insertion) without pausing; currentTime keeps advancing 2376ms
+   ↓ control (no re-home): the same explicit removal with the MSE card as a plain OUTGOING page track
+ ✓ |firefox| tests/fluid-motion/overlay-identity.browser.test.ts (9 tests | 7 skipped) 16ms
+ ✓ |chromium| tests/fluid-motion/overlay-retention-requirements.browser.test.ts (7 tests) 6445ms
+   ✓ nested unwind: closing the child restores the PARENT layer's resting reaction (0.6), not the baseline  1446ms
+   ✓ reduced motion reaches the full declared resting POSE (scale), not only the dim  350ms
+   ✓ same-node channel independence: a later run animating only opacity keeps the retained resting scale  1048ms
+   ✓ displayed transform adoption: the close continues the retained SCALE from its displayed factor (not the declared from)  1068ms
+   ✓ removal: the reacting region is removed while resting — no stale write, the close proceeds, balanced cleanup  1067ms
+   ✓ rapid reopen: reopening during the close continues from the displayed page value and rests again at the declared value  1249ms
+ ✓ |chromium| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests) 8ms
+ ✓ |webkit| tests/fluid-motion/overlay-retention-requirements.browser.test.ts (7 tests) 6419ms
+   ✓ nested unwind: closing the child restores the PARENT layer's resting reaction (0.6), not the baseline  1434ms
+   ✓ reduced motion reaches the full declared resting POSE (scale), not only the dim  351ms
+   ✓ same-node channel independence: a later run animating only opacity keeps the retained resting scale  1049ms
+   ✓ displayed transform adoption: the close continues the retained SCALE from its displayed factor (not the declared from)  1067ms
+   ✓ removal: the reacting region is removed while resting — no stale write, the close proceeds, balanced cleanup  1048ms
+   ✓ rapid reopen: reopening during the close continues from the displayed page value and rests again at the declared value  1250ms
+ ✓ |webkit| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests) 13ms
+ ✓ |chromium| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests) 106ms
+ ✓ |chromium| tests/fluid-motion/overlay-store-checkpoint.browser.test.ts (2 tests) 2ms
+ ✓ |webkit| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests) 132ms
+ ✓ |webkit| tests/fluid-motion/overlay-store-checkpoint.browser.test.ts (2 tests) 2ms
+ ✓ |firefox| tests/fluid-motion/overlay-retention-requirements.browser.test.ts (7 tests) 6378ms
+   ✓ nested unwind: closing the child restores the PARENT layer's resting reaction (0.6), not the baseline  1427ms
+   ✓ reduced motion reaches the full declared resting POSE (scale), not only the dim  354ms
+   ✓ same-node channel independence: a later run animating only opacity keeps the retained resting scale  1050ms
+   ✓ displayed transform adoption: the close continues the retained SCALE from its displayed factor (not the declared from)  1052ms
+   ✓ removal: the reacting region is removed while resting — no stale write, the close proceeds, balanced cleanup  1051ms
+   ✓ rapid reopen: reopening during the close continues from the displayed page value and rests again at the declared value  1232ms
+ ✓ |firefox| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests) 17ms
+ ✓ |firefox| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests) 117ms
+ ✓ |firefox| tests/fluid-motion/overlay-store-checkpoint.browser.test.ts (2 tests) 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |chromium| tests/fluid-motion/overlay-motion.browser.test.ts > C3 live MSE video across layers: the removed card's playing MediaSource video flies into the modal layer (moveBefore or re-insertion) without pausing; currentTime keeps advancing
+AssertionError: the detached MSE element stopped (moveBefore: true): expected true to be false // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/overlay-motion.browser.test.ts/C3-live-MSE-video-across-layers--the-removed-card-s-playing-MediaSource-video-flies-into-the-modal-layer--moveBefore-or-re-insertion--without-pausing--currentTime-keeps-advancing-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- false[39m
+[31m+ true[39m
+
+ ❯ tests/fluid-motion/overlay-motion.browser.test.ts:683:110
+    681|   // MSE: the built-in provider resumes the detached real element (mut…
+    682|   await sleep(200);
+    683|   expect(video.paused, `the detached MSE element stopped (moveBefore: …
+       |                                                                                                              ^
+    684|   const t0 = video.currentTime;
+    685|   const mirror = [...flight!.querySelectorAll<HTMLCanvasElement>('canv…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |firefox| tests/fluid-motion/overlay-motion.browser.test.ts > C3 live MSE video across layers: the removed card's playing MediaSource video flies into the modal layer (moveBefore or re-insertion) without pausing; currentTime keeps advancing
+AssertionError: the detached MSE element stopped (moveBefore: false): expected true to be false // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/overlay-motion.browser.test.ts/C3-live-MSE-video-across-layers--the-removed-card-s-playing-MediaSource-video-flies-into-the-modal-layer--moveBefore-or-re-insertion--without-pausing--currentTime-keeps-advancing-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- false[39m
+[31m+ true[39m
+
+ ❯ tests/fluid-motion/overlay-motion.browser.test.ts:683:110
+    681|   // MSE: the built-in provider resumes the detached real element (mut…
+    682|   await sleep(200);
+    683|   expect(video.paused, `the detached MSE element stopped (moveBefore: …
+       |                                                                                                              ^
+    684|   const t0 = video.currentTime;
+    685|   const mirror = [...flight!.querySelectorAll<HTMLCanvasElement>('canv…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |webkit| tests/fluid-motion/overlay-motion.browser.test.ts > C3 live MSE video across layers: the removed card's playing MediaSource video flies into the modal layer (moveBefore or re-insertion) without pausing; currentTime keeps advancing
+AssertionError: the detached MSE element stopped (moveBefore: false): expected true to be false // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/overlay-motion.browser.test.ts/C3-live-MSE-video-across-layers--the-removed-card-s-playing-MediaSource-video-flies-into-the-modal-layer--moveBefore-or-re-insertion--without-pausing--currentTime-keeps-advancing-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- false[39m
+[31m+ true[39m
+
+ ❯ tests/fluid-motion/overlay-motion.browser.test.ts:683:115
+    681|   // MSE: the built-in provider resumes the detached real element (mut…
+    682|   await sleep(200);
+    683|   expect(video.paused, `the detached MSE element stopped (moveBefore: …
+       |                                                                                                                   ^
+    684|   const t0 = video.currentTime;
+    685|   const mirror = [...flight!.querySelectorAll<HTMLCanvasElement>('canv…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  3 failed | 15 passed (18)
+      Tests  3 failed | 102 passed | 51 skipped (156)
+   Start at  00:55:25
+   Duration  25.68s (transform 0ms, setup 54ms, collect 991ms, tests 70.27s, environment 0ms, prepare 320.46s)
+

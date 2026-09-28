@@ -1,0 +1,46 @@
+{
+  "richParticipants": {
+    "content": {
+      "cardDisplay": "flex",
+      "gridDisplay": "grid",
+      "ribbon": "linear-gradient(90deg, rgb(56, 189, 248)",
+      "badgeTransform": "matrix(0.999657, -0.0261769, 0.0261769, 0.999657, 0, 0)",
+      "artClip": "inset(0px round 14px)",
+      "svg": true,
+      "canvas": true
+    },
+    "canvasSemantics": {
+      "role": "img",
+      "label": "Pavilion model — drag or use arrow keys to orbit",
+      "tabIndex": 0
+    },
+    "representationAtWaypoint": null,
+    "skipped": [],
+    "unsupported": [],
+    "longTasks": [],
+    "resources": {
+      "resources": {
+        "frames": 0,
+        "timers": 0,
+        "observers": 0,
+        "leases": 0,
+        "plane": false,
+        "representations": 0,
+        "running": false
+      },
+      "engine": {
+        "observers": 0,
+        "handles": 0,
+        "media": 0
+      },
+      "graphics": {
+        "surfaces": 1,
+        "retained": 0,
+        "representations": 0,
+        "mirrors": 0
+      },
+      "scenes": 1,
+      "held": []
+    }
+  }
+}

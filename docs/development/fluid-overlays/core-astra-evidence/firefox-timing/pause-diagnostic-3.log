@@ -1,0 +1,144 @@
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-firefox-timing/packages/core
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+Port 63315 is in use, trying another one...
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > composite add onto a non-zero underlying value
+[astra-stack-solve] {"properties":["margin-left"],"offset":0,"bases":[["margin-left","10.0007px"]],"reasons":[],"samples":[{"at":465,"values":["15.6052px"],"times":[140.12]},{"at":478,"values":["16.2719px"],"times":[156.78]}],"timeline":476.16,"sourceTimes":[{"time":156.78,"start":319.36,"playState":"running"}]}
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > composite add onto a non-zero underlying value
+[astra-stack-final] {"property":"margin-left","copyTimes":[323.46],"got":[23.1401],"want":[22.9384],"underlying":"10.0007px","diagnostics":[{"type":"representation","participant":"stack","provider":"projection","continuity":"live"},{"type":"unsupported","participant":"stack","reason":"animationReconstructed"}],"timeline":659.5,"pending":[false],"states":["paused"]}
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > composite add onto a non-zero underlying value
+[astra-extra-frame] {"property":"margin-left","times":[323.46],"copy":"23.1401px","reference":"22.9384px"}
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > composite add onto a non-zero underlying value
+[astra-explicit-holdtime] {"property":"margin-left","times":[323.46],"copy":"22.9391px","reference":"22.9384px"}
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > two animations on one property (replace, then add)
+[astra-stack-solve] {"properties":["margin-left"],"offset":0,"bases":[["margin-left","4.999988px"]],"reasons":[],"samples":[{"at":879,"values":["11.9524px"],"times":[133.32,133.32]},{"at":898,"values":["12.8214px"],"times":[150,150]}],"timeline":892.82,"sourceTimes":[{"time":150,"start":742.82,"playState":"running"},{"time":150,"start":742.82,"playState":"running"}]}
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > two animations on one property (replace, then add)
+[astra-stack-final] {"property":"margin-left","copyTimes":[316.68,316.68],"got":[21.6275],"want":[21.5126],"underlying":"4.99999px","diagnostics":[{"type":"representation","participant":"stack","provider":"projection","continuity":"live"},{"type":"unsupported","participant":"stack","reason":"animationReconstructed"}],"timeline":1076.16,"pending":[false,false],"states":["paused","paused"]}
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > two animations on one property (replace, then add)
+[astra-extra-frame] {"property":"margin-left","times":[316.68,316.68],"copy":"21.6275px","reference":"21.5126px"}
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > two animations on one property (replace, then add)
+[astra-explicit-holdtime] {"property":"margin-left","times":[316.68,316.68],"copy":"21.5126px","reference":"21.5126px"}
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > per-keyframe easing with an implicit start
+[astra-stack-solve] {"properties":["opacity"],"offset":0,"bases":[["opacity","0.9"]],"reasons":[],"samples":[{"at":1227,"values":["0.78"],"times":[150]},{"at":1243,"values":["0.767019"],"times":[166.22]}],"timeline":1242.38,"sourceTimes":[{"time":166.22,"start":1076.16,"playState":"running"}]}
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > per-keyframe easing with an implicit start
+[astra-stack-final] {"property":"opacity","copyTimes":[333.34],"got":[0.62789],"want":[0.633328],"underlying":"0.9","diagnostics":[{"type":"representation","participant":"stack","provider":"projection","continuity":"live"},{"type":"unsupported","participant":"stack","reason":"animationReconstructed"}],"timeline":1426.16,"pending":[false],"states":["paused"]}
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > per-keyframe easing with an implicit start
+[astra-extra-frame] {"property":"opacity","times":[333.34],"copy":"0.62789","reference":"0.633328"}
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > per-keyframe easing with an implicit start
+[astra-explicit-holdtime] {"property":"opacity","times":[333.34],"copy":"0.633328","reference":"0.633328"}
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > a non-identity implicit underlying transform from a stylesheet
+[astra-stack-solve] {"properties":["transform"],"offset":0,"bases":[["transform","matrix(0.996195, 0.0871557, -0.0871557, 0.996195, 10, 0)"]],"reasons":[],"samples":[{"at":1575,"values":["matrix(0.992026, 0.126033, -0.126033, 0.992026, 17.4681, 0)"],"times":[149.36]},{"at":1593,"values":["matrix(0.991453, 0.130467, -0.130467, 0.991453, 18.3218, 0)"],"times":[166.42]}],"timeline":1592.6,"sourceTimes":[{"time":166.42,"start":1426.16,"playState":"running"}]}
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > a non-identity implicit underlying transform from a stylesheet
+[astra-stack-final] {"property":"transform","copyTimes":[333.34],"got":[0.984467,0.175573,-0.175573,0.984467,27.04,0],"want":[0.984807,0.17365,-0.17365,0.984807,26.667,0],"underlying":"matrix(0.996195, 0.0871557, -0.0871557, 0.996195, 10, 0)","diagnostics":[{"type":"representation","participant":"stack","provider":"projection","continuity":"live"},{"type":"unsupported","participant":"stack","reason":"animationReconstructed"}],"timeline":1776.16,"pending":[false],"states":["paused"]}
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > a non-identity implicit underlying transform from a stylesheet
+[astra-extra-frame] {"property":"transform","times":[333.34],"copy":"matrix(0.984467, 0.175573, -0.175573, 0.984467, 27.04, 0)","reference":"matrix(0.984807, 0.17365, -0.17365, 0.984807, 26.667, 0)"}
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > a non-identity implicit underlying transform from a stylesheet
+[astra-explicit-holdtime] {"property":"transform","times":[333.34],"copy":"matrix(0.984808, 0.17365, -0.17365, 0.984808, 26.667, 0)","reference":"matrix(0.984807, 0.17365, -0.17365, 0.984807, 26.667, 0)"}
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement native oracle diagnostic > native add animation pause exposes the same currentTime/style skew
+[astra-native-control] {"time":316.66,"value":"22.7922px","want":"22.6664px","later":"22.7922px","explicit":"22.6664px","current":316.66,"underlying":"10px"}
+ ❯ |firefox| tests/fluid-motion/representation.browser.test.ts (69 tests | 2 failed | 64 skipped) 1845ms
+     ↓ reproduces a rich grid/flex/gradient/pseudo/SVG/scrolled participant faithfully and safely
+     ↓ SVG references are representation-scoped; paint servers keep their attributes (gradient preserved)
+     ↓ declarative animations continue on the copy without mutating the source (explicit replay, implicit live tracking)
+     ↓ a row inside a scrolled rounded scroller is represented and carries the ancestor clip chain
+     ↓ a default non-preserved WebGL canvas is mirrored live without app cooperation; retirement without a renderer provider is reported
+     ↓ large participants prepare in bounded slices within the budget; a mid-copy mutation restarts and is reflected
+     ↓ public configuration: providers are consulted per element; diagnostics reach onDiagnostic; retained render authority keeps a canvas live after retirement
+     ↓ a URL video keeps playing on its muted decorative player after retirement and disposes cleanly
+     ↓ a throwing provider frame is isolated, reported publicly, and its representation is still disposed exactly once
+     ↓ fluidMotion validates providers and budgets; plans carry the engine as non-enumerable data; definitions accept only fluidMotion configurations
+     ↓ within-page runs report that native snapshots need a route commit (immediate commits cannot be wrapped); the commit stays immediate
+     ↓ the browser image of a cross-origin frame follows its representation after the commit; real controls stay usable; everything is released
+     ↓ a successor adopts a shared participant's native snapshot on supersession (same transition, no restart) and releases it at settle
+     ↓ another view transition ends the native snapshot: reported and released (mechanism constraint)
+     ↓ a rotated/skewed outgoing participant is revealed with its exact 2D matrix at its painted bounds
+     ↓ an inline <svg> element is itself a participant (scoped references, no skip)
+     ↓ a script-created transform animation with an implicit identity start is reconstructed by verified hypothesis and keeps running
+     ↓ script-created animations with implicit keyframes keep running on the copy after retirement (reconstructed without mutating the source)
+     × composite add onto a non-zero underlying value 419ms
+     ✓ two animations on one property (replace, then add)  341ms
+     ✓ per-keyframe easing with an implicit start  353ms
+     × a non-identity implicit underlying transform from a stylesheet 385ms
+     ↓ F1: a live provider whose retire() returns nothing receives no frame() afterwards
+     ↓ F2: a paused animation with an implicit keyframe is continued paused
+     ↓ F3: canvas content inside a same-origin frame is represented and nested provider hooks run
+     ↓ F4: the clip of a scaled clipping ancestor uses its painted (scaled) dimensions
+     ↓ F5: an SVG group participant paints at its geometry with the owner svg resources
+     ↓ F6: a rejected provider readiness is reported, never an unhandled rejection
+     ↓ F7: indeterminate checkbox state and SVG image hrefs are preserved
+     ↓ R8: a selected file input does not abort capture; its visible selection is copied by reference (not read, source untouched)
+     ↓ a registered participant is warmed in idle time and reused (identical to a fresh projection); edits, ancestor classes and hover invalidate
+     ↓ the cache is bounded (entries and elements) and releases unregistered participants
+     ↓ sticky header in a scrolled container keeps its stuck position
+     ↓ a fixed badge inside a participant keeps its viewport position
+     ↓ list markers and numbering are reproduced natively
+     ↓ CSS counters in generated content are resolved by read-only simulation (pixel-equal)
+     ↓ counters scoped outside the participant, nested counters() and counter styles resolve to the rendered text
+     ↓ a selected file input keeps its native label (synthetic File; nothing read, source selection untouched)
+     ↓ a display:none element does not contribute counter increments (pixel-equal to the live rendering)
+     ↓ a following sibling counter-reset replaces (does not nest under) the preceding sibling counter
+     ↓ open shadow roots (with slots) are reproduced; closed shadow roots are reported for the native provider
+     ↓ a control-bearing outgoing copy holds until its declared start, then fades to its original end
+     ↓ a MediaSource object URL cannot attach to the decorative player: underlay kept, failure reported, player released, the detached fallback held until disposal
+     ↓ a provider whose frame throws is disposed at the failure, exactly once
+     ↓ C1: warm templates never replace provider participation (custom providers disable the cache; live content is never templated)
+     ↓ C2: same-turn content and CSSOM changes are never served from a stale template
+     ↓ C3: a provider disposed at a frame failure is not retired; only its own signal aborts
+     ↓ C4: a nested same-origin frame provider readiness rejection is reported, never unhandled
+     ↓ iframe: shared source keeps its real paint before the cue
+     ↓ iframe tabindex=-1 (pointer-operable, outside tab order): shared source keeps its real paint before the cue
+     ↓ video[controls]: shared source keeps its real paint before the cue
+     ↓ video[controls][tabindex=-1]: shared source keeps its real paint before the cue
+     ↓ video without controls (not operable): shared source does not keep its real paint before the cue
+     ↓ generic [tabindex=-1] (programmatic focus only): shared source does not keep its real paint before the cue
+     ↓ an outgoing row inside a rotated scroll container is clipped exactly by the rotated container (pixel-equal at reveal)
+     ↓ the outer axis-aligned clip is preserved together with the rotated polygon (pixel-equal at reveal)
+     ↓ a closed-shadow element in an outgoing participant is named at the cue and its browser image follows the copy
+     ↓ F1: a disabled cache installs no global subscriptions; dispose leaves none
+     ↓ F2: a same-turn property scroll is copied from the live source, not the warm offset
+     ↓ F3: a CSSOM declaration edit with an unchanged rule count is not served from a stale template
+     ↓ F4: inside a same-origin frame, one failing provider is disposed alone; its sibling keeps its frames and signal
+     ↓ a thin rotated clip polygon is released continuously and covers the whole box just before completion (no endpoint pop)
+     ↓ a participant that is essentially the player settles: no representation, no lease, usable until the commit, nothing after removal
+     ↓ settle:true settles the containing participant deterministically even when the player is a small part (no size threshold)
+     ↓ settle:true inside a same-origin iframe settles the outer participant; nested acquisitions are disposed and aborted exactly once
+     ↓ nested settlement through a run: the participant is not represented or leased; an unrelated participant is; two levels of frames propagate
+     ↓ inline iframe: the provided box keeps its size and the following text its position
+     ↓ inline canvas: the provided box keeps its size and the following text its position
+     ✓ native add animation pause exposes the same currentTime/style skew  346ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |firefox| tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > composite add onto a non-zero underlying value
+AssertionError: 23.1401 vs 22.9384: expected 0.20169999999999888 to be less than 0.2
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/representation.browser.test.ts/animation-stack-continuation-after-retirement--source-never-mutated--composite-add-onto-a-non-zero-underlying-value-1.png
+
+ ❯ continues/< tests/fluid-motion/representation.browser.test.ts:578:94
+
+ ❯ continues tests/fluid-motion/representation.browser.test.ts:578:8
+ ❯ async* tests/fluid-motion/representation.browser.test.ts:581:71
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |firefox| tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > a non-identity implicit underlying transform from a stylesheet
+AssertionError: 0.984467,0.175573,-0.175573,0.984467,27.04,0 vs 0.984807,0.17365,-0.17365,0.984807,26.667,0: expected 0.37299999999999756 to be less than 0.2
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/representation.browser.test.ts/animation-stack-continuation-after-retirement--source-never-mutated--a-non-identity-implicit-underlying-transform-from-a-stylesheet-1.png
+
+ ❯ continues/< tests/fluid-motion/representation.browser.test.ts:578:94
+
+ ❯ continues tests/fluid-motion/representation.browser.test.ts:578:8
+ ❯ async* tests/fluid-motion/representation.browser.test.ts:587:87
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 3 passed | 64 skipped (69)
+   Start at  00:16:53
+   Duration  3.76s (transform 0ms, setup 8ms, collect 139ms, tests 1.84s, environment 0ms, prepare 337ms)
+

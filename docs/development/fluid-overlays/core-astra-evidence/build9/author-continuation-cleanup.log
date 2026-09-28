@@ -1,0 +1,19 @@
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-core-build9-review/packages/core
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+ ↓ |chromium| tests/fluid-motion/overlay-motion.browser.test.ts (25 tests | 25 skipped)
+ ✓ |chromium| tests/fluid-motion/overlay-identity.browser.test.ts (11 tests | 10 skipped) 13ms
+ ↓ |webkit| tests/fluid-motion/overlay-motion.browser.test.ts (25 tests | 25 skipped)
+ ↓ |chromium| tests/fluid-motion/overlay-routed-back.browser.test.ts (1 test | 1 skipped)
+ ✓ |webkit| tests/fluid-motion/overlay-identity.browser.test.ts (11 tests | 10 skipped) 18ms
+ ↓ |webkit| tests/fluid-motion/overlay-routed-back.browser.test.ts (1 test | 1 skipped)
+ ↓ |firefox| tests/fluid-motion/overlay-motion.browser.test.ts (25 tests | 25 skipped)
+ ✓ |firefox| tests/fluid-motion/overlay-identity.browser.test.ts (11 tests | 10 skipped) 8ms
+ ↓ |firefox| tests/fluid-motion/overlay-routed-back.browser.test.ts (1 test | 1 skipped)
+
+ Test Files  3 passed | 6 skipped (9)
+      Tests  3 passed | 108 skipped (111)
+   Start at  20:40:21
+   Duration  2.07s (transform 0ms, setup 45ms, collect 858ms, tests 39ms, environment 0ms, prepare 3.18s)
+

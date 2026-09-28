@@ -1,0 +1,73 @@
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-core-build10-review/packages/core
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+ ✓ |chromium| tests/fluid-motion/astra-c1-corrected.browser.test.ts (20 tests) 15319ms
+   ✓ C1 corrected repeat 0 at the destination retarget: position and velocity continue exactly from the displayed state  753ms
+   ✓ C1 corrected repeat 1 at the destination retarget: position and velocity continue exactly from the displayed state  765ms
+   ✓ C1 corrected repeat 2 at the destination retarget: position and velocity continue exactly from the displayed state  767ms
+   ✓ C1 corrected repeat 3 at the destination retarget: position and velocity continue exactly from the displayed state  767ms
+   ✓ C1 corrected repeat 4 at the destination retarget: position and velocity continue exactly from the displayed state  767ms
+   ✓ C1 corrected repeat 5 at the destination retarget: position and velocity continue exactly from the displayed state  766ms
+   ✓ C1 corrected repeat 6 at the destination retarget: position and velocity continue exactly from the displayed state  767ms
+   ✓ C1 corrected repeat 7 at the destination retarget: position and velocity continue exactly from the displayed state  767ms
+   ✓ C1 corrected repeat 8 at the destination retarget: position and velocity continue exactly from the displayed state  767ms
+   ✓ C1 corrected repeat 9 at the destination retarget: position and velocity continue exactly from the displayed state  767ms
+   ✓ C1 corrected repeat 10 at the destination retarget: position and velocity continue exactly from the displayed state  767ms
+   ✓ C1 corrected repeat 11 at the destination retarget: position and velocity continue exactly from the displayed state  766ms
+   ✓ C1 corrected repeat 12 at the destination retarget: position and velocity continue exactly from the displayed state  767ms
+   ✓ C1 corrected repeat 13 at the destination retarget: position and velocity continue exactly from the displayed state  767ms
+   ✓ C1 corrected repeat 14 at the destination retarget: position and velocity continue exactly from the displayed state  767ms
+   ✓ C1 corrected repeat 15 at the destination retarget: position and velocity continue exactly from the displayed state  767ms
+   ✓ C1 corrected repeat 16 at the destination retarget: position and velocity continue exactly from the displayed state  767ms
+   ✓ C1 corrected repeat 17 at the destination retarget: position and velocity continue exactly from the displayed state  766ms
+   ✓ C1 corrected repeat 18 at the destination retarget: position and velocity continue exactly from the displayed state  767ms
+   ✓ C1 corrected repeat 19 at the destination retarget: position and velocity continue exactly from the displayed state  767ms
+ ✓ |firefox| tests/fluid-motion/astra-c1-corrected.browser.test.ts (20 tests) 14641ms
+   ✓ C1 corrected repeat 0 at the destination retarget: position and velocity continue exactly from the displayed state  731ms
+   ✓ C1 corrected repeat 1 at the destination retarget: position and velocity continue exactly from the displayed state  733ms
+   ✓ C1 corrected repeat 2 at the destination retarget: position and velocity continue exactly from the displayed state  735ms
+   ✓ C1 corrected repeat 3 at the destination retarget: position and velocity continue exactly from the displayed state  732ms
+   ✓ C1 corrected repeat 4 at the destination retarget: position and velocity continue exactly from the displayed state  733ms
+   ✓ C1 corrected repeat 5 at the destination retarget: position and velocity continue exactly from the displayed state  733ms
+   ✓ C1 corrected repeat 6 at the destination retarget: position and velocity continue exactly from the displayed state  729ms
+   ✓ C1 corrected repeat 7 at the destination retarget: position and velocity continue exactly from the displayed state  731ms
+   ✓ C1 corrected repeat 8 at the destination retarget: position and velocity continue exactly from the displayed state  731ms
+   ✓ C1 corrected repeat 9 at the destination retarget: position and velocity continue exactly from the displayed state  736ms
+   ✓ C1 corrected repeat 10 at the destination retarget: position and velocity continue exactly from the displayed state  735ms
+   ✓ C1 corrected repeat 11 at the destination retarget: position and velocity continue exactly from the displayed state  731ms
+   ✓ C1 corrected repeat 12 at the destination retarget: position and velocity continue exactly from the displayed state  734ms
+   ✓ C1 corrected repeat 13 at the destination retarget: position and velocity continue exactly from the displayed state  732ms
+   ✓ C1 corrected repeat 14 at the destination retarget: position and velocity continue exactly from the displayed state  733ms
+   ✓ C1 corrected repeat 15 at the destination retarget: position and velocity continue exactly from the displayed state  735ms
+   ✓ C1 corrected repeat 16 at the destination retarget: position and velocity continue exactly from the displayed state  732ms
+   ✓ C1 corrected repeat 17 at the destination retarget: position and velocity continue exactly from the displayed state  725ms
+   ✓ C1 corrected repeat 18 at the destination retarget: position and velocity continue exactly from the displayed state  732ms
+   ✓ C1 corrected repeat 19 at the destination retarget: position and velocity continue exactly from the displayed state  726ms
+ ✓ |webkit| tests/fluid-motion/astra-c1-corrected.browser.test.ts (20 tests) 15319ms
+   ✓ C1 corrected repeat 0 at the destination retarget: position and velocity continue exactly from the displayed state  820ms
+   ✓ C1 corrected repeat 1 at the destination retarget: position and velocity continue exactly from the displayed state  764ms
+   ✓ C1 corrected repeat 2 at the destination retarget: position and velocity continue exactly from the displayed state  765ms
+   ✓ C1 corrected repeat 3 at the destination retarget: position and velocity continue exactly from the displayed state  766ms
+   ✓ C1 corrected repeat 4 at the destination retarget: position and velocity continue exactly from the displayed state  768ms
+   ✓ C1 corrected repeat 5 at the destination retarget: position and velocity continue exactly from the displayed state  766ms
+   ✓ C1 corrected repeat 6 at the destination retarget: position and velocity continue exactly from the displayed state  767ms
+   ✓ C1 corrected repeat 7 at the destination retarget: position and velocity continue exactly from the displayed state  751ms
+   ✓ C1 corrected repeat 8 at the destination retarget: position and velocity continue exactly from the displayed state  750ms
+   ✓ C1 corrected repeat 9 at the destination retarget: position and velocity continue exactly from the displayed state  767ms
+   ✓ C1 corrected repeat 10 at the destination retarget: position and velocity continue exactly from the displayed state  764ms
+   ✓ C1 corrected repeat 11 at the destination retarget: position and velocity continue exactly from the displayed state  769ms
+   ✓ C1 corrected repeat 12 at the destination retarget: position and velocity continue exactly from the displayed state  766ms
+   ✓ C1 corrected repeat 13 at the destination retarget: position and velocity continue exactly from the displayed state  767ms
+   ✓ C1 corrected repeat 14 at the destination retarget: position and velocity continue exactly from the displayed state  767ms
+   ✓ C1 corrected repeat 15 at the destination retarget: position and velocity continue exactly from the displayed state  767ms
+   ✓ C1 corrected repeat 16 at the destination retarget: position and velocity continue exactly from the displayed state  766ms
+   ✓ C1 corrected repeat 17 at the destination retarget: position and velocity continue exactly from the displayed state  767ms
+   ✓ C1 corrected repeat 18 at the destination retarget: position and velocity continue exactly from the displayed state  750ms
+   ✓ C1 corrected repeat 19 at the destination retarget: position and velocity continue exactly from the displayed state  749ms
+
+ Test Files  3 passed (3)
+      Tests  60 passed (60)
+   Start at  20:55:12
+   Duration  17.09s (transform 0ms, setup 30ms, collect 587ms, tests 45.28s, environment 0ms, prepare 340ms)
+

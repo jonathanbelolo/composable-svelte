@@ -1,0 +1,6 @@
+{
+  "packages/core/src/lib/application/renderer/choreography/channels.ts": "480494cd96f7b64657a5239ac80456fef442a156ecf2f737adaf08b6a5c814bb",
+  "packages/core/src/lib/application/renderer/choreography/hermite.ts": "22404659c856fe456ea5073a48dae553d842b5a7cebcc76b84b8c20f272d8163",
+  "packages/core/src/lib/application/renderer/choreography/channel-types.ts": "6ad7096d83c50865d015246189097f5b22ed166aca448479ca8c09c20fe7f84a",
+  "packages/core/tests/fluid-motion/s1-easing.test.ts": "88fccd2e2355acc33ba4333b9c88cf94177fde866709b4efdfa84c06d68c5197"
+}

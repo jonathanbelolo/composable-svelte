@@ -1,0 +1,12 @@
+{
+  "manifest": "ba297cd43fc8ee76e0fae8c217cf155b530b925545ef1457ac4f3638ce8566f6",
+  "entries": 118,
+  "src": "e79ac3480e9248c2015058aed7ef47f0390ee448685d3b0dda98bb6ac75c1c29",
+  "dist": "b0c3a789019d1e268df17ea763059f42246dc97f6bb9ec1dff7603fd50a380e0",
+  "evidence": {
+    "core-astra-final-boundary.browser.test.ts": "d359d9e68e9e8d248d97f980b2fc3b556a12f0268e97ea36d5a3dfcfa2d9b884",
+    "final-runtime-probes.log": "ce176ecb8dd6ff8b104db93745578e3608e1b52f422d231319edfd51e65238ce",
+    "core-astra-unused-handoff.browser.test.ts": "c41abee1c41d00cc6bb66d4082991a17f10d5b1b019104278ac1f3f673a927b9",
+    "vitest.review.config.ts": "a495e271612187be9fdc856a0453494bc5d76eaa02fce5699c8eb5c3c5a38a95"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "baseline": "2e07f650c1421c25f6b29d2db9c0cc885ea891ed",
+  "build5": {
+    "manifest": "684235fdb87173d7dd926cbf4d27711b6927e8bb4921ca1889c4db015a514eaf",
+    "files": 88,
+    "src": "83bfd00955d4c3446c51d4f3ae52836ca134e8ce0ea469346fab4140ad643f1e",
+    "dist": "7b206161952b48d98f816c1e4d966ecbd132ca07875e6313f0677b79cea8b600"
+  },
+  "build6": {
+    "manifest": "49557968073fa930beec44bf2a2a3b944cecf11e19c8113597356cc009a3f710",
+    "files": 91,
+    "src": "737c38fcf301d609cf7e978cc6900d233e86d707d5ac0d37e0e7fef5d3ead8d8",
+    "dist": "d522f2e5fc40d37dea58afae9fea984809e6e2573089c822e485eff290ed68ff"
+  },
+  "tree_hash_method": "cd src or dist; find . -type f | LC_ALL=C sort | xargs shasum -a 256 | shasum -a 256",
+  "evidence": {
+    "build5-c2-c3-controls.log": "a31d5f0410d8c2cb939237f242bd46c47c86ed732992e8579ac8126c0cef95aa",
+    "build5-firefox-candidate.log": "41b513deec789f9f2bfe26c8b9af6df004b6e4aab586b6d8509ca1ea076d787f",
+    "build5-unchanged-probes.log": "fb8b3930b6d869fc4722dcbd9f9932ea7ccd70959622b122eda85407b29f46ed",
+    "build5-vitest.firefox.config.ts": "294e54fc4cb7974ef0477b91a9c055b21b353e78739fcb39199af71a9d71c75c",
+    "build5-vitest.fluid-motion.config.ts": "45fa1e2edb57149939b17682e1783ee6d9b3a8cda89f613b3836e5f38d911314",
+    "build5-vitest.focused.config.ts": "003076d0051350f9346e77c78745de054858429c157ee00b86e17e31a431dd90",
+    "build5-vitest.node.config.ts": "de148ee6edaedff1cc048c9ff5632236b3cc925d411bbce186b9f9c5c7752f50",
+    "build5-vitest.review.config.ts": "3f804bff755cfaafaccfc479d483e4f9c71041b890ea7c0f6991e88586944a8b",
+    "build6-c2-subscription-comparison.log": "7924db1d7c27a260377fc710da4f9fb20550d33eb8d2a5121b41ad12fd7fa4b7",
+    "build6-c3-driver-failure.log": "71f9f534542abcc158df71cff828a0cf72d1a3eb042abe3014af36b08f6b3094",
+    "build6-final-controls.log": "f2bcd98c3b065bf343a5f8b307833995c1e0cd500df65a553d539a1424dcbf2d",
+    "build6-firefox-candidate.log": "14bdf79b169e6c431acc00027341b353eb3e3cc49f10a8d06bea5219b5d8431c",
+    "build6-retention-boundary-probes.log": "39cd3430c4b6a608aa264693c5127846bcd64db008073064783a0da927a589bc",
+    "build6-transform-probe.log": "848e82676589ea5eeb70b8fe8aae63efd78a176b7b7eb271b1cf972e344fa43d",
+    "build6-vitest.controls.config.ts": "6f6c31a03883592d0a3b03e74cb06037f73183147d9c60f981cf7d296b3d7ed2",
+    "build6-vitest.firefox.config.ts": "e7c00607ee5325e8fb5f138a014655b146029f01762eae5ed3194aab73d13f03",
+    "build6-vitest.fluid-motion.config.ts": "45fa1e2edb57149939b17682e1783ee6d9b3a8cda89f613b3836e5f38d911314",
+    "build6-vitest.focused.config.ts": "8bf22271a825967b8158ae4332cf90de3f65b90015957f80565e88f63b850bef",
+    "build6-vitest.node.config.ts": "de148ee6edaedff1cc048c9ff5632236b3cc925d411bbce186b9f9c5c7752f50",
+    "build6-vitest.review.config.ts": "384cb89216e4d64b8006d3e36dd9423bee270b9e153f0ad9a720e2b848fb0fe9",
+    "core-astra-c2-public.browser.test.ts": "f7ac91278e96df68f43dcbfc284ee9be418b27b45e2e1ba9150a755dc2300ae9",
+    "core-astra-correction.browser.test.ts": "bc5bc5a4fc287a6833493030428a4a9aaa6ed60fa1b7dff46be0aa9f9bd96c98"
+  }
+}

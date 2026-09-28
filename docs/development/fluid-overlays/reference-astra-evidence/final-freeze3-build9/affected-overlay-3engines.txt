@@ -1,0 +1,65 @@
+8:40:04 PM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference - using default configuration.
+
+ RUN  v4.0.7 /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference
+
+8:40:04 PM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference - using default configuration.
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > supports rapid reopen without epoch corruption (I1/I2)
+BJS - [20:40:06]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > supports rapid reopen without epoch corruption (I1/I2)
+BJS - [20:40:06]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > supports rapid reopen without epoch corruption (I1/I2)
+BJS - [20:40:06]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > the catalog rests dimmed and contracted past the open duration, through a refused close and the nested alert, and returns on close
+BJS - [20:40:07]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > the catalog rests dimmed and contracted past the open duration, through a refused close and the nested alert, and returns on close
+BJS - [20:40:07]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > the catalog rests dimmed and contracted past the open duration, through a refused close and the nested alert, and returns on close
+BJS - [20:40:07]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > the drawer pushes the catalog aside and holds it there; closing slides it back
+BJS - [20:40:10]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > the drawer pushes the catalog aside and holds it there; closing slides it back
+BJS - [20:40:10]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > the drawer pushes the catalog aside and holds it there; closing slides it back
+BJS - [20:40:11]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > reduced motion reaches the same full resting pose immediately (no intermediate geometry), and the close releases it
+BJS - [20:40:12]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > reduced motion reaches the same full resting pose immediately (no intermediate geometry), and the close releases it
+BJS - [20:40:12]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > reduced motion reaches the same full resting pose immediately (no intermediate geometry), and the close releases it
+BJS - [20:40:12]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > rapid reopen during the close re-rests the catalog for the new instance, then releases it once
+BJS - [20:40:13]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > rapid reopen during the close re-rests the catalog for the new instance, then releases it once
+BJS - [20:40:14]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > rapid reopen during the close re-rests the catalog for the new instance, then releases it once
+BJS - [20:40:14]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > rapid reopen during the close re-rests the catalog for the new instance, then releases it once
+RAPID_REOPEN {"midClose":0.893061,"rest":0.88,"scale":0.98}
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > rapid reopen during the close re-rests the catalog for the new instance, then releases it once
+RAPID_REOPEN {"midClose":0.902956,"rest":0.88,"scale":0.98}
+stdout | tests/overlay.browser.test.ts > overlay-lifetime page reaction (trusted input) > rapid reopen during the close re-rests the catalog for the new instance, then releases it once
+RAPID_REOPEN {"midClose":0.897947,"rest":0.88,"scale":0.98}
+ ✓ |webkit| tests/overlay.browser.test.ts (19 tests | 14 skipped) 10921ms
+     ✓ supports rapid reopen without epoch corruption (I1/I2)  825ms
+     ✓ the catalog rests dimmed and contracted past the open duration, through a refused close and the nested alert, and returns on close  3345ms
+     ✓ the drawer pushes the catalog aside and holds it there; closing slides it back  1500ms
+     ✓ reduced motion reaches the same full resting pose immediately (no intermediate geometry), and the close releases it  1781ms
+     ✓ rapid reopen during the close re-rests the catalog for the new instance, then releases it once  3468ms
+ ✓ |firefox| tests/overlay.browser.test.ts (19 tests | 14 skipped) 10648ms
+     ✓ supports rapid reopen without epoch corruption (I1/I2)  728ms
+     ✓ the catalog rests dimmed and contracted past the open duration, through a refused close and the nested alert, and returns on close  3335ms
+     ✓ the drawer pushes the catalog aside and holds it there; closing slides it back  1493ms
+     ✓ reduced motion reaches the same full resting pose immediately (no intermediate geometry), and the close releases it  1690ms
+     ✓ rapid reopen during the close re-rests the catalog for the new instance, then releases it once  3400ms
+ ✓ |chromium| tests/overlay.browser.test.ts (19 tests | 14 skipped) 11670ms
+     ✓ supports rapid reopen without epoch corruption (I1/I2)  758ms
+     ✓ the catalog rests dimmed and contracted past the open duration, through a refused close and the nested alert, and returns on close  3645ms
+     ✓ the drawer pushes the catalog aside and holds it there; closing slides it back  1649ms
+     ✓ reduced motion reaches the same full resting pose immediately (no intermediate geometry), and the close releases it  1918ms
+     ✓ rapid reopen during the close re-rests the catalog for the new instance, then releases it once  3699ms
+
+ Test Files  3 passed (3)
+      Tests  15 passed | 42 skipped (57)
+   Start at  20:40:04
+   Duration  13.51s (transform 0ms, setup 0ms, collect 2.14s, tests 33.24s, environment 0ms, prepare 465ms)
+

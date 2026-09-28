@@ -1,0 +1,31 @@
+12:33:06 AM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference - using default configuration.
+
+ RUN  v4.0.7 /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference
+
+12:33:06 AM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference - using default configuration.
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: listen EPERM: operation not permitted ::1:63315
+ ❯ Server.setupListenHandle [as _listen2] node:net:1918:21
+ ❯ listenInCluster node:net:1997:12
+ ❯ GetAddrInfoReqWrap.callback node:net:2206:7
+ ❯ GetAddrInfoReqWrap.onlookupall [as oncomplete] node:dns:134:8
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'EPERM', errno: -1, syscall: 'listen', address: '::1', port: 63315 }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  no tests
+      Tests  no tests
+     Errors  1 error
+   Start at  00:33:06
+   Duration  49ms (transform 0ms, setup 0ms, collect 0ms, tests 0ms, environment 0ms, prepare 0ms)
+
+close timed out after 10000ms
+Tests closed successfully but something prevents the main process from exiting
+You can try to identify the cause by enabling "hanging-process" reporter. See https://vitest.dev/config/#reporters

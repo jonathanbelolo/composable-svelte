@@ -1,0 +1,34 @@
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-core-build8-review/packages/core
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+ ↓ |chromium| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests | 6 skipped)
+ ✓ |chromium| tests/fluid-motion/core-astra-correction.browser.test.ts (4 tests) 30ms
+ ↓ |webkit| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests | 6 skipped)
+ ↓ |chromium| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 skipped)
+stdout | tests/fluid-motion/core-astra-c2-public.browser.test.ts > correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=false
+[astra-c2] {"defer":false,"diagnostics":[{"type":"representation","participant":"card","provider":"projection","continuity":"static","transaction":-1},{"type":"preparation","transaction":-1,"workMs":0.6,"slices":1,"cached":0,"projected":1,"elements":1,"outcome":"ready","waitedMs":0,"readinessPending":0},{"type":"content","transaction":-1,"participant":"card","requested":"crossfade","applied":"crossfade"},{"type":"prepared","transaction":-1,"at":67.09999990463257,"skipped":[]},{"type":"frame","transaction":-1,"t":0,"participant":"card","x":0,"y":40,"width":160,"height":90,"vx":0,"vy":0}]}
+stdout | tests/fluid-motion/core-astra-c2-public.browser.test.ts > correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=true
+[astra-c2] {"defer":true,"diagnostics":[{"type":"representation","participant":"card","provider":"projection","continuity":"static","transaction":-1},{"type":"preparation","transaction":-1,"workMs":0.5,"slices":1,"cached":0,"projected":1,"elements":1,"outcome":"ready","waitedMs":0,"readinessPending":0},{"type":"content","transaction":-1,"participant":"card","requested":"crossfade","applied":"crossfade"},{"type":"prepared","transaction":-1,"at":75.39999985694885,"skipped":[]},{"type":"frame","transaction":-1,"t":0,"participant":"card","x":0,"y":40,"width":160,"height":90,"vx":0,"vy":0}]}
+ ✓ |chromium| tests/fluid-motion/core-astra-c2-public.browser.test.ts (2 tests) 23ms
+ ✓ |webkit| tests/fluid-motion/core-astra-correction.browser.test.ts (4 tests) 26ms
+ ↓ |webkit| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 skipped)
+stdout | tests/fluid-motion/core-astra-c2-public.browser.test.ts > correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=false
+[astra-c2] {"defer":false,"diagnostics":[{"type":"representation","participant":"card","provider":"projection","continuity":"static","transaction":-1},{"type":"preparation","transaction":-1,"workMs":0,"slices":1,"cached":0,"projected":1,"elements":1,"outcome":"ready","waitedMs":0,"readinessPending":0},{"type":"content","transaction":-1,"participant":"card","requested":"crossfade","applied":"crossfade"},{"type":"prepared","transaction":-1,"at":98,"skipped":[]},{"type":"frame","transaction":-1,"t":0,"participant":"card","x":0,"y":40,"width":160,"height":90,"vx":0,"vy":0}]}
+stdout | tests/fluid-motion/core-astra-c2-public.browser.test.ts > correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=true
+[astra-c2] {"defer":true,"diagnostics":[{"type":"representation","participant":"card","provider":"projection","continuity":"static","transaction":-1},{"type":"preparation","transaction":-1,"workMs":0,"slices":1,"cached":0,"projected":1,"elements":1,"outcome":"ready","waitedMs":0,"readinessPending":0},{"type":"content","transaction":-1,"participant":"card","requested":"crossfade","applied":"crossfade"},{"type":"prepared","transaction":-1,"at":107,"skipped":[]},{"type":"frame","transaction":-1,"t":0,"participant":"card","x":0,"y":40,"width":160,"height":90,"vx":0,"vy":0}]}
+ ✓ |webkit| tests/fluid-motion/core-astra-c2-public.browser.test.ts (2 tests) 31ms
+ ↓ |firefox| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests | 6 skipped)
+ ✓ |firefox| tests/fluid-motion/core-astra-correction.browser.test.ts (4 tests) 10ms
+ ↓ |firefox| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 skipped)
+stdout | tests/fluid-motion/core-astra-c2-public.browser.test.ts > correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=false
+[astra-c2] {"defer":false,"diagnostics":[{"type":"representation","participant":"card","provider":"projection","continuity":"static","transaction":-1},{"type":"preparation","transaction":-1,"workMs":2,"slices":1,"cached":0,"projected":1,"elements":1,"outcome":"ready","waitedMs":0,"readinessPending":0},{"type":"content","transaction":-1,"participant":"card","requested":"crossfade","applied":"crossfade"},{"type":"prepared","transaction":-1,"at":159,"skipped":[]},{"type":"frame","transaction":-1,"t":0,"participant":"card","x":0,"y":40,"width":160,"height":90,"vx":0,"vy":0}]}
+stdout | tests/fluid-motion/core-astra-c2-public.browser.test.ts > correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=true
+[astra-c2] {"defer":true,"diagnostics":[{"type":"representation","participant":"card","provider":"projection","continuity":"static","transaction":-1},{"type":"preparation","transaction":-1,"workMs":1,"slices":1,"cached":0,"projected":1,"elements":1,"outcome":"ready","waitedMs":0,"readinessPending":0},{"type":"content","transaction":-1,"participant":"card","requested":"crossfade","applied":"crossfade"},{"type":"prepared","transaction":-1,"at":167,"skipped":[]},{"type":"frame","transaction":-1,"t":0,"participant":"card","x":0,"y":40,"width":160,"height":90,"vx":0,"vy":0}]}
+ ✓ |firefox| tests/fluid-motion/core-astra-c2-public.browser.test.ts (2 tests) 19ms
+
+ Test Files  6 passed | 6 skipped (12)
+      Tests  18 passed | 24 skipped (42)
+   Start at  20:31:37
+   Duration  2.50s (transform 0ms, setup 65ms, collect 854ms, tests 139ms, environment 0ms, prepare 4.52s)
+

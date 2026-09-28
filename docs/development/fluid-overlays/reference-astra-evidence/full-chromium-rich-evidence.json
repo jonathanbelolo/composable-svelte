@@ -1,0 +1,589 @@
+{
+  "richParticipants": {
+    "content": {
+      "cardDisplay": "flex",
+      "gridDisplay": "grid",
+      "ribbon": "linear-gradient(90deg, rgb(56, 189, 248)",
+      "badgeTransform": "matrix(0.999657, -0.0261769, 0.0261769, 0.999657, 0, 0)",
+      "artClip": "inset(0px round 14px)",
+      "svg": true,
+      "canvas": true
+    },
+    "canvasSemantics": {
+      "role": "img",
+      "label": "Pavilion model — drag or use arrow keys to orbit",
+      "tabIndex": 0
+    },
+    "representationAtWaypoint": {
+      "wrapper": [
+        153,
+        145,
+        972,
+        450
+      ],
+      "surface": [
+        153,
+        145,
+        972,
+        450
+      ],
+      "runMs": 291
+    },
+    "skipped": [],
+    "unsupported": [],
+    "longTasks": [
+      147
+    ],
+    "resources": {
+      "resources": {
+        "frames": 0,
+        "timers": 0,
+        "observers": 0,
+        "leases": 0,
+        "plane": false,
+        "representations": 0,
+        "running": false
+      },
+      "engine": {
+        "observers": 0,
+        "handles": 0,
+        "media": 0
+      },
+      "graphics": {
+        "surfaces": 1,
+        "retained": 0,
+        "representations": 0,
+        "mirrors": 0
+      },
+      "scenes": 1,
+      "held": []
+    }
+  },
+  "webglContinuity": {
+    "anchoredStartTime": 1790548522684,
+    "homeProgression": 0.131,
+    "studyProgression": 0.168,
+    "ticksBeforeNavigation": 31,
+    "ticksTotal": 199,
+    "cold": {
+      "cueAt": 406,
+      "repBox": [
+        154,
+        144,
+        973,
+        450
+      ],
+      "representationProgression": 0.324,
+      "longTasks": [
+        147
+      ]
+    },
+    "warm": {
+      "cueAt": 389,
+      "longTasks": [
+        145
+      ]
+    },
+    "domainTrace": [
+      "navigate",
+      "navigate",
+      "navigate"
+    ],
+    "unsupported": [],
+    "resources": {
+      "resources": {
+        "frames": 0,
+        "timers": 0,
+        "observers": 0,
+        "leases": 0,
+        "plane": false,
+        "representations": 0,
+        "running": false
+      },
+      "engine": {
+        "observers": 0,
+        "handles": 0,
+        "media": 0
+      },
+      "graphics": {
+        "surfaces": 1,
+        "retained": 0,
+        "representations": 0,
+        "mirrors": 0
+      },
+      "scenes": 1,
+      "held": []
+    }
+  },
+  "videoContinuity": {
+    "control": {
+      "playing": false,
+      "representation": true,
+      "runMs": [
+        268,
+        496,
+        613
+      ],
+      "connectedAtSecond": true,
+      "repMoved": false,
+      "videoChange": 0,
+      "textChange": 0,
+      "pageVideos": 0,
+      "resources": {
+        "resources": {
+          "frames": 0,
+          "timers": 0,
+          "observers": 0,
+          "leases": 0,
+          "plane": false,
+          "representations": 0,
+          "running": false
+        },
+        "engine": {
+          "observers": 0,
+          "handles": 0,
+          "media": 0
+        },
+        "graphics": {
+          "surfaces": 1,
+          "retained": 0,
+          "representations": 0,
+          "mirrors": 0
+        },
+        "scenes": 1,
+        "held": []
+      },
+      "unsupported": []
+    },
+    "playing": {
+      "playing": true,
+      "representation": true,
+      "runMs": [
+        273,
+        546,
+        664
+      ],
+      "connectedAtSecond": true,
+      "repMoved": false,
+      "videoChange": 0.254,
+      "textChange": 0.254,
+      "pageVideos": 0,
+      "resources": {
+        "resources": {
+          "frames": 0,
+          "timers": 0,
+          "observers": 0,
+          "leases": 0,
+          "plane": false,
+          "representations": 0,
+          "running": false
+        },
+        "engine": {
+          "observers": 0,
+          "handles": 0,
+          "media": 0
+        },
+        "graphics": {
+          "surfaces": 1,
+          "retained": 0,
+          "representations": 0,
+          "mirrors": 0
+        },
+        "scenes": 1,
+        "held": []
+      },
+      "unsupported": []
+    },
+    "attempts": {
+      "control": [
+        {
+          "playing": false,
+          "representation": true,
+          "runMs": [
+            268,
+            496,
+            613
+          ],
+          "connectedAtSecond": true,
+          "repMoved": false,
+          "videoChange": 0,
+          "textChange": 0,
+          "pageVideos": 0,
+          "resources": {
+            "resources": {
+              "frames": 0,
+              "timers": 0,
+              "observers": 0,
+              "leases": 0,
+              "plane": false,
+              "representations": 0,
+              "running": false
+            },
+            "engine": {
+              "observers": 0,
+              "handles": 0,
+              "media": 0
+            },
+            "graphics": {
+              "surfaces": 1,
+              "retained": 0,
+              "representations": 0,
+              "mirrors": 0
+            },
+            "scenes": 1,
+            "held": []
+          },
+          "unsupported": []
+        }
+      ],
+      "playing": [
+        {
+          "playing": true,
+          "representation": true,
+          "runMs": [
+            273,
+            546,
+            664
+          ],
+          "connectedAtSecond": true,
+          "repMoved": false,
+          "videoChange": 0.254,
+          "textChange": 0.254,
+          "pageVideos": 0,
+          "resources": {
+            "resources": {
+              "frames": 0,
+              "timers": 0,
+              "observers": 0,
+              "leases": 0,
+              "plane": false,
+              "representations": 0,
+              "running": false
+            },
+            "engine": {
+              "observers": 0,
+              "handles": 0,
+              "media": 0
+            },
+            "graphics": {
+              "surfaces": 1,
+              "retained": 0,
+              "representations": 0,
+              "mirrors": 0
+            },
+            "scenes": 1,
+            "held": []
+          },
+          "unsupported": []
+        }
+      ]
+    },
+    "note": "airflow copy held unfaded (opacity 1) until 780 ms; the paused-loop run is the control"
+  },
+  "interruption": {
+    "settledReasons": [
+      "superseded",
+      "completed",
+      "superseded",
+      "completed",
+      "superseded",
+      "completed"
+    ],
+    "protocolEvents": 18,
+    "representationsLeft": 0,
+    "resources": {
+      "resources": {
+        "frames": 0,
+        "timers": 0,
+        "observers": 0,
+        "leases": 0,
+        "plane": false,
+        "representations": 0,
+        "running": false
+      },
+      "engine": {
+        "observers": 0,
+        "handles": 0,
+        "media": 0
+      },
+      "graphics": {
+        "surfaces": 1,
+        "retained": 0,
+        "representations": 0,
+        "mirrors": 0
+      },
+      "scenes": 1,
+      "held": []
+    },
+    "domainTrace": [
+      "navigate",
+      "navigate",
+      "navigate",
+      "navigate",
+      "navigate",
+      "navigate"
+    ]
+  },
+  "teardown": {
+    "resourcesAfter": {
+      "frames": 0,
+      "timers": 0,
+      "observers": 0,
+      "leases": 0,
+      "plane": false,
+      "representations": 0,
+      "running": false
+    },
+    "engine": {
+      "observers": 0,
+      "handles": 0,
+      "media": 0
+    },
+    "graphics": {
+      "surfaces": 0,
+      "retained": 0,
+      "representations": 0,
+      "mirrors": 0
+    },
+    "canvases": 0,
+    "videos": 0
+  },
+  "reducedMotion": {
+    "shimmer": "paused",
+    "videoPaused": true,
+    "heroRepresentations": 0,
+    "trace": [
+      "setReducedMotion",
+      "navigate"
+    ]
+  },
+  "outgoingRetainedProgression": {
+    "control": {
+      "turning": false,
+      "representation": true,
+      "runMs": [
+        297,
+        395,
+        497
+      ],
+      "repMoved": false,
+      "mirrorChange": 0,
+      "staticChange": 0,
+      "ticksAtRetirement": 0,
+      "ticksAfter": 0,
+      "resources": {
+        "resources": {
+          "frames": 0,
+          "timers": 0,
+          "observers": 0,
+          "leases": 0,
+          "plane": false,
+          "representations": 0,
+          "running": false
+        },
+        "engine": {
+          "observers": 0,
+          "handles": 0,
+          "media": 0
+        },
+        "graphics": {
+          "surfaces": 0,
+          "retained": 0,
+          "representations": 0,
+          "mirrors": 0
+        },
+        "scenes": 0,
+        "held": []
+      }
+    },
+    "turning": {
+      "turning": true,
+      "representation": true,
+      "runMs": [
+        299,
+        399,
+        516
+      ],
+      "repMoved": false,
+      "mirrorChange": 0.079,
+      "staticChange": 0,
+      "ticksAtRetirement": 33,
+      "ticksAfter": 70,
+      "resources": {
+        "resources": {
+          "frames": 0,
+          "timers": 0,
+          "observers": 0,
+          "leases": 0,
+          "plane": false,
+          "representations": 0,
+          "running": false
+        },
+        "engine": {
+          "observers": 0,
+          "handles": 0,
+          "media": 0
+        },
+        "graphics": {
+          "surfaces": 0,
+          "retained": 0,
+          "representations": 0,
+          "mirrors": 0
+        },
+        "scenes": 0,
+        "held": []
+      }
+    },
+    "attempts": {
+      "control": [
+        {
+          "turning": false,
+          "representation": true,
+          "runMs": [
+            297,
+            395,
+            497
+          ],
+          "repMoved": false,
+          "mirrorChange": 0,
+          "staticChange": 0,
+          "ticksAtRetirement": 0,
+          "ticksAfter": 0,
+          "resources": {
+            "resources": {
+              "frames": 0,
+              "timers": 0,
+              "observers": 0,
+              "leases": 0,
+              "plane": false,
+              "representations": 0,
+              "running": false
+            },
+            "engine": {
+              "observers": 0,
+              "handles": 0,
+              "media": 0
+            },
+            "graphics": {
+              "surfaces": 0,
+              "retained": 0,
+              "representations": 0,
+              "mirrors": 0
+            },
+            "scenes": 0,
+            "held": []
+          }
+        }
+      ],
+      "turning": [
+        {
+          "turning": true,
+          "representation": true,
+          "runMs": [
+            299,
+            399,
+            516
+          ],
+          "repMoved": false,
+          "mirrorChange": 0.079,
+          "staticChange": 0,
+          "ticksAtRetirement": 33,
+          "ticksAfter": 70,
+          "resources": {
+            "resources": {
+              "frames": 0,
+              "timers": 0,
+              "observers": 0,
+              "leases": 0,
+              "plane": false,
+              "representations": 0,
+              "running": false
+            },
+            "engine": {
+              "observers": 0,
+              "handles": 0,
+              "media": 0
+            },
+            "graphics": {
+              "surfaces": 0,
+              "retained": 0,
+              "representations": 0,
+              "mirrors": 0
+            },
+            "scenes": 0,
+            "held": []
+          }
+        }
+      ]
+    }
+  },
+  "responsiveness": {
+    "planCueMs": {
+      "study": 300,
+      "dossier": 280
+    },
+    "defaultPreparationBudgetMs": 250,
+    "windows": [
+      {
+        "route": "study",
+        "path": "cold",
+        "cueMs": 362,
+        "settleMs": 871,
+        "longTasksMs": [
+          143
+        ],
+        "maxFrameGapMs": 133,
+        "framesOver50": 1
+      },
+      {
+        "route": "study",
+        "path": "warm",
+        "cueMs": 363,
+        "settleMs": 873,
+        "longTasksMs": [
+          149
+        ],
+        "maxFrameGapMs": 133,
+        "framesOver50": 1
+      },
+      {
+        "route": "dossier",
+        "path": "cold",
+        "cueMs": 322,
+        "settleMs": 954,
+        "longTasksMs": [],
+        "maxFrameGapMs": 17,
+        "framesOver50": 0
+      },
+      {
+        "route": "dossier",
+        "path": "warm",
+        "cueMs": 322,
+        "settleMs": 954,
+        "longTasksMs": [],
+        "maxFrameGapMs": 17,
+        "framesOver50": 0
+      }
+    ],
+    "instrumentControl": {
+      "longTasks": [
+        120
+      ],
+      "maxFrameGapMs": 117,
+      "framesOver50": 1
+    },
+    "limits": "long-animation-frame script attribution is not reported by this headless Chromium (observer accepted, no entries for a 120 ms block)"
+  },
+  "dynamicReducedMotion": {
+    "pausedAt": 0.242273,
+    "afterWait": 0.242273,
+    "advancedMs": 0,
+    "airflow": "paused",
+    "label": "Play",
+    "resumedOnPlay": true,
+    "trace": [
+      "setReducedMotion",
+      "detail:toggleAirflow"
+    ]
+  }
+}

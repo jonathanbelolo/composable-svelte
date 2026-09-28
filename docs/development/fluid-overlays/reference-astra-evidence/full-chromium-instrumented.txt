@@ -1,0 +1,237 @@
+12:34:54 AM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference - using default configuration.
+
+ RUN  v4.0.7 /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference
+
+12:34:54 AM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference - using default configuration.
+stdout | tests/reference.browser.test.ts > 1. shared title plate moves from main to header across a mid-timeline commit with overlapping incoming text
+BJS - [00:34:56]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > 2. card expands through a half-page pose into the real interactive study, then a separate collapse recontracts it
+BJS - [00:34:57]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > 2. card expands through a half-page pose into the real interactive study, then a separate collapse recontracts it
+BJS - [00:34:57]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > 2. card expands through a half-page pose into the real interactive study, then a separate collapse recontracts it
+BJS - [00:34:58]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > 3. whole-layout reconfiguration: several independently timed geometry tracks, no route change
+BJS - [00:34:59]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > 4a. rapid reversal and repeated navigation continue from the displayed pose and retain nothing
+BJS - [00:35:02]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > 4a. rapid reversal and repeated navigation continue from the displayed pose and retain nothing
+BJS - [00:35:03]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > 4a. rapid reversal and repeated navigation continue from the displayed pose and retain nothing
+BJS - [00:35:04]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > 4a. rapid reversal and repeated navigation continue from the displayed pose and retain nothing
+BJS - [00:35:05]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > 4a. rapid reversal and repeated navigation continue from the displayed pose and retain nothing
+BJS - [00:35:07]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > 4a. rapid reversal and repeated navigation continue from the displayed pose and retain nothing
+BJS - [00:35:08]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > 4a. rapid reversal and repeated navigation continue from the displayed pose and retain nothing
+BJS - [00:35:09]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > 4b. (was gap R1) viewport resize before the cue re-resolves the viewport-relative pose (positive control)
+BJS - [00:35:10]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > 4b. (was gap R1) viewport resize before the cue re-resolves the viewport-relative pose (positive control)
+BJS - [00:35:11]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > 4c. nested scroll: page scroll mid-flight rebases, and the reading list position is restored on back
+BJS - [00:35:11]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > 4c. nested scroll: page scroll mid-flight rebases, and the reading list position is restored on back
+BJS - [00:35:13]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > 4d. (was gap R2) late destination geometry after commit is followed to the real destination (positive control)
+BJS - [00:35:13]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > 4e. the Reduce motion preference changes the actual plan: no geometry travel, one short handoff
+BJS - [00:35:15]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > 4e. the Reduce motion preference changes the actual plan: no geometry travel, one short handoff
+BJS - [00:35:15]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > 4f. destroying the Host mid-flight releases every owned visual resource
+BJS - [00:35:15]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > 3b. (was gap R3) within-page shared tracks start from the source position and honour startMs
+BJS - [00:35:16]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > 2b. (was gap R4) the painted shared representation follows its geometry through the half-page pose
+BJS - [00:35:17]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > 2b. (was gap R4) the painted shared representation follows its geometry through the half-page pose
+BJS - [00:35:18]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > no application element runs a CSS transition (state and pseudo-class changes are instant)
+BJS - [00:35:18]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > no application element runs a CSS transition (state and pseudo-class changes are instant)
+BJS - [00:35:19]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/reference.browser.test.ts > effect retirement: a resource owned by the outgoing page retires exactly once at the commit, while its decoration continues
+BJS - [00:35:19]: Babylon.js v8.36.1 - WebGL2
+ ✓ |chromium| tests/reference.browser.test.ts (13 tests) 24800ms
+   ✓ 1. shared title plate moves from main to header across a mid-timeline commit with overlapping incoming text  1227ms
+   ✓ 2. card expands through a half-page pose into the real interactive study, then a separate collapse recontracts it  2083ms
+   ✓ 3. whole-layout reconfiguration: several independently timed geometry tracks, no route change  2951ms
+   ✓ 4a. rapid reversal and repeated navigation continue from the displayed pose and retain nothing  8100ms
+   ✓ 4b. (was gap R1) viewport resize before the cue re-resolves the viewport-relative pose (positive control)  1082ms
+   ✓ 4c. nested scroll: page scroll mid-flight rebases, and the reading list position is restored on back  2384ms
+   ✓ 4d. (was gap R2) late destination geometry after commit is followed to the real destination (positive control)  1185ms
+   ✓ 4e. the Reduce motion preference changes the actual plan: no geometry travel, one short handoff  799ms
+   ✓ 4f. destroying the Host mid-flight releases every owned visual resource  500ms
+   ✓ 3b. (was gap R3) within-page shared tracks start from the source position and honour startMs  1116ms
+   ✓ 2b. (was gap R4) the painted shared representation follows its geometry through the half-page pose  1067ms
+   ✓ no application element runs a CSS transition (state and pseudo-class changes are instant)  1150ms
+   ✓ effect retirement: a resource owned by the outgoing page retires exactly once at the commit, while its decoration continues  1151ms
+stdout | tests/rich.browser.test.ts > rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas
+BJS - [00:35:21]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas
+ASTRA_RICH_SAMPLE {"at":{"wrapper":[153,145,972,450],"surface":[153,145,972,450],"runMs":291},"lastRunTime":291,"settled":[],"prepared":[{"type":"prepared","transaction":1,"at":567.2000000476837,"skipped":[]}],"frames":[{"t":0},{"t":3.799999952316284},{"t":7.299999952316284},{"t":25.299999952316284},{"t":40.700000047683716},{"t":58.90000009536743},{"t":75.29999995231628},{"t":90.59999990463257},{"t":107.59999990463257},{"t":125.29999995231628},{"t":140.5},{"t":170.70000004768372},{"t":174},{"t":190.29999995231628},{"t":207},{"t":225.09999990463257},{"t":241.20000004768372},{"t":259.09999990463257},{"t":275.40000009536743},{"t":291}],"unsupported":[]}
+stdout | tests/rich.browser.test.ts > rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas
+BJS - [00:35:21]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > live WebGL continuity: the turntable keeps turning through the route commit from explicit shared scene state
+BJS - [00:35:22]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > live WebGL continuity: the turntable keeps turning through the route commit from explicit shared scene state
+BJS - [00:35:23]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > live WebGL continuity: the turntable keeps turning through the route commit from explicit shared scene state
+BJS - [00:35:25]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > live WebGL continuity: the turntable keeps turning through the route commit from explicit shared scene state
+BJS - [00:35:25]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > video continuity: the airflow copy in the leaving introduction keeps playing after the commit (paused-loop control)
+BJS - [00:35:26]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > video continuity: the airflow copy in the leaving introduction keeps playing after the commit (paused-loop control)
+BJS - [00:35:28]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > repeated interruption adopts the shared card representation and leaves nothing behind
+BJS - [00:35:28]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > repeated interruption adopts the shared card representation and leaves nothing behind
+BJS - [00:35:29]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > repeated interruption adopts the shared card representation and leaves nothing behind
+BJS - [00:35:29]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > repeated interruption adopts the shared card representation and leaves nothing behind
+BJS - [00:35:30]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > repeated interruption adopts the shared card representation and leaves nothing behind
+BJS - [00:35:31]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > repeated interruption adopts the shared card representation and leaves nothing behind
+BJS - [00:35:32]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > repeated interruption adopts the shared card representation and leaves nothing behind
+BJS - [00:35:32]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > teardown mid-flight with a retained renderer releases every visual resource
+BJS - [00:35:33]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > teardown mid-flight with a retained renderer releases every visual resource
+BJS - [00:35:33]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > reduced motion: no geometry travel, the SVG shimmer and the airflow loop hold still
+BJS - [00:35:34]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > outgoing WebGL mirror keeps visibly turning after its page retires (stationary copy, turntable-off control)
+BJS - [00:35:34]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > outgoing WebGL mirror keeps visibly turning after its page retires (stationary copy, turntable-off control)
+BJS - [00:35:35]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > preparation responsiveness: cold versus warm, WebGL versus non-WebGL route (no screenshots while measuring)
+BJS - [00:35:37]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > preparation responsiveness: cold versus warm, WebGL versus non-WebGL route (no screenshots while measuring)
+BJS - [00:35:38]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > preparation responsiveness: cold versus warm, WebGL versus non-WebGL route (no screenshots while measuring)
+BJS - [00:35:39]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > preparation responsiveness: cold versus warm, WebGL versus non-WebGL route (no screenshots while measuring)
+BJS - [00:35:40]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > preparation responsiveness: cold versus warm, WebGL versus non-WebGL route (no screenshots while measuring)
+BJS - [00:35:40]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > preparation responsiveness: cold versus warm, WebGL versus non-WebGL route (no screenshots while measuring)
+BJS - [00:35:42]: Babylon.js v8.36.1 - WebGL2
+ ✓ |chromium| tests/rich.browser.test.ts (9 tests) 24568ms
+   ✓ rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas  1267ms
+   ✓ live WebGL continuity: the turntable keeps turning through the route commit from explicit shared scene state  4083ms
+   ✓ video continuity: the airflow copy in the leaving introduction keeps playing after the commit (paused-loop control)  2333ms
+   ✓ repeated interruption adopts the shared card representation and leaves nothing behind  4400ms
+   ✓ teardown mid-flight with a retained renderer releases every visual resource  850ms
+   ✓ reduced motion: no geometry travel, the SVG shimmer and the airflow loop hold still  566ms
+   ✓ outgoing WebGL mirror keeps visibly turning after its page retires (stationary copy, turntable-off control)  2850ms
+   ✓ preparation responsiveness: cold versus warm, WebGL versus non-WebGL route (no screenshots while measuring)  7567ms
+   ✓ turning on Reduce motion while on the dossier stops the playing airflow loop (and Play still works)  650ms
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > open and close paint backdrop/content mid-flight and fly the card to the hero and back
+BJS - [00:35:45]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > explicit Close entry drives the accepted close with its own quicker plan
+BJS - [00:35:47]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > a refused explicit close acquires nothing, stacks the alert above the modal, and nested Escape closes only the alert
+BJS - [00:35:49]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > Save & Close keeps the modal presented while saving, then its explicit plan drives the accepted close
+BJS - [00:35:51]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > reduced motion: fades only, no geometry frames
+BJS - [00:35:54]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay motion witnesses (trusted input) > drawer: trusted open paints mid-flight, tabs switch, Escape closes and restores focus
+BJS - [00:35:55]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > opens curator modal from card: page, backdrop, and content mounted together
+BJS - [00:35:56]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > opens non-pavilion curator modal instance (lattice), binding actual workId to instance plans
+BJS - [00:35:56]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > permits disjoint page interaction while overlay is presented (S7)
+BJS - [00:35:57]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > refuses close when dirty (I3), stacks nested discard alert (O8), then closes after save (I4)
+BJS - [00:35:58]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > Save & Close saves then closes
+BJS - [00:35:59]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > supports rapid reopen without epoch corruption (I1/I2)
+BJS - [00:35:59]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > opens technical specifications drawer and switches tabs (O5/O6)
+BJS - [00:36:00]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > restores focus to opener element upon dismissal
+BJS - [00:36:00]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/overlay.browser.test.ts > stacked overlay browser experience > honors reduced motion preference for overlays
+BJS - [00:36:01]: Babylon.js v8.36.1 - WebGL2
+ ✓ |chromium| tests/overlay.browser.test.ts (15 tests) 16317ms
+     ✓ open and close paint backdrop/content mid-flight and fly the card to the hero and back  1269ms
+     ✓ explicit Close entry drives the accepted close with its own quicker plan  2665ms
+     ✓ a refused explicit close acquires nothing, stacks the alert above the modal, and nested Escape closes only the alert  2232ms
+     ✓ Save & Close keeps the modal presented while saving, then its explicit plan drives the accepted close  2749ms
+     ✓ reduced motion: fades only, no geometry frames  586ms
+     ✓ drawer: trusted open paints mid-flight, tabs switch, Escape closes and restores focus  982ms
+     ✓ opens curator modal from card: page, backdrop, and content mounted together  617ms
+     ✓ opens non-pavilion curator modal instance (lattice), binding actual workId to instance plans  599ms
+     ✓ permits disjoint page interaction while overlay is presented (S7)  652ms
+     ✓ refuses close when dirty (I3), stacks nested discard alert (O8), then closes after save (I4)  900ms
+     ✓ Save & Close saves then closes  664ms
+     ✓ supports rapid reopen without epoch corruption (I1/I2)  685ms
+     ✓ opens technical specifications drawer and switches tabs (O5/O6)  584ms
+     ✓ restores focus to opener element upon dismissal  784ms
+     ✓ honors reduced motion preference for overlays  350ms
+ ✓ |chromium| tests/overlay.domain.test.ts (19 tests) 3ms
+stdout | tests/focus.browser.test.ts > normal viewport: Back stays focused, visible and in front wherever decoration crosses it
+BJS - [00:36:02]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/focus.browser.test.ts > normal viewport: Back stays focused, visible and in front wherever decoration crosses it
+BJS - [00:36:02]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/focus.browser.test.ts > normal viewport: Back stays focused, visible and in front wherever decoration crosses it
+F1 report {"viewport":[1280,900],"focusedFrames":23,"overlapFrames":2,"problems":[],"ringPixel":{"point":[155,142],"rgb":[56,189,248],"runMs":347,"opacityAtRequest":0.84,"coveredAfterCapture":false,"opacityAfterCapture":0}}
+stdout | tests/focus.browser.test.ts > short viewport: the card really passes over Back, which is painted in front of it
+BJS - [00:36:03]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/focus.browser.test.ts > short viewport: the card really passes over Back, which is painted in front of it
+BJS - [00:36:03]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/focus.browser.test.ts > short viewport: the card really passes over Back, which is painted in front of it
+F1 report {"viewport":[1280,400],"focusedFrames":24,"overlapFrames":10,"problems":[],"ringPixel":{"point":[200,142],"rgb":[56,189,248],"runMs":342,"opacityAtRequest":1,"coveredAfterCapture":true,"opacityAfterCapture":0.48}}
+stdout | tests/focus.browser.test.ts > short viewport: the card really passes over Back, which is painted in front of it
+F1 attempts [{"point":[200,142],"rgb":[56,189,248],"runMs":342,"opacityAtRequest":1,"coveredAfterCapture":true,"opacityAfterCapture":0.48}]
+stdout | tests/focus.browser.test.ts > short viewport: the card really passes over Back, which is painted in front of it
+BJS - [00:36:04]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/focus.browser.test.ts > short viewport: the card really passes over Back, which is painted in front of it
+F1 closing {"closingOverlap":2,"problems":[]}
+stdout | tests/focus.browser.test.ts > resize to a short viewport mid-run keeps Back in front
+BJS - [00:36:05]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/focus.browser.test.ts > resize to a short viewport mid-run keeps Back in front
+BJS - [00:36:05]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/focus.browser.test.ts > resize to a short viewport mid-run keeps Back in front
+F1 report {"viewport":[1280,400],"focusedFrames":23,"overlapFrames":2,"problems":[],"ringPixel":{"point":[155,142],"rgb":[56,189,248],"runMs":340,"opacityAtRequest":0.86,"coveredAfterCapture":false,"opacityAfterCapture":0}}
+stdout | tests/focus.browser.test.ts > negative control: without the foreground layer the same frame shows the card over the focus ring
+BJS - [00:36:06]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/focus.browser.test.ts > negative control: without the foreground layer the same frame shows the card over the focus ring
+BJS - [00:36:06]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/focus.browser.test.ts > negative control: without the foreground layer the same frame shows the card over the focus ring
+F1 report {"viewport":[1280,400],"focusedFrames":24,"overlapFrames":10,"problems":["nav not positioned"],"ringPixel":{"point":[200,142],"rgb":[55,97,109],"runMs":341,"opacityAtRequest":1,"coveredAfterCapture":true,"opacityAfterCapture":0.54}}
+stdout | tests/focus.browser.test.ts > negative control: without the foreground layer the same frame shows the card over the focus ring
+F1 attempts [{"point":[200,142],"rgb":[55,97,109],"runMs":341,"opacityAtRequest":1,"coveredAfterCapture":true,"opacityAfterCapture":0.54}]
+ ✓ |chromium| tests/focus.browser.test.ts (4 tests) 5052ms
+   ✓ normal viewport: Back stays focused, visible and in front wherever decoration crosses it  1067ms
+   ✓ short viewport: the card really passes over Back, which is painted in front of it  1851ms
+   ✓ resize to a short viewport mid-run keeps Back in front  1051ms
+   ✓ negative control: without the foreground layer the same frame shows the card over the focus ring  1083ms
+ ✓ |chromium| tests/domain.test.ts (11 tests) 2ms
+stdout | tests/hydration.browser.test.ts > home markup hydrates, adopts server nodes and replays nothing
+BJS - [00:36:07]: Babylon.js v8.36.1 - WebGL2
+ ✓ |chromium| tests/hydration.browser.test.ts (1 test) 1239ms
+   ✓ home markup hydrates, adopts server nodes and replays nothing  1239ms
+stdout | tests/entry.browser.test.ts > direct load of /study renders only the study page, initialized from the document URL
+BJS - [00:36:09]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/entry.browser.test.ts > direct load of / renders only the home page, initialized from the document URL
+BJS - [00:36:09]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/entry.browser.test.ts > direct load of /nowhere renders only the home page, initialized from the document URL
+BJS - [00:36:09]: Babylon.js v8.36.1 - WebGL2
+ ✓ |chromium| tests/entry.browser.test.ts (4 tests) 201ms
+
+ Test Files  8 passed (8)
+      Tests  76 passed (76)
+   Start at  00:34:54
+   Duration  74.59s (transform 0ms, setup 0ms, collect 1.60s, tests 72.18s, environment 0ms, prepare 430.38s)
+

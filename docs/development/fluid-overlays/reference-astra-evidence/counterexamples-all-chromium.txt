@@ -1,0 +1,76 @@
+12:37:29 AM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference - using default configuration.
+
+ RUN  v4.0.7 /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference
+
+12:37:29 AM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference - using default configuration.
+Port 63315 is in use, trying another one...
+stdout | tests/astra.counterexamples.test.ts > a successful save after full dismissal is retained in the catalog
+late-save {"notes":"Lightweight double-skin ETFE inflated at 250 Pa gauge pressure.","status":"idle"}
+stdout | tests/astra.counterexamples.test.ts > a stale result does not roll back a newer saved catalog revision
+out-of-order {"catalog":"old","draft":"new","dirty":false}
+stdout | tests/astra.counterexamples.test.ts > a duplicate success before the view flush preserves the pending accepted Save & Close
+duplicate-before-bridge {"first":1,"duplicate":null,"status":"presented"}
+ ❯ |chromium| tests/astra.counterexamples.test.ts (3 tests | 3 failed) 4ms
+   × a successful save after full dismissal is retained in the catalog 3ms
+   × a stale result does not roll back a newer saved catalog revision 0ms
+   × a duplicate success before the view flush preserves the pending accepted Save & Close 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |chromium| tests/astra.counterexamples.test.ts > a successful save after full dismissal is retained in the catalog
+AssertionError: expected 'Lightweight double-skin ETFE inflated…' to be 'Saved before leaving' // Object.is equality
+
+Expected: [32m"Saved before leaving"[39m
+Received: [31m"Lightweight double-skin ETFE inflated at 250 Pa gauge pressure."[39m
+
+ ❯ tests/astra.counterexamples.test.ts:14:37
+     12|  s=step(s,complete);
+     13|  console.log('late-save',JSON.stringify({notes:s.specs.cloud!.curatorN…
+     14|  expect(s.specs.cloud!.curatorNotes).toBe('Saved before leaving');
+       |                                     ^
+     15|  expect(s.curator).toBeNull();
+     16| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |chromium| tests/astra.counterexamples.test.ts > a stale result does not roll back a newer saved catalog revision
+AssertionError: expected 'old' to be 'new' // Object.is equality
+
+Expected: [32m"new"[39m
+Received: [31m"old"[39m
+
+ ❯ tests/astra.counterexamples.test.ts:27:37
+     25|  s=step(step(b,resultB),resultA);
+     26|  console.log('out-of-order',JSON.stringify({catalog:s.specs.cloud!.cur…
+     27|  expect(s.specs.cloud!.curatorNotes).toBe('new');
+       |                                     ^
+     28| });
+     29| it('a duplicate success before the view flush preserves the pending ac…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |chromium| tests/astra.counterexamples.test.ts > a duplicate success before the view flush preserves the pending accepted Save & Close
+AssertionError: expected null to be 1 // Object.is equality
+
+[32m- Expected:[39m 
+1
+
+[31m+ Received:[39m 
+null
+
+ ❯ tests/astra.counterexamples.test.ts:35:39
+     33|  const ready=step(saving,result);const duplicate=step(ready,result);
+     34|  console.log('duplicate-before-bridge',JSON.stringify({first:ready.cur…
+     35|  expect(duplicate.curator!.closeReady).toBe(ready.curator!.closeReady);
+       |                                       ^
+     36| });
+     37| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed (3)
+   Start at  00:37:29
+   Duration  1.46s (transform 0ms, setup 0ms, collect 966ms, tests 4ms, environment 0ms, prepare 42ms)
+

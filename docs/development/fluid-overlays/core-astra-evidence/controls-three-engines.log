@@ -1,0 +1,397 @@
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-core-astra-review/packages/core
+
+stdout | tests/fluid-motion/s1-transform-regressions.browser.test.ts > review: outgoing slide retains the ancestor scale in viewport displacement
+[review ancestor scale] {
+  "actualDX": 22.720001220703125,
+  "at": [
+    333.2799987792969,
+    240,
+  ],
+  "expectedDX": 22.72,
+  "later": [
+    356,
+    240,
+  ],
+}
+stdout | tests/fluid-motion/s1-transform-regressions.browser.test.ts > review: outgoing slide retains the ancestor rotation in viewport displacement
+[review ancestor rotate] {
+  "at": [
+    380,
+    166.63999938964844,
+  ],
+  "dx": 0,
+  "dy": 11.360000610351562,
+  "later": [
+    380,
+    178,
+  ],
+}
+stdout | tests/fluid-motion/s1-transform-regressions.browser.test.ts > review: noncentral scale origin preserves its trajectory after removal
+[review origin] {
+  "at": {
+    "bottom": 131.67999267578125,
+    "height": 31.67999267578125,
+    "left": 100,
+    "right": 179.1999969482422,
+    "top": 100,
+    "width": 79.19999694824219,
+    "x": 100,
+    "y": 100,
+  },
+  "later": {
+    "bottom": 126,
+    "height": 26,
+    "left": 100,
+    "right": 165,
+    "top": 100,
+    "width": 65,
+    "x": 100,
+    "y": 100,
+  },
+}
+stdout | tests/fluid-motion/s1-transform-regressions.browser.test.ts > review: successor scale resolves stylesheet stable value while older lease is live
+[review stable fallback] {
+  "diag": [
+    {
+      "continuity": "static",
+      "participant": "x",
+      "provider": "projection",
+      "transaction": 1,
+      "type": "representation",
+    },
+    {
+      "cached": 0,
+      "elements": 1,
+      "outcome": "ready",
+      "projected": 1,
+      "readinessPending": 0,
+      "slices": 1,
+      "transaction": 1,
+      "type": "preparation",
+      "waitedMs": 0,
+      "workMs": 0.3,
+    },
+    {
+      "at": 0,
+      "skipped": [],
+      "transaction": 1,
+      "type": "prepared",
+    },
+    {
+      "t": 500,
+      "transaction": 1,
+      "type": "cue",
+    },
+    {
+      "continuity": "static",
+      "participant": "x",
+      "provider": "projection",
+      "transaction": 2,
+      "type": "representation",
+    },
+    {
+      "cached": 0,
+      "elements": 1,
+      "outcome": "ready",
+      "projected": 1,
+      "readinessPending": 0,
+      "slices": 1,
+      "transaction": 2,
+      "type": "preparation",
+      "waitedMs": 0,
+      "workMs": 0.3,
+    },
+    {
+      "participant": "*",
+      "reason": "adoptedFromEarlierRun",
+      "transaction": 2,
+      "type": "unsupported",
+    },
+    {
+      "at": 500,
+      "skipped": [],
+      "transaction": 2,
+      "type": "prepared",
+    },
+    {
+      "t": 500,
+      "transaction": 2,
+      "type": "cue",
+    },
+  ],
+  "expected": 1.001,
+  "scale": "1.001",
+}
+ ✓ |chromium| tests/fluid-motion/overlay-identity.browser.test.ts (6 tests) 17ms
+ ✓ |chromium| tests/fluid-motion/s1-transform-regressions.browser.test.ts (6 tests) 16ms
+stdout | tests/fluid-motion/s1-transform-native.browser.test.ts > review: actual native snapshot group follows outgoing slide and scale after commit
+[review native motion] Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.7390.37 Safari/537.36 {
+  "key": {
+    "composite": "auto",
+    "computedOffset": 0,
+    "easing": "linear",
+    "height": "70px",
+    "offset": null,
+    "opacity": "1",
+    "transform": "translate(122.296px, 29.713px) scale(0.706086, 0.706086)",
+    "transformOrigin": "0px 0px",
+    "width": "140px",
+  },
+  "matrix": [
+    0.7060859799385071,
+    0.7060859799385071,
+    122.2959976196289,
+    29.71299934387207,
+  ],
+  "rect": {
+    "bottom": 100.32159614562988,
+    "height": 77.66944885253906,
+    "left": 115.23509216308594,
+    "right": 242.33056640625,
+    "top": 22.65214729309082,
+    "width": 127.09547424316406,
+    "x": 115.23509216308594,
+    "y": 22.65214729309082,
+  },
+  "scale": 0.7060859680175782,
+}
+ ✓ |chromium| tests/fluid-motion/s1-transform-native.browser.test.ts (1 test) 110ms
+Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+stdout | tests/fluid-motion/s1-transform-regressions.browser.test.ts > review: outgoing slide retains the ancestor scale in viewport displacement
+[review ancestor scale] {
+  "actualDX": 22.720001220703125,
+  "at": [
+    333.2799987792969,
+    240,
+  ],
+  "expectedDX": 22.72,
+  "later": [
+    356,
+    240,
+  ],
+}
+stdout | tests/fluid-motion/s1-transform-regressions.browser.test.ts > review: outgoing slide retains the ancestor rotation in viewport displacement
+[review ancestor rotate] {
+  "at": [
+    380,
+    166.63999938964844,
+  ],
+  "dx": 0,
+  "dy": 11.360000610351562,
+  "later": [
+    380,
+    178,
+  ],
+}
+stdout | tests/fluid-motion/s1-transform-regressions.browser.test.ts > review: noncentral scale origin preserves its trajectory after removal
+[review origin] {
+  "at": {
+    "bottom": 131.67999267578125,
+    "height": 31.67999267578125,
+    "left": 100,
+    "right": 179.1999969482422,
+    "top": 100,
+    "width": 79.19999694824219,
+    "x": 100,
+    "y": 100,
+  },
+  "later": {
+    "bottom": 126,
+    "height": 26,
+    "left": 100,
+    "right": 165,
+    "top": 100,
+    "width": 65,
+    "x": 100,
+    "y": 100,
+  },
+}
+stdout | tests/fluid-motion/s1-transform-regressions.browser.test.ts > review: successor scale resolves stylesheet stable value while older lease is live
+[review stable fallback] {
+  "diag": [
+    {
+      "continuity": "static",
+      "participant": "x",
+      "provider": "projection",
+      "transaction": 1,
+      "type": "representation",
+    },
+    {
+      "cached": 0,
+      "elements": 1,
+      "outcome": "ready",
+      "projected": 1,
+      "readinessPending": 0,
+      "slices": 1,
+      "transaction": 1,
+      "type": "preparation",
+      "waitedMs": 0,
+      "workMs": 0,
+    },
+    {
+      "at": 0,
+      "skipped": [],
+      "transaction": 1,
+      "type": "prepared",
+    },
+    {
+      "t": 500,
+      "transaction": 1,
+      "type": "cue",
+    },
+    {
+      "continuity": "static",
+      "participant": "x",
+      "provider": "projection",
+      "transaction": 2,
+      "type": "representation",
+    },
+    {
+      "cached": 0,
+      "elements": 1,
+      "outcome": "ready",
+      "projected": 1,
+      "readinessPending": 0,
+      "slices": 1,
+      "transaction": 2,
+      "type": "preparation",
+      "waitedMs": 0,
+      "workMs": 0,
+    },
+    {
+      "participant": "*",
+      "reason": "adoptedFromEarlierRun",
+      "transaction": 2,
+      "type": "unsupported",
+    },
+    {
+      "at": 500,
+      "skipped": [],
+      "transaction": 2,
+      "type": "prepared",
+    },
+    {
+      "t": 500,
+      "transaction": 2,
+      "type": "cue",
+    },
+  ],
+  "expected": 1.001,
+  "scale": "1.001",
+}
+ ✓ |webkit| tests/fluid-motion/s1-transform-regressions.browser.test.ts (6 tests) 27ms
+ ✓ |webkit| tests/fluid-motion/overlay-identity.browser.test.ts (6 tests) 28ms
+stdout | tests/fluid-motion/s1-transform-native.browser.test.ts > review: actual native snapshot group follows outgoing slide and scale after commit
+[review native motion] Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15 {
+  "key": {
+    "composite": "auto",
+    "computedOffset": 0,
+    "easing": "linear",
+    "height": "70px",
+    "offset": null,
+    "opacity": "1",
+    "transform": "translate(122.29595px, 29.713006px) scale(0.706086, 0.706086)",
+    "transformOrigin": "0 0",
+    "width": "140px",
+  },
+  "matrix": [
+    0.706086,
+    0.706086,
+    122.29595184326172,
+    29.71300506591797,
+  ],
+  "rect": {
+    "bottom": 100.32159614562988,
+    "height": 77.66944885253906,
+    "left": 115.23509216308594,
+    "right": 242.33055114746094,
+    "top": 22.65214729309082,
+    "width": 127.095458984375,
+    "x": 115.23509216308594,
+    "y": 22.65214729309082,
+  },
+  "scale": 0.7060858832465278,
+}
+ ✓ |webkit| tests/fluid-motion/s1-transform-native.browser.test.ts (1 test) 124ms
+ ✓ |chromium| tests/fluid-motion/overlay-managed.browser.test.ts (1 test) 1025ms
+   ✓ Escape on a managed modal: the accepted dismissal is choreographed by the default close plan; completion once  1025ms
+12:10:19 AM [vite] (client) ✨ new dependencies optimized: tailwind-merge
+12:10:19 AM [vite] (client) ✨ optimized dependencies changed. reloading
+
+[vitest] Vite unexpectedly reloaded a test. This may cause tests to fail, lead to flaky behaviour or duplicated test runs.
+For a stable experience, please add mentioned dependencies to your config's `optimizeDeps.include` field manually.
+
+
+ ✓ |chromium| tests/fluid-motion/overlay-command.browser.test.ts (1 test) 366ms
+   ✓ Command open/close run through its default overlay plans  365ms
+ ✓ |webkit| tests/fluid-motion/overlay-command.browser.test.ts (1 test) 364ms
+   ✓ Command open/close run through its default overlay plans  363ms
+ ✓ |chromium| tests/fluid-motion/overlay-scope.browser.test.ts (1 test) 1189ms
+   ✓ a page-initialised participant used inside a Modal snippet registers in the modal instance scope; reopening is a new epoch  1188ms
+ ✓ |webkit| tests/fluid-motion/overlay-managed.browser.test.ts (1 test) 1027ms
+   ✓ Escape on a managed modal: the accepted dismissal is choreographed by the default close plan; completion once  1026ms
+ ✓ |chromium| tests/fluid-motion/overlay-lightbox.browser.test.ts (1 test) 672ms
+   ✓ ImageLightbox open and Escape close are choreographed by the default plans; no built-in animation; completion once each  672ms
+ ✓ |webkit| tests/fluid-motion/overlay-lightbox.browser.test.ts (1 test) 668ms
+   ✓ ImageLightbox open and Escape close are choreographed by the default plans; no built-in animation; completion once each  667ms
+ ✓ |webkit| tests/fluid-motion/overlay-layers.browser.test.ts (3 tests) 1347ms
+   ✓ an earlier layer (content z-51) paints below a later layer backdrop (z-50); closing the later layer restores it  974ms
+   ✓ a Modal nested in another Modal's children snippet paints above it, ranked by the dismissal coordinator (not by mount order)  307ms
+ ✓ |webkit| tests/fluid-motion/overlay-scope.browser.test.ts (1 test) 1198ms
+   ✓ a page-initialised participant used inside a Modal snippet registers in the modal instance scope; reopening is a new epoch  1196ms
+ ✓ |chromium| tests/fluid-motion/overlay-layers.browser.test.ts (3 tests) 2166ms
+   ✓ an earlier layer (content z-51) paints below a later layer backdrop (z-50); closing the later layer restores it  1715ms
+   ✓ a Modal nested in another Modal's children snippet paints above it, ranked by the dismissal coordinator (not by mount order)  371ms
+ ✓ |firefox| tests/fluid-motion/overlay-command.browser.test.ts (1 test) 356ms
+   ✓ Command open/close run through its default overlay plans  356ms
+ ✓ |firefox| tests/fluid-motion/overlay-lightbox.browser.test.ts (1 test) 666ms
+   ✓ ImageLightbox open and Escape close are choreographed by the default plans; no built-in animation; completion once each  666ms
+ ✓ |firefox| tests/fluid-motion/overlay-scope.browser.test.ts (1 test) 1185ms
+   ✓ a page-initialised participant used inside a Modal snippet registers in the modal instance scope; reopening is a new epoch  1185ms
+ ✓ |chromium| tests/fluid-motion/overlay-motion.browser.test.ts (12 tests) 8842ms
+   ✓ close then open are choreographed live on one timeline; completion exactly once each; no spring, copies or leases left  1076ms
+   ✓ a refused close claims and completes nothing; a reopen during dismissal cancels the old obligation without dispatch  817ms
+   ✓ W-C3: during choreographed open/close the primitive keeps focus, inertness and scroll-lock authority (visuals only are claimed)  1383ms
+   ✓ C2 explicit entry: transition() prepares BEFORE the commit — a page source the commit removes is still captured and exits as a copy  368ms
+   ✓ C2 epoch: a pending explicit plan applies only to its own epoch; a stale one is discarded (nothing acquired) and the default plan runs  367ms
+   ✓ C5: a REFUSED explicit transition overlapping a running open leaves that run progressing untouched (same copy, leases, tracks, obligation)  1065ms
+   ✓ C2 explicit open: the shared source is captured before the commit removes it; the flight departs from its pre-commit geometry  935ms
+   ✓ destination-phase ambiguity is decided before any destination is suppressed (no acquire-then-rollback)  798ms
+   ✓ U2 nested combined dismissal: one parent plan staggers the live child and the parent on one timeline; the child joins (no spring), both complete once; authority stays with the primitives  1085ms
+   ✓ phase boundary (default plan): sources resolve at the claim, AFTER the accepted change rendered — a source the same action removed is diagnosed missingSource (no false pre-commit flight); the open still completes once  799ms
+ ✓ |webkit| tests/fluid-motion/overlay-motion.browser.test.ts (12 tests) 8810ms
+   ✓ close then open are choreographed live on one timeline; completion exactly once each; no spring, copies or leases left  1058ms
+   ✓ a refused close claims and completes nothing; a reopen during dismissal cancels the old obligation without dispatch  834ms
+   ✓ W-C3: during choreographed open/close the primitive keeps focus, inertness and scroll-lock authority (visuals only are claimed)  1368ms
+   ✓ C2 explicit entry: transition() prepares BEFORE the commit — a page source the commit removes is still captured and exits as a copy  365ms
+   ✓ C2 epoch: a pending explicit plan applies only to its own epoch; a stale one is discarded (nothing acquired) and the default plan runs  368ms
+   ✓ C5: a REFUSED explicit transition overlapping a running open leaves that run progressing untouched (same copy, leases, tracks, obligation)  1067ms
+   ✓ C2 explicit open: the shared source is captured before the commit removes it; the flight departs from its pre-commit geometry  932ms
+   ✓ destination-phase ambiguity is decided before any destination is suppressed (no acquire-then-rollback)  785ms
+   ✓ U2 nested combined dismissal: one parent plan staggers the live child and the parent on one timeline; the child joins (no spring), both complete once; authority stays with the primitives  1082ms
+   ✓ phase boundary (default plan): sources resolve at the claim, AFTER the accepted change rendered — a source the same action removed is diagnosed missingSource (no false pre-commit flight); the open still completes once  802ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |firefox| tests/fluid-motion/overlay-identity.browser.test.ts [ tests/fluid-motion/overlay-identity.browser.test.ts ]
+ FAIL  |firefox| tests/fluid-motion/overlay-layers.browser.test.ts [ tests/fluid-motion/overlay-layers.browser.test.ts ]
+ FAIL  |firefox| tests/fluid-motion/overlay-managed.browser.test.ts [ tests/fluid-motion/overlay-managed.browser.test.ts ]
+ FAIL  |firefox| tests/fluid-motion/overlay-motion.browser.test.ts [ tests/fluid-motion/overlay-motion.browser.test.ts ]
+ FAIL  |firefox| tests/fluid-motion/s1-transform-native.browser.test.ts [ tests/fluid-motion/s1-transform-native.browser.test.ts ]
+ FAIL  |firefox| tests/fluid-motion/s1-transform-regressions.browser.test.ts [ tests/fluid-motion/s1-transform-regressions.browser.test.ts ]
+Error: Failed to import test file /private/tmp/fluid-overlays-core-astra-review/packages/core/tests/setup.ts
+Caused by: Error: Vitest failed to find the runner. This is a bug in Vitest. Please, open an issue with reproduction.
+ ❯ tests/setup.ts:21:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+
+ Test Files  6 failed | 21 passed (27)
+      Tests  67 passed (67)
+   Start at  00:10:16
+   Duration  11.61s (transform 0ms, setup 927ms, collect 12.21s, tests 30.20s, environment 0ms, prepare 14.57s)
+

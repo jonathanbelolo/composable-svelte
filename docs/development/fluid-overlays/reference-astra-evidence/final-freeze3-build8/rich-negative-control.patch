@@ -1,0 +1,10 @@
+--- rich.browser.test.ts
++++ rich.browser.test.ts (private negative control)
+@@ -131,6 +131,7 @@
+         if (settled(f) > settledBefore) return null;
+         const last = f.host().diagnostics.filter(event => event.type === 'frame' && event.participant === 'card-pavilion').at(-1);
+         const runMs = (last?.t as number | undefined) ?? -1;
++        document.querySelector('[data-route-representation="card-pavilion"]')?.remove(); // reviewer negative control: missing live paint
+         const rep = document.querySelector('[data-route-representation="card-pavilion"]');
+         if (rep && runMs > 290) return { wrapper: box(rep), surface: rep.firstElementChild ? box(rep.firstElementChild) : null, runMs };
+         await frame();

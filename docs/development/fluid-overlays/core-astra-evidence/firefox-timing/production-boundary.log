@@ -1,0 +1,28 @@
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-firefox-timing/packages/core
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+Port 63315 is in use, trying another one...
+stdout | tests/fluid-motion/firefox-production-boundary.browser.test.ts > running retirement has no test pause or clock rewrite: add margin
+[astra-production-running] {"name":"add margin","samples":21,"initialError":0,"maxError":0,"replayTime":[494.24],"oracleTime":[494.24]}
+stdout | tests/fluid-motion/firefox-production-boundary.browser.test.ts > running retirement has no test pause or clock rewrite: replace plus add margin
+[astra-production-running] {"name":"replace plus add margin","samples":21,"initialError":0.000700000000000145,"maxError":0.000700000000000145,"replayTime":[516.68,516.68],"oracleTime":[516.68,516.68]}
+stdout | tests/fluid-motion/firefox-production-boundary.browser.test.ts > running retirement has no test pause or clock rewrite: implicit opacity easing
+[astra-production-running] {"name":"implicit opacity easing","samples":21,"initialError":0,"maxError":0,"replayTime":[516.66],"oracleTime":[516.66]}
+stdout | tests/fluid-motion/firefox-production-boundary.browser.test.ts > running retirement has no test pause or clock rewrite: implicit transform
+[astra-production-running] {"name":"implicit transform","samples":21,"initialError":0.0000010000000000287557,"maxError":0.0000010000000000287557,"replayTime":[516.66],"oracleTime":[516.66]}
+stdout | tests/fluid-motion/firefox-production-boundary.browser.test.ts > already-paused production source remains faithful: implicit
+[astra-production-paused] {"explicit":false,"time":400,"pending":false,"state":"paused","value":"0.58"}
+stdout | tests/fluid-motion/firefox-production-boundary.browser.test.ts > already-paused production source remains faithful: explicit
+[astra-production-paused] {"explicit":true,"time":400,"pending":false,"state":"paused","value":"0.58"}
+ ✓ |firefox| tests/fluid-motion/firefox-production-boundary.browser.test.ts (6 tests) 2244ms
+   ✓ running retirement has no test pause or clock rewrite: add margin  499ms
+   ✓ running retirement has no test pause or clock rewrite: replace plus add margin  513ms
+   ✓ running retirement has no test pause or clock rewrite: implicit opacity easing  518ms
+   ✓ running retirement has no test pause or clock rewrite: implicit transform  516ms
+
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+   Start at  00:22:39
+   Duration  3.80s (transform 0ms, setup 8ms, collect 17ms, tests 2.24s, environment 0ms, prepare 122ms)
+

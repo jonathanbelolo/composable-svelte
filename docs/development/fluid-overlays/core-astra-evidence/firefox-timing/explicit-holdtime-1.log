@@ -1,0 +1,15 @@
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-firefox-timing/packages/core
+
+ ✓ |firefox| tests/fluid-motion/representation.browser.test.ts (68 tests | 64 skipped) 1398ms
+     ✓ composite add onto a non-zero underlying value  348ms
+     ✓ two animations on one property (replace, then add)  350ms
+     ✓ per-keyframe easing with an implicit start  352ms
+     ✓ a non-identity implicit underlying transform from a stylesheet  348ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed | 64 skipped (68)
+   Start at  00:17:27
+   Duration  2.84s (transform 0ms, setup 9ms, collect 148ms, tests 1.40s, environment 0ms, prepare 115ms)
+

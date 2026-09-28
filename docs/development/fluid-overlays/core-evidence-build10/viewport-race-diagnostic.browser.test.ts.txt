@@ -1,0 +1,19 @@
+// Temporary diagnostic (run 18:45Z twice, 3 engines, then deleted). Exact source.
+import { afterEach, it } from 'vitest';
+import { page } from 'vitest/browser';
+const stops: (() => void)[] = [];
+afterEach(() => { for (const stop of stops.splice(0).reverse()) stop(); });
+const raf = () => new Promise(resolve => requestAnimationFrame(() => resolve(undefined)));
+it('A: sets 640, fire-and-forget restore', async () => {
+  const original = { width: window.innerWidth, height: window.innerHeight };
+  console.log('RACE A start', window.innerWidth);
+  stops.push(() => { void page.viewport(original.width, original.height); });
+  await page.viewport(640, 700); await raf();
+});
+it('B: awaits 660 like the replan test', async () => {
+  console.log('RACE B start', window.innerWidth);
+  await page.viewport(660, 700); await raf();
+  console.log('RACE B after awaited 660 + rAF', window.innerWidth);
+  await new Promise(resolve => setTimeout(resolve, 100));
+  console.log('RACE B 100ms later', window.innerWidth);
+});

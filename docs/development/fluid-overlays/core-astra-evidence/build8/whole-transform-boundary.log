@@ -1,0 +1,181 @@
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-core-build8-review/packages/core
+
+ ↓ |chromium| tests/fluid-motion/core-astra-correction.browser.test.ts (4 tests | 4 skipped)
+ ↓ |chromium| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests | 6 skipped)
+ ↓ |webkit| tests/fluid-motion/core-astra-c2-public.browser.test.ts (2 tests | 2 skipped)
+ ↓ |chromium| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 skipped)
+ ↓ |webkit| tests/fluid-motion/core-astra-correction.browser.test.ts (4 tests | 4 skipped)
+stdout | tests/fluid-motion/core-astra-final-boundary.browser.test.ts > final boundary: whole-run successor preserves active slide and scale
+[astra-whole-transform] {"oldPose":{"translate":"40px 20px","scale":"0.8"},"newPose":{"translate":"0px","scale":"1"},"before":{"x":150,"y":124,"width":80,"height":32,"top":124,"right":230,"bottom":156,"left":150},"after":{"x":100,"y":100,"width":100,"height":40,"top":100,"right":200,"bottom":140,"left":100}}
+ ↓ |webkit| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests | 6 skipped)
+ ❯ |chromium| tests/fluid-motion/core-astra-final-boundary.browser.test.ts (1 test | 1 failed) 94ms
+   × final boundary: whole-run successor preserves active slide and scale 94ms
+ ↓ |webkit| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 skipped)
+ ↓ |chromium| tests/fluid-motion/core-astra-c2-public.browser.test.ts (2 tests | 2 skipped)
+stdout | tests/fluid-motion/core-astra-final-boundary.browser.test.ts > final boundary: whole-run successor preserves active slide and scale
+[astra-whole-transform] {"oldPose":{"translate":"40px 20px","scale":"0.8"},"newPose":{"translate":"0px","scale":"1"},"before":{"x":150,"y":124,"width":80,"height":32,"top":124,"right":230,"bottom":156,"left":150},"after":{"x":100,"y":100,"width":100,"height":40,"top":100,"right":200,"bottom":140,"left":100}}
+ ❯ |webkit| tests/fluid-motion/core-astra-final-boundary.browser.test.ts (1 test | 1 failed) 74ms
+   × final boundary: whole-run successor preserves active slide and scale 73ms
+stdout | tests/fluid-motion/core-astra-final-boundary.browser.test.ts > final boundary: whole-run successor preserves active slide and scale
+[astra-whole-transform] {"oldPose":{"translate":"40px 20px","scale":"0.8"},"newPose":{"translate":"0px","scale":"1"},"before":{"x":150,"y":124,"width":80,"height":32,"top":124,"right":230,"bottom":156,"left":150},"after":{"x":100,"y":100,"width":100,"height":40,"top":100,"right":200,"bottom":140,"left":100}}
+ ❯ |firefox| tests/fluid-motion/core-astra-final-boundary.browser.test.ts (1 test | 1 failed) 78ms
+   × final boundary: whole-run successor preserves active slide and scale 78ms
+ ↓ |firefox| tests/fluid-motion/core-astra-c2-public.browser.test.ts (2 tests | 2 skipped)
+ ↓ |firefox| tests/fluid-motion/core-astra-correction.browser.test.ts (4 tests | 4 skipped)
+ ↓ |firefox| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests | 6 skipped)
+ ↓ |firefox| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 skipped)
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |chromium| tests/fluid-motion/core-astra-final-boundary.browser.test.ts > final boundary: whole-run successor preserves active slide and scale
+AssertionError: expected 100 to be close to 150, received difference is 50, but expected 0.005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-final-boundary.browser.test.ts/final-boundary--whole-run-successor-preserves-active-slide-and-scale-1.png
+
+ ❯ tests/fluid-motion/core-astra-final-boundary.browser.test.ts:35:22
+     33|  f.host.local(p,f.owner,()=>{});f.step(400);const after=n.getBoundingC…
+     34|  console.log('[astra-whole-transform]',JSON.stringify({oldPose,newPose…
+     35|  expect.soft(after.x).toBeCloseTo(before.x,2);expect.soft(after.y).toB…
+       |                      ^
+     36| });
+     37| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯
+
+ FAIL  |chromium| tests/fluid-motion/core-astra-final-boundary.browser.test.ts > final boundary: whole-run successor preserves active slide and scale
+AssertionError: expected 100 to be close to 124, received difference is 24, but expected 0.005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-final-boundary.browser.test.ts/final-boundary--whole-run-successor-preserves-active-slide-and-scale-1.png
+
+ ❯ tests/fluid-motion/core-astra-final-boundary.browser.test.ts:35:67
+     33|  f.host.local(p,f.owner,()=>{});f.step(400);const after=n.getBoundingC…
+     34|  console.log('[astra-whole-transform]',JSON.stringify({oldPose,newPose…
+     35|  expect.soft(after.x).toBeCloseTo(before.x,2);expect.soft(after.y).toB…
+       |                                                                   ^
+     36| });
+     37| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯
+
+ FAIL  |chromium| tests/fluid-motion/core-astra-final-boundary.browser.test.ts > final boundary: whole-run successor preserves active slide and scale
+AssertionError: expected 100 to be close to 80, received difference is 20, but expected 0.005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-final-boundary.browser.test.ts/final-boundary--whole-run-successor-preserves-active-slide-and-scale-1.png
+
+ ❯ tests/fluid-motion/core-astra-final-boundary.browser.test.ts:35:116
+     33|  f.host.local(p,f.owner,()=>{});f.step(400);const after=n.getBoundingC…
+     34|  console.log('[astra-whole-transform]',JSON.stringify({oldPose,newPose…
+     35|  expect.soft(after.x).toBeCloseTo(before.x,2);expect.soft(after.y).toB…
+       |                                                                                                                    ^
+     36| });
+     37| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯
+
+ FAIL  |firefox| tests/fluid-motion/core-astra-final-boundary.browser.test.ts > final boundary: whole-run successor preserves active slide and scale
+AssertionError: expected 100 to be close to 150, received difference is 50, but expected 0.005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-final-boundary.browser.test.ts/final-boundary--whole-run-successor-preserves-active-slide-and-scale-1.png
+
+ ❯ tests/fluid-motion/core-astra-final-boundary.browser.test.ts:35:22
+     33|  f.host.local(p,f.owner,()=>{});f.step(400);const after=n.getBoundingC…
+     34|  console.log('[astra-whole-transform]',JSON.stringify({oldPose,newPose…
+     35|  expect.soft(after.x).toBeCloseTo(before.x,2);expect.soft(after.y).toB…
+       |                      ^
+     36| });
+     37| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯
+
+ FAIL  |firefox| tests/fluid-motion/core-astra-final-boundary.browser.test.ts > final boundary: whole-run successor preserves active slide and scale
+AssertionError: expected 100 to be close to 124, received difference is 24, but expected 0.005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-final-boundary.browser.test.ts/final-boundary--whole-run-successor-preserves-active-slide-and-scale-1.png
+
+ ❯ tests/fluid-motion/core-astra-final-boundary.browser.test.ts:35:67
+     33|  f.host.local(p,f.owner,()=>{});f.step(400);const after=n.getBoundingC…
+     34|  console.log('[astra-whole-transform]',JSON.stringify({oldPose,newPose…
+     35|  expect.soft(after.x).toBeCloseTo(before.x,2);expect.soft(after.y).toB…
+       |                                                                   ^
+     36| });
+     37| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯
+
+ FAIL  |firefox| tests/fluid-motion/core-astra-final-boundary.browser.test.ts > final boundary: whole-run successor preserves active slide and scale
+AssertionError: expected 100 to be close to 80, received difference is 20, but expected 0.005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-final-boundary.browser.test.ts/final-boundary--whole-run-successor-preserves-active-slide-and-scale-1.png
+
+ ❯ tests/fluid-motion/core-astra-final-boundary.browser.test.ts:35:116
+     33|  f.host.local(p,f.owner,()=>{});f.step(400);const after=n.getBoundingC…
+     34|  console.log('[astra-whole-transform]',JSON.stringify({oldPose,newPose…
+     35|  expect.soft(after.x).toBeCloseTo(before.x,2);expect.soft(after.y).toB…
+       |                                                                                                                    ^
+     36| });
+     37| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯
+
+ FAIL  |webkit| tests/fluid-motion/core-astra-final-boundary.browser.test.ts > final boundary: whole-run successor preserves active slide and scale
+AssertionError: expected 100 to be close to 150, received difference is 50, but expected 0.005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-final-boundary.browser.test.ts/final-boundary--whole-run-successor-preserves-active-slide-and-scale-1.png
+
+ ❯ tests/fluid-motion/core-astra-final-boundary.browser.test.ts:35:34
+     33|  f.host.local(p,f.owner,()=>{});f.step(400);const after=n.getBoundingC…
+     34|  console.log('[astra-whole-transform]',JSON.stringify({oldPose,newPose…
+     35|  expect.soft(after.x).toBeCloseTo(before.x,2);expect.soft(after.y).toB…
+       |                                  ^
+     36| });
+     37| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯
+
+ FAIL  |webkit| tests/fluid-motion/core-astra-final-boundary.browser.test.ts > final boundary: whole-run successor preserves active slide and scale
+AssertionError: expected 100 to be close to 124, received difference is 24, but expected 0.005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-final-boundary.browser.test.ts/final-boundary--whole-run-successor-preserves-active-slide-and-scale-1.png
+
+ ❯ tests/fluid-motion/core-astra-final-boundary.browser.test.ts:35:79
+     33|  f.host.local(p,f.owner,()=>{});f.step(400);const after=n.getBoundingC…
+     34|  console.log('[astra-whole-transform]',JSON.stringify({oldPose,newPose…
+     35|  expect.soft(after.x).toBeCloseTo(before.x,2);expect.soft(after.y).toB…
+       |                                                                               ^
+     36| });
+     37| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/9]⎯
+
+ FAIL  |webkit| tests/fluid-motion/core-astra-final-boundary.browser.test.ts > final boundary: whole-run successor preserves active slide and scale
+AssertionError: expected 100 to be close to 80, received difference is 20, but expected 0.005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-final-boundary.browser.test.ts/final-boundary--whole-run-successor-preserves-active-slide-and-scale-1.png
+
+ ❯ tests/fluid-motion/core-astra-final-boundary.browser.test.ts:35:128
+     33|  f.host.local(p,f.owner,()=>{});f.step(400);const after=n.getBoundingC…
+     34|  console.log('[astra-whole-transform]',JSON.stringify({oldPose,newPose…
+     35|  expect.soft(after.x).toBeCloseTo(before.x,2);expect.soft(after.y).toB…
+       |                                                                                                                                ^
+     36| });
+     37| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/9]⎯
+
+
+ Test Files  3 failed | 12 skipped (15)
+      Tests  3 failed | 42 skipped (45)
+   Start at  20:32:51
+   Duration  2.17s (transform 0ms, setup 81ms, collect 1.01s, tests 246ms, environment 0ms, prepare 7.03s)
+

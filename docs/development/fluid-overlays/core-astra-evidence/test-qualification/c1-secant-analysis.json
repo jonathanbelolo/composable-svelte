@@ -1,0 +1,2462 @@
+[
+  {
+    "final_t": 712.8999998569489,
+    "observed_vx": 0,
+    "expected_secant_vx": 0.0,
+    "error": 0.0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 279.59999990463257,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 713.1999998092651
+      }
+    ]
+  },
+  {
+    "final_t": 709.0000000000001,
+    "observed_vx": 0,
+    "expected_secant_vx": 0.0,
+    "error": 0.0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 278.0000000000001,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 710
+      }
+    ]
+  },
+  {
+    "final_t": 706,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 265,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 707
+      }
+    ]
+  },
+  {
+    "final_t": 715.0999999046326,
+    "observed_vx": 0,
+    "expected_secant_vx": 0.0,
+    "error": 0.0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 281.7999999523163,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715.0999999046326
+      }
+    ]
+  },
+  {
+    "final_t": 714,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 266,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 714
+      }
+    ]
+  },
+  {
+    "final_t": 705,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 263,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 705
+      }
+    ]
+  },
+  {
+    "final_t": 715.0999999046326,
+    "observed_vx": 0,
+    "expected_secant_vx": 0.0,
+    "error": 0.0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 281.90000009536743,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715.2000000476837
+      }
+    ]
+  },
+  {
+    "final_t": 714,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 282,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715
+      }
+    ]
+  },
+  {
+    "final_t": 707,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 265,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 707
+      }
+    ]
+  },
+  {
+    "final_t": 715.2999999523163,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 283,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715.4000000953674
+      }
+    ]
+  },
+  {
+    "final_t": 715,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 286,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715
+      }
+    ]
+  },
+  {
+    "final_t": 707,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 265,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 707
+      }
+    ]
+  },
+  {
+    "final_t": 714.9000000953674,
+    "observed_vx": 0,
+    "expected_secant_vx": 0.0,
+    "error": 0.0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 281.5,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715
+      }
+    ]
+  },
+  {
+    "final_t": 716,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 282,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 716
+      }
+    ]
+  },
+  {
+    "final_t": 706,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 265,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 706
+      }
+    ]
+  },
+  {
+    "final_t": 715.1000001430511,
+    "observed_vx": 0,
+    "expected_secant_vx": 0.0,
+    "error": 0.0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 281.7000000476837,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715.1000001430511
+      }
+    ]
+  },
+  {
+    "final_t": 714,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 282,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 714
+      }
+    ]
+  },
+  {
+    "final_t": 707,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 265,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 707
+      }
+    ]
+  },
+  {
+    "final_t": 715.5,
+    "observed_vx": 0,
+    "expected_secant_vx": 0.0,
+    "error": 0.0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 282.19999980926514,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715.5999999046326
+      }
+    ]
+  },
+  {
+    "final_t": 714,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 280,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 714
+      }
+    ]
+  },
+  {
+    "final_t": 706,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 263,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 706
+      }
+    ]
+  },
+  {
+    "final_t": 715.4000000953674,
+    "observed_vx": 0,
+    "expected_secant_vx": 0.0,
+    "error": 0.0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 282.10000014305115,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715.5
+      }
+    ]
+  },
+  {
+    "final_t": 715,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 281,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715
+      }
+    ]
+  },
+  {
+    "final_t": 705,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 263,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 705
+      }
+    ]
+  },
+  {
+    "final_t": 715.4000000953674,
+    "observed_vx": 0,
+    "expected_secant_vx": 0.0,
+    "error": 0.0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 282.10000014305115,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715.5
+      }
+    ]
+  },
+  {
+    "final_t": 715,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 283,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715
+      }
+    ]
+  },
+  {
+    "final_t": 700,
+    "observed_vx": 0.004770846224801062,
+    "expected_secant_vx": 0.004770846224857905,
+    "error": 5.684341886080802e-14,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 266,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 701
+      }
+    ]
+  },
+  {
+    "final_t": 715.2999999523163,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 282,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715.4000000953674
+      }
+    ]
+  },
+  {
+    "final_t": 716.0000000000009,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 283,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 716.0000000000009
+      }
+    ]
+  },
+  {
+    "final_t": 705,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 264,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 705
+      }
+    ]
+  },
+  {
+    "final_t": 715.3000001907349,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 282,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715.4000000953674
+      }
+    ]
+  },
+  {
+    "final_t": 716,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 282,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 716
+      }
+    ]
+  },
+  {
+    "final_t": 707,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 257,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 707
+      }
+    ]
+  },
+  {
+    "final_t": 715.5,
+    "observed_vx": 0,
+    "expected_secant_vx": 0.0,
+    "error": 0.0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 282.2000000476837,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715.5999999046326
+      }
+    ]
+  },
+  {
+    "final_t": 714,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 281,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 714
+      }
+    ]
+  },
+  {
+    "final_t": 707,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 265,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 707
+      }
+    ]
+  },
+  {
+    "final_t": 715.3000001907349,
+    "observed_vx": 0,
+    "expected_secant_vx": 0.0,
+    "error": 0.0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 281.90000009536743,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715.3000001907349
+      }
+    ]
+  },
+  {
+    "final_t": 716,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 283,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 716
+      }
+    ]
+  },
+  {
+    "final_t": 700,
+    "observed_vx": 0.00479289088269752,
+    "expected_secant_vx": 0.00479289088269752,
+    "error": 0.0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 267,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 700
+      }
+    ]
+  },
+  {
+    "final_t": 715.2000000476837,
+    "observed_vx": 0,
+    "expected_secant_vx": 0.0,
+    "error": 0.0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 281.7999999523163,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715.2999999523163
+      }
+    ]
+  },
+  {
+    "final_t": 716,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 282,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 717
+      }
+    ]
+  },
+  {
+    "final_t": 700,
+    "observed_vx": 0.004770846224801062,
+    "expected_secant_vx": 0.004770846224857905,
+    "error": 5.684341886080802e-14,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 266,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 700
+      }
+    ]
+  },
+  {
+    "final_t": 715,
+    "observed_vx": 0,
+    "expected_secant_vx": 0.0,
+    "error": 0.0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 281.7000000476837,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715.1000001430511
+      }
+    ]
+  },
+  {
+    "final_t": 715,
+    "observed_vx": 0,
+    "expected_secant_vx": 0.0,
+    "error": 0.0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 266.0000000000018,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715
+      }
+    ]
+  },
+  {
+    "final_t": 706,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 265,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 706
+      }
+    ]
+  },
+  {
+    "final_t": 715.5,
+    "observed_vx": 0,
+    "expected_secant_vx": 0.0,
+    "error": 0.0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 282.2000000476837,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715.5
+      }
+    ]
+  },
+  {
+    "final_t": 700,
+    "observed_vx": 0.004620705651348089,
+    "expected_secant_vx": 0.004620705651348089,
+    "error": 0.0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 259,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 700
+      }
+    ]
+  },
+  {
+    "final_t": 716,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 266,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 716
+      }
+    ]
+  },
+  {
+    "final_t": 715.3000001907349,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 282,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715.4000000953674
+      }
+    ]
+  },
+  {
+    "final_t": 700,
+    "observed_vx": 0.004599836888758091,
+    "expected_secant_vx": 0.004599836888758091,
+    "error": 0.0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 258,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 700
+      }
+    ]
+  },
+  {
+    "final_t": 716,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 282,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 716
+      }
+    ]
+  },
+  {
+    "final_t": 715.3999998569489,
+    "observed_vx": 0,
+    "expected_secant_vx": 0.0,
+    "error": 0.0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 282.09999990463257,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715.5
+      }
+    ]
+  },
+  {
+    "final_t": 707,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 265,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 707
+      }
+    ]
+  },
+  {
+    "final_t": 715,
+    "observed_vx": 0,
+    "expected_secant_vx": 0.0,
+    "error": 0.0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 279.9999999999982,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715
+      }
+    ]
+  },
+  {
+    "final_t": 715,
+    "observed_vx": 0,
+    "expected_secant_vx": 0.0,
+    "error": 0.0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 281.60000014305115,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715.1000001430511
+      }
+    ]
+  },
+  {
+    "final_t": 706,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 258,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 706
+      }
+    ]
+  },
+  {
+    "final_t": 700.0000000000018,
+    "observed_vx": 0.004770846224801062,
+    "expected_secant_vx": 0.0047708462247442185,
+    "error": 5.684341886080802e-14,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 266,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 700.0000000000018
+      }
+    ]
+  },
+  {
+    "final_t": 700,
+    "observed_vx": 0.004599836888758091,
+    "expected_secant_vx": 0.004599836888758091,
+    "error": 0.0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 258,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 700
+      }
+    ]
+  },
+  {
+    "final_t": 715.1000001430511,
+    "observed_vx": 0,
+    "expected_secant_vx": 0.0,
+    "error": 0.0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 281.7999999523163,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 715.2000000476837
+      }
+    ]
+  },
+  {
+    "final_t": 716,
+    "observed_vx": 0,
+    "expected_secant_vx": 0,
+    "error": 0,
+    "at_exact_endpoint": true,
+    "retarget": {
+      "type": "retarget",
+      "transaction": 1,
+      "participant": "hero",
+      "t": 282,
+      "cause": "destination",
+      "from": [
+        0,
+        70,
+        240,
+        90
+      ],
+      "velocity": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "to": [
+        300,
+        0,
+        120,
+        40
+      ],
+      "constrained": false
+    },
+    "settled": [
+      {
+        "type": "settled",
+        "transaction": 1,
+        "reason": "completed",
+        "t": 716
+      }
+    ]
+  }
+]

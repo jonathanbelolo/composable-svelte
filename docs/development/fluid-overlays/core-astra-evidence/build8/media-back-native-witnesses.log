@@ -1,0 +1,32 @@
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-core-build8-review/packages/core
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+Port 63315 is in use, trying another one...
+ ✓ |chromium| tests/fluid-motion/overlay-motion.browser.test.ts (25 tests | 22 skipped) 5824ms
+   ✓ W-C3: during choreographed open/close the primitive keeps focus, inertness and scroll-lock authority (visuals only are claimed)  1357ms
+   ✓ C3 portable media: a live canvas flight is re-homed into the modal layer (with or without moveBefore) and keeps its content; a cross-origin frame copy carries no live browsing context; other tracks run  1066ms
+   ✓ C3 live MSE video across layers: the removed card's playing MediaSource video flies into the modal layer (moveBefore or re-insertion) without pausing; currentTime keeps advancing  3400ms
+ ✓ |chromium| tests/fluid-motion/overlay-identity.browser.test.ts (10 tests | 7 skipped) 10ms
+ ✓ |webkit| tests/fluid-motion/overlay-motion.browser.test.ts (25 tests | 22 skipped) 5901ms
+   ✓ W-C3: during choreographed open/close the primitive keeps focus, inertness and scroll-lock authority (visuals only are claimed)  1366ms
+   ✓ C3 portable media: a live canvas flight is re-homed into the modal layer (with or without moveBefore) and keeps its content; a cross-origin frame copy carries no live browsing context; other tracks run  1083ms
+   ✓ C3 live MSE video across layers: the removed card's playing MediaSource video flies into the modal layer (moveBefore or re-insertion) without pausing; currentTime keeps advancing  3450ms
+ ✓ |webkit| tests/fluid-motion/overlay-identity.browser.test.ts (10 tests | 7 skipped) 13ms
+ ✓ |firefox| tests/fluid-motion/overlay-motion.browser.test.ts (25 tests | 22 skipped) 5770ms
+   ✓ W-C3: during choreographed open/close the primitive keeps focus, inertness and scroll-lock authority (visuals only are claimed)  1301ms
+   ✓ C3 portable media: a live canvas flight is re-homed into the modal layer (with or without moveBefore) and keeps its content; a cross-origin frame copy carries no live browsing context; other tracks run  1077ms
+   ✓ C3 live MSE video across layers: the removed card's playing MediaSource video flies into the modal layer (moveBefore or re-insertion) without pausing; currentTime keeps advancing  3391ms
+ ✓ |firefox| tests/fluid-motion/overlay-identity.browser.test.ts (10 tests | 7 skipped) 15ms
+ ✓ |chromium| tests/fluid-motion/overlay-routed-back.browser.test.ts (1 test) 922ms
+   ✓ Browser Back dismisses the routed modal: default close plan choreographs the accepted dismissal; completion once; URL and history coherent  922ms
+ ✓ |webkit| tests/fluid-motion/overlay-routed-back.browser.test.ts (1 test) 915ms
+   ✓ Browser Back dismisses the routed modal: default close plan choreographs the accepted dismissal; completion once; URL and history coherent  915ms
+ ✓ |firefox| tests/fluid-motion/overlay-routed-back.browser.test.ts (1 test) 890ms
+   ✓ Browser Back dismisses the routed modal: default close plan choreographs the accepted dismissal; completion once; URL and history coherent  890ms
+
+ Test Files  9 passed (9)
+      Tests  21 passed | 87 skipped (108)
+   Start at  20:32:11
+   Duration  9.20s (transform 0ms, setup 49ms, collect 897ms, tests 20.26s, environment 0ms, prepare 39.34s)
+

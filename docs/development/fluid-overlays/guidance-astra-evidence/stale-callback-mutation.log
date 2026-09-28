@@ -1,0 +1,15 @@
+11:57:17 PM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-guidance-review-probe - using default configuration.
+
+ RUN  v4.0.7 /private/tmp/overlay-guidance-review-probe
+
+11:57:17 PM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-guidance-review-probe - using default configuration.
+stdout | tests/app.browser.test.ts > overlay orchestration: the notes dialog (public package) > a close during the opening reverses it; the cancelled open never completes
+REVIEW_MUTATION: stale onPresentationComplete invoked after closeNotes
+ ✓ |chromium| tests/app.browser.test.ts (10 tests | 9 skipped) 608ms
+     ✓ a close during the opening reverses it; the cancelled open never completes  607ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 9 skipped (10)
+   Start at  23:57:17
+   Duration  1.83s (transform 0ms, setup 0ms, collect 757ms, tests 608ms, environment 0ms, prepare 42ms)
+

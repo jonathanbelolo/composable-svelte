@@ -1,0 +1,64 @@
+{
+  "baseline": "2e07f650c1421c25f6b29d2db9c0cc885ea891ed",
+  "isolation": "/private/tmp/fluid-overlays-firefox-timing",
+  "scope": "four animation stack continuation tests; Firefox only",
+  "source_identities": {
+    "packages/core/tests/fluid-motion/representation.browser.test.ts": {
+      "baseline_sha256": "56c3b2df7fd4b576c3a19291bd009c5d17a7fb30bad0d86b614b1c66035e0c40",
+      "live_sha256": "56c3b2df7fd4b576c3a19291bd009c5d17a7fb30bad0d86b614b1c66035e0c40",
+      "identical": true
+    },
+    "packages/core/src/lib/application/renderer/representation/representer.ts": {
+      "baseline_sha256": "da91c9a5a3ef936b908ffbc45732fe667e6eac30b334ea166c7551d122d73a37",
+      "live_sha256": "da91c9a5a3ef936b908ffbc45732fe667e6eac30b334ea166c7551d122d73a37",
+      "identical": true
+    },
+    "packages/core/src/lib/application/renderer/representation/projection.ts": {
+      "baseline_sha256": "72eb4e8c887e67a36352153ec8e9979aef42705323e71c38a0948d29ae903752",
+      "live_sha256": "72eb4e8c887e67a36352153ec8e9979aef42705323e71c38a0948d29ae903752",
+      "identical": true
+    },
+    "packages/core/src/lib/application/renderer/representation/stack.ts": {
+      "baseline_sha256": "0dd8b5b3b0dc69c1cd2fa38e7980ce1a94af4d8f8c49cdf43b829c679908e736",
+      "live_sha256": "0dd8b5b3b0dc69c1cd2fa38e7980ce1a94af4d8f8c49cdf43b829c679908e736",
+      "identical": true
+    },
+    "packages/core/src/lib/application/renderer/representation/reconstruct.ts": {
+      "baseline_sha256": "c8436b3c65428e422c7e3b4a7f2e70da745293abf9e27268ef21f6cb0dc96ee1",
+      "live_sha256": "c8436b3c65428e422c7e3b4a7f2e70da745293abf9e27268ef21f6cb0dc96ee1",
+      "identical": true
+    }
+  },
+  "artifacts": {
+    "negative-control.test.ts": "3e4175dd48de7e901ca59ca5101663926703625af2a6cd7b0a0a9a698f90b7ad",
+    "explicit-holdtime-1.log": "0e576c70324e00bd6159a6040a97b2a49ceef79cf7162a07b1460fff21c95a71",
+    "explicit-holdtime-3.log": "b154c7280ed735793678f4103984f968ee2934c2b3cca05337030fbb09b21561",
+    "explicit-holdtime-2.log": "f659234ca7bf22d98ea8238622e29f8ba2c59c2225fcfcfa2e6d74a109054a7b",
+    "explicit-holdtime-6.log": "4f50e82433f3c4a35c08001b3c5275f768a2aeee0473af41cc51f5ce089cef11",
+    "native-only-control.log": "02eb4eb9a849cfb5705eda2fb4dc28ec4b29a3023c8cac9ee183d96a7f4fdb07",
+    "explicit-holdtime-5.log": "f19be0dff24263927a9afcbd3c72a137eecf364f4693ad715dd50d97583c4e80",
+    "explicit-holdtime-4.log": "10e1bfb54044f408eb97071f90fcae19af7eaa3aa720640ee5354f1e7b0e3625",
+    "report.md": "1ab1dbda6d906c0171f436cfaf9a6501ee59739176bcca16c0c7626e6c153369",
+    "pause-diagnostic.test.ts": "051c29ebdd1d81b205fa94cd2420ff32e2745962fa7084e0fa1254e6a8710985",
+    "baseline-unchanged-1.log": "ba6cf0ec2977e07fba4f2d6d90929c051b40096f1cc13f373c902fd9eab8a261",
+    "vitest.production-boundary.config.ts": "a8fbdd5398de9df98890bcc73d333e8a6d8306c91050a917ca084b914096b46a",
+    "baseline-unchanged-2.log": "c0f5834ac01c9a6a1b79e324411859b1a28c46015d9025b64627b1b0542889ac",
+    "vitest.native-pause.config.ts": "32fbb77a788051849988cfe5ab72fc1953f514b580bc9f53cbe3d64d298de6dd",
+    "instrumented-original.test.ts": "ee9d2a8c4faaa0d117e4d05178d460317821c525535a4f5211ca344144a70790",
+    "baseline-unchanged-3.log": "f888485d4d7be84221c7438dbe1280830312f964a17fae4e79a72b034d38f714",
+    "explicit-holdtime.test.ts": "5c44b553ebedb7fac6e1f684082672b54728a965ca4e3ebf885b4f96c60f6d5e",
+    "production-boundary.log": "f7b2cb7be9cda2e26fc24a918f8c5c135615819a1354c7a705de7ec8b584c45a",
+    "vitest.timing.config.ts": "db35ca3961a9be9b925bbc0b722d514c734c0357aef324c1ed4edf7cbca72504",
+    "pause-diagnostic-1.log": "513e2981975683745d1604297f9972939bfe7af30c6d185c584ab22537f0f5a8",
+    "pause-diagnostic-2.log": "dbb9c11a10ae83dd80a6d799e09a39602ff7618c468407cef80665ae4d4b25c1",
+    "firefox-production-boundary.browser.test.ts": "0e7872eba8fb756a92e67fe25f325959c0deef83e8f6ca61d44c0c5470c2418d",
+    "pause-diagnostic-3.log": "cc9cd62e61ea597021cf2a7f801aeb988581092807c633df96b93bc19a20f12d",
+    "stack.instrumented.ts": "a282175558eef7e7d41e48ef849b774b32af85258b50c0db4b2178efb53e4e1b",
+    "instrumented-1.log": "7f6324096ba582da67d20b56535f39154a5a609b5d684ee856ac505ef94bd2ec",
+    "instrumented-3.log": "406589fe7e9ef122738fb15537433fdaf311e0680b3d6aa74945e5b27a1f6e23",
+    "firefox-native-pause.browser.test.ts": "6a1dbf77fffa49b2322488c6d5b511af03a1a20028e95324b6032fda36ff3bb9",
+    "instrumented-2.log": "0f042d48af3daca3864fbd51330f38ded429d99e99d3cb3fe69dad5f768e75b1",
+    "negative-control.log": "3bea960482664d9f8d3deab6650b182f173ac24bd6ef7ca0a78c870182a826e6",
+    "test-only-synchronization.patch": "d8b266f1241f1173592c921ea7a3b611085672af919951bb1ea98fa9f7420f40"
+  }
+}

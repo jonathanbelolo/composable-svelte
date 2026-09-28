@@ -1,0 +1,18 @@
+{
+  "docs/development/fluid-motion/guidance-example-check/fluid-motion.template.md": "ab88b1837be4a21593cba9131d50f398f40743aacdca32a71a26b2783db6e718",
+  "packages/core/docs/fluid-motion.md": "9427602dc161f28ca0f503b43e42282d791d0a35809c5770f955d73df803c86c",
+  "docs/development/fluid-motion/guidance-example-check/src/model.ts": "ac9366f40d0e625b5a454be879f03e14599a18f10891ab5be8cd769e3450c949",
+  "docs/development/fluid-motion/guidance-example-check/src/motion.ts": "0ceed3a683188cc88db4195b0c712cbc50140a085344a55beed5c68bfd7f572f",
+  "docs/development/fluid-motion/guidance-example-check/src/DetailView.svelte": "159c09b978aefd9fe7762d202a41536285d991255808240e7eb558c88b5477e2",
+  "docs/development/fluid-motion/guidance-example-check/tests/plans.test.ts": "bdcaf1401e7af06f57d85a761be6131e3a0c2a7c01687946be6ae00e63b69be0",
+  "docs/development/fluid-motion/guidance-example-check/tests/app.browser.test.ts": "05f3ba34d3b8cf9c9d6ec4bddedff5b5b0ef7b5a0e4e4c7f78dde3a75f56d2c6",
+  "docs/development/fluid-motion/guidance-example-check/tests/modal-probe.ts": "68b8ed367e1a401d8e3c588cf279dd1320214b2856e4142633a249b613724488",
+  "docs/development/fluid-motion/guidance-example-check/tests/ModalProbe.svelte": "6c679ce1799e203b734484e3decb9aeaab88064cb4bcbb796fb5d1aed215e772",
+  "docs/development/fluid-motion/guidance-example-check/vitest.browser.config.mjs": "0d9d12546e29aae74d8e23055cc557bda2c931f4ef9e675aefcf1d2299b139ad",
+  "packages/core/docs/application-motion.md": "1208d5d544568f850840ec614ee11806ab248244eccf260a391284cf3140f2be",
+  "packages/core/docs/application-contract.md": "c35e2480d2aec85e2af9dd67f25e78d2d9e051c8121553268e9fc529370205e6",
+  "packages/core/README.md": "fff09df91651136d4fb849c81fcafbf1ef8e4c595e5e57a4f6877997dc487540",
+  ".claude/skills/composable-svelte-navigation/SKILL.md": "a1e6de08e65a88e966ccf8885ce3f8918b18fb2ba3fcf5784a120d8080076e54",
+  "packages/core/tests/test-components/SkillExamples-navigation.svelte": "030d60d0fa65144637912da4c44c8cbf8a8eb670188308d6c524957e6701a26b",
+  "packages/core/tests/repo/skill-examples.test.ts": "c6801e968d1731c2501eda6410fd2bd0875d83aca8689d1df32dc1c69959858d"
+}

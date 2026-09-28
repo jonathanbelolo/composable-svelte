@@ -1,0 +1,301 @@
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-core-build9-review/packages/core
+
+ ↓ |chromium| tests/fluid-motion/core-astra-final-boundary.browser.test.ts (1 test | 1 skipped)
+ ↓ |chromium| tests/fluid-motion/core-astra-c2-public.browser.test.ts (2 tests | 2 skipped)
+stdout | tests/fluid-motion/core-astra-unused-handoff.browser.test.ts > final cleanup: a reduced route successor discards every handed transform lease
+[astra-discard] {"translate":"40px 20px","scale":"0.8","leases":2}
+ ↓ |chromium| tests/fluid-motion/core-astra-correction.browser.test.ts (4 tests | 4 skipped)
+ ↓ |chromium| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests | 6 skipped)
+ ❯ |webkit| tests/fluid-motion/core-astra-unused-handoff.browser.test.ts (2 tests | 2 failed) 146ms
+   × final cleanup: a reduced route successor discards every handed transform lease 89ms
+   × final cleanup: a successor not using transforms releases them and restores the base 55ms
+stdout | tests/fluid-motion/core-astra-unused-handoff.browser.test.ts > final cleanup: a reduced route successor discards every handed transform lease
+[astra-discard] {"translate":"40px 20px","scale":"0.8","leases":2}
+ ↓ |webkit| tests/fluid-motion/core-astra-final-boundary.browser.test.ts (1 test | 1 skipped)
+ ↓ |firefox| tests/fluid-motion/core-astra-final-boundary.browser.test.ts (1 test | 1 skipped)
+ ↓ |webkit| tests/fluid-motion/core-astra-c2-public.browser.test.ts (2 tests | 2 skipped)
+ ❯ |chromium| tests/fluid-motion/core-astra-unused-handoff.browser.test.ts (2 tests | 2 failed) 197ms
+   × final cleanup: a reduced route successor discards every handed transform lease 117ms
+   × final cleanup: a successor not using transforms releases them and restores the base 80ms
+ ↓ |webkit| tests/fluid-motion/core-astra-correction.browser.test.ts (4 tests | 4 skipped)
+ ↓ |chromium| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 skipped)
+ ↓ |firefox| tests/fluid-motion/core-astra-c2-public.browser.test.ts (2 tests | 2 skipped)
+ ↓ |webkit| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests | 6 skipped)
+ ↓ |webkit| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 skipped)
+ ↓ |firefox| tests/fluid-motion/core-astra-correction.browser.test.ts (4 tests | 4 skipped)
+ ↓ |firefox| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests | 6 skipped)
+stdout | tests/fluid-motion/core-astra-unused-handoff.browser.test.ts > final cleanup: a reduced route successor discards every handed transform lease
+[astra-discard] {"translate":"40px 20px","scale":"0.8","leases":2}
+ ❯ |firefox| tests/fluid-motion/core-astra-unused-handoff.browser.test.ts (2 tests | 2 failed) 80ms
+   × final cleanup: a reduced route successor discards every handed transform lease 56ms
+   × final cleanup: a successor not using transforms releases them and restores the base 24ms
+ ↓ |firefox| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 skipped)
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |chromium| tests/fluid-motion/core-astra-unused-handoff.browser.test.ts > final cleanup: a reduced route successor discards every handed transform lease
+AssertionError: expected '40px 20px' to be '' // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-unused-handoff.browser.test.ts/final-cleanup--a-reduced-route-successor-discards-every-handed-transform-lease-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[31m+ 40px 20px[39m
+
+ ❯ tests/fluid-motion/core-astra-unused-handoff.browser.test.ts:38:32
+     36|  expect(f.host.admitted({type:'admitted',transaction:2 as never,motion…
+     37|  f.host.dispose();console.log('[astra-discard]',JSON.stringify({transl…
+     38|  expect.soft(n.style.translate).toBe('');expect.soft(n.style.scale).to…
+       |                                ^
+     39| });
+     40| it('final cleanup: a successor not using transforms releases them and …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/12]⎯
+
+ FAIL  |chromium| tests/fluid-motion/core-astra-unused-handoff.browser.test.ts > final cleanup: a reduced route successor discards every handed transform lease
+AssertionError: expected '0.8' to be '' // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-unused-handoff.browser.test.ts/final-cleanup--a-reduced-route-successor-discards-every-handed-transform-lease-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[31m+ 0.8[39m
+
+ ❯ tests/fluid-motion/core-astra-unused-handoff.browser.test.ts:38:68
+     36|  expect(f.host.admitted({type:'admitted',transaction:2 as never,motion…
+     37|  f.host.dispose();console.log('[astra-discard]',JSON.stringify({transl…
+     38|  expect.soft(n.style.translate).toBe('');expect.soft(n.style.scale).to…
+       |                                                                    ^
+     39| });
+     40| it('final cleanup: a successor not using transforms releases them and …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/12]⎯
+
+ FAIL  |chromium| tests/fluid-motion/core-astra-unused-handoff.browser.test.ts > final cleanup: a reduced route successor discards every handed transform lease
+AssertionError: expected 2 to be +0 // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-unused-handoff.browser.test.ts/final-cleanup--a-reduced-route-successor-discards-every-handed-transform-lease-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 0[39m
+[31m+ 2[39m
+
+ ❯ tests/fluid-motion/core-astra-unused-handoff.browser.test.ts:38:115
+     36|  expect(f.host.admitted({type:'admitted',transaction:2 as never,motion…
+     37|  f.host.dispose();console.log('[astra-discard]',JSON.stringify({transl…
+     38|  expect.soft(n.style.translate).toBe('');expect.soft(n.style.scale).to…
+       |                                                                                                                   ^
+     39| });
+     40| it('final cleanup: a successor not using transforms releases them and …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/12]⎯
+
+ FAIL  |chromium| tests/fluid-motion/core-astra-unused-handoff.browser.test.ts > final cleanup: a successor not using transforms releases them and restores the base
+AssertionError: expected 2 to be +0 // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-unused-handoff.browser.test.ts/final-cleanup--a-successor-not-using-transforms-releases-them-and-restores-the-base-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 0[39m
+[31m+ 2[39m
+
+ ❯ tests/fluid-motion/core-astra-unused-handoff.browser.test.ts:45:125
+     43|  f.host.local(p,f.owner,()=>{});f.step(400);
+     44|  f.host.local(defineChoreography({cueMs:0,durationMs:1000,tracks:[{par…
+     45|  expect(n.style.scale).toBe('2');expect(n.style.translate).toBe('5px 7…
+       |                                                                                                                             ^
+     46| });
+     47| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/12]⎯
+
+ FAIL  |firefox| tests/fluid-motion/core-astra-unused-handoff.browser.test.ts > final cleanup: a reduced route successor discards every handed transform lease
+AssertionError: expected '40px 20px' to be '' // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-unused-handoff.browser.test.ts/final-cleanup--a-reduced-route-successor-discards-every-handed-transform-lease-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[31m+ 40px 20px[39m
+
+ ❯ tests/fluid-motion/core-astra-unused-handoff.browser.test.ts:38:32
+     36|  expect(f.host.admitted({type:'admitted',transaction:2 as never,motion…
+     37|  f.host.dispose();console.log('[astra-discard]',JSON.stringify({transl…
+     38|  expect.soft(n.style.translate).toBe('');expect.soft(n.style.scale).to…
+       |                                ^
+     39| });
+     40| it('final cleanup: a successor not using transforms releases them and …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/12]⎯
+
+ FAIL  |firefox| tests/fluid-motion/core-astra-unused-handoff.browser.test.ts > final cleanup: a reduced route successor discards every handed transform lease
+AssertionError: expected '0.8' to be '' // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-unused-handoff.browser.test.ts/final-cleanup--a-reduced-route-successor-discards-every-handed-transform-lease-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[31m+ 0.8[39m
+
+ ❯ tests/fluid-motion/core-astra-unused-handoff.browser.test.ts:38:68
+     36|  expect(f.host.admitted({type:'admitted',transaction:2 as never,motion…
+     37|  f.host.dispose();console.log('[astra-discard]',JSON.stringify({transl…
+     38|  expect.soft(n.style.translate).toBe('');expect.soft(n.style.scale).to…
+       |                                                                    ^
+     39| });
+     40| it('final cleanup: a successor not using transforms releases them and …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/12]⎯
+
+ FAIL  |firefox| tests/fluid-motion/core-astra-unused-handoff.browser.test.ts > final cleanup: a reduced route successor discards every handed transform lease
+AssertionError: expected 2 to be +0 // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-unused-handoff.browser.test.ts/final-cleanup--a-reduced-route-successor-discards-every-handed-transform-lease-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 0[39m
+[31m+ 2[39m
+
+ ❯ tests/fluid-motion/core-astra-unused-handoff.browser.test.ts:38:115
+     36|  expect(f.host.admitted({type:'admitted',transaction:2 as never,motion…
+     37|  f.host.dispose();console.log('[astra-discard]',JSON.stringify({transl…
+     38|  expect.soft(n.style.translate).toBe('');expect.soft(n.style.scale).to…
+       |                                                                                                                   ^
+     39| });
+     40| it('final cleanup: a successor not using transforms releases them and …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/12]⎯
+
+ FAIL  |firefox| tests/fluid-motion/core-astra-unused-handoff.browser.test.ts > final cleanup: a successor not using transforms releases them and restores the base
+AssertionError: expected 2 to be +0 // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-unused-handoff.browser.test.ts/final-cleanup--a-successor-not-using-transforms-releases-them-and-restores-the-base-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 0[39m
+[31m+ 2[39m
+
+ ❯ tests/fluid-motion/core-astra-unused-handoff.browser.test.ts:45:125
+     43|  f.host.local(p,f.owner,()=>{});f.step(400);
+     44|  f.host.local(defineChoreography({cueMs:0,durationMs:1000,tracks:[{par…
+     45|  expect(n.style.scale).toBe('2');expect(n.style.translate).toBe('5px 7…
+       |                                                                                                                             ^
+     46| });
+     47| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/12]⎯
+
+ FAIL  |webkit| tests/fluid-motion/core-astra-unused-handoff.browser.test.ts > final cleanup: a reduced route successor discards every handed transform lease
+AssertionError: expected '40px 20px' to be '' // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-unused-handoff.browser.test.ts/final-cleanup--a-reduced-route-successor-discards-every-handed-transform-lease-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[31m+ 40px 20px[39m
+
+ ❯ tests/fluid-motion/core-astra-unused-handoff.browser.test.ts:38:37
+     36|  expect(f.host.admitted({type:'admitted',transaction:2 as never,motion…
+     37|  f.host.dispose();console.log('[astra-discard]',JSON.stringify({transl…
+     38|  expect.soft(n.style.translate).toBe('');expect.soft(n.style.scale).to…
+       |                                     ^
+     39| });
+     40| it('final cleanup: a successor not using transforms releases them and …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/12]⎯
+
+ FAIL  |webkit| tests/fluid-motion/core-astra-unused-handoff.browser.test.ts > final cleanup: a reduced route successor discards every handed transform lease
+AssertionError: expected '0.8' to be '' // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-unused-handoff.browser.test.ts/final-cleanup--a-reduced-route-successor-discards-every-handed-transform-lease-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[31m+ 0.8[39m
+
+ ❯ tests/fluid-motion/core-astra-unused-handoff.browser.test.ts:38:73
+     36|  expect(f.host.admitted({type:'admitted',transaction:2 as never,motion…
+     37|  f.host.dispose();console.log('[astra-discard]',JSON.stringify({transl…
+     38|  expect.soft(n.style.translate).toBe('');expect.soft(n.style.scale).to…
+       |                                                                         ^
+     39| });
+     40| it('final cleanup: a successor not using transforms releases them and …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/12]⎯
+
+ FAIL  |webkit| tests/fluid-motion/core-astra-unused-handoff.browser.test.ts > final cleanup: a reduced route successor discards every handed transform lease
+AssertionError: expected 2 to be +0 // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-unused-handoff.browser.test.ts/final-cleanup--a-reduced-route-successor-discards-every-handed-transform-lease-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 0[39m
+[31m+ 2[39m
+
+ ❯ tests/fluid-motion/core-astra-unused-handoff.browser.test.ts:38:120
+     36|  expect(f.host.admitted({type:'admitted',transaction:2 as never,motion…
+     37|  f.host.dispose();console.log('[astra-discard]',JSON.stringify({transl…
+     38|  expect.soft(n.style.translate).toBe('');expect.soft(n.style.scale).to…
+       |                                                                                                                        ^
+     39| });
+     40| it('final cleanup: a successor not using transforms releases them and …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/12]⎯
+
+ FAIL  |webkit| tests/fluid-motion/core-astra-unused-handoff.browser.test.ts > final cleanup: a successor not using transforms releases them and restores the base
+AssertionError: expected 2 to be +0 // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-unused-handoff.browser.test.ts/final-cleanup--a-successor-not-using-transforms-releases-them-and-restores-the-base-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 0[39m
+[31m+ 2[39m
+
+ ❯ tests/fluid-motion/core-astra-unused-handoff.browser.test.ts:45:130
+     43|  f.host.local(p,f.owner,()=>{});f.step(400);
+     44|  f.host.local(defineChoreography({cueMs:0,durationMs:1000,tracks:[{par…
+     45|  expect(n.style.scale).toBe('2');expect(n.style.translate).toBe('5px 7…
+       |                                                                                                                                  ^
+     46| });
+     47| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/12]⎯
+
+
+ Test Files  3 failed | 15 skipped (18)
+      Tests  6 failed | 45 skipped (51)
+   Start at  20:41:06
+   Duration  2.77s (transform 0ms, setup 149ms, collect 1.35s, tests 423ms, environment 0ms, prepare 11.89s)
+

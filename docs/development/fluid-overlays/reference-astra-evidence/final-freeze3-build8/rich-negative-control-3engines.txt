@@ -1,0 +1,92 @@
+8:33:50 PM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference - using default configuration.
+
+ RUN  v4.0.7 /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference
+
+8:33:50 PM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference - using default configuration.
+stdout | tests/rich.browser.test.ts > rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas
+BJS - [20:33:52]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas
+BJS - [20:33:52]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/rich.browser.test.ts > rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas
+BJS - [20:33:52]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas
+BJS - [20:33:52]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/rich.browser.test.ts > rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas
+BJS - [20:33:52]: Babylon.js v8.36.1 - WebGL2 - Parallel shader compilation
+stdout | tests/rich.browser.test.ts > rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas
+BJS - [20:33:53]: Babylon.js v8.36.1 - WebGL2
+ ❯ |webkit| tests/rich.browser.test.ts (9 tests | 1 failed | 8 skipped) 1352ms
+   × rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas 1346ms
+   ↓ live WebGL continuity: the turntable keeps turning through the route commit from explicit shared scene state
+   ↓ video continuity: the airflow copy in the leaving introduction keeps playing after the commit (paused-loop control)
+   ↓ repeated interruption adopts the shared card representation and leaves nothing behind
+   ↓ teardown mid-flight with a retained renderer releases every visual resource
+   ↓ reduced motion: no geometry travel, the SVG shimmer and the airflow loop hold still
+   ↓ outgoing WebGL mirror keeps visibly turning after its page retires (stationary copy, turntable-off control)
+   ↓ preparation responsiveness: cold versus warm, WebGL versus non-WebGL route (no screenshots while measuring)
+   ↓ turning on Reduce motion while on the dossier stops the playing airflow loop (and Play still works)
+ ❯ |chromium| tests/rich.browser.test.ts (9 tests | 1 failed | 8 skipped) 1496ms
+   × rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas 1495ms
+   ↓ live WebGL continuity: the turntable keeps turning through the route commit from explicit shared scene state
+   ↓ video continuity: the airflow copy in the leaving introduction keeps playing after the commit (paused-loop control)
+   ↓ repeated interruption adopts the shared card representation and leaves nothing behind
+   ↓ teardown mid-flight with a retained renderer releases every visual resource
+   ↓ reduced motion: no geometry travel, the SVG shimmer and the airflow loop hold still
+   ↓ outgoing WebGL mirror keeps visibly turning after its page retires (stationary copy, turntable-off control)
+   ↓ preparation responsiveness: cold versus warm, WebGL versus non-WebGL route (no screenshots while measuring)
+   ↓ turning on Reduce motion while on the dossier stops the playing airflow loop (and Play still works)
+ ❯ |firefox| tests/rich.browser.test.ts (9 tests | 1 failed | 8 skipped) 1221ms
+   × rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas 1219ms
+   ↓ live WebGL continuity: the turntable keeps turning through the route commit from explicit shared scene state
+   ↓ video continuity: the airflow copy in the leaving introduction keeps playing after the commit (paused-loop control)
+   ↓ repeated interruption adopts the shared card representation and leaves nothing behind
+   ↓ teardown mid-flight with a retained renderer releases every visual resource
+   ↓ reduced motion: no geometry travel, the SVG shimmer and the airflow loop hold still
+   ↓ outgoing WebGL mirror keeps visibly turning after its page retires (stationary copy, turntable-off control)
+   ↓ preparation responsiveness: cold versus warm, WebGL versus non-WebGL route (no screenshots while measuring)
+   ↓ turning on Reduce motion while on the dossier stops the playing airflow loop (and Play still works)
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |chromium| tests/rich.browser.test.ts > rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas
+AssertionError: expected null not to be null
+ ❯ tests/rich.browser.test.ts:149:23
+    147|   const skipped = f.diagnostics('prepared').flatMap(event => (event as…
+    148|   evidence.richParticipants = { content, canvasSemantics, representati…
+    149|   expect(shot.rep).not.toBeNull();
+       |                       ^
+    150|   expect(shot.rep!.wrapper[2]!).toBeGreaterThan(500);
+    151|   expect(shot.rep!.wrapper[3]!).toBeGreaterThan(200);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |firefox| tests/rich.browser.test.ts > rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas
+AssertionError: expected null not to be null
+ ❯ tests/rich.browser.test.ts:149:23
+    147|   const skipped = f.diagnostics('prepared').flatMap(event => (event as…
+    148|   evidence.richParticipants = { content, canvasSemantics, representati…
+    149|   expect(shot.rep).not.toBeNull();
+       |                       ^
+    150|   expect(shot.rep!.wrapper[2]!).toBeGreaterThan(500);
+    151|   expect(shot.rep!.wrapper[3]!).toBeGreaterThan(200);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |webkit| tests/rich.browser.test.ts > rich participants are represented, not skipped: flex/grid, gradients, ::before, transforms, clip-path, inline SVG, WebGL canvas
+AssertionError: expected null not to be null
+ ❯ tests/rich.browser.test.ts:149:32
+    147|   const skipped = f.diagnostics('prepared').flatMap(event => (event as…
+    148|   evidence.richParticipants = { content, canvasSemantics, representati…
+    149|   expect(shot.rep).not.toBeNull();
+       |                                ^
+    150|   expect(shot.rep!.wrapper[2]!).toBeGreaterThan(500);
+    151|   expect(shot.rep!.wrapper[3]!).toBeGreaterThan(200);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  3 failed (3)
+      Tests  3 failed | 24 skipped (27)
+   Start at  20:33:50
+   Duration  3.64s (transform 0ms, setup 0ms, collect 2.01s, tests 4.07s, environment 0ms, prepare 262ms)
+

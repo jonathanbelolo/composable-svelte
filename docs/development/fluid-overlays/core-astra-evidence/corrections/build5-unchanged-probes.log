@@ -1,0 +1,16 @@
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-core-build5-review/packages/core
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+ ✓ |chromium| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests) 16ms
+ ✓ |webkit| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests) 24ms
+ ✓ |chromium| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests) 112ms
+ ✓ |webkit| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests) 148ms
+ ✓ |firefox| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests) 15ms
+ ✓ |firefox| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests) 123ms
+
+ Test Files  6 passed (6)
+      Tests  24 passed (24)
+   Start at  00:46:40
+   Duration  1.98s (transform 0ms, setup 27ms, collect 586ms, tests 438ms, environment 0ms, prepare 1.33s)
+

@@ -1,0 +1,443 @@
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-policy-baseline-check/packages/core
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+ ❯ tests/repo/animation-policy.test.ts (13 tests | 1 failed) 105ms
+     ✓ finds source to scan in every root, so this guard is not vacuous 2ms
+     ✓ the scanner recognises what it claims to 1ms
+     ✓ reads what a transition declaration actually animates 1ms
+     ✓ a Register grant covers only the properties it names 0ms
+     ✓ sees an animation hidden in an attribute or a Tailwind class 0ms
+     ✓ reads a Tailwind class everywhere one can live, and nowhere else 0ms
+     ✓ leaves the infinite Tailwind animations and lookalike CSS values alone 0ms
+     ✓ strips comments without eating code 1ms
+     ✓ does not treat `//` as a comment in a stylesheet 0ms
+     ✓ sees scroll-behavior, which is an animation the browser runs for you 0ms
+     ✓ committed build artifacts carry no prohibited animation 0ms
+     ✓ the register has no stale entries 6ms
+     × no file violates the guideline 93ms
+ ❯ tests/repo/optional-props.test.ts (28 tests | 1 failed) 1385ms
+     ✓ finds components to scan, so the arms below are not vacuous 1ms
+     ✓ auth has components with props, so it is really being scanned  305ms
+     ✓ charts has components with props, so it is really being scanned 0ms
+     ✓ chat has components with props, so it is really being scanned 53ms
+     ✓ code has components with props, so it is really being scanned 10ms
+     ✓ core has components with props, so it is really being scanned 135ms
+     ✓ graphics has components with props, so it is really being scanned 8ms
+     ✓ maps has components with props, so it is really being scanned 0ms
+     ✓ media has components with props, so it is really being scanned 24ms
+     ✓ resolves a realistic number of props, so a broken parser cannot pass  419ms
+     ✓ every optional prop accepts undefined  393ms
+     ✓ every registered file still exists and still declares its props 0ms
+     ✓ every registered prop is still $bindable, so the stated reason stays true 1ms
+     ✓ every registered prop would still offend without its exemption 19ms
+     ✓ finds some, so the arm below is about something 0ms
+     ✓ every one is used somewhere that would break if it drifted 6ms
+     × is measured by the splitter, not by a grep 4ms
+     ✓ reads a trailing | undefined on a function type as the return type 0ms
+     ✓ accepts undefined only as a top-level alternative 0ms
+     ✓ splits members at depth zero, through quotes and comments 0ms
+     ✓ isBareNever recognizes only genuine bare never 0ms
+     ✓ proves ordinary optional props still require undefined and function-return-never is not exempt 1ms
+     ✓ follows { Props } to the actual props members 1ms
+     ✓ follows { type Props } to the actual props members 1ms
+     ✓ follows type { Props } to the actual props members 1ms
+     ✓ follows { Props as Local } to the actual props members 1ms
+     ✓ follows { type Props as Local } to the actual props members 1ms
+     ✓ follows type { Props as Local } to the actual props members 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/repo/animation-policy.test.ts > animation policy > no file violates the guideline
+AssertionError: 3 CSS animation site(s) violate guides/ANIMATION-GUIDELINES.md.
+
+  examples/fluid-motion-reference/src/Turntable.svelte:11  one-shot @keyframes — a lifecycle animation; use Motion One
+      scene.store.dispatch(turning ? { type: 'stopAnimation', id: turntable.id } : { type: 'startAnimation', animation: turntable });
+  examples/fluid-motion-reference/src/styles.css:485  one-shot @keyframes — a lifecycle animation; use Motion One
+      animation-duration: 0.01ms !important;
+  examples/fluid-motion-reference/src/styles.css:487  CSS transition — see guides/ANIMATION-GUIDELINES.md
+      transition-duration: 0.01ms !important;
+
+Classify by what DRIVES the change:
+  pseudo-class (:hover/:focus/:active) -> delete the transition, keep the style
+  component or reducer state           -> Motion One in a guarded $effect
+  repeats forever                      -> @keyframes, and it must say 'infinite'
+  continuous external numeric source   -> add a Register entry, with a reason: expected [ { …(4) }, { …(4) }, { …(4) } ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   {
++     "file": "examples/fluid-motion-reference/src/Turntable.svelte",
++     "line": 11,
++     "text": "scene.store.dispatch(turning ? { type: 'stopAnimation', id: turntable.id } : { type: 'startAnimation', animation: turntable });",
++     "why": "one-shot @keyframes — a lifecycle animation; use Motion One",
++   },
++   {
++     "file": "examples/fluid-motion-reference/src/styles.css",
++     "line": 485,
++     "text": "animation-duration: 0.01ms !important;",
++     "why": "one-shot @keyframes — a lifecycle animation; use Motion One",
++   },
++   {
++     "file": "examples/fluid-motion-reference/src/styles.css",
++     "line": 487,
++     "text": "transition-duration: 0.01ms !important;",
++     "why": "CSS transition — see guides/ANIMATION-GUIDELINES.md",
++   },
++ ]
+
+ ❯ tests/repo/animation-policy.test.ts:970:5
+    968|     `  repeats forever                      -> @keyframes, and it must…
+    969|     `  continuous external numeric source   -> add a Register entry, w…
+    970|   ).toEqual([]);
+       |     ^
+    971|  });
+    972| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/repo/optional-props.test.ts > optional properties in .ts carry the same hazard > is measured by the splitter, not by a grep
+AssertionError: bare optional properties: 317
+packages/auth/src/lib/subject/types.ts  display_name?
+packages/charts/src/lib/types/chart.types.ts  range?
+packages/charts/src/lib/types/chart.types.ts  targetTransform?
+packages/chat/src/lib/streaming-chat/collaborative-types.ts  avatar?
+packages/chat/src/lib/streaming-chat/collaborative-types.ts  getTimestamp?
+packages/chat/src/lib/streaming-chat/collaborative-types.ts  messageId?
+packages/chat/src/lib/streaming-chat/types.ts  captions?
+packages/chat/src/lib/streaming-chat/types.ts  duration?
+packages/chat/src/lib/streaming-chat/types.ts  generateId?
+packages/chat/src/lib/streaming-chat/types.ts  getTimestamp?
+packages/chat/src/lib/streaming-chat/types.ts  height?
+packages/chat/src/lib/streaming-chat/types.ts  metadata?
+packages/chat/src/lib/streaming-chat/types.ts  pageCount?
+packages/chat/src/lib/streaming-chat/types.ts  reactedByMe?
+packages/chat/src/lib/streaming-chat/types.ts  reactions?
+packages/chat/src/lib/streaming-chat/types.ts  senderName?
+packages/chat/src/lib/streaming-chat/types.ts  thumbnail?
+packages/chat/src/lib/streaming-chat/types.ts  title?
+packages/chat/src/lib/streaming-chat/types.ts  uploadError?
+packages/chat/src/lib/streaming-chat/types.ts  uploadFile?
+packages/chat/src/lib/streaming-chat/types.ts  uploadProgress?
+packages/chat/src/lib/streaming-chat/types.ts  uploadStatus?
+packages/chat/src/lib/streaming-chat/types.ts  width?
+packages/code/src/lib/code-editor/code-editor.types.ts  formatter?
+packages/code/src/lib/code-editor/code-editor.types.ts  onSave?
+packages/code/src/lib/node-canvas/types.ts  autoLayout?
+packages/code/src/lib/node-canvas/types.ts  error?
+packages/code/src/lib/node-canvas/types.ts  generateId?
+packages/code/src/lib/node-canvas/types.ts  inputs?
+packages/code/src/lib/node-canvas/types.ts  multiple?
+packages/code/src/lib/node-canvas/types.ts  outputs?
+packages/code/src/lib/node-canvas/types.ts  validate?
+packages/code/src/lib/node-canvas/types.ts  validateConnection?
+packages/core/src/lib/actions/clickOutside.ts  enabled?
+packages/core/src/lib/animation/animate.ts  duration?
+packages/core/src/lib/animation/scroll.ts  epsilon?
+packages/core/src/lib/animation/scroll.ts  reducedMotion?
+packages/core/src/lib/animation/scroll.ts  stiffness?
+packages/core/src/lib/animation/spring-config.ts  bounce?
+packages/core/src/lib/animation/spring-config.ts  visualDuration?
+packages/core/src/lib/api/endpoints.ts  filters?
+packages/core/src/lib/api/endpoints.ts  hasMore?
+packages/core/src/lib/api/endpoints.ts  limit?
+packages/core/src/lib/api/endpoints.ts  offset?
+packages/core/src/lib/api/endpoints.ts  order?
+packages/core/src/lib/api/endpoints.ts  page?
+packages/core/src/lib/api/endpoints.ts  page?
+packages/core/src/lib/api/endpoints.ts  pageSize?
+packages/core/src/lib/api/endpoints.ts  pageSize?
+packages/core/src/lib/api/endpoints.ts  q?
+packages/core/src/lib/api/endpoints.ts  query?
+packages/core/src/lib/api/endpoints.ts  sort?
+packages/core/src/lib/api/errors.ts  code?
+packages/core/src/lib/api/testing/spy-client.ts  config?
+packages/core/src/lib/api/types.ts  _response?
+packages/core/src/lib/api/types.ts  backoffMultiplier?
+packages/core/src/lib/api/types.ts  baseURL?
+packages/core/src/lib/api/types.ts  body?
+packages/core/src/lib/api/types.ts  cache?
+packages/core/src/lib/api/types.ts  cache?
+packages/core/src/lib/api/types.ts  cached?
+packages/core/src/lib/api/types.ts  config?
+packages/core/src/lib/api/types.ts  deduplicate?
+packages/core/src/lib/api/types.ts  deduplicate?
+packages/core/src/lib/api/types.ts  headers?
+packages/core/src/lib/api/types.ts  headers?
+packages/core/src/lib/api/types.ts  initialDelay?
+packages/core/src/lib/api/types.ts  interceptors?
+packages/core/src/lib/api/types.ts  invalidateOnMutation?
+packages/core/src/lib/api/types.ts  invalidates?
+packages/core/src/lib/api/types.ts  key?
+packages/core/src/lib/api/types.ts  maxAttempts?
+packages/core/src/lib/api/types.ts  maxDelay?
+packages/core/src/lib/api/types.ts  onError?
+packages/core/src/lib/api/types.ts  onRequest?
+packages/core/src/lib/api/types.ts  onResponse?
+packages/core/src/lib/api/types.ts  params?
+packages/core/src/lib/api/types.ts  retry?
+packages/core/src/lib/api/types.ts  retry?
+packages/core/src/lib/api/types.ts  retryableStatusCodes?
+packages/core/src/lib/api/types.ts  shouldRetry?
+packages/core/src/lib/api/types.ts  signal?
+packages/core/src/lib/api/types.ts  timeout?
+packages/core/src/lib/api/types.ts  timeout?
+packages/core/src/lib/api/types.ts  ttl?
+packages/core/src/lib/application/renderer/choreography/drivers.ts  dispose?
+packages/core/src/lib/application/renderer/choreography/drivers.ts  height?
+packages/core/src/lib/application/renderer/choreography/drivers.ts  opacity?
+packages/core/src/lib/application/renderer/choreography/drivers.ts  width?
+packages/core/src/lib/application/renderer/choreography/drivers.ts  x?
+packages/core/src/lib/application/renderer/choreography/drivers.ts  y?
+packages/core/src/lib/application/renderer/choreography/engine-types.ts  native?
+packages/core/src/lib/application/renderer/representation/types.ts  frame?
+packages/core/src/lib/application/renderer/representation/types.ts  frame?
+packages/core/src/lib/application/renderer/representation/types.ts  retire?
+packages/core/src/lib/components/command/command.types.ts  action?
+packages/core/src/lib/components/command/command.types.ts  description?
+packages/core/src/lib/components/command/command.types.ts  disabled?
+packages/core/src/lib/components/command/command.types.ts  group?
+packages/core/src/lib/components/command/command.types.ts  icon?
+packages/core/src/lib/components/command/command.types.ts  keywords?
+packages/core/src/lib/components/command/command.types.ts  maxResults?
+packages/core/src/lib/components/command/command.types.ts  onSelect?
+packages/core/src/lib/components/command/command.types.ts  shortcut?
+packages/core/src/lib/components/data-table/table.types.ts  fetchData?
+packages/core/src/lib/components/data-table/table.types.ts  getRowId?
+packages/core/src/lib/components/data-table/table.types.ts  initialData?
+packages/core/src/lib/components/data-table/table.types.ts  multiSort?
+packages/core/src/lib/components/data-table/table.types.ts  pageSize?
+packages/core/src/lib/components/data-table/table.types.ts  serverSide?
+packages/core/src/lib/components/form/form.types.ts  asyncValidators?
+packages/core/src/lib/components/form/form.types.ts  debounceMs?
+packages/core/src/lib/components/form/form.types.ts  mode?
+packages/core/src/lib/components/form/form.types.ts  onSubmitError?
+packages/core/src/lib/components/form/form.types.ts  onSubmitSuccess?
+packages/core/src/lib/components/image-gallery/image-gallery.types.ts  caption?
+packages/core/src/lib/components/image-gallery/image-gallery.types.ts  height?
+packages/core/src/lib/components/image-gallery/image-gallery.types.ts  sizes?
+packages/core/src/lib/components/image-gallery/image-gallery.types.ts  srcset?
+packages/core/src/lib/components/image-gallery/image-gallery.types.ts  thumbnailUrl?
+packages/core/src/lib/components/image-gallery/image-gallery.types.ts  width?
+packages/core/src/lib/components/toast/toast.types.ts  action?
+packages/core/src/lib/components/toast/toast.types.ts  description?
+packages/core/src/lib/components/toast/toast.types.ts  dismissible?
+packages/core/src/lib/components/toast/toast.types.ts  dismissing?
+packages/core/src/lib/components/toast/toast.types.ts  duration?
+packages/core/src/lib/components/toast/toast.types.ts  title?
+packages/core/src/lib/components/ui/accordion/accordion.types.ts  disabled?
+packages/core/src/lib/components/ui/calendar/calendar.types.ts  onDateSelect?
+packages/core/src/lib/components/ui/calendar/calendar.types.ts  onRangeSelect?
+packages/core/src/lib/components/ui/collapsible/collapsible.types.ts  onCollapse?
+packages/core/src/lib/components/ui/collapsible/collapsible.types.ts  onExpand?
+packages/core/src/lib/components/ui/combobox/combobox.types.ts  description?
+packages/core/src/lib/components/ui/combobox/combobox.types.ts  disabled?
+packages/core/src/lib/components/ui/dropdown-menu/dropdown-menu.types.ts  disabled?
+packages/core/src/lib/components/ui/dropdown-menu/dropdown-menu.types.ts  icon?
+packages/core/src/lib/components/ui/dropdown-menu/dropdown-menu.types.ts  isSeparator?
+packages/core/src/lib/components/ui/dropdown-menu/dropdown-menu.types.ts  shortcut?
+packages/core/src/lib/components/ui/file-upload/file-upload.types.ts  error?
+packages/core/src/lib/components/ui/file-upload/file-upload.types.ts  fileName?
+packages/core/src/lib/components/ui/file-upload/file-upload.types.ts  previewUrl?
+packages/core/src/lib/components/ui/pagination/pagination.types.ts  onItemsPerPageChange?
+packages/core/src/lib/components/ui/pagination/pagination.types.ts  onPageChange?
+packages/core/src/lib/components/ui/select/select.types.ts  description?
+packages/core/src/lib/components/ui/select/select.types.ts  disabled?
+packages/core/src/lib/components/ui/select/select.types.ts  onChange?
+packages/core/src/lib/components/ui/tooltip/tooltip.types.ts  isHovered?
+packages/core/src/lib/components/ui/tree-view/tree-view.types.ts  children?
+packages/core/src/lib/components/ui/tree-view/tree-view.types.ts  data?
+packages/core/src/lib/components/ui/tree-view/tree-view.types.ts  disabled?
+packages/core/src/lib/components/ui/tree-view/tree-view.types.ts  icon?
+packages/core/src/lib/components/ui/tree-view/tree-view.types.ts  lazy?
+packages/core/src/lib/dependencies/storage.ts  debug?
+packages/core/src/lib/dependencies/storage.ts  domain?
+packages/core/src/lib/dependencies/storage.ts  domain?
+packages/core/src/lib/dependencies/storage.ts  expires?
+packages/core/src/lib/dependencies/storage.ts  maxAge?
+packages/core/src/lib/dependencies/storage.ts  maxAge?
+packages/core/src/lib/dependencies/storage.ts  path?
+packages/core/src/lib/dependencies/storage.ts  path?
+packages/core/src/lib/dependencies/storage.ts  prefix?
+packages/core/src/lib/dependencies/storage.ts  sameSite?
+packages/core/src/lib/dependencies/storage.ts  sameSite?
+packages/core/src/lib/dependencies/storage.ts  secure?
+packages/core/src/lib/dependencies/storage.ts  secure?
+packages/core/src/lib/dependencies/storage.ts  validator?
+packages/core/src/lib/i18n/ssr.ts  cookieName?
+packages/core/src/lib/i18n/ssr.ts  localeDetector?
+packages/core/src/lib/i18n/ssr.ts  preloadNamespaces?
+packages/core/src/lib/i18n/ssr.ts  urlParam?
+packages/core/src/lib/routing/browser-history.ts  parseQuery?
+packages/core/src/lib/routing/browser-history.ts  serializeQuery?
+packages/core/src/lib/routing/managed-history.ts  scroll?
+packages/core/src/lib/routing/schemas.ts  default?
+packages/core/src/lib/routing/schemas.ts  default?
+packages/core/src/lib/routing/schemas.ts  enum?
+packages/core/src/lib/routing/schemas.ts  integer?
+packages/core/src/lib/routing/schemas.ts  max?
+packages/core/src/lib/routing/schemas.ts  maxLength?
+packages/core/src/lib/routing/schemas.ts  min?
+packages/core/src/lib/routing/schemas.ts  minLength?
+packages/core/src/lib/routing/schemas.ts  pattern?
+packages/core/src/lib/routing/staged/types.ts  observeTurn?
+packages/core/src/lib/routing/sync-effect.ts  debounceMs?
+packages/core/src/lib/routing/sync-effect.ts  replace?
+packages/core/src/lib/routing/sync-effect.ts  serializeQuery?
+packages/core/src/lib/ssr/render.ts  bodyScripts?
+packages/core/src/lib/ssr/render.ts  clientScript?
+packages/core/src/lib/ssr/render.ts  head?
+packages/core/src/lib/ssr/render.ts  lang?
+packages/core/src/lib/ssr/render.ts  title?
+packages/core/src/lib/ssr/sanitize.ts  allowDataUri?
+packages/core/src/lib/ssr/sanitize.ts  allowedAttributes?
+packages/core/src/lib/ssr/sanitize.ts  allowedTags?
+packages/core/src/lib/ssr/sanitize.ts  domPurifyConfig?
+packages/core/src/lib/ssr/ssg.ts  baseURL?
+packages/core/src/lib/ssr/ssg.ts  dependencies?
+packages/core/src/lib/ssr/ssg.ts  generate404?
+packages/core/src/lib/ssr/ssg.ts  getInitialState?
+packages/core/src/lib/ssr/ssg.ts  getServerProps?
+packages/core/src/lib/ssr/ssg.ts  notFoundState?
+packages/core/src/lib/ssr/ssg.ts  onPageGenerated?
+packages/core/src/lib/ssr/ssg.ts  outDir?
+packages/core/src/lib/ssr/ssg.ts  paths?
+packages/core/src/lib/ssr/ssg.ts  renderOptions?
+packages/core/src/lib/test/test-store.ts  dependencies?
+packages/core/src/lib/types.ts  maxHistorySize?
+packages/core/src/lib/types.ts  ssr?
+packages/core/src/lib/types.ts  subscribeToActions?
+packages/core/src/lib/websocket/testing/spy-client.ts  protocols?
+packages/core/src/lib/websocket/types.ts  pingMessage?
+packages/core/src/lib/websocket/types.ts  pongMessage?
+packages/graphics/src/core/initial-state.ts  backgroundColor?
+packages/graphics/src/core/initial-state.ts  sceneId?
+packages/graphics/src/core/scene-sync.ts  renderAuthority?
+packages/graphics/src/core/types.ts  alpha?
+packages/graphics/src/core/types.ts  easing?
+packages/graphics/src/core/types.ts  emissive?
+packages/graphics/src/core/types.ts  far?
+packages/graphics/src/core/types.ts  fov?
+packages/graphics/src/core/types.ts  loop?
+packages/graphics/src/core/types.ts  metallic?
+packages/graphics/src/core/types.ts  near?
+packages/graphics/src/core/types.ts  orthoSize?
+packages/graphics/src/core/types.ts  rotation?
+packages/graphics/src/core/types.ts  roughness?
+packages/graphics/src/core/types.ts  scale?
+packages/graphics/src/core/types.ts  visible?
+packages/graphics/src/core/types.ts  wireframe?
+packages/graphics/src/lib/overlay/overlay-types.ts  animationFrameId?
+packages/graphics/src/lib/overlay/overlay-types.ts  debug?
+packages/graphics/src/lib/overlay/overlay-types.ts  error?
+packages/graphics/src/lib/overlay/overlay-types.ts  error?
+packages/graphics/src/lib/overlay/overlay-types.ts  handleContextLoss?
+packages/graphics/src/lib/overlay/overlay-types.ts  height?
+packages/graphics/src/lib/overlay/overlay-types.ts  maxTextureSize?
+packages/graphics/src/lib/overlay/overlay-types.ts  memoryBudget?
+packages/graphics/src/lib/overlay/overlay-types.ts  onContextLost?
+packages/graphics/src/lib/overlay/overlay-types.ts  onContextRestored?
+packages/graphics/src/lib/overlay/overlay-types.ts  onError?
+packages/graphics/src/lib/overlay/overlay-types.ts  renderAuthority?
+packages/graphics/src/lib/overlay/overlay-types.ts  targetFPS?
+packages/graphics/src/lib/overlay/overlay-types.ts  texture?
+packages/graphics/src/lib/overlay/overlay-types.ts  texture?
+packages/graphics/src/lib/overlay/overlay-types.ts  uniforms?
+packages/graphics/src/lib/overlay/overlay-types.ts  vertex?
+packages/graphics/src/lib/overlay/overlay-types.ts  width?
+packages/graphics/src/lib/representation/visual-provider.ts  frame?
+packages/graphics/src/lib/representation/visual-provider.ts  frame?
+packages/graphics/src/lib/representation/visual-provider.ts  retire?
+packages/graphics/src/lib/shaders/presets/ripple.ts  amplitude?
+packages/graphics/src/lib/shaders/presets/ripple.ts  center?
+packages/graphics/src/lib/shaders/presets/ripple.ts  decay?
+packages/graphics/src/lib/shaders/presets/ripple.ts  frequency?
+packages/graphics/src/lib/shaders/presets/ripple.ts  speed?
+packages/graphics/src/lib/shaders/presets/wave.ts  amplitude?
+packages/graphics/src/lib/shaders/presets/wave.ts  direction?
+packages/graphics/src/lib/shaders/presets/wave.ts  frequency?
+packages/graphics/src/lib/shaders/presets/wave.ts  phase?
+packages/graphics/src/lib/shaders/presets/wave.ts  speed?
+packages/graphics/src/lib/shaders/render-pipeline.ts  bounds?
+packages/graphics/src/lib/shaders/render-pipeline.ts  canvasHeight?
+packages/graphics/src/lib/shaders/render-pipeline.ts  canvasWidth?
+packages/graphics/src/lib/shaders/render-pipeline.ts  clear?
+packages/graphics/src/lib/shaders/render-pipeline.ts  clearColor?
+packages/graphics/src/lib/shaders/render-pipeline.ts  uniforms?
+packages/graphics/src/lib/shaders/shader-compiler.ts  error?
+packages/graphics/src/lib/shaders/shader-compiler.ts  error?
+packages/graphics/src/lib/shaders/shader-compiler.ts  log?
+packages/graphics/src/lib/shaders/shader-compiler.ts  log?
+packages/graphics/src/lib/shaders/shader-compiler.ts  program?
+packages/graphics/src/lib/shaders/shader-compiler.ts  shader?
+packages/graphics/src/lib/utils/webgl-support.ts  reason?
+packages/maps/src/lib/types/map.types.ts  accessToken?
+packages/maps/src/lib/types/map.types.ts  bearing?
+packages/maps/src/lib/types/map.types.ts  bounds?
+packages/maps/src/lib/types/map.types.ts  closeButton?
+packages/maps/src/lib/types/map.types.ts  closeOnClick?
+packages/maps/src/lib/types/map.types.ts  customAttribution?
+packages/maps/src/lib/types/map.types.ts  customTileURL?
+packages/maps/src/lib/types/map.types.ts  data?
+packages/maps/src/lib/types/map.types.ts  data?
+packages/maps/src/lib/types/map.types.ts  draggable?
+packages/maps/src/lib/types/map.types.ts  duration?
+packages/maps/src/lib/types/map.types.ts  essential?
+packages/maps/src/lib/types/map.types.ts  flyToTarget?
+packages/maps/src/lib/types/map.types.ts  icon?
+packages/maps/src/lib/types/map.types.ts  pitch?
+packages/maps/src/lib/types/map.types.ts  popup?
+packages/maps/src/lib/types/map.types.ts  zoom?
+packages/maps/src/lib/utils/tile-providers.ts  description?
+packages/maps/src/lib/utils/tile-providers.ts  previewURL?
+packages/media/src/lib/audio-player/audio-manager.ts  createAudioElement?
+packages/media/src/lib/audio-player/types.ts  album?
+packages/media/src/lib/audio-player/types.ts  artist?
+packages/media/src/lib/audio-player/types.ts  clock?
+packages/media/src/lib/audio-player/types.ts  coverArt?
+packages/media/src/lib/audio-player/types.ts  duration?
+packages/media/src/lib/audio-player/types.ts  format?
+packages/media/src/lib/audio-player/types.ts  loadSpeed?
+packages/media/src/lib/audio-player/types.ts  loadVolume?
+packages/media/src/lib/audio-player/types.ts  saveSpeed?
+packages/media/src/lib/audio-player/types.ts  saveVolume?
+packages/media/src/lib/audio-player/types.ts  trackPlayback?
+packages/media/src/lib/audio-player/types.ts  trackSkip?
+packages/media/src/lib/audio-player/types.ts  useMockPlayback?
+packages/media/src/lib/video-embed/live-media.ts  frame?
+packages/media/src/lib/video-embed/live-media.ts  frame?
+packages/media/src/lib/video-embed/live-media.ts  retire?
+packages/media/src/lib/video-embed/types.ts  autoplay?
+packages/media/src/lib/video-embed/types.ts  kind?
+packages/media/src/lib/video-embed/types.ts  kind?
+packages/media/src/lib/video-embed/types.ts  loop?
+packages/media/src/lib/video-embed/types.ts  muted?
+packages/media/src/lib/video-embed/types.ts  parent?
+packages/media/src/lib/video-embed/types.ts  startTime?
+packages/media/src/lib/video-embed/types.ts  title?: expected 317 to be 297 // Object.is equality
+
+- Expected
++ Received
+
+- 297
++ 317
+
+ ❯ tests/repo/optional-props.test.ts:789:5
+    787|     ? `bare optional properties: ${bare.length}\n${bare.join('\n')}`
+    788|     : `${ALLOWED_BARE_OPTIONALS - bare.length} have been fixed — lower…
+    789|   ).toBe(ALLOWED_BARE_OPTIONALS);
+       |     ^
+    790|  });
+    791| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  2 failed | 39 passed (41)
+   Start at  20:36:58
+   Duration  2.12s (transform 146ms, setup 50ms, collect 612ms, tests 1.49s, environment 0ms, prepare 13ms)
+

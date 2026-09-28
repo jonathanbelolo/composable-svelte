@@ -1,0 +1,95 @@
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-core-build6-review/packages/core
+
+Port 63315 is in use, trying another one...
+ ❯ |chromium| tests/fluid-motion/core-astra-correction.browser.test.ts (2 tests | 1 failed) 134ms
+   × correction review: unreachable destination disposes its shared driver exactly once 131ms
+   ✓ correction review: partial incoming conflict adopts displayed slide and scale 2ms
+ ❯ |webkit| tests/fluid-motion/core-astra-correction.browser.test.ts (2 tests | 1 failed) 72ms
+   × correction review: unreachable destination disposes its shared driver exactly once 68ms
+   ✓ correction review: partial incoming conflict adopts displayed slide and scale 3ms
+ ↓ |chromium| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests | 6 skipped)
+ ↓ |webkit| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests | 6 skipped)
+ ↓ |chromium| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 skipped)
+ ↓ |webkit| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 skipped)
+ ❯ |firefox| tests/fluid-motion/core-astra-correction.browser.test.ts (2 tests | 1 failed) 68ms
+   × correction review: unreachable destination disposes its shared driver exactly once 66ms
+   ✓ correction review: partial incoming conflict adopts displayed slide and scale 2ms
+ ↓ |firefox| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests | 6 skipped)
+ ↓ |firefox| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 skipped)
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |chromium| tests/fluid-motion/core-astra-correction.browser.test.ts > correction review: unreachable destination disposes its shared driver exactly once
+AssertionError: expected +0 to be 1 // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-correction.browser.test.ts/correction-review--unreachable-destination-disposes-its-shared-driver-exactly-once-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1[39m
+[31m+ 0[39m
+
+ ❯ tests/fluid-motion/core-astra-correction.browser.test.ts:41:48
+     39|  expect(f.host.diagnostics.some(e=>(e as {reason?:string}).reason==='l…
+     40|  expect(document.querySelector('[data-route-representation="card"]')).…
+     41|  f.step(1000);f.host.dispose();expect(disposed).toBe(1);
+       |                                                ^
+     42| });
+     43| it('correction review: partial incoming conflict adopts displayed slid…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |firefox| tests/fluid-motion/core-astra-correction.browser.test.ts > correction review: unreachable destination disposes its shared driver exactly once
+AssertionError: expected +0 to be 1 // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-correction.browser.test.ts/correction-review--unreachable-destination-disposes-its-shared-driver-exactly-once-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1[39m
+[31m+ 0[39m
+
+ ❯ tests/fluid-motion/core-astra-correction.browser.test.ts:41:48
+     39|  expect(f.host.diagnostics.some(e=>(e as {reason?:string}).reason==='l…
+     40|  expect(document.querySelector('[data-route-representation="card"]')).…
+     41|  f.step(1000);f.host.dispose();expect(disposed).toBe(1);
+       |                                                ^
+     42| });
+     43| it('correction review: partial incoming conflict adopts displayed slid…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |webkit| tests/fluid-motion/core-astra-correction.browser.test.ts > correction review: unreachable destination disposes its shared driver exactly once
+AssertionError: expected +0 to be 1 // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-correction.browser.test.ts/correction-review--unreachable-destination-disposes-its-shared-driver-exactly-once-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1[39m
+[31m+ 0[39m
+
+ ❯ tests/fluid-motion/core-astra-correction.browser.test.ts:41:53
+     39|  expect(f.host.diagnostics.some(e=>(e as {reason?:string}).reason==='l…
+     40|  expect(document.querySelector('[data-route-representation="card"]')).…
+     41|  f.step(1000);f.host.dispose();expect(disposed).toBe(1);
+       |                                                     ^
+     42| });
+     43| it('correction review: partial incoming conflict adopts displayed slid…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  3 failed | 6 skipped (9)
+      Tests  3 failed | 3 passed | 24 skipped (30)
+   Start at  00:52:33
+   Duration  1.68s (transform 0ms, setup 35ms, collect 690ms, tests 274ms, environment 0ms, prepare 2.83s)
+

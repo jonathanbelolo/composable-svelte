@@ -1,0 +1,16 @@
+{
+  "manifest": "70abcc826518e4c363862997d811e3c3f19a54f374522365b4f910edfbd6f232",
+  "entries": 117,
+  "src": "406d1360d74fee78df19949b992b2c6e61f1b6387cbe90af76de118b5e8d3560",
+  "dist": "811e2068911467f310799f66afc8a68577253dfa1671f7c490c9901f03ff33f0",
+  "evidence": {
+    "unused-handoff-cleanup-ordered.log": "0f653da056b04887847cad7863a20c1e089c4a7361f365db148f5f1c1acdb918",
+    "core-astra-final-boundary.browser.test.ts": "d359d9e68e9e8d248d97f980b2fc3b556a12f0268e97ea36d5a3dfcfa2d9b884",
+    "author-continuation-cleanup.log": "f5dc74bdee1c6d16da447441c0909e5487d4f898cd8f57bc9e27578090cdf3c8",
+    "unused-handoff-cleanup.log": "596015f6ef23129a329ba1fede7e7533634676766f991f310fd39be93fb3ef44",
+    "unchanged-final-boundary.log": "9f921ec548a710575199a91bee3d56ec272981d7bbedb1bd8d728cc87a7d8cd0",
+    "vitest.witness.config.ts": "9b5f08916d9b9570300bb69b21ee8d3fe07b952ba608bd7d200162ee7a798de7",
+    "core-astra-unused-handoff.browser.test.ts": "c41abee1c41d00cc6bb66d4082991a17f10d5b1b019104278ac1f3f673a927b9",
+    "vitest.review.config.ts": "05489c79e21d89d5acd316b552eb9576d5735e5c582f71f9feffde067fd0f6ca"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "baseline": "2e07f650c1421c25f6b29d2db9c0cc885ea891ed",
+  "snapshot_manifest_sha256": "b476047a84010f3ddc7d08f4b2151d786b31842b5fb1d8b15ffa18fd595cd3ae",
+  "isolation": "/private/tmp/fluid-overlays-core-astra-review",
+  "probes": {
+    "core-astra-public-probe.browser.test.ts": "88d135a45c8bdd0097530442b649c3be87ca3629579cf3084b6054e3a2e39325",
+    "core-astra-probe.browser.test.ts": "63edfb31292c00ba8319045e397a85126364a354702c608d1c2b2184b9c97d7e",
+    "vitest.controls.config.ts": "df423bdb58242ccebd1dff7b4d9bc7ff644019a1ac91f41651c07996fe815136",
+    "vitest.review.config.ts": "23d87f69f77c087c28b57667b7c8f96c2225da241ebe1c164b46647542c92e60"
+  },
+  "artifacts": {
+    "core-astra-public-probe.browser.test.ts": "88d135a45c8bdd0097530442b649c3be87ca3629579cf3084b6054e3a2e39325",
+    "controls-three-engines-serial.log": "0fd7cec046c470a433cb4d021abd944f794216db07aee7e5bd5434de06bc30ee",
+    "probes-three-engines.log": "b69af64bdfe84d5751960bd8d0dca912e10ef33a0f934a4dd6d0094ea35de7cf",
+    "core-astra-probe.browser.test.ts": "63edfb31292c00ba8319045e397a85126364a354702c608d1c2b2184b9c97d7e",
+    "controls-three-engines.log": "57aa33c7852aa093039eef5e05ff04384178d9b24b57ce3ca51190050a955bcd",
+    "transform-composition-probe.log": "155cb2aa5538e543272a116439697a4a9f60916ef38d557ee2569947374892f9",
+    "probes.log": "55d9e30e77d51067b3407579e343f79224272f944e6253143f45ceb50287f288",
+    "vitest.controls.config.ts": "df423bdb58242ccebd1dff7b4d9bc7ff644019a1ac91f41651c07996fe815136",
+    "vitest.review.config.ts": "23d87f69f77c087c28b57667b7c8f96c2225da241ebe1c164b46647542c92e60"
+  }
+}

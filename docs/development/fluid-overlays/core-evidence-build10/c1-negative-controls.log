@@ -1,0 +1,190 @@
+
+ RUN  v4.0.7 /Users/jonathanbelolo/.codex/worktrees/67a5/composable-svelte/packages/core
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+ ❯ |chromium| tests/fluid-motion/zz-c1-negctl-secant.browser.test.ts (15 tests | 1 failed | 14 skipped) 868ms
+   × C1 at the destination retarget: position and velocity continue exactly from the displayed state 867ms
+   ↓ successor adopts the displayed pose and velocity: no restoration frame, no representation gap
+   ↓ veto at the cue returns the still-current page from the displayed poses, bounded, with zero domain actions
+   ↓ hold-then-fade: a control stays painted at stable before commit, then its copy fades after reveal; visible focus pins a focusable participant
+   ↓ content mutation during suppression recaptures on the next frame without doubled opacity; scroll before the cue is sampled
+   ↓ nested participants become layout-preserving placeholders in the ancestor copy; unsupported geometry skips its track honestly
+   ↓ an unrelated open native modal (top layer) no longer refuses route choreography: the run plays and commits once (fluid-overlays §10)
+   ↓ card expands through an intermediate viewport pose to a real interactive expanded state, with independent tracks
+   ↓ foreign authority, ancestor opacity and 2D ancestor scale: displayed values captured, foreign writer never acquired, appearance applied once
+   ↓ a reduced-motion preference change during playback settles safely; the next-turn cue commits
+   ↓ the explicit plane outlet hosts representations; an unqualified (transformed) outlet falls back to the document plane
+   ↓ the scroll seam checkpoint runs after render and before destination measurement; user scroll rebases
+   ↓ conflict: a managed motion binding owns its opacity even when idle; choreography records displayed values and the engine keeps writing mid-run
+   ↓ a shared control keeps its real control visibly painted before commit (no invisible controls)
+   ↓ large cold participant through the public assembly and default budgets (staged 600 ms, visual 600 ms): prepared, revealed, committed, completed, no long task
+ ❯ |chromium| tests/fluid-motion/zz-c1-negctl-endpoint.browser.test.ts (15 tests | 1 failed | 14 skipped) 865ms
+   × C1 at the destination retarget: position and velocity continue exactly from the displayed state 864ms
+   ↓ successor adopts the displayed pose and velocity: no restoration frame, no representation gap
+   ↓ veto at the cue returns the still-current page from the displayed poses, bounded, with zero domain actions
+   ↓ hold-then-fade: a control stays painted at stable before commit, then its copy fades after reveal; visible focus pins a focusable participant
+   ↓ content mutation during suppression recaptures on the next frame without doubled opacity; scroll before the cue is sampled
+   ↓ nested participants become layout-preserving placeholders in the ancestor copy; unsupported geometry skips its track honestly
+   ↓ an unrelated open native modal (top layer) no longer refuses route choreography: the run plays and commits once (fluid-overlays §10)
+   ↓ card expands through an intermediate viewport pose to a real interactive expanded state, with independent tracks
+   ↓ foreign authority, ancestor opacity and 2D ancestor scale: displayed values captured, foreign writer never acquired, appearance applied once
+   ↓ a reduced-motion preference change during playback settles safely; the next-turn cue commits
+   ↓ the explicit plane outlet hosts representations; an unqualified (transformed) outlet falls back to the document plane
+   ↓ the scroll seam checkpoint runs after render and before destination measurement; user scroll rebases
+   ↓ conflict: a managed motion binding owns its opacity even when idle; choreography records displayed values and the engine keeps writing mid-run
+   ↓ a shared control keeps its real control visibly painted before commit (no invisible controls)
+   ↓ large cold participant through the public assembly and default budgets (staged 600 ms, visual 600 ms): prepared, revealed, committed, completed, no long task
+ ❯ |webkit| tests/fluid-motion/zz-c1-negctl-secant.browser.test.ts (15 tests | 1 failed | 14 skipped) 871ms
+   × C1 at the destination retarget: position and velocity continue exactly from the displayed state 869ms
+   ↓ successor adopts the displayed pose and velocity: no restoration frame, no representation gap
+   ↓ veto at the cue returns the still-current page from the displayed poses, bounded, with zero domain actions
+   ↓ hold-then-fade: a control stays painted at stable before commit, then its copy fades after reveal; visible focus pins a focusable participant
+   ↓ content mutation during suppression recaptures on the next frame without doubled opacity; scroll before the cue is sampled
+   ↓ nested participants become layout-preserving placeholders in the ancestor copy; unsupported geometry skips its track honestly
+   ↓ an unrelated open native modal (top layer) no longer refuses route choreography: the run plays and commits once (fluid-overlays §10)
+   ↓ card expands through an intermediate viewport pose to a real interactive expanded state, with independent tracks
+   ↓ foreign authority, ancestor opacity and 2D ancestor scale: displayed values captured, foreign writer never acquired, appearance applied once
+   ↓ a reduced-motion preference change during playback settles safely; the next-turn cue commits
+   ↓ the explicit plane outlet hosts representations; an unqualified (transformed) outlet falls back to the document plane
+   ↓ the scroll seam checkpoint runs after render and before destination measurement; user scroll rebases
+   ↓ conflict: a managed motion binding owns its opacity even when idle; choreography records displayed values and the engine keeps writing mid-run
+   ↓ a shared control keeps its real control visibly painted before commit (no invisible controls)
+   ↓ large cold participant through the public assembly and default budgets (staged 600 ms, visual 600 ms): prepared, revealed, committed, completed, no long task
+ ❯ |webkit| tests/fluid-motion/zz-c1-negctl-endpoint.browser.test.ts (15 tests | 1 failed | 14 skipped) 868ms
+   × C1 at the destination retarget: position and velocity continue exactly from the displayed state 867ms
+   ↓ successor adopts the displayed pose and velocity: no restoration frame, no representation gap
+   ↓ veto at the cue returns the still-current page from the displayed poses, bounded, with zero domain actions
+   ↓ hold-then-fade: a control stays painted at stable before commit, then its copy fades after reveal; visible focus pins a focusable participant
+   ↓ content mutation during suppression recaptures on the next frame without doubled opacity; scroll before the cue is sampled
+   ↓ nested participants become layout-preserving placeholders in the ancestor copy; unsupported geometry skips its track honestly
+   ↓ an unrelated open native modal (top layer) no longer refuses route choreography: the run plays and commits once (fluid-overlays §10)
+   ↓ card expands through an intermediate viewport pose to a real interactive expanded state, with independent tracks
+   ↓ foreign authority, ancestor opacity and 2D ancestor scale: displayed values captured, foreign writer never acquired, appearance applied once
+   ↓ a reduced-motion preference change during playback settles safely; the next-turn cue commits
+   ↓ the explicit plane outlet hosts representations; an unqualified (transformed) outlet falls back to the document plane
+   ↓ the scroll seam checkpoint runs after render and before destination measurement; user scroll rebases
+   ↓ conflict: a managed motion binding owns its opacity even when idle; choreography records displayed values and the engine keeps writing mid-run
+   ↓ a shared control keeps its real control visibly painted before commit (no invisible controls)
+   ↓ large cold participant through the public assembly and default budgets (staged 600 ms, visual 600 ms): prepared, revealed, committed, completed, no long task
+ ❯ |firefox| tests/fluid-motion/zz-c1-negctl-secant.browser.test.ts (15 tests | 1 failed | 14 skipped) 795ms
+   × C1 at the destination retarget: position and velocity continue exactly from the displayed state 795ms
+   ↓ successor adopts the displayed pose and velocity: no restoration frame, no representation gap
+   ↓ veto at the cue returns the still-current page from the displayed poses, bounded, with zero domain actions
+   ↓ hold-then-fade: a control stays painted at stable before commit, then its copy fades after reveal; visible focus pins a focusable participant
+   ↓ content mutation during suppression recaptures on the next frame without doubled opacity; scroll before the cue is sampled
+   ↓ nested participants become layout-preserving placeholders in the ancestor copy; unsupported geometry skips its track honestly
+   ↓ an unrelated open native modal (top layer) no longer refuses route choreography: the run plays and commits once (fluid-overlays §10)
+   ↓ card expands through an intermediate viewport pose to a real interactive expanded state, with independent tracks
+   ↓ foreign authority, ancestor opacity and 2D ancestor scale: displayed values captured, foreign writer never acquired, appearance applied once
+   ↓ a reduced-motion preference change during playback settles safely; the next-turn cue commits
+   ↓ the explicit plane outlet hosts representations; an unqualified (transformed) outlet falls back to the document plane
+   ↓ the scroll seam checkpoint runs after render and before destination measurement; user scroll rebases
+   ↓ conflict: a managed motion binding owns its opacity even when idle; choreography records displayed values and the engine keeps writing mid-run
+   ↓ a shared control keeps its real control visibly painted before commit (no invisible controls)
+   ↓ large cold participant through the public assembly and default budgets (staged 600 ms, visual 600 ms): prepared, revealed, committed, completed, no long task
+ ❯ |firefox| tests/fluid-motion/zz-c1-negctl-endpoint.browser.test.ts (15 tests | 1 failed | 14 skipped) 801ms
+   × C1 at the destination retarget: position and velocity continue exactly from the displayed state 800ms
+   ↓ successor adopts the displayed pose and velocity: no restoration frame, no representation gap
+   ↓ veto at the cue returns the still-current page from the displayed poses, bounded, with zero domain actions
+   ↓ hold-then-fade: a control stays painted at stable before commit, then its copy fades after reveal; visible focus pins a focusable participant
+   ↓ content mutation during suppression recaptures on the next frame without doubled opacity; scroll before the cue is sampled
+   ↓ nested participants become layout-preserving placeholders in the ancestor copy; unsupported geometry skips its track honestly
+   ↓ an unrelated open native modal (top layer) no longer refuses route choreography: the run plays and commits once (fluid-overlays §10)
+   ↓ card expands through an intermediate viewport pose to a real interactive expanded state, with independent tracks
+   ↓ foreign authority, ancestor opacity and 2D ancestor scale: displayed values captured, foreign writer never acquired, appearance applied once
+   ↓ a reduced-motion preference change during playback settles safely; the next-turn cue commits
+   ↓ the explicit plane outlet hosts representations; an unqualified (transformed) outlet falls back to the document plane
+   ↓ the scroll seam checkpoint runs after render and before destination measurement; user scroll rebases
+   ↓ conflict: a managed motion binding owns its opacity even when idle; choreography records displayed values and the engine keeps writing mid-run
+   ↓ a shared control keeps its real control visibly painted before commit (no invisible controls)
+   ↓ large cold participant through the public assembly and default budgets (staged 600 ms, visual 600 ms): prepared, revealed, committed, completed, no long task
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |chromium| tests/fluid-motion/zz-c1-negctl-endpoint.browser.test.ts > C1 at the destination retarget: position and velocity continue exactly from the displayed state
+AssertionError: expected 300 to be close to 301, received difference is 1, but expected 0.0005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/zz-c1-negctl-endpoint.browser.test.ts/C1-at-the-destination-retarget--position-and-velocity-continue-exactly-from-the-displayed-state-1.png
+
+ ❯ tests/fluid-motion/zz-c1-negctl-endpoint.browser.test.ts:65:17
+     63|   // Endpoint: the measured destination rect, reached with zero veloci…
+     64|   const last = f.diagnostics('frame').filter(event => event.participan…
+     65|   expect(last.x).toBeCloseTo(retarget.to[0] + 1, 3); // NEGATIVE CONTR…
+       |                 ^
+     66|   // Frame `vx` is a backward 1 ms secant (compose(t).x - compose(t - …
+     67|   // Hermite continuation (from the displayed state to the destination…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  |chromium| tests/fluid-motion/zz-c1-negctl-secant.browser.test.ts > C1 at the destination retarget: position and velocity continue exactly from the displayed state
+AssertionError: expected +0 to be close to 0.01, received difference is 0.01, but expected 5e-7
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/zz-c1-negctl-secant.browser.test.ts/C1-at-the-destination-retarget--position-and-velocity-continue-exactly-from-the-displayed-state-1.png
+
+ ❯ tests/fluid-motion/zz-c1-negctl-secant.browser.test.ts:71:18
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  |firefox| tests/fluid-motion/zz-c1-negctl-endpoint.browser.test.ts > C1 at the destination retarget: position and velocity continue exactly from the displayed state
+AssertionError: expected 300 to be close to 301, received difference is 1, but expected 0.0005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/zz-c1-negctl-endpoint.browser.test.ts/C1-at-the-destination-retarget--position-and-velocity-continue-exactly-from-the-displayed-state-1.png
+
+ ❯ tests/fluid-motion/zz-c1-negctl-endpoint.browser.test.ts:65:17
+     63|   // Endpoint: the measured destination rect, reached with zero veloci…
+     64|   const last = f.diagnostics('frame').filter(event => event.participan…
+     65|   expect(last.x).toBeCloseTo(retarget.to[0] + 1, 3); // NEGATIVE CONTR…
+       |                 ^
+     66|   // Frame `vx` is a backward 1 ms secant (compose(t).x - compose(t - …
+     67|   // Hermite continuation (from the displayed state to the destination…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  |firefox| tests/fluid-motion/zz-c1-negctl-secant.browser.test.ts > C1 at the destination retarget: position and velocity continue exactly from the displayed state
+AssertionError: expected +0 to be close to 0.01, received difference is 0.01, but expected 5e-7
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/zz-c1-negctl-secant.browser.test.ts/C1-at-the-destination-retarget--position-and-velocity-continue-exactly-from-the-displayed-state-1.png
+
+ ❯ tests/fluid-motion/zz-c1-negctl-secant.browser.test.ts:71:18
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  |webkit| tests/fluid-motion/zz-c1-negctl-endpoint.browser.test.ts > C1 at the destination retarget: position and velocity continue exactly from the displayed state
+AssertionError: expected 300 to be close to 301, received difference is 1, but expected 0.0005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/zz-c1-negctl-endpoint.browser.test.ts/C1-at-the-destination-retarget--position-and-velocity-continue-exactly-from-the-displayed-state-1.png
+
+ ❯ tests/fluid-motion/zz-c1-negctl-endpoint.browser.test.ts:65:29
+     63|   // Endpoint: the measured destination rect, reached with zero veloci…
+     64|   const last = f.diagnostics('frame').filter(event => event.participan…
+     65|   expect(last.x).toBeCloseTo(retarget.to[0] + 1, 3); // NEGATIVE CONTR…
+       |                             ^
+     66|   // Frame `vx` is a backward 1 ms secant (compose(t).x - compose(t - …
+     67|   // Hermite continuation (from the displayed state to the destination…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  |webkit| tests/fluid-motion/zz-c1-negctl-secant.browser.test.ts > C1 at the destination retarget: position and velocity continue exactly from the displayed state
+AssertionError: expected +0 to be close to 0.01, received difference is 0.01, but expected 5e-7
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/zz-c1-negctl-secant.browser.test.ts/C1-at-the-destination-retarget--position-and-velocity-continue-exactly-from-the-displayed-state-1.png
+
+ ❯ tests/fluid-motion/zz-c1-negctl-secant.browser.test.ts:71:30
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  6 failed (6)
+      Tests  6 failed | 84 skipped (90)
+   Start at  20:53:51
+   Duration  2.69s (transform 0ms, setup 155ms, collect 1.48s, tests 5.07s, environment 0ms, prepare 399ms)
+

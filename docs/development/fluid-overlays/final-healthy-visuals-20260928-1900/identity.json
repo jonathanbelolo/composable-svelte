@@ -1,0 +1,41 @@
+{
+  "runtime": "build10",
+  "srcTree": "e79ac3480e9248c2015058aed7ef47f0390ee448685d3b0dda98bb6ac75c1c29",
+  "distTree": "b0c3a789019d1e268df17ea763059f42246dc97f6bb9ec1dff7603fd50a380e0",
+  "distByteComparisonToImmutableSnapshot": "pass",
+  "url": "http://127.0.0.1:5188/",
+  "viewport": {
+    "width": 702,
+    "height": 993
+  },
+  "images": {
+    "drawer-resting.png": {
+      "sha256": "78335611f307377722ef0206fa921243bd45d250add089f5c9f621fc27500705",
+      "state": "resting",
+      "capturedAtUtc": "2026-09-28T19:00:29.749895+00:00"
+    },
+    "nested-overlay-resting.png": {
+      "sha256": "6f48900fad26dd3ec6e4e0a59f7b0c4e0b83d8b9dd00025f9979d365868ec17e",
+      "state": "resting",
+      "capturedAtUtc": "2026-09-28T19:00:08.864314+00:00"
+    },
+    "modal-resting.png": {
+      "sha256": "5569034e72f9a2b45208243da236232ad85b8495e8b29e58abcf7bee9f59b626",
+      "state": "resting",
+      "capturedAtUtc": "2026-09-28T18:59:56.937578+00:00"
+    }
+  },
+  "observedRestingStyles": {
+    "modalCatalog": {
+      "opacity": "0.88",
+      "scale": "0.98",
+      "translate": "none"
+    },
+    "drawerCatalog": {
+      "opacity": "1",
+      "scale": "none",
+      "translate": "-32px"
+    }
+  },
+  "limitations": "Resting layout screenshots only. Not evidence of temporal continuity. No mid-flight screenshot claimed. Existing bounded browser witnesses retained."
+}

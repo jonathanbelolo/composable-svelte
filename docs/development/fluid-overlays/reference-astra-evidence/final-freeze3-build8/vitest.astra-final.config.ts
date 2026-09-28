@@ -1,0 +1,2 @@
+import base from './vitest.browser.config.ts';
+export default { ...base, test: { ...base.test, include: ['tests/overlay.browser.test.ts','tests/overlay.domain.test.ts','tests/astra.counterexamples.test.ts','tests/astra.browser.test.ts','tests/rich.browser.test.ts'],browser:{...base.test!.browser,instances:['chromium','firefox','webkit'].map(browser=>({browser,viewport:{width:1280,height:900}}))}}};

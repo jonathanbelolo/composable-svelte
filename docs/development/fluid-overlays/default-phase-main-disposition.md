@@ -1,0 +1,9 @@
+# Main C2 default phase disposition — 2026-09-27 22:12 UTC
+
+Parent architecture/acceptance lead explicitly rejects post-render-only default source qualification. Preserve C2. Require framework-owned capture/reservation before destructive render for default choreography as well as explicit entry. Standard accepted action removing registered page source and opening overlay must retain outgoing visual without app callback glue.
+
+Narrowest internal integration with real managed action/presentation/render pipeline: resolve guards/accepted intent; capture/validate outgoing endpoints while DOM still exists; apply accepted business transition/render; resolve/validate destinations and continue timeline. Capture may be after synchronous reduction if old DOM/ownership remains, before destructive render/unmount. No impure reducers or async commit waits. Preserve source epoch/owner snapshot. Provisional preparation may acquire/hide/supersede nothing until acceptance; refusal/throw rolls back fully.
+
+One framework default path for dispatch/dismissal causes including Escape, outside, reducer changes and Back when accepted. Explicit precedence and once current-epoch completion retained. Bindable primitives need equivalent before-removal lifecycle, no silent exception. Truly absent/unregistered geometry can diagnose/settle; registered source removed by same accepted transition is not absent geometry.
+
+Required regressions: same-action source removal plus default overlay opening, guarded refusal preserving existing motion, rapid reversal/replacement, destination failure cleanup. Verify actual cross-owner visual continuity, not merely no diagnostic. Record design adjustment and implement without further design/approval round. If fundamental incompatibility discovered, report actual mechanism/options before weakening requirement.

@@ -1,0 +1,63 @@
+12:36:27 AM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference - using default configuration.
+
+ RUN  v4.0.7 /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference
+
+12:36:27 AM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference - using default configuration.
+Port 63315 is in use, trying another one...
+stdout | tests/astra.browser.test.ts > trusted failure/retry and edits during save preserve the draft, then one successful bridge close
+BJS - [00:36:29]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/astra.browser.test.ts > trusted failure/retry and edits during save preserve the draft, then one successful bridge close
+BJS - [00:36:29]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/astra.browser.test.ts > trusted save then full discard dismissal retains the late successful saved revision
+BJS - [00:36:31]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/astra.browser.test.ts > trusted save then full discard dismissal retains the late successful saved revision
+ASTRA_MOUNTED_LATE {"status":"idle","catalog":"Lightweight double-skin ETFE inflated at 250 Pa gauge pressure.","trace":["home:openCurator","openCuratorModal","curatorPresentation","curator:editNotes","curator:save","curator:dismiss","confirmAlertPresentation","confirmAlert:confirmDiscard","confirmAlertPresentation","curatorPresentation","curator:saveCompleted"]}
+stdout | tests/astra.browser.test.ts > trusted reopen and second save cannot be rolled back by the first late result
+BJS - [00:36:33]: Babylon.js v8.36.1 - WebGL2
+stdout | tests/astra.browser.test.ts > trusted reopen and second save cannot be rolled back by the first late result
+ASTRA_MOUNTED_ORDER {"catalog":"Old revision","draft":"New revision","trace":["home:openCurator","openCuratorModal","curatorPresentation","curator:editNotes","curator:save","curator:dismiss","confirmAlertPresentation","confirmAlert:confirmDiscard","confirmAlertPresentation","curatorPresentation","home:openCurator","openCuratorModal","curatorPresentation","curator:editNotes","curator:save","curator:saveCompleted","curator:saveCompleted"]}
+ ❯ |chromium| tests/astra.browser.test.ts (3 tests | 2 failed) 6240ms
+   ✓ trusted failure/retry and edits during save preserve the draft, then one successful bridge close  1708ms
+   × trusted save then full discard dismissal retains the late successful saved revision 1865ms
+   × trusted reopen and second save cannot be rolled back by the first late result 2666ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |chromium| tests/astra.browser.test.ts > trusted save then full discard dismissal retains the late successful saved revision
+AssertionError: expected 'Lightweight double-skin ETFE inflated…' to be 'Late saved revision' // Object.is equality
+
+Expected: [32m"L[7mate saved revision[27m"[39m
+Received: [31m"L[7mightweight double-skin ETFE inflated at 250 Pa gauge pressure.[27m"[39m
+
+ ❯ tests/astra.browser.test.ts:38:53
+     36|  await click('[data-confirm-discard]');await waitFor(()=>f.status()===…
+     37|  console.log('ASTRA_MOUNTED_LATE',JSON.stringify({status:f.status(),ca…
+     38|  expect(f.app.store.state.specs.cloud!.curatorNotes).toBe('Late saved …
+       |                                                     ^
+     39| });
+     40| it('trusted reopen and second save cannot be rolled back by the first …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |chromium| tests/astra.browser.test.ts > trusted reopen and second save cannot be rolled back by the first late result
+AssertionError: expected 'Old revision' to be 'New revision' // Object.is equality
+
+Expected: [32m"[7mNew[27m revision"[39m
+Received: [31m"[7mOld[27m revision"[39m
+
+ ❯ tests/astra.browser.test.ts:47:53
+     45|  f.requests[1]!.resolve();await waitFor(()=>!f.app.store.state.curator…
+     46|  console.log('ASTRA_MOUNTED_ORDER',JSON.stringify({catalog:f.app.store…
+     47|  expect(f.app.store.state.specs.cloud!.curatorNotes).toBe('New revisio…
+       |                                                     ^
+     48| });
+     49| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 1 passed (3)
+   Start at  00:36:27
+   Duration  7.86s (transform 0ms, setup 0ms, collect 1.11s, tests 6.24s, environment 0ms, prepare 46ms)
+

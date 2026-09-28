@@ -1,0 +1,33 @@
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-core-build5-review/packages/core
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+Port 63315 is in use, trying another one...
+ ✓ |firefox| tests/fluid-motion/representation.browser.test.ts (68 tests | 64 skipped) 1382ms
+     ✓ composite add onto a non-zero underlying value  330ms
+     ✓ two animations on one property (replace, then add)  349ms
+     ✓ per-keyframe easing with an implicit start  353ms
+     ✓ a non-identity implicit underlying transform from a stylesheet  349ms
+stdout | tests/fluid-motion/firefox-production-boundary.browser.test.ts > running retirement has no test pause or clock rewrite: add margin
+[astra-production-running] {"name":"add margin","samples":21,"initialError":0.00009999999999976694,"maxError":0.00009999999999976694,"replayTime":[493.02],"oracleTime":[493.02]}
+stdout | tests/fluid-motion/firefox-production-boundary.browser.test.ts > running retirement has no test pause or clock rewrite: replace plus add margin
+[astra-production-running] {"name":"replace plus add margin","samples":21,"initialError":0.0007999999999999119,"maxError":0.0007999999999999119,"replayTime":[516.78,516.78],"oracleTime":[516.78,516.78]}
+stdout | tests/fluid-motion/firefox-production-boundary.browser.test.ts > running retirement has no test pause or clock rewrite: implicit opacity easing
+[astra-production-running] {"name":"implicit opacity easing","samples":21,"initialError":0,"maxError":0,"replayTime":[516.68],"oracleTime":[516.68]}
+stdout | tests/fluid-motion/firefox-production-boundary.browser.test.ts > running retirement has no test pause or clock rewrite: implicit transform
+[astra-production-running] {"name":"implicit transform","samples":21,"initialError":0,"maxError":0.0000010000000000287557,"replayTime":[516.66],"oracleTime":[516.66]}
+stdout | tests/fluid-motion/firefox-production-boundary.browser.test.ts > already-paused production source remains faithful: implicit
+[astra-production-paused] {"explicit":false,"time":400,"pending":false,"state":"paused","value":"0.58"}
+stdout | tests/fluid-motion/firefox-production-boundary.browser.test.ts > already-paused production source remains faithful: explicit
+[astra-production-paused] {"explicit":true,"time":400,"pending":false,"state":"paused","value":"0.58"}
+ ✓ |firefox| tests/fluid-motion/firefox-production-boundary.browser.test.ts (6 tests) 2250ms
+   ✓ running retirement has no test pause or clock rewrite: add margin  493ms
+   ✓ running retirement has no test pause or clock rewrite: replace plus add margin  519ms
+   ✓ running retirement has no test pause or clock rewrite: implicit opacity easing  519ms
+   ✓ running retirement has no test pause or clock rewrite: implicit transform  516ms
+
+ Test Files  2 passed (2)
+      Tests  10 passed | 64 skipped (74)
+   Start at  00:51:00
+   Duration  5.56s (transform 0ms, setup 13ms, collect 163ms, tests 3.63s, environment 0ms, prepare 1.97s)
+

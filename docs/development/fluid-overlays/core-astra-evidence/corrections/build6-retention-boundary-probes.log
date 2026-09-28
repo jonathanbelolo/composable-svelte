@@ -1,0 +1,160 @@
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-core-build6-review/packages/core
+
+ ❯ |chromium| tests/fluid-motion/core-astra-correction.browser.test.ts (4 tests | 2 failed | 2 skipped) 206ms
+   ↓ correction review: unreachable destination disposes its shared driver exactly once
+   ↓ correction review: partial incoming conflict adopts displayed slide and scale
+   × correction review: reduced resting transforms compose with stylesheet base like animated transforms 142ms
+   × correction review: retiring reaction source owner releases retained channels while shell overlay survives 64ms
+ ❯ |webkit| tests/fluid-motion/core-astra-correction.browser.test.ts (4 tests | 2 failed | 2 skipped) 108ms
+   ↓ correction review: unreachable destination disposes its shared driver exactly once
+   ↓ correction review: partial incoming conflict adopts displayed slide and scale
+   × correction review: reduced resting transforms compose with stylesheet base like animated transforms 51ms
+   × correction review: retiring reaction source owner releases retained channels while shell overlay survives 56ms
+ ↓ |chromium| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests | 6 skipped)
+ ↓ |webkit| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests | 6 skipped)
+ ↓ |chromium| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 skipped)
+ ↓ |webkit| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 skipped)
+ ❯ |firefox| tests/fluid-motion/core-astra-correction.browser.test.ts (4 tests | 2 failed | 2 skipped) 90ms
+   ↓ correction review: unreachable destination disposes its shared driver exactly once
+   ↓ correction review: partial incoming conflict adopts displayed slide and scale
+   × correction review: reduced resting transforms compose with stylesheet base like animated transforms 60ms
+   × correction review: retiring reaction source owner releases retained channels while shell overlay survives 30ms
+ ↓ |firefox| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests | 6 skipped)
+ ↓ |firefox| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 skipped)
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |chromium| tests/fluid-motion/core-astra-correction.browser.test.ts > correction review: reduced resting transforms compose with stylesheet base like animated transforms
+AssertionError: expected 0.95 to be close to 1.9, received difference is 0.95, but expected 0.0005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-correction.browser.test.ts/correction-review--reduced-resting-transforms-compose-with-stylesheet-base-like-animated-transforms-1.png
+
+ ❯ tests/fluid-motion/core-astra-correction.browser.test.ts:56:48
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯
+
+ FAIL  |chromium| tests/fluid-motion/core-astra-correction.browser.test.ts > correction review: reduced resting transforms compose with stylesheet base like animated transforms
+AssertionError: expected '12px 5px' to be '32px 15px' // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-correction.browser.test.ts/correction-review--reduced-resting-transforms-compose-with-stylesheet-base-like-animated-transforms-1.png
+
+Expected: [32m"[7m3[27m2px [7m1[27m5px"[39m
+Received: [31m"[7m1[27m2px 5px"[39m
+
+ ❯ tests/fluid-motion/core-astra-correction.browser.test.ts:56:110
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯
+
+ FAIL  |chromium| tests/fluid-motion/core-astra-correction.browser.test.ts > correction review: retiring reaction source owner releases retained channels while shell overlay survives
+AssertionError: expected 1 to be +0 // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-correction.browser.test.ts/correction-review--retiring-reaction-source-owner-releases-retained-channels-while-shell-overlay-survives-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 0[39m
+[31m+ 1[39m
+
+ ❯ tests/fluid-motion/core-astra-correction.browser.test.ts:63:34
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯
+
+ FAIL  |firefox| tests/fluid-motion/core-astra-correction.browser.test.ts > correction review: reduced resting transforms compose with stylesheet base like animated transforms
+AssertionError: expected 0.95 to be close to 1.9, received difference is 0.95, but expected 0.0005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-correction.browser.test.ts/correction-review--reduced-resting-transforms-compose-with-stylesheet-base-like-animated-transforms-1.png
+
+ ❯ tests/fluid-motion/core-astra-correction.browser.test.ts:56:48
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯
+
+ FAIL  |firefox| tests/fluid-motion/core-astra-correction.browser.test.ts > correction review: reduced resting transforms compose with stylesheet base like animated transforms
+AssertionError: expected '12px 5px' to be '32px 15px' // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-correction.browser.test.ts/correction-review--reduced-resting-transforms-compose-with-stylesheet-base-like-animated-transforms-1.png
+
+Expected: [32m"[7m3[27m2px [7m1[27m5px"[39m
+Received: [31m"[7m1[27m2px 5px"[39m
+
+ ❯ tests/fluid-motion/core-astra-correction.browser.test.ts:56:110
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯
+
+ FAIL  |firefox| tests/fluid-motion/core-astra-correction.browser.test.ts > correction review: retiring reaction source owner releases retained channels while shell overlay survives
+AssertionError: expected 1 to be +0 // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-correction.browser.test.ts/correction-review--retiring-reaction-source-owner-releases-retained-channels-while-shell-overlay-survives-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 0[39m
+[31m+ 1[39m
+
+ ❯ tests/fluid-motion/core-astra-correction.browser.test.ts:63:34
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯
+
+ FAIL  |webkit| tests/fluid-motion/core-astra-correction.browser.test.ts > correction review: reduced resting transforms compose with stylesheet base like animated transforms
+AssertionError: expected 0.95 to be close to 1.9, received difference is 0.95, but expected 0.0005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-correction.browser.test.ts/correction-review--reduced-resting-transforms-compose-with-stylesheet-base-like-animated-transforms-1.png
+
+ ❯ tests/fluid-motion/core-astra-correction.browser.test.ts:56:60
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯
+
+ FAIL  |webkit| tests/fluid-motion/core-astra-correction.browser.test.ts > correction review: reduced resting transforms compose with stylesheet base like animated transforms
+AssertionError: expected '12px 5px' to be '32px 15px' // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-correction.browser.test.ts/correction-review--reduced-resting-transforms-compose-with-stylesheet-base-like-animated-transforms-1.png
+
+Expected: [32m"[7m3[27m2px [7m1[27m5px"[39m
+Received: [31m"[7m1[27m2px 5px"[39m
+
+ ❯ tests/fluid-motion/core-astra-correction.browser.test.ts:56:115
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/9]⎯
+
+ FAIL  |webkit| tests/fluid-motion/core-astra-correction.browser.test.ts > correction review: retiring reaction source owner releases retained channels while shell overlay survives
+AssertionError: expected 1 to be +0 // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-correction.browser.test.ts/correction-review--retiring-reaction-source-owner-releases-retained-channels-while-shell-overlay-survives-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 0[39m
+[31m+ 1[39m
+
+ ❯ tests/fluid-motion/core-astra-correction.browser.test.ts:63:39
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/9]⎯
+
+
+ Test Files  3 failed | 6 skipped (9)
+      Tests  6 failed | 30 skipped (36)
+   Start at  00:54:22
+   Duration  2.13s (transform 0ms, setup 39ms, collect 810ms, tests 404ms, environment 0ms, prepare 3.32s)
+

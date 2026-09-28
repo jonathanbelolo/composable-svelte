@@ -1,0 +1,31 @@
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-firefox-timing/packages/core
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > composite add onto a non-zero underlying value
+[astra-stack-solve] {"properties":["margin-left"],"offset":0,"bases":[["margin-left","10.0003px"]],"reasons":[],"samples":[{"at":474,"values":["16.0017px"],"times":[150.04]},{"at":487,"values":["16.6683px"],"times":[166.7]}],"timeline":484.34,"sourceTimes":[{"time":166.7,"start":317.62,"playState":"running"}]}
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > composite add onto a non-zero underlying value
+[astra-stack-final] {"property":"margin-left","copyTimes":[333.38],"got":[23.3558],"want":[23.3352],"underlying":"10.0003px","diagnostics":[{"type":"representation","participant":"stack","provider":"projection","continuity":"live"},{"type":"unsupported","participant":"stack","reason":"animationReconstructed"}],"timeline":667.66,"pending":[false],"states":["paused"]}
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > two animations on one property (replace, then add)
+[astra-stack-solve] {"properties":["margin-left"],"offset":0,"bases":[["margin-left","5.00041px"]],"reasons":[],"samples":[{"at":823,"values":["12.8214px"],"times":[150,150]},{"at":838,"values":["13.6905px"],"times":[166.66,166.66]}],"timeline":834.34,"sourceTimes":[{"time":166.66,"start":667.66,"playState":"running"},{"time":166.66,"start":667.66,"playState":"running"}]}
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > two animations on one property (replace, then add)
+[astra-stack-final] {"property":"margin-left","copyTimes":[333.34,333.34],"got":[22.5689],"want":[22.3813],"underlying":"5.00041px","diagnostics":[{"type":"representation","participant":"stack","provider":"projection","continuity":"live"},{"type":"unsupported","participant":"stack","reason":"animationReconstructed"}],"timeline":1017.66,"pending":[false,false],"states":["paused","paused"]}
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > per-keyframe easing with an implicit start
+[astra-stack-solve] {"properties":["opacity"],"offset":0,"bases":[["opacity","0.9"]],"reasons":[],"samples":[{"at":1172,"values":["0.78"],"times":[150]},{"at":1190,"values":["0.766667"],"times":[166.66]}],"timeline":1184.34,"sourceTimes":[{"time":166.66,"start":1017.66,"playState":"running"}]}
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > per-keyframe easing with an implicit start
+[astra-stack-final] {"property":"opacity","copyTimes":[333.34],"got":[0.630719],"want":[0.633328],"underlying":"0.9","diagnostics":[{"type":"representation","participant":"stack","provider":"projection","continuity":"live"},{"type":"unsupported","participant":"stack","reason":"animationReconstructed"}],"timeline":1367.66,"pending":[false],"states":["paused"]}
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > a non-identity implicit underlying transform from a stylesheet
+[astra-stack-solve] {"properties":["transform"],"offset":0,"bases":[["transform","matrix(0.996195, 0.0871557, -0.0871557, 0.996195, 10, 0)"]],"reasons":[],"samples":[{"at":1519,"values":["matrix(0.992005, 0.126199, -0.126199, 0.992005, 17.5, 0)"],"times":[150]},{"at":1542,"values":["matrix(0.991445, 0.130526, -0.130526, 0.991445, 18.3333, 0)"],"times":[166.66]}],"timeline":1534.34,"sourceTimes":[{"time":166.66,"start":1367.66,"playState":"running"}]}
+stdout | tests/fluid-motion/representation.browser.test.ts > animation stack continuation after retirement (source never mutated) > a non-identity implicit underlying transform from a stylesheet
+[astra-stack-final] {"property":"transform","copyTimes":[350],"got":[0.983889,0.17878,-0.17878,0.983889,27.6624,0],"want":[0.984041,0.177944,-0.177944,0.984041,27.5,0],"underlying":"matrix(0.996195, 0.0871557, -0.0871557, 0.996195, 10, 0)","diagnostics":[{"type":"representation","participant":"stack","provider":"projection","continuity":"live"},{"type":"unsupported","participant":"stack","reason":"animationReconstructed"}],"timeline":1734.34,"pending":[false],"states":["paused"]}
+ ✓ |firefox| tests/fluid-motion/representation.browser.test.ts (68 tests | 64 skipped) 1423ms
+     ✓ composite add onto a non-zero underlying value  358ms
+     ✓ two animations on one property (replace, then add)  348ms
+     ✓ per-keyframe easing with an implicit start  345ms
+     ✓ a non-identity implicit underlying transform from a stylesheet  371ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed | 64 skipped (68)
+   Start at  00:15:59
+   Duration  3.01s (transform 0ms, setup 9ms, collect 141ms, tests 1.42s, environment 0ms, prepare 116ms)
+

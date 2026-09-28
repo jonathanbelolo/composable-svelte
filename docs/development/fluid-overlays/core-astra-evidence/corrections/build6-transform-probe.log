@@ -1,0 +1,77 @@
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-core-build6-review/packages/core
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+Port 63315 is in use, trying another one...
+ ❯ |chromium| tests/fluid-motion/core-astra-correction.browser.test.ts (2 tests | 1 failed | 1 skipped) 86ms
+   ↓ correction review: unreachable destination disposes its shared driver exactly once
+   × correction review: partial incoming conflict adopts displayed slide and scale 86ms
+ ↓ |chromium| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests | 6 skipped)
+ ↓ |chromium| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 skipped)
+ ❯ |webkit| tests/fluid-motion/core-astra-correction.browser.test.ts (2 tests | 1 failed | 1 skipped) 70ms
+   ↓ correction review: unreachable destination disposes its shared driver exactly once
+   × correction review: partial incoming conflict adopts displayed slide and scale 69ms
+ ↓ |webkit| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests | 6 skipped)
+ ↓ |webkit| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 skipped)
+ ❯ |firefox| tests/fluid-motion/core-astra-correction.browser.test.ts (2 tests | 1 failed | 1 skipped) 67ms
+   ↓ correction review: unreachable destination disposes its shared driver exactly once
+   × correction review: partial incoming conflict adopts displayed slide and scale 66ms
+ ↓ |firefox| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests | 6 skipped)
+ ↓ |firefox| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 skipped)
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |chromium| tests/fluid-motion/core-astra-correction.browser.test.ts > correction review: partial incoming conflict adopts displayed slide and scale
+AssertionError: expected 225 to be close to 175, received difference is 50, but expected 0.005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-correction.browser.test.ts/correction-review--partial-incoming-conflict-adopts-displayed-slide-and-scale-1.png
+
+ ❯ tests/fluid-motion/core-astra-correction.browser.test.ts:48:55
+     46|  f.host.local(p,a,()=>{});stops.push(f.host.register(n,'n',a));f.step(…
+     47|  const before=n.getBoundingClientRect();f.host.local(p,b,()=>{});stops…
+     48|  const after=n.getBoundingClientRect();expect(after.x).toBeCloseTo(bef…
+       |                                                       ^
+     49| });
+     50| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |firefox| tests/fluid-motion/core-astra-correction.browser.test.ts > correction review: partial incoming conflict adopts displayed slide and scale
+AssertionError: expected 225 to be close to 175, received difference is 50, but expected 0.005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-correction.browser.test.ts/correction-review--partial-incoming-conflict-adopts-displayed-slide-and-scale-1.png
+
+ ❯ tests/fluid-motion/core-astra-correction.browser.test.ts:48:55
+     46|  f.host.local(p,a,()=>{});stops.push(f.host.register(n,'n',a));f.step(…
+     47|  const before=n.getBoundingClientRect();f.host.local(p,b,()=>{});stops…
+     48|  const after=n.getBoundingClientRect();expect(after.x).toBeCloseTo(bef…
+       |                                                       ^
+     49| });
+     50| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |webkit| tests/fluid-motion/core-astra-correction.browser.test.ts > correction review: partial incoming conflict adopts displayed slide and scale
+AssertionError: expected 225 to be close to 175, received difference is 50, but expected 0.005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-correction.browser.test.ts/correction-review--partial-incoming-conflict-adopts-displayed-slide-and-scale-1.png
+
+ ❯ tests/fluid-motion/core-astra-correction.browser.test.ts:48:67
+     46|  f.host.local(p,a,()=>{});stops.push(f.host.register(n,'n',a));f.step(…
+     47|  const before=n.getBoundingClientRect();f.host.local(p,b,()=>{});stops…
+     48|  const after=n.getBoundingClientRect();expect(after.x).toBeCloseTo(bef…
+       |                                                                   ^
+     49| });
+     50| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  3 failed | 6 skipped (9)
+      Tests  3 failed | 27 skipped (30)
+   Start at  00:53:03
+   Duration  2.36s (transform 0ms, setup 50ms, collect 838ms, tests 223ms, environment 0ms, prepare 3.01s)
+

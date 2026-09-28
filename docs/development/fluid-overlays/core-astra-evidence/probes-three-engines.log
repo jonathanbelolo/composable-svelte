@@ -1,0 +1,430 @@
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-core-astra-review/packages/core
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+ ❯ |webkit| tests/fluid-motion/core-astra-probe.browser.test.ts (5 tests | 5 failed) 252ms
+   × review: partial conflicting incoming opacity adopts displayed state 68ms
+   × review: partial conflicting shared flight adopts displayed geometry 42ms
+   × review: whole-run handoff preserves a scoped shared participant 53ms
+   × review: partially yielded shared driver is disposed once 48ms
+   × review: an ambiguous route destination does not cancel an unrelated earlier node animation 39ms
+ ❯ |chromium| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 failed) 288ms
+   × review: two unaccepted explicit entries in one flush discard both preparations 109ms
+   × review: reversing a default dismissal adopts displayed opacity 179ms
+ ❯ |webkit| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 failed) 269ms
+   × review: two unaccepted explicit entries in one flush discard both preparations 99ms
+   × review: reversing a default dismissal adopts displayed opacity 169ms
+ ❯ |chromium| tests/fluid-motion/core-astra-probe.browser.test.ts (5 tests | 5 failed) 427ms
+   × review: partial conflicting incoming opacity adopts displayed state 130ms
+   × review: partial conflicting shared flight adopts displayed geometry 81ms
+   × review: whole-run handoff preserves a scoped shared participant 81ms
+   × review: partially yielded shared driver is disposed once 67ms
+   × review: an ambiguous route destination does not cancel an unrelated earlier node animation 67ms
+ ❯ |firefox| tests/fluid-motion/core-astra-probe.browser.test.ts (5 tests | 5 failed) 227ms
+   × review: partial conflicting incoming opacity adopts displayed state 77ms
+   × review: partial conflicting shared flight adopts displayed geometry 43ms
+   × review: whole-run handoff preserves a scoped shared participant 32ms
+   × review: partially yielded shared driver is disposed once 38ms
+   × review: an ambiguous route destination does not cancel an unrelated earlier node animation 37ms
+ ❯ |firefox| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 failed) 238ms
+   × review: two unaccepted explicit entries in one flush discard both preparations 87ms
+   × review: reversing a default dismissal adopts displayed opacity 151ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 21 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |chromium| tests/fluid-motion/core-astra-probe.browser.test.ts > review: partial conflicting incoming opacity adopts displayed state
+AssertionError: before=0.4, after=0: expected +0 to be close to 0.4, received difference is 0.4, but expected 0.0005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-probe.browser.test.ts/review--partial-conflicting-incoming-opacity-adopts-displayed-state-1.png
+
+ ❯ tests/fluid-motion/core-astra-probe.browser.test.ts:36:84
+     34|  f.host.local(p,b,()=>{});stops.push(f.host.register(n,'n',b));
+     35|  const after=Number(n.style.opacity);
+     36|  expect(before).toBeCloseTo(0.4,3);expect(after,`before=${before}, aft…
+       |                                                                                    ^
+     37| });
+     38| it('review: partial conflicting shared flight adopts displayed geometr…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/21]⎯
+
+ FAIL  |chromium| tests/fluid-motion/core-astra-probe.browser.test.ts > review: partial conflicting shared flight adopts displayed geometry
+AssertionError: before=170, after=20: expected 20 to be close to 170, received difference is 150, but expected 0.05
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-probe.browser.test.ts/review--partial-conflicting-shared-flight-adopts-displayed-geometry-1.png
+
+ ❯ tests/fluid-motion/core-astra-probe.browser.test.ts:45:50
+     43|  f.host.local(defineChoreography({cueMs:0,durationMs:300,tracks:[{part…
+     44|  const after=document.querySelector<HTMLElement>('[data-route-represen…
+     45|  expect(after,`before=${before}, after=${after}`).toBeCloseTo(before,1…
+       |                                                  ^
+     46| });
+     47| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/21]⎯
+
+ FAIL  |chromium| tests/fluid-motion/core-astra-probe.browser.test.ts > review: whole-run handoff preserves a scoped shared participant
+AssertionError: expected +0 to be 1 // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-probe.browser.test.ts/review--whole-run-handoff-preserves-a-scoped-shared-participant-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1[39m
+[31m+ 0[39m
+
+ ❯ tests/fluid-motion/core-astra-probe.browser.test.ts:56:80
+     54|  expect(document.querySelectorAll('[data-route-representation="hero"]'…
+     55|  f.host.local(p,f.owner,()=>{});
+     56|  expect(document.querySelectorAll('[data-route-representation="hero"]'…
+       |                                                                                ^
+     57| });
+     58| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/21]⎯
+
+ FAIL  |chromium| tests/fluid-motion/core-astra-probe.browser.test.ts > review: partially yielded shared driver is disposed once
+AssertionError: expected +0 to be 1 // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-probe.browser.test.ts/review--partially-yielded-shared-driver-is-disposed-once-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1[39m
+[31m+ 0[39m
+
+ ❯ tests/fluid-motion/core-astra-probe.browser.test.ts:66:60
+     64|  const run=new ChoreographyRun(f.host,1 as never,p,f.owner,[],()=>{});…
+     65|  f.host.local(defineChoreography({cueMs:0,durationMs:300,tracks:[{part…
+     66|  run.settle('superseded');f.host.dispose();expect(disposed).toBe(1);
+       |                                                            ^
+     67| });
+     68| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/21]⎯
+
+ FAIL  |chromium| tests/fluid-motion/core-astra-probe.browser.test.ts > review: an ambiguous route destination does not cancel an unrelated earlier node animation
+AssertionError: inline=, computed=1: expected 1 to be close to 0.5, received difference is 0.5, but expected 0.0005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-probe.browser.test.ts/review--an-ambiguous-route-destination-does-not-cancel-an-unrelated-earlier-node-animation-1.png
+
+ ❯ tests/fluid-motion/core-astra-probe.browser.test.ts:80:126
+     78|  expect(f.host.diagnostics.some(e=>e.type==='unsupported'&&e.reason===…
+     79|  f.step(500);
+     80|  expect(Number(getComputedStyle(first).opacity),`inline=${first.style.…
+       |                                                                                                                              ^
+     81| });
+     82| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/21]⎯
+
+ FAIL  |chromium| tests/fluid-motion/core-astra-public-probe.browser.test.ts > review: two unaccepted explicit entries in one flush discard both preparations
+AssertionError: expected 1 to be +0 // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-public-probe.browser.test.ts/review--two-unaccepted-explicit-entries-in-one-flush-discard-both-preparations-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 0[39m
+[31m+ 1[39m
+
+ ❯ tests/fluid-motion/core-astra-public-probe.browser.test.ts:41:16
+     39|  expect(runs()).toBe(0);
+     40|  handle.transition(p,()=>{});handle.transition(p,()=>{});await tick();…
+     41|  expect(runs()).toBe(0);
+       |                ^
+     42| });
+     43| it('review: reversing a default dismissal adopts displayed opacity', a…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/21]⎯
+
+ FAIL  |chromium| tests/fluid-motion/core-astra-public-probe.browser.test.ts > review: reversing a default dismissal adopts displayed opacity
+AssertionError: before=0.673, after=0: expected 0.673 to be less than 0.1
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-public-probe.browser.test.ts/review--reversing-a-default-dismissal-adopts-displayed-opacity-1.png
+
+ ❯ tests/fluid-motion/core-astra-public-probe.browser.test.ts:49:67
+     47|  overlayHooks.dispatch!({type:'open'});flushSync();await Promise.resol…
+     48|  const after=opacity('[data-modal-content]');
+     49|  expect(Math.abs(after-before),`before=${before}, after=${after}`).toB…
+       |                                                                   ^
+     50| });
+     51| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/21]⎯
+
+ FAIL  |firefox| tests/fluid-motion/core-astra-probe.browser.test.ts > review: partial conflicting incoming opacity adopts displayed state
+AssertionError: before=0.4, after=0: expected +0 to be close to 0.4, received difference is 0.4, but expected 0.0005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-probe.browser.test.ts/review--partial-conflicting-incoming-opacity-adopts-displayed-state-1.png
+
+ ❯ tests/fluid-motion/core-astra-probe.browser.test.ts:36:84
+     34|  f.host.local(p,b,()=>{});stops.push(f.host.register(n,'n',b));
+     35|  const after=Number(n.style.opacity);
+     36|  expect(before).toBeCloseTo(0.4,3);expect(after,`before=${before}, aft…
+       |                                                                                    ^
+     37| });
+     38| it('review: partial conflicting shared flight adopts displayed geometr…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/21]⎯
+
+ FAIL  |firefox| tests/fluid-motion/core-astra-probe.browser.test.ts > review: partial conflicting shared flight adopts displayed geometry
+AssertionError: before=170, after=20: expected 20 to be close to 170, received difference is 150, but expected 0.05
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-probe.browser.test.ts/review--partial-conflicting-shared-flight-adopts-displayed-geometry-1.png
+
+ ❯ tests/fluid-motion/core-astra-probe.browser.test.ts:45:50
+     43|  f.host.local(defineChoreography({cueMs:0,durationMs:300,tracks:[{part…
+     44|  const after=document.querySelector<HTMLElement>('[data-route-represen…
+     45|  expect(after,`before=${before}, after=${after}`).toBeCloseTo(before,1…
+       |                                                  ^
+     46| });
+     47| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/21]⎯
+
+ FAIL  |firefox| tests/fluid-motion/core-astra-probe.browser.test.ts > review: whole-run handoff preserves a scoped shared participant
+AssertionError: expected +0 to be 1 // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-probe.browser.test.ts/review--whole-run-handoff-preserves-a-scoped-shared-participant-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1[39m
+[31m+ 0[39m
+
+ ❯ tests/fluid-motion/core-astra-probe.browser.test.ts:56:80
+     54|  expect(document.querySelectorAll('[data-route-representation="hero"]'…
+     55|  f.host.local(p,f.owner,()=>{});
+     56|  expect(document.querySelectorAll('[data-route-representation="hero"]'…
+       |                                                                                ^
+     57| });
+     58| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/21]⎯
+
+ FAIL  |firefox| tests/fluid-motion/core-astra-probe.browser.test.ts > review: partially yielded shared driver is disposed once
+AssertionError: expected +0 to be 1 // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-probe.browser.test.ts/review--partially-yielded-shared-driver-is-disposed-once-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1[39m
+[31m+ 0[39m
+
+ ❯ tests/fluid-motion/core-astra-probe.browser.test.ts:66:60
+     64|  const run=new ChoreographyRun(f.host,1 as never,p,f.owner,[],()=>{});…
+     65|  f.host.local(defineChoreography({cueMs:0,durationMs:300,tracks:[{part…
+     66|  run.settle('superseded');f.host.dispose();expect(disposed).toBe(1);
+       |                                                            ^
+     67| });
+     68| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/21]⎯
+
+ FAIL  |firefox| tests/fluid-motion/core-astra-probe.browser.test.ts > review: an ambiguous route destination does not cancel an unrelated earlier node animation
+AssertionError: inline=, computed=1: expected 1 to be close to 0.5, received difference is 0.5, but expected 0.0005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-probe.browser.test.ts/review--an-ambiguous-route-destination-does-not-cancel-an-unrelated-earlier-node-animation-1.png
+
+ ❯ tests/fluid-motion/core-astra-probe.browser.test.ts:80:126
+     78|  expect(f.host.diagnostics.some(e=>e.type==='unsupported'&&e.reason===…
+     79|  f.step(500);
+     80|  expect(Number(getComputedStyle(first).opacity),`inline=${first.style.…
+       |                                                                                                                              ^
+     81| });
+     82| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/21]⎯
+
+ FAIL  |firefox| tests/fluid-motion/core-astra-public-probe.browser.test.ts > review: two unaccepted explicit entries in one flush discard both preparations
+AssertionError: expected 1 to be +0 // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-public-probe.browser.test.ts/review--two-unaccepted-explicit-entries-in-one-flush-discard-both-preparations-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 0[39m
+[31m+ 1[39m
+
+ ❯ tests/fluid-motion/core-astra-public-probe.browser.test.ts:41:16
+     39|  expect(runs()).toBe(0);
+     40|  handle.transition(p,()=>{});handle.transition(p,()=>{});await tick();…
+     41|  expect(runs()).toBe(0);
+       |                ^
+     42| });
+     43| it('review: reversing a default dismissal adopts displayed opacity', a…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/21]⎯
+
+ FAIL  |firefox| tests/fluid-motion/core-astra-public-probe.browser.test.ts > review: reversing a default dismissal adopts displayed opacity
+AssertionError: before=0.663333, after=0: expected 0.663333 to be less than 0.1
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-public-probe.browser.test.ts/review--reversing-a-default-dismissal-adopts-displayed-opacity-1.png
+
+ ❯ tests/fluid-motion/core-astra-public-probe.browser.test.ts:49:67
+     47|  overlayHooks.dispatch!({type:'open'});flushSync();await Promise.resol…
+     48|  const after=opacity('[data-modal-content]');
+     49|  expect(Math.abs(after-before),`before=${before}, after=${after}`).toB…
+       |                                                                   ^
+     50| });
+     51| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/21]⎯
+
+ FAIL  |webkit| tests/fluid-motion/core-astra-probe.browser.test.ts > review: partial conflicting incoming opacity adopts displayed state
+AssertionError: before=0.4, after=0: expected +0 to be close to 0.4, received difference is 0.4, but expected 0.0005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-probe.browser.test.ts/review--partial-conflicting-incoming-opacity-adopts-displayed-state-1.png
+
+ ❯ tests/fluid-motion/core-astra-probe.browser.test.ts:36:96
+     34|  f.host.local(p,b,()=>{});stops.push(f.host.register(n,'n',b));
+     35|  const after=Number(n.style.opacity);
+     36|  expect(before).toBeCloseTo(0.4,3);expect(after,`before=${before}, aft…
+       |                                                                                                ^
+     37| });
+     38| it('review: partial conflicting shared flight adopts displayed geometr…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/21]⎯
+
+ FAIL  |webkit| tests/fluid-motion/core-astra-probe.browser.test.ts > review: partial conflicting shared flight adopts displayed geometry
+AssertionError: before=170, after=20: expected 20 to be close to 170, received difference is 150, but expected 0.05
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-probe.browser.test.ts/review--partial-conflicting-shared-flight-adopts-displayed-geometry-1.png
+
+ ❯ tests/fluid-motion/core-astra-probe.browser.test.ts:45:62
+     43|  f.host.local(defineChoreography({cueMs:0,durationMs:300,tracks:[{part…
+     44|  const after=document.querySelector<HTMLElement>('[data-route-represen…
+     45|  expect(after,`before=${before}, after=${after}`).toBeCloseTo(before,1…
+       |                                                              ^
+     46| });
+     47| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/21]⎯
+
+ FAIL  |webkit| tests/fluid-motion/core-astra-probe.browser.test.ts > review: whole-run handoff preserves a scoped shared participant
+AssertionError: expected +0 to be 1 // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-probe.browser.test.ts/review--whole-run-handoff-preserves-a-scoped-shared-participant-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1[39m
+[31m+ 0[39m
+
+ ❯ tests/fluid-motion/core-astra-probe.browser.test.ts:56:85
+     54|  expect(document.querySelectorAll('[data-route-representation="hero"]'…
+     55|  f.host.local(p,f.owner,()=>{});
+     56|  expect(document.querySelectorAll('[data-route-representation="hero"]'…
+       |                                                                                     ^
+     57| });
+     58| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/21]⎯
+
+ FAIL  |webkit| tests/fluid-motion/core-astra-probe.browser.test.ts > review: partially yielded shared driver is disposed once
+AssertionError: expected +0 to be 1 // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-probe.browser.test.ts/review--partially-yielded-shared-driver-is-disposed-once-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1[39m
+[31m+ 0[39m
+
+ ❯ tests/fluid-motion/core-astra-probe.browser.test.ts:66:65
+     64|  const run=new ChoreographyRun(f.host,1 as never,p,f.owner,[],()=>{});…
+     65|  f.host.local(defineChoreography({cueMs:0,durationMs:300,tracks:[{part…
+     66|  run.settle('superseded');f.host.dispose();expect(disposed).toBe(1);
+       |                                                                 ^
+     67| });
+     68| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/21]⎯
+
+ FAIL  |webkit| tests/fluid-motion/core-astra-probe.browser.test.ts > review: an ambiguous route destination does not cancel an unrelated earlier node animation
+AssertionError: inline=, computed=1: expected 1 to be close to 0.5, received difference is 0.5, but expected 0.0005
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-probe.browser.test.ts/review--an-ambiguous-route-destination-does-not-cancel-an-unrelated-earlier-node-animation-1.png
+
+ ❯ tests/fluid-motion/core-astra-probe.browser.test.ts:80:138
+     78|  expect(f.host.diagnostics.some(e=>e.type==='unsupported'&&e.reason===…
+     79|  f.step(500);
+     80|  expect(Number(getComputedStyle(first).opacity),`inline=${first.style.…
+       |                                                                                                                                          ^
+     81| });
+     82| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/21]⎯
+
+ FAIL  |webkit| tests/fluid-motion/core-astra-public-probe.browser.test.ts > review: two unaccepted explicit entries in one flush discard both preparations
+AssertionError: expected 1 to be +0 // Object.is equality
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-public-probe.browser.test.ts/review--two-unaccepted-explicit-entries-in-one-flush-discard-both-preparations-1.png
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 0[39m
+[31m+ 1[39m
+
+ ❯ tests/fluid-motion/core-astra-public-probe.browser.test.ts:41:21
+     39|  expect(runs()).toBe(0);
+     40|  handle.transition(p,()=>{});handle.transition(p,()=>{});await tick();…
+     41|  expect(runs()).toBe(0);
+       |                     ^
+     42| });
+     43| it('review: reversing a default dismissal adopts displayed opacity', a…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/21]⎯
+
+ FAIL  |webkit| tests/fluid-motion/core-astra-public-probe.browser.test.ts > review: reversing a default dismissal adopts displayed opacity
+AssertionError: before=0.68, after=0: expected 0.68 to be less than 0.1
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-public-probe.browser.test.ts/review--reversing-a-default-dismissal-adopts-displayed-opacity-1.png
+
+ ❯ tests/fluid-motion/core-astra-public-probe.browser.test.ts:49:80
+     47|  overlayHooks.dispatch!({type:'open'});flushSync();await Promise.resol…
+     48|  const after=opacity('[data-modal-content]');
+     49|  expect(Math.abs(after-before),`before=${before}, after=${after}`).toB…
+       |                                                                                ^
+     50| });
+     51| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/21]⎯
+
+
+ Test Files  6 failed (6)
+      Tests  21 failed (21)
+   Start at  00:11:42
+   Duration  2.04s (transform 0ms, setup 110ms, collect 1.17s, tests 1.70s, environment 0ms, prepare 465ms)
+

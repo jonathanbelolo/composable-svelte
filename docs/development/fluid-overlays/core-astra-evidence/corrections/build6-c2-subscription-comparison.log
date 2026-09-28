@@ -1,0 +1,78 @@
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+ RUN  v4.0.7 /private/tmp/fluid-overlays-core-build6-review/packages/core
+
+Port 63315 is in use, trying another one...
+Port 63316 is in use, trying another one...
+stdout | tests/fluid-motion/core-astra-c2-public.browser.test.ts > correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=false
+[astra-c2] {"defer":false,"diagnostics":[{"type":"preparation","transaction":-1,"workMs":0,"slices":1,"cached":0,"projected":0,"elements":0,"outcome":"ready","waitedMs":0,"readinessPending":0},{"type":"prepared","transaction":-1,"at":591,"skipped":["card:missingSource"]}]}
+stdout | tests/fluid-motion/core-astra-c2-public.browser.test.ts > correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=false
+[astra-c2] {"defer":false,"diagnostics":[{"type":"preparation","transaction":-1,"workMs":0,"slices":1,"cached":0,"projected":0,"elements":0,"outcome":"ready","waitedMs":0,"readinessPending":0},{"type":"prepared","transaction":-1,"at":226,"skipped":["card:missingSource"]}]}
+stdout | tests/fluid-motion/core-astra-c2-public.browser.test.ts > correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=true
+[astra-c2] {"defer":true,"diagnostics":[{"type":"representation","participant":"card","provider":"projection","continuity":"static","transaction":-1},{"type":"preparation","transaction":-1,"workMs":1,"slices":1,"cached":0,"projected":1,"elements":1,"outcome":"ready","waitedMs":0,"readinessPending":0},{"type":"content","transaction":-1,"participant":"card","requested":"crossfade","applied":"crossfade"},{"type":"prepared","transaction":-1,"at":307,"skipped":[]},{"type":"frame","transaction":-1,"t":0,"participant":"card","x":0,"y":40,"width":160,"height":90,"vx":0,"vy":0}]}
+ ❯ |webkit| tests/fluid-motion/core-astra-c2-public.browser.test.ts (2 tests | 1 failed) 98ms
+   × correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=false 86ms
+   ✓ correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=true 10ms
+stdout | tests/fluid-motion/core-astra-c2-public.browser.test.ts > correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=true
+[astra-c2] {"defer":true,"diagnostics":[{"type":"representation","participant":"card","provider":"projection","continuity":"static","transaction":-1},{"type":"preparation","transaction":-1,"workMs":0.7,"slices":1,"cached":0,"projected":1,"elements":1,"outcome":"ready","waitedMs":0,"readinessPending":0},{"type":"content","transaction":-1,"participant":"card","requested":"crossfade","applied":"crossfade"},{"type":"prepared","transaction":-1,"at":768.9000000953674,"skipped":[]},{"type":"frame","transaction":-1,"t":0,"participant":"card","x":0,"y":40,"width":160,"height":90,"vx":0,"vy":0}]}
+ ❯ |chromium| tests/fluid-motion/core-astra-c2-public.browser.test.ts (2 tests | 1 failed) 192ms
+   × correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=false 176ms
+   ✓ correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=true 15ms
+ ↓ |chromium| tests/fluid-motion/core-astra-correction.browser.test.ts (4 tests | 4 skipped)
+ ↓ |webkit| tests/fluid-motion/core-astra-correction.browser.test.ts (4 tests | 4 skipped)
+ ↓ |chromium| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests | 6 skipped)
+ ↓ |webkit| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests | 6 skipped)
+ ↓ |chromium| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 skipped)
+ ↓ |webkit| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 skipped)
+stdout | tests/fluid-motion/core-astra-c2-public.browser.test.ts > correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=false
+[astra-c2] {"defer":false,"diagnostics":[{"type":"preparation","transaction":-1,"workMs":0,"slices":1,"cached":0,"projected":0,"elements":0,"outcome":"ready","waitedMs":0,"readinessPending":0},{"type":"prepared","transaction":-1,"at":211,"skipped":["card:missingSource"]}]}
+stdout | tests/fluid-motion/core-astra-c2-public.browser.test.ts > correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=true
+[astra-c2] {"defer":true,"diagnostics":[{"type":"representation","participant":"card","provider":"projection","continuity":"static","transaction":-1},{"type":"preparation","transaction":-1,"workMs":0,"slices":1,"cached":0,"projected":1,"elements":1,"outcome":"ready","waitedMs":0,"readinessPending":0},{"type":"content","transaction":-1,"participant":"card","requested":"crossfade","applied":"crossfade"},{"type":"prepared","transaction":-1,"at":311,"skipped":[]},{"type":"frame","transaction":-1,"t":0,"participant":"card","x":0,"y":40,"width":160,"height":90,"vx":0,"vy":0}]}
+ ❯ |firefox| tests/fluid-motion/core-astra-c2-public.browser.test.ts (2 tests | 1 failed) 112ms
+   × correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=false 94ms
+   ✓ correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=true 18ms
+ ↓ |firefox| tests/fluid-motion/core-astra-correction.browser.test.ts (4 tests | 4 skipped)
+ ↓ |firefox| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests | 6 skipped)
+ ↓ |firefox| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests | 2 skipped)
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |chromium| tests/fluid-motion/core-astra-c2-public.browser.test.ts > correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=false
+AssertionError: expected null not to be null
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-c2-public.browser.test.ts/correction-review--direct-bindable-destructive-update-after-mounted-flush--framework-subscriptions-ready-false-1.png
+
+ ❯ tests/fluid-motion/core-astra-c2-public.browser.test.ts:36:99
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |firefox| tests/fluid-motion/core-astra-c2-public.browser.test.ts > correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=false
+AssertionError: expected null not to be null
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-c2-public.browser.test.ts/correction-review--direct-bindable-destructive-update-after-mounted-flush--framework-subscriptions-ready-false-1.png
+
+ ❯ tests/fluid-motion/core-astra-c2-public.browser.test.ts:36:99
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |webkit| tests/fluid-motion/core-astra-c2-public.browser.test.ts > correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=false
+AssertionError: expected null not to be null
+
+Failure screenshot:
+  - tests/fluid-motion/__screenshots__/core-astra-c2-public.browser.test.ts/correction-review--direct-bindable-destructive-update-after-mounted-flush--framework-subscriptions-ready-false-1.png
+
+ ❯ tests/fluid-motion/core-astra-c2-public.browser.test.ts:36:108
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  3 failed | 9 skipped (12)
+      Tests  3 failed | 3 passed | 36 skipped (42)
+   Start at  00:55:43
+   Duration  2.07s (transform 0ms, setup 54ms, collect 873ms, tests 402ms, environment 0ms, prepare 6.42s)
+

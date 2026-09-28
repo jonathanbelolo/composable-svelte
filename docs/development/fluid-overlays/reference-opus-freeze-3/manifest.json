@@ -1,0 +1,18 @@
+{
+  "examples/fluid-motion-reference/README.md": "d5ac35cba8fc22e14dbfdd7db166bf1ad35e0c483610a226c9afadda7d1742b2",
+  "examples/fluid-motion-reference/src/ArchiveDrawer.svelte": "3d52f57cbfcc1521fa2dcf1a1671995b4e53492348f262d1f7216b097f51e1a2",
+  "examples/fluid-motion-reference/src/CuratorModal.svelte": "82f4a50e7c12fc35e182892338b5484b3dbf31661c15e89a457601ce2a83a3c2",
+  "examples/fluid-motion-reference/src/Gallery.svelte": "00e2f5d24752f97e58aaf23dc5669ea7c8c586d9b085d2a88c2f0c83f9d6b94d",
+  "examples/fluid-motion-reference/src/HomeView.svelte": "f171617fef0284eb75d78dab172393d3f088334b635652e62751421d99d53c2a",
+  "examples/fluid-motion-reference/src/model.ts": "698c699bd670d5d8bfd0e4fc67cff37f68d147a010293c516a1d0881ad495162",
+  "examples/fluid-motion-reference/src/overlay-motion.ts": "7bbfde2fc4ec9b7da8309be11db19a5485c716da58f0905d304da948330f39bf",
+  "examples/fluid-motion-reference/src/views.ts": "0e0089b083a3e170fd9fc67013872d38bdcff83fc4253f2200e8a9a244b2a4f9",
+  "examples/fluid-motion-reference/tests/fixtures/ssr-home.html": "e9ff1ca6578988ab29295d26de2d158c0544e768f5d98bd97c40fcfb9e7c9ea1",
+  "examples/fluid-motion-reference/tests/overlay.browser.test.ts": "e758c9946e9ed5983719ebcff3ee011387c237cd55378c09dc523f2dd3c3e46b",
+  "examples/fluid-motion-reference/tests/overlay.domain.test.ts": "a4e9c5663b5a3f0aed8fbbe3bb7fcf20d128217b39688e65f860dcab4d6b474f",
+  "examples/fluid-motion-reference/tests/astra.counterexamples.test.ts": "f8bcaa2966868cdf797fc573c53addb81a113917932db9125eaa94655fe5bf22",
+  "examples/fluid-motion-reference/tests/astra.browser.test.ts": "416017e700d6ca3bc30cb593ba888080bc47a50f7c62a252c79c009260f71944",
+  "examples/fluid-motion-reference/tests/rich.browser.test.ts": "38eb45b3f62d835ed5bb528862affaa7051f093743dbd0875c7df7da56fefa7a",
+  "docs/development/fluid-overlays/reference-opus-review.md": "4677fbf7e2d04529c609dcc3950f840413045abdb9791da3511f9c18322c8b92",
+  "_runtime_run_js": "5454d7994abdf12849eb2c2164f445f2b455550836456b2034c80c618f89e2ef (unpublished; newer than build 6 56dc12b0788e4808)"
+}

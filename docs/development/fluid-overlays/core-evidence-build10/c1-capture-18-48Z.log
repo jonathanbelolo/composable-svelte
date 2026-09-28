@@ -1,0 +1,238 @@
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+ RUN  v4.0.7 /Users/jonathanbelolo/.codex/worktrees/67a5/composable-svelte/packages/core
+
+ ✓ |chromium| tests/fluid-motion/visual-correction2.browser.test.ts (16 tests) 160ms
+ ✓ |chromium| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests) 128ms
+ ✓ |webkit| tests/fluid-motion/visual-correction2.browser.test.ts (16 tests) 179ms
+ ✓ |chromium| tests/fluid-motion/overlay-identity.browser.test.ts (11 tests) 37ms
+ ✓ |chromium| tests/fluid-motion/visual-correction.browser.test.ts (19 tests) 63ms
+ ✓ |webkit| tests/fluid-motion/overlay-identity.browser.test.ts (11 tests) 58ms
+ ✓ |chromium| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests) 19ms
+ ✓ |chromium| tests/fluid-motion/core-astra-correction.browser.test.ts (4 tests) 14ms
+ ✓ |webkit| tests/fluid-motion/visual-correction.browser.test.ts (19 tests) 118ms
+ ✓ |webkit| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests) 25ms
+stdout | tests/fluid-motion/core-astra-c2-public.browser.test.ts > correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=false
+[astra-c2] {"defer":false,"diagnostics":[{"type":"representation","participant":"card","provider":"projection","continuity":"static","transaction":-1},{"type":"preparation","transaction":-1,"workMs":1.6,"slices":1,"cached":0,"projected":1,"elements":1,"outcome":"ready","waitedMs":0,"readinessPending":0},{"type":"content","transaction":-1,"participant":"card","requested":"crossfade","applied":"crossfade"},{"type":"prepared","transaction":-1,"at":2230.5999999046326,"skipped":[]},{"type":"frame","transaction":-1,"t":0,"participant":"card","x":0,"y":40,"width":160,"height":90,"vx":0,"vy":0}]}
+stdout | tests/fluid-motion/core-astra-c2-public.browser.test.ts > correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=true
+[astra-c2] {"defer":true,"diagnostics":[{"type":"representation","participant":"card","provider":"projection","continuity":"static","transaction":-1},{"type":"preparation","transaction":-1,"workMs":0.7,"slices":1,"cached":0,"projected":1,"elements":1,"outcome":"ready","waitedMs":0,"readinessPending":0},{"type":"content","transaction":-1,"participant":"card","requested":"crossfade","applied":"crossfade"},{"type":"prepared","transaction":-1,"at":2239.899999856949,"skipped":[]},{"type":"frame","transaction":-1,"t":0,"participant":"card","x":0,"y":40,"width":160,"height":90,"vx":0,"vy":0}]}
+ ✓ |chromium| tests/fluid-motion/core-astra-c2-public.browser.test.ts (2 tests) 27ms
+ ✓ |webkit| tests/fluid-motion/core-astra-correction.browser.test.ts (4 tests) 23ms
+ ✓ |chromium| tests/fluid-motion/presence.browser.test.ts (8 tests) 107ms
+stdout | tests/fluid-motion/core-astra-unused-handoff.browser.test.ts > final cleanup: a reduced route successor discards every handed transform lease
+[astra-discard] {"translate":"","scale":"","leases":0}
+ ✓ |chromium| tests/fluid-motion/core-astra-unused-handoff.browser.test.ts (2 tests) 6ms
+stdout | tests/fluid-motion/core-astra-c2-public.browser.test.ts > correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=false
+[astra-c2] {"defer":false,"diagnostics":[{"type":"representation","participant":"card","provider":"projection","continuity":"static","transaction":-1},{"type":"preparation","transaction":-1,"workMs":2,"slices":1,"cached":0,"projected":1,"elements":1,"outcome":"ready","waitedMs":0,"readinessPending":0},{"type":"content","transaction":-1,"participant":"card","requested":"crossfade","applied":"crossfade"},{"type":"prepared","transaction":-1,"at":1527.0000000000002,"skipped":[]},{"type":"frame","transaction":-1,"t":0,"participant":"card","x":0,"y":40,"width":160,"height":90,"vx":0,"vy":0}]}
+stdout | tests/fluid-motion/core-astra-c2-public.browser.test.ts > correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=true
+[astra-c2] {"defer":true,"diagnostics":[{"type":"representation","participant":"card","provider":"projection","continuity":"static","transaction":-1},{"type":"preparation","transaction":-1,"workMs":1,"slices":1,"cached":0,"projected":1,"elements":1,"outcome":"ready","waitedMs":0,"readinessPending":0},{"type":"content","transaction":-1,"participant":"card","requested":"crossfade","applied":"crossfade"},{"type":"prepared","transaction":-1,"at":1540,"skipped":[]},{"type":"frame","transaction":-1,"t":0,"participant":"card","x":0,"y":40,"width":160,"height":90,"vx":0,"vy":0}]}
+ ✓ |webkit| tests/fluid-motion/core-astra-c2-public.browser.test.ts (2 tests) 42ms
+stdout | tests/fluid-motion/core-astra-final-boundary.browser.test.ts > final boundary: whole-run successor preserves active slide and scale
+[astra-whole-transform] {"oldPose":{"translate":"40px 20px","scale":"0.8"},"newPose":{"translate":"40px 20px","scale":"0.8"},"before":{"x":150,"y":124,"width":80,"height":32,"top":124,"right":230,"bottom":156,"left":150},"after":{"x":150,"y":124,"width":80,"height":32,"top":124,"right":230,"bottom":156,"left":150}}
+ ✓ |chromium| tests/fluid-motion/core-astra-final-boundary.browser.test.ts (1 test) 5ms
+ ✓ |webkit| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests) 156ms
+stdout | tests/fluid-motion/core-astra-unused-handoff.browser.test.ts > final cleanup: a reduced route successor discards every handed transform lease
+[astra-discard] {"translate":"","scale":"","leases":0}
+ ✓ |webkit| tests/fluid-motion/core-astra-unused-handoff.browser.test.ts (2 tests) 9ms
+stdout | tests/fluid-motion/core-astra-final-boundary.browser.test.ts > final boundary: whole-run successor preserves active slide and scale
+[astra-whole-transform] {"oldPose":{"translate":"40px 20px","scale":"0.8"},"newPose":{"translate":"40px 20px","scale":"0.8"},"before":{"x":150,"y":124,"width":80,"height":32,"top":124,"right":230,"bottom":156,"left":150},"after":{"x":150,"y":124,"width":80,"height":32,"top":124,"right":230,"bottom":156,"left":150}}
+ ✓ |webkit| tests/fluid-motion/core-astra-final-boundary.browser.test.ts (1 test) 7ms
+ ✓ |webkit| tests/fluid-motion/presence.browser.test.ts (8 tests) 146ms
+ ✓ |firefox| tests/fluid-motion/visual-correction.browser.test.ts (19 tests) 65ms
+ ✓ |firefox| tests/fluid-motion/overlay-identity.browser.test.ts (11 tests) 52ms
+ ✓ |firefox| tests/fluid-motion/core-astra-correction.browser.test.ts (4 tests) 17ms
+stdout | tests/fluid-motion/core-astra-c2-public.browser.test.ts > correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=false
+[astra-c2] {"defer":false,"diagnostics":[{"type":"representation","participant":"card","provider":"projection","continuity":"static","transaction":-1},{"type":"preparation","transaction":-1,"workMs":1,"slices":1,"cached":0,"projected":1,"elements":1,"outcome":"ready","waitedMs":0,"readinessPending":0},{"type":"content","transaction":-1,"participant":"card","requested":"crossfade","applied":"crossfade"},{"type":"prepared","transaction":-1,"at":1267,"skipped":[]},{"type":"frame","transaction":-1,"t":0,"participant":"card","x":0,"y":40,"width":160,"height":90,"vx":0,"vy":0}]}
+ ✓ |firefox| tests/fluid-motion/visual-correction2.browser.test.ts (16 tests) 109ms
+ ✓ |firefox| tests/fluid-motion/core-astra-probe.browser.test.ts (6 tests) 17ms
+stdout | tests/fluid-motion/core-astra-c2-public.browser.test.ts > correction review: direct bindable destructive update after mounted flush; framework subscriptions ready=true
+[astra-c2] {"defer":true,"diagnostics":[{"type":"representation","participant":"card","provider":"projection","continuity":"static","transaction":-1},{"type":"preparation","transaction":-1,"workMs":0,"slices":1,"cached":0,"projected":1,"elements":1,"outcome":"ready","waitedMs":0,"readinessPending":0},{"type":"content","transaction":-1,"participant":"card","requested":"crossfade","applied":"crossfade"},{"type":"prepared","transaction":-1,"at":1281,"skipped":[]},{"type":"frame","transaction":-1,"t":0,"participant":"card","x":0,"y":40,"width":160,"height":90,"vx":0,"vy":0}]}
+ ✓ |firefox| tests/fluid-motion/presence.browser.test.ts (8 tests) 64ms
+ ✓ |firefox| tests/fluid-motion/core-astra-c2-public.browser.test.ts (2 tests) 32ms
+ ✓ |firefox| tests/fluid-motion/core-astra-public-probe.browser.test.ts (2 tests) 84ms
+stdout | tests/fluid-motion/core-astra-unused-handoff.browser.test.ts > final cleanup: a reduced route successor discards every handed transform lease
+[astra-discard] {"translate":"","scale":"","leases":0}
+stdout | tests/fluid-motion/core-astra-final-boundary.browser.test.ts > final boundary: whole-run successor preserves active slide and scale
+[astra-whole-transform] {"oldPose":{"translate":"40px 20px","scale":"0.8"},"newPose":{"translate":"40px 20px","scale":"0.8"},"before":{"x":150,"y":124,"width":80,"height":32,"top":124,"right":230,"bottom":156,"left":150},"after":{"x":150,"y":124,"width":80,"height":32,"top":124,"right":230,"bottom":156,"left":150}}
+ ✓ |firefox| tests/fluid-motion/core-astra-unused-handoff.browser.test.ts (2 tests) 8ms
+ ✓ |firefox| tests/fluid-motion/core-astra-final-boundary.browser.test.ts (1 test) 6ms
+ ✓ |chromium| tests/fluid-motion/overlay-retention-requirements.browser.test.ts (7 tests) 6451ms
+   ✓ nested unwind: closing the child restores the PARENT layer's resting reaction (0.6), not the baseline  1451ms
+   ✓ reduced motion reaches the full declared resting POSE (scale), not only the dim  351ms
+   ✓ same-node channel independence: a later run animating only opacity keeps the retained resting scale  1049ms
+   ✓ displayed transform adoption: the close continues the retained SCALE from its displayed factor (not the declared from)  1066ms
+   ✓ removal: the reacting region is removed while resting — no stale write, the close proceeds, balanced cleanup  1063ms
+   ✓ rapid reopen: reopening during the close continues from the displayed page value and rests again at the declared value  1250ms
+ ✓ |webkit| tests/fluid-motion/overlay-retention-requirements.browser.test.ts (7 tests) 6452ms
+   ✓ nested unwind: closing the child restores the PARENT layer's resting reaction (0.6), not the baseline  1453ms
+   ✓ reduced motion reaches the full declared resting POSE (scale), not only the dim  349ms
+   ✓ same-node channel independence: a later run animating only opacity keeps the retained resting scale  1049ms
+   ✓ displayed transform adoption: the close continues the retained SCALE from its displayed factor (not the declared from)  1065ms
+   ✓ removal: the reacting region is removed while resting — no stale write, the close proceeds, balanced cleanup  1067ms
+   ✓ rapid reopen: reopening during the close continues from the displayed page value and rests again at the declared value  1249ms
+ ✓ |firefox| tests/fluid-motion/overlay-retention-requirements.browser.test.ts (7 tests) 5027ms
+   ✓ nested unwind: closing the child restores the PARENT layer's resting reaction (0.6), not the baseline  1111ms
+   ✓ reduced motion reaches the full declared resting POSE (scale), not only the dim  325ms
+   ✓ same-node channel independence: a later run animating only opacity keeps the retained resting scale  749ms
+   ✓ displayed transform adoption: the close continues the retained SCALE from its displayed factor (not the declared from)  907ms
+   ✓ removal: the reacting region is removed while resting — no stale write, the close proceeds, balanced cleanup  906ms
+   ✓ rapid reopen: reopening during the close continues from the displayed page value and rests again at the declared value  918ms
+ ✓ |chromium| tests/fluid-motion/visual-completion.browser.test.ts (10 tests) 8458ms
+   ✓ per-corner radius and inset clip channels animate through waypoints to their targets, then release  743ms
+   ✓ content options are qualified before playback: scale for images, text falls back, reflow bounded, clipReveal via a real clip lease  1665ms
+   ✓ managed custom drivers: pose continuation into the measured destination, failure isolation, no-continuation snap, disposal  900ms
+   ✓ shared recapture on content mutation and a moving ancestor before the cue: same wrapper, followed offset, continuous retarget  767ms
+   ✓ route focus at the semantic route boundary: destination heading focused with preventScroll and announced; keyboard continues in the new page  467ms
+   ✓ within-page choreography: business state commits immediately; decoration bridges; rapid collapse continues from the displayed pose; zero resources  584ms
+   ✓ zero owned visual resources after veto return, supersession, repeated runs and Host destruction mid-run  1218ms
+   ✓ within-page choreography in a plain (non-routed, non-staged) application: explicit dispatch commits immediately; the layout is bridged  581ms
+   ✓ incoming text slides and fades in while the shared element is still moving (design example), through the public route assembly  867ms
+   ✓ F1 (public assembly): an outgoing surface containing a native Save button stays painted until the commit, then its copy fades  666ms
+ ✓ |webkit| tests/fluid-motion/visual-completion.browser.test.ts (10 tests) 8487ms
+   ✓ per-corner radius and inset clip channels animate through waypoints to their targets, then release  804ms
+   ✓ content options are qualified before playback: scale for images, text falls back, reflow bounded, clipReveal via a real clip lease  1664ms
+   ✓ managed custom drivers: pose continuation into the measured destination, failure isolation, no-continuation snap, disposal  900ms
+   ✓ shared recapture on content mutation and a moving ancestor before the cue: same wrapper, followed offset, continuous retarget  751ms
+   ✓ route focus at the semantic route boundary: destination heading focused with preventScroll and announced; keyboard continues in the new page  465ms
+   ✓ within-page choreography: business state commits immediately; decoration bridges; rapid collapse continues from the displayed pose; zero resources  583ms
+   ✓ zero owned visual resources after veto return, supersession, repeated runs and Host destruction mid-run  1202ms
+   ✓ within-page choreography in a plain (non-routed, non-staged) application: explicit dispatch commits immediately; the layout is bridged  581ms
+   ✓ incoming text slides and fades in while the shared element is still moving (design example), through the public route assembly  867ms
+   ✓ F1 (public assembly): an outgoing surface containing a native Save button stays painted until the commit, then its copy fades  666ms
+ ✓ |firefox| tests/fluid-motion/visual-completion.browser.test.ts (10 tests) 8003ms
+   ✓ per-corner radius and inset clip channels animate through waypoints to their targets, then release  736ms
+   ✓ content options are qualified before playback: scale for images, text falls back, reflow bounded, clipReveal via a real clip lease  1592ms
+   ✓ managed custom drivers: pose continuation into the measured destination, failure isolation, no-continuation snap, disposal  858ms
+   ✓ shared recapture on content mutation and a moving ancestor before the cue: same wrapper, followed offset, continuous retarget  734ms
+   ✓ route focus at the semantic route boundary: destination heading focused with preventScroll and announced; keyboard continues in the new page  434ms
+   ✓ within-page choreography: business state commits immediately; decoration bridges; rapid collapse continues from the displayed pose; zero resources  499ms
+   ✓ zero owned visual resources after veto return, supersession, repeated runs and Host destruction mid-run  1134ms
+   ✓ within-page choreography in a plain (non-routed, non-staged) application: explicit dispatch commits immediately; the layout is bridged  548ms
+   ✓ incoming text slides and fades in while the shared element is still moving (design example), through the public route assembly  834ms
+   ✓ F1 (public assembly): an outgoing surface containing a native Save button stays painted until the commit, then its copy fades  633ms
+stdout | tests/fluid-motion/visual.browser.test.ts > large cold participant through the public assembly and default budgets (staged 600 ms, visual 600 ms): prepared, revealed, committed, completed, no long task
+[coverage] public-large-preparation: elements=1501 workMs=332.6 slices=11 outcome=ready longestBlockMs=68.7 settled=completed recaptures=0
+ ✓ |chromium| tests/fluid-motion/visual.browser.test.ts (15 tests) 12018ms
+   ✓ C1 at the destination retarget: position and velocity continue exactly from the displayed state  743ms
+   ✓ successor adopts the displayed pose and velocity: no restoration frame, no representation gap  833ms
+   ✓ veto at the cue returns the still-current page from the displayed poses, bounded, with zero domain actions  549ms
+   ✓ hold-then-fade: a control stays painted at stable before commit, then its copy fades after reveal; visible focus pins a focusable participant  767ms
+   ✓ content mutation during suppression recaptures on the next frame without doubled opacity; scroll before the cue is sampled  766ms
+   ✓ nested participants become layout-preserving placeholders in the ancestor copy; unsupported geometry skips its track honestly  767ms
+   ✓ an unrelated open native modal (top layer) no longer refuses route choreography: the run plays and commits once (fluid-overlays §10)  767ms
+   ✓ card expands through an intermediate viewport pose to a real interactive expanded state, with independent tracks  866ms
+   ✓ foreign authority, ancestor opacity and 2D ancestor scale: displayed values captured, foreign writer never acquired, appearance applied once  917ms
+   ✓ the explicit plane outlet hosts representations; an unqualified (transformed) outlet falls back to the document plane  1532ms
+   ✓ the scroll seam checkpoint runs after render and before destination measurement; user scroll rebases  767ms
+   ✓ conflict: a managed motion binding owns its opacity even when idle; choreography records displayed values and the engine keeps writing mid-run  766ms
+   ✓ a shared control keeps its real control visibly painted before commit (no invisible controls)  666ms
+   ✓ large cold participant through the public assembly and default budgets (staged 600 ms, visual 600 ms): prepared, revealed, committed, completed, no long task  1194ms
+stdout | tests/fluid-motion/visual.browser.test.ts > large cold participant through the public assembly and default budgets (staged 600 ms, visual 600 ms): prepared, revealed, committed, completed, no long task
+[coverage] public-large-preparation: elements=1501 workMs=321 slices=11 outcome=ready longestBlockMs=33.0 settled=completed recaptures=0
+ ✓ |webkit| tests/fluid-motion/visual.browser.test.ts (15 tests) 12026ms
+   ✓ C1 at the destination retarget: position and velocity continue exactly from the displayed state  804ms
+   ✓ successor adopts the displayed pose and velocity: no restoration frame, no representation gap  831ms
+   ✓ veto at the cue returns the still-current page from the displayed poses, bounded, with zero domain actions  549ms
+   ✓ hold-then-fade: a control stays painted at stable before commit, then its copy fades after reveal; visible focus pins a focusable participant  767ms
+   ✓ content mutation during suppression recaptures on the next frame without doubled opacity; scroll before the cue is sampled  766ms
+   ✓ nested participants become layout-preserving placeholders in the ancestor copy; unsupported geometry skips its track honestly  767ms
+   ✓ an unrelated open native modal (top layer) no longer refuses route choreography: the run plays and commits once (fluid-overlays §10)  751ms
+   ✓ card expands through an intermediate viewport pose to a real interactive expanded state, with independent tracks  866ms
+   ✓ foreign authority, ancestor opacity and 2D ancestor scale: displayed values captured, foreign writer never acquired, appearance applied once  917ms
+   ✓ the explicit plane outlet hosts representations; an unqualified (transformed) outlet falls back to the document plane  1532ms
+   ✓ the scroll seam checkpoint runs after render and before destination measurement; user scroll rebases  766ms
+   ✓ conflict: a managed motion binding owns its opacity even when idle; choreography records displayed values and the engine keeps writing mid-run  766ms
+   ✓ a shared control keeps its real control visibly painted before commit (no invisible controls)  667ms
+   ✓ large cold participant through the public assembly and default budgets (staged 600 ms, visual 600 ms): prepared, revealed, committed, completed, no long task  1158ms
+stdout | tests/fluid-motion/visual.browser.test.ts > large cold participant through the public assembly and default budgets (staged 600 ms, visual 600 ms): prepared, revealed, committed, completed, no long task
+[coverage] public-large-preparation: elements=1501 workMs=321 slices=10 outcome=ready longestBlockMs=74.0 settled=completed recaptures=0
+ ✓ |firefox| tests/fluid-motion/visual.browser.test.ts (15 tests) 11462ms
+   ✓ C1 at the destination retarget: position and velocity continue exactly from the displayed state  734ms
+   ✓ successor adopts the displayed pose and velocity: no restoration frame, no representation gap  792ms
+   ✓ veto at the cue returns the still-current page from the displayed poses, bounded, with zero domain actions  507ms
+   ✓ hold-then-fade: a control stays painted at stable before commit, then its copy fades after reveal; visible focus pins a focusable participant  732ms
+   ✓ content mutation during suppression recaptures on the next frame without doubled opacity; scroll before the cue is sampled  734ms
+   ✓ nested participants become layout-preserving placeholders in the ancestor copy; unsupported geometry skips its track honestly  733ms
+   ✓ an unrelated open native modal (top layer) no longer refuses route choreography: the run plays and commits once (fluid-overlays §10)  735ms
+   ✓ card expands through an intermediate viewport pose to a real interactive expanded state, with independent tracks  831ms
+   ✓ foreign authority, ancestor opacity and 2D ancestor scale: displayed values captured, foreign writer never acquired, appearance applied once  882ms
+   ✓ the explicit plane outlet hosts representations; an unqualified (transformed) outlet falls back to the document plane  1464ms
+   ✓ the scroll seam checkpoint runs after render and before destination measurement; user scroll rebases  732ms
+   ✓ conflict: a managed motion binding owns its opacity even when idle; choreography records displayed values and the engine keeps writing mid-run  735ms
+   ✓ a shared control keeps its real control visibly painted before commit (no invisible controls)  633ms
+   ✓ large cold participant through the public assembly and default budgets (staged 600 ms, visual 600 ms): prepared, revealed, committed, completed, no long task  1120ms
+ ✓ |chromium| tests/fluid-motion/overlay-motion.browser.test.ts (25 tests) 24985ms
+   ✓ close then open are choreographed live on one timeline; completion exactly once each; no spring, copies or leases left  1068ms
+   ✓ a refused close claims and completes nothing; a reopen during dismissal cancels the old obligation without dispatch  816ms
+   ✓ W-C3: during choreographed open/close the primitive keeps focus, inertness and scroll-lock authority (visuals only are claimed)  1385ms
+   ✓ C2 explicit entry: transition() prepares BEFORE the commit — a page source the commit removes is still captured and exits as a copy  366ms
+   ✓ C2 epoch: a pending explicit plan applies only to its own epoch; a stale one is discarded (nothing acquired) and the default plan runs  367ms
+   ✓ C5: a REFUSED explicit transition overlapping a running open leaves that run progressing untouched (same copy, leases, tracks, obligation)  1084ms
+   ✓ C2 explicit open: the shared source is captured before the commit removes it; the flight departs from its pre-commit geometry  933ms
+   ✓ destination-phase ambiguity is decided before any destination is suppressed (no acquire-then-rollback)  801ms
+   ✓ U2 nested combined dismissal: one parent plan staggers the live child and the parent on one timeline; the child joins (no spring), both complete once; authority stays with the primitives  1083ms
+   ✓ C2 default phase (Main disposition): one accepted action removes the page card AND opens the modal — the DEFAULT open plan captured the card before the destructive render; the flight departs from its pre-render geometry into the modal layer  1066ms
+   ✓ C3 portable media: a live canvas flight is re-homed into the modal layer (with or without moveBefore) and keeps its content; a cross-origin frame copy carries no live browsing context; other tracks run  1068ms
+   ✓ C2 default phase, CONDITIONAL overlay component: the Modal mounts in the same render that removes the card; the page-created handle's presentation probe captures the card before that render  1083ms
+   ✓ C2 default phase: a REFUSED close (guard) prepares nothing at the checkpoint and leaves a running open untouched  1067ms
+   ✓ persistent page reaction: a still-mounted catalog WITH focusable controls follows its declared dim under the opening modal; DOM kept; focus stays with the modal coordinator  803ms
+   ✓ conditional declaration: repeated epochs, refusal and replacement — each accepted open captures the removed card pre-render; a refused close prepares nothing; a rapid reversal continues the displayed paint  2949ms
+   ✓ conditional declaration: absent destination settles the flight honestly with balanced cleanup; owner (Host) disposal mid-flight cancels the obligation and releases everything  1234ms
+   ✓ C2 bindable/prop-only update (no store commit): one Svelte update removes the page card and presents the modal — the Host pre-effect captured the card before the destructive render  750ms
+   ✓ source-owner disposal: the conditional overlay owner is unmounted mid-dismissal by an external accepted change — its obligation is cancelled (never dispatched), resources released, page intact  733ms
+   ✓ overlay-lifetime resting reaction: the page dim is HELD past its duration while presented (open completes without waiting), survives a refused close, and the accepted close continues from the displayed value to baseline; balanced cleanup  1550ms
+   ✓ overlay-lifetime resting reaction: Host destruction while presented restores the page and leaves no leases  750ms
+   ✓ overlay-lifetime resting reaction under reduced motion: the open reaches the same resting state immediately (no animation), the close releases it immediately; balanced  433ms
+   ✓ C3 live MSE video across layers: the removed card's playing MediaSource video flies into the modal layer (moveBefore or re-insertion) without pausing; currentTime keeps advancing  3401ms
+ ✓ |firefox| tests/fluid-motion/overlay-motion.browser.test.ts (25 tests) 22767ms
+   ✓ close then open are choreographed live on one timeline; completion exactly once each; no spring, copies or leases left  1017ms
+   ✓ a refused close claims and completes nothing; a reopen during dismissal cancels the old obligation without dispatch  733ms
+   ✓ W-C3: during choreographed open/close the primitive keeps focus, inertness and scroll-lock authority (visuals only are claimed)  1301ms
+   ✓ C2 explicit entry: transition() prepares BEFORE the commit — a page source the commit removes is still captured and exits as a copy  332ms
+   ✓ C2 epoch: a pending explicit plan applies only to its own epoch; a stale one is discarded (nothing acquired) and the default plan runs  333ms
+   ✓ C5: a REFUSED explicit transition overlapping a running open leaves that run progressing untouched (same copy, leases, tracks, obligation)  994ms
+   ✓ C2 explicit open: the shared source is captured before the commit removes it; the flight departs from its pre-commit geometry  873ms
+   ✓ destination-phase ambiguity is decided before any destination is suppressed (no acquire-then-rollback)  743ms
+   ✓ U2 nested combined dismissal: one parent plan staggers the live child and the parent on one timeline; the child joins (no spring), both complete once; authority stays with the primitives  1016ms
+   ✓ C2 default phase (Main disposition): one accepted action removes the page card AND opens the modal — the DEFAULT open plan captured the card before the destructive render; the flight departs from its pre-render geometry into the modal layer  1008ms
+   ✓ C3 portable media: a live canvas flight is re-homed into the modal layer (with or without moveBefore) and keeps its content; a cross-origin frame copy carries no live browsing context; other tracks run  1068ms
+   ✓ C2 default phase, CONDITIONAL overlay component: the Modal mounts in the same render that removes the card; the page-created handle's presentation probe captures the card before that render  1007ms
+   ✓ C2 default phase: a REFUSED close (guard) prepares nothing at the checkpoint and leaves a running open untouched  1015ms
+   ✓ persistent page reaction: a still-mounted catalog WITH focusable controls follows its declared dim under the opening modal; DOM kept; focus stays with the modal coordinator  750ms
+   ✓ conditional declaration: repeated epochs, refusal and replacement — each accepted open captures the removed card pre-render; a refused close prepares nothing; a rapid reversal continues the displayed paint  2717ms
+   ✓ conditional declaration: absent destination settles the flight honestly with balanced cleanup; owner (Host) disposal mid-flight cancels the obligation and releases everything  1116ms
+   ✓ C2 bindable/prop-only update (no store commit): one Svelte update removes the page card and presents the modal — the Host pre-effect captured the card before the destructive render  677ms
+   ✓ source-owner disposal: the conditional overlay owner is unmounted mid-dismissal by an external accepted change — its obligation is cancelled (never dispatched), resources released, page intact  366ms
+   ✓ overlay-lifetime resting reaction: the page dim is HELD past its duration while presented (open completes without waiting), survives a refused close, and the accepted close continues from the displayed value to baseline; balanced cleanup  1224ms
+   ✓ overlay-lifetime resting reaction: Host destruction while presented restores the page and leaves no leases  625ms
+   ✓ overlay-lifetime resting reaction under reduced motion: the open reaches the same resting state immediately (no animation), the close releases it immediately; balanced  367ms
+   ✓ C3 live MSE video across layers: the removed card's playing MediaSource video flies into the modal layer (moveBefore or re-insertion) without pausing; currentTime keeps advancing  3385ms
+ ✓ |webkit| tests/fluid-motion/overlay-motion.browser.test.ts (25 tests) 25030ms
+   ✓ close then open are choreographed live on one timeline; completion exactly once each; no spring, copies or leases left  1078ms
+   ✓ a refused close claims and completes nothing; a reopen during dismissal cancels the old obligation without dispatch  815ms
+   ✓ W-C3: during choreographed open/close the primitive keeps focus, inertness and scroll-lock authority (visuals only are claimed)  1366ms
+   ✓ C2 explicit entry: transition() prepares BEFORE the commit — a page source the commit removes is still captured and exits as a copy  367ms
+   ✓ C2 epoch: a pending explicit plan applies only to its own epoch; a stale one is discarded (nothing acquired) and the default plan runs  367ms
+   ✓ C5: a REFUSED explicit transition overlapping a running open leaves that run progressing untouched (same copy, leases, tracks, obligation)  1084ms
+   ✓ C2 explicit open: the shared source is captured before the commit removes it; the flight departs from its pre-commit geometry  933ms
+   ✓ destination-phase ambiguity is decided before any destination is suppressed (no acquire-then-rollback)  800ms
+   ✓ U2 nested combined dismissal: one parent plan staggers the live child and the parent on one timeline; the child joins (no spring), both complete once; authority stays with the primitives  1083ms
+   ✓ C2 default phase (Main disposition): one accepted action removes the page card AND opens the modal — the DEFAULT open plan captured the card before the destructive render; the flight departs from its pre-render geometry into the modal layer  1066ms
+   ✓ C3 portable media: a live canvas flight is re-homed into the modal layer (with or without moveBefore) and keeps its content; a cross-origin frame copy carries no live browsing context; other tracks run  1069ms
+   ✓ C2 default phase, CONDITIONAL overlay component: the Modal mounts in the same render that removes the card; the page-created handle's presentation probe captures the card before that render  1066ms
+   ✓ C2 default phase: a REFUSED close (guard) prepares nothing at the checkpoint and leaves a running open untouched  1083ms
+   ✓ persistent page reaction: a still-mounted catalog WITH focusable controls follows its declared dim under the opening modal; DOM kept; focus stays with the modal coordinator  800ms
+   ✓ conditional declaration: repeated epochs, refusal and replacement — each accepted open captures the removed card pre-render; a refused close prepares nothing; a rapid reversal continues the displayed paint  2965ms
+   ✓ conditional declaration: absent destination settles the flight honestly with balanced cleanup; owner (Host) disposal mid-flight cancels the obligation and releases everything  1234ms
+   ✓ C2 bindable/prop-only update (no store commit): one Svelte update removes the page card and presents the modal — the Host pre-effect captured the card before the destructive render  734ms
+   ✓ source-owner disposal: the conditional overlay owner is unmounted mid-dismissal by an external accepted change — its obligation is cancelled (never dispatched), resources released, page intact  732ms
+   ✓ overlay-lifetime resting reaction: the page dim is HELD past its duration while presented (open completes without waiting), survives a refused close, and the accepted close continues from the displayed value to baseline; balanced cleanup  1549ms
+   ✓ overlay-lifetime resting reaction: Host destruction while presented restores the page and leaves no leases  751ms
+   ✓ overlay-lifetime resting reaction under reduced motion: the open reaches the same resting state immediately (no animation), the close releases it immediately; balanced  434ms
+   ✓ C3 live MSE video across layers: the removed card's playing MediaSource video flies into the modal layer (moveBefore or re-insertion) without pausing; currentTime keeps advancing  3452ms
+
+ Test Files  42 passed (42)
+      Tests  384 passed (384)
+   Start at  20:47:51
+   Duration  28.39s (transform 0ms, setup 2.62s, collect 20.95s, tests 152.95s, environment 0ms, prepare 44.60s)
+

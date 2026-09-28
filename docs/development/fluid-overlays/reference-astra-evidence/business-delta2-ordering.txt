@@ -1,0 +1,12 @@
+12:45:31 AM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference - using default configuration.
+
+ RUN  v4.0.7 /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference
+
+12:45:31 AM [vite-plugin-svelte] no Svelte config found at /private/tmp/overlay-reference-astra-20260928/examples/fluid-motion-reference - using default configuration.
+ ✓ |chromium| tests/astra.business-delta.test.ts (2 tests) 1ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  00:45:31
+   Duration  1.45s (transform 0ms, setup 0ms, collect 965ms, tests 1ms, environment 0ms, prepare 43ms)
+

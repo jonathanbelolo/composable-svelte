@@ -1,0 +1,1 @@
+import { defineConfig } from 'vitest/config';import base from './vite.config.js';export default defineConfig({...base,cacheDir:'/private/tmp/fluid-overlays-firefox-timing/cache',test:{...base.test,fileParallelism:false,include:['tests/fluid-motion/representation.browser.test.ts'],browser:{...base.test.browser,instances:[{browser:'firefox'}]}}});
